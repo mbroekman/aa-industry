@@ -1,0 +1,18 @@
+{% extends 'allianceauth/base-bs5.html' %}
+
+{% load i18n %}
+
+{% block page_title %}
+    {% translate "Industry Plugin" %}
+{% endblock %}
+
+{% block header_nav_brand %}
+    {% translate "Industry Plugin" %}
+{% endblock header_nav_brand %}
+
+{% block content %}
+    <div class="allianceauth-industry-plugin">
+        <!-- Tabs removed in favor of separate main menu items -->
+        {% block details %}{% endblock %}
+    </div>
+{% endblock %}
