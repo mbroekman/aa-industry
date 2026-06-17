@@ -214,3 +214,103 @@ class PlanetPin(models.Model):
         from django.utils import timezone
 
         return timezone.now() >= self.expiry_time
+
+
+class CorpPricingConfig(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="pricing_config"
+    )
+    default_discount_percent = models.FloatField(
+        default=0.0,
+        help_text="Default discount % applied to Jita prices (e.g. 10.0 for 10% off)",
+    )
+
+    class Meta:
+        verbose_name = "Corp Pricing Config"
+        verbose_name_plural = "Corp Pricing Configs"
+
+    def __str__(self):
+        return f"{self.corporation.corporation_name} Pricing"
+
+
+class CorpTypeDiscount(models.Model):
+    config = models.ForeignKey(
+        CorpPricingConfig, on_delete=models.CASCADE, related_name="type_discounts"
+    )
+    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    discount_percent = models.FloatField(
+        help_text="Discount % for this specific item type"
+    )
+
+    class Meta:
+        verbose_name = "Corp Type Discount"
+        verbose_name_plural = "Corp Type Discounts"
+        unique_together = (("config", "eve_type"),)
+
+    def __str__(self):
+        return f"{self.eve_type.name} - {self.discount_percent}% off"
+
+
+class MemberOrder(models.Model):
+    ORDER_STATUS_CHOICES = (
+        ("REQUESTED", "Requested"),
+        ("QUOTED", "Quoted"),
+        ("ACCEPTED", "Accepted"),
+        ("IN_PRODUCTION", "In Production"),
+        ("READY", "Ready for Pickup"),
+        ("DELIVERED", "Delivered"),
+        ("REJECTED", "Rejected"),
+    )
+
+    character = models.ForeignKey(
+        EveCharacter, on_delete=models.CASCADE, related_name="industry_orders"
+    )
+    status = models.CharField(
+        max_length=20, choices=ORDER_STATUS_CHOICES, default="REQUESTED"
+    )
+    total_price = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Member Order"
+        verbose_name_plural = "Member Orders"
+
+    def __str__(self):
+        return f"Order #{self.id} by {self.character.character_name} - {self.status}"
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        MemberOrder, on_delete=models.CASCADE, related_name="items"
+    )
+    item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    quantity = models.IntegerField(default=1)
+    price_per_unit = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    discount_applied = models.FloatField(default=0.0)
+
+    class Meta:
+        verbose_name = "Order Item"
+        verbose_name_plural = "Order Items"
+
+    def __str__(self):
+        return f"{self.quantity}x {self.item_type.name} for Order #{self.order_id}"
+
+    @property
+    def line_total(self):
+        return self.price_per_unit * self.quantity
+
+
+class OrderFit(models.Model):
+    order = models.OneToOneField(
+        MemberOrder, on_delete=models.CASCADE, related_name="fit"
+    )
+    raw_fit_text = models.TextField()
+
+    class Meta:
+        verbose_name = "Order Fit"
+        verbose_name_plural = "Order Fits"
+
+    def __str__(self):
+        return f"Fit for Order #{self.order_id}"

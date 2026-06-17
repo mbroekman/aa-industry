@@ -60,6 +60,34 @@ def register_corporate_menu():
     return CorporateIndustryMenuItem()
 
 
+class MemberOrdersMenuItem(MenuItemHook):
+    """Menu entry for Member Orders (Self Service)"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("Member Orders"),
+            "fas fa-shopping-cart fa-fw",
+            "industry:orders_dashboard",
+            navactive=[
+                "industry:orders_dashboard",
+                "industry:create_order",
+                "industry:view_quote",
+            ],
+        )
+
+    def render(self, request):
+        if request.user.has_perm("industry.basic_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_member_orders_menu():
+    """Register the member orders menu item"""
+    return MemberOrdersMenuItem()
+
+
 @hooks.register("url_hook")
 def register_urls():
     """Register app urls"""

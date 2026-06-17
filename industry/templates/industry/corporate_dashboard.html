@@ -53,7 +53,7 @@
                         <td>{{ job.runs }}</td>
                         <td>{% if job.probability %}{{ job.probability|floatformat:2 }}%{% endif %}</td>
                         <td>{{ job.successful_runs|default_if_none:"" }}</td>
-                        <td>{{ job.cost|intcomma }} ISK</td>
+                        <td>{{ job.cost|floatformat:2|intcomma }} ISK</td>
                         <td>{{ job.wallet_division }}</td>
                         <td>
                             <span class="badge
