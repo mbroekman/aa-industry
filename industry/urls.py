@@ -20,4 +20,18 @@ urlpatterns = [
     path("orders/<int:order_id>/", views.view_quote, name="view_quote"),
     path("orders/<int:order_id>/accept/", views.accept_quote, name="accept_quote"),
     path("orders/<int:order_id>/reject/", views.reject_quote, name="reject_quote"),
+    path(
+        "industrialist/", views.industrialist_dashboard, name="industrialist_dashboard"
+    ),
+    path("industrialist/claim/<int:task_id>/", views.claim_task, name="claim_task"),
+    path(
+        "industrialist/complete/<int:task_id>/",
+        views.complete_task,
+        name="complete_task",
+    ),
+    path(
+        "industrialist/leaderboard/",
+        views.industrialist_leaderboard,
+        name="industrialist_leaderboard",
+    ),
 ]

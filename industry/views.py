@@ -209,7 +209,7 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    from .models import MemberOrder
+    from .models import MemberOrder, ProductionTask
 
     order = MemberOrder.objects.filter(
         id=order_id, character_id__in=user_characters, status="QUOTED"
@@ -218,7 +218,25 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     if order:
         order.status = "ACCEPTED"
         order.save()
-        messages.success(request, "Quote accepted! Your order is now in progress.")
+
+        # Create Production Tasks
+        tasks_to_create = []
+        for item in order.items.all():
+            tasks_to_create.append(
+                ProductionTask(
+                    item_type=item.item_type,
+                    quantity=item.quantity,
+                    status="UNCLAIMED",
+                    created_from_order=order,
+                    gamification_value=item.line_total,
+                )
+            )
+        ProductionTask.objects.bulk_create(tasks_to_create)
+
+        messages.success(
+            request,
+            "Quote accepted! Your order is now in progress and tasks have been generated for builders.",
+        )
     return redirect("industry:orders_dashboard")
 
 
@@ -239,3 +257,164 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         order.save()
         messages.info(request, "Quote rejected and order cancelled.")
     return redirect("industry:orders_dashboard")
+
+
+@login_required
+@permission_required("industry.industrialist_access")
+def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
+    """Main execution dashboard for industrialists"""
+    # Django
+    from django.db.models import Sum
+
+    from .models import CorpMOTD, CorporationIndustryJob, ProductionTask
+
+    # Setup corp context
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    motd = None
+    if corporation:
+        motd = CorpMOTD.objects.filter(corporation=corporation).first()
+
+    # Unclaimed tasks
+    unclaimed_tasks = ProductionTask.objects.filter(status="UNCLAIMED").order_by(
+        "-created_at"
+    )
+
+    # My active tasks
+    user_characters = request.user.character_ownerships.all().values_list(
+        "character_id", flat=True
+    )
+    my_tasks = ProductionTask.objects.filter(
+        status="IN_PRODUCTION", assigned_to_id__in=user_characters
+    ).order_by("-assigned_at")
+
+    # Active corp jobs (from ESI sync)
+    user_corps = request.user.character_ownerships.all().values_list(
+        "character__corporation_id", flat=True
+    )
+    corp_active_jobs = CorporationIndustryJob.objects.filter(
+        corporation__corporation_id__in=user_corps, status="active"
+    ).select_related("blueprint_type", "product_type", "installer")
+
+    context = {
+        "title": "Industrialist Dashboard",
+        "motd": motd,
+        "unclaimed_tasks": unclaimed_tasks,
+        "my_tasks": my_tasks,
+        "corp_active_jobs": corp_active_jobs,
+    }
+    return render(request, "industry/industrialist_dashboard.html", context)
+
+
+@login_required
+@permission_required("industry.industrialist_access")
+def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
+    if request.method == "POST":
+        character_id = request.POST.get("character_id")
+        # Alliance Auth
+        from allianceauth.eveonline.models import EveCharacter
+
+        from .models import ProductionTask
+
+        character = EveCharacter.objects.filter(
+            character_id=character_id, character_ownership__user=request.user
+        ).first()
+        if not character:
+            messages.error(request, "Invalid character selected.")
+            return redirect("industry:industrialist_dashboard")
+
+        task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
+        if task:
+            # Django
+            from django.utils import timezone
+
+            task.status = "IN_PRODUCTION"
+            task.assigned_to = character
+            task.assigned_at = timezone.now()
+            task.save()
+            messages.success(
+                request, f"Successfully claimed {task.quantity}x {task.item_type.name}."
+            )
+        else:
+            messages.error(request, "Task is no longer available or does not exist.")
+
+    return redirect("industry:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry.industrialist_access")
+def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
+    if request.method == "POST":
+        user_characters = request.user.character_ownerships.all().values_list(
+            "character_id", flat=True
+        )
+        from .models import ProductionTask
+
+        task = ProductionTask.objects.filter(
+            id=task_id, assigned_to_id__in=user_characters, status="IN_PRODUCTION"
+        ).first()
+        if task:
+            # Django
+            from django.utils import timezone
+
+            task.status = "COMPLETED"
+            task.completed_at = timezone.now()
+            task.save()
+
+            # Check if all tasks for the order are completed to update MemberOrder status
+            if task.created_from_order:
+                order = task.created_from_order
+                remaining = order.production_tasks.exclude(status="COMPLETED").exists()
+                if not remaining:
+                    order.status = "READY"
+                    order.save()
+
+            messages.success(
+                request, f"Marked {task.quantity}x {task.item_type.name} as completed!"
+            )
+        else:
+            messages.error(request, "Task not found or not assigned to you.")
+
+    return redirect("industry:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry.industrialist_access")
+def industrialist_leaderboard(request: WSGIRequest) -> HttpResponse:
+    """Leaderboard and History view"""
+    # Django
+    from django.db.models import Count, Sum
+
+    from .models import ProductionTask
+
+    # Leaderboard by points (gamification_value)
+    leaderboard_isk = (
+        ProductionTask.objects.filter(status="COMPLETED")
+        .values("assigned_to__character_name")
+        .annotate(total_isk=Sum("gamification_value"), tasks=Count("id"))
+        .order_by("-total_isk")[:25]
+    )
+
+    # Leaderboard by volume
+    leaderboard_vol = (
+        ProductionTask.objects.filter(status="COMPLETED")
+        .values("assigned_to__character_name")
+        .annotate(total_isk=Sum("gamification_value"), tasks=Count("id"))
+        .order_by("-tasks")[:25]
+    )
+
+    user_characters = request.user.character_ownerships.all().values_list(
+        "character_id", flat=True
+    )
+    personal_history = ProductionTask.objects.filter(
+        status="COMPLETED", assigned_to_id__in=user_characters
+    ).order_by("-completed_at")
+
+    context = {
+        "title": "Industrialist Leaderboards",
+        "leaderboard_isk": leaderboard_isk,
+        "leaderboard_vol": leaderboard_vol,
+        "personal_history": personal_history,
+    }
+    return render(request, "industry/industrialist_leaderboard.html", context)

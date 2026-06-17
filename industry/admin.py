@@ -64,3 +64,18 @@ class MemberOrderAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("character__character_name",)
     inlines = [OrderItemInline, OrderFitInline]
+
+
+from .models import CorpMOTD, ProductionTask
+
+
+@admin.register(CorpMOTD)
+class CorpMOTDAdmin(admin.ModelAdmin):
+    list_display = ("corporation", "updated_at", "updated_by")
+
+
+@admin.register(ProductionTask)
+class ProductionTaskAdmin(admin.ModelAdmin):
+    list_display = ("item_type", "quantity", "status", "assigned_to", "created_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("assigned_to__character_name", "item_type__name")

@@ -23,6 +23,10 @@ class General(models.Model):
         permissions = (
             ("basic_access", "Can access this app"),
             ("corp_access", "Can access corporate industry jobs"),
+            (
+                "industrialist_access",
+                "Can access the industrialist dashboard and claim jobs",
+            ),
         )
 
 
@@ -280,6 +284,14 @@ class MemberOrder(models.Model):
     def __str__(self):
         return f"Order #{self.id} by {self.character.character_name} - {self.status}"
 
+    @property
+    def progress_percent(self):
+        total_tasks = self.production_tasks.count()
+        if total_tasks == 0:
+            return 0
+        completed_tasks = self.production_tasks.filter(status="COMPLETED").count()
+        return int((completed_tasks / total_tasks) * 100)
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
@@ -314,3 +326,71 @@ class OrderFit(models.Model):
 
     def __str__(self):
         return f"Fit for Order #{self.order_id}"
+
+
+class CorpMOTD(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="motd"
+    )
+    message = models.TextField(help_text="Message of the day for industrialists")
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        EveCharacter, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = "Corp MOTD"
+        verbose_name_plural = "Corp MOTDs"
+
+    def __str__(self):
+        return f"MOTD for {self.corporation.corporation_name}"
+
+
+class ProductionTask(models.Model):
+    STATUS_CHOICES = (
+        ("UNCLAIMED", "Unclaimed"),
+        ("IN_PRODUCTION", "In Production"),
+        ("COMPLETED", "Completed"),
+    )
+
+    item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    quantity = models.IntegerField(default=1)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="UNCLAIMED"
+    )
+
+    # Relationships
+    created_from_order = models.ForeignKey(
+        MemberOrder,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="production_tasks",
+    )
+    assigned_to = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="claimed_tasks",
+    )
+
+    # Gamification
+    gamification_value = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=0.00,
+        help_text="Calculated ISK value of the task for leaderboards",
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Production Task"
+        verbose_name_plural = "Production Tasks"
+
+    def __str__(self):
+        return f"{self.quantity}x {self.item_type.name} - {self.status}"

@@ -88,6 +88,33 @@ def register_member_orders_menu():
     return MemberOrdersMenuItem()
 
 
+class IndustrialistMenuItem(MenuItemHook):
+    """Menu entry for Industrialist Dashboard"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("Industrialist Dash"),
+            "fas fa-hammer fa-fw",
+            "industry:industrialist_dashboard",
+            navactive=[
+                "industry:industrialist_dashboard",
+                "industry:industrialist_leaderboard",
+            ],
+        )
+
+    def render(self, request):
+        if request.user.has_perm("industry.industrialist_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_industrialist_menu():
+    """Register the industrialist menu item"""
+    return IndustrialistMenuItem()
+
+
 @hooks.register("url_hook")
 def register_urls():
     """Register app urls"""

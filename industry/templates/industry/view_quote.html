@@ -81,13 +81,21 @@
                     <dl class="row">
                         <dt class="col-sm-4">{% trans "Status" %}</dt>
                         <dd class="col-sm-8">
-                            {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">Requested</span>
-                            {% elif order.status == 'QUOTED' %}<span class="badge bg-info">Quoted</span>
-                            {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">Accepted</span>
-                            {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
-                            {% elif order.status == 'READY' %}<span class="badge bg-success">Ready</span>
-                            {% elif order.status == 'DELIVERED' %}<span class="badge bg-dark">Delivered</span>
-                            {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">Rejected</span>
+                            <div>
+                                {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">Requested</span>
+                                {% elif order.status == 'QUOTED' %}<span class="badge bg-info">Quoted</span>
+                                {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">Accepted</span>
+                                {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
+                                {% elif order.status == 'READY' %}<span class="badge bg-success">Ready</span>
+                                {% elif order.status == 'DELIVERED' %}<span class="badge bg-dark">Delivered</span>
+                                {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </div>
+                            {% if order.production_tasks.exists %}
+                                <div class="progress mt-2" style="height: 10px;" title="{{ order.progress_percent }}% Completed">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small class="text-muted">{{ order.progress_percent }}% completed</small>
                             {% endif %}
                         </dd>
 
