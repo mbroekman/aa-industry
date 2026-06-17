@@ -115,6 +115,34 @@ def register_industrialist_menu():
     return IndustrialistMenuItem()
 
 
+class DirectorMenuItem(MenuItemHook):
+    """Menu entry for Director Control Panel"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("Director CP"),
+            "fas fa-chess-king fa-fw",
+            "industry:director_dashboard",
+            navactive=[
+                "industry:director_dashboard",
+                "industry:director_inventory",
+                "industry:director_config",
+            ],
+        )
+
+    def render(self, request):
+        if request.user.has_perm("industry.corp_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_director_menu():
+    """Register the director menu item"""
+    return DirectorMenuItem()
+
+
 @hooks.register("url_hook")
 def register_urls():
     """Register app urls"""

@@ -353,10 +353,22 @@ class ProductionTask(models.Model):
         ("COMPLETED", "Completed"),
     )
 
+    PRIORITY_CHOICES = (
+        ("HIGH", "High"),
+        ("NORMAL", "Normal"),
+        ("LOW", "Low"),
+    )
+
     item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     quantity = models.IntegerField(default=1)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="UNCLAIMED"
+    )
+    priority = models.CharField(
+        max_length=10, choices=PRIORITY_CHOICES, default="NORMAL"
+    )
+    hidden = models.BooleanField(
+        default=False, help_text="Hide from standard Industrialist Job Market"
     )
 
     # Relationships
@@ -373,6 +385,14 @@ class ProductionTask(models.Model):
         null=True,
         blank=True,
         related_name="claimed_tasks",
+    )
+    bom_parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bom_children",
+        help_text="The parent task that requires this sub-component",
     )
 
     # Gamification
@@ -394,3 +414,114 @@ class ProductionTask(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.item_type.name} - {self.status}"
+
+
+class CorpItemConfig(models.Model):
+    BOM_CHOICES = (
+        ("SDE", "Eve SDE (Database)"),
+        ("FUZZWORK", "Fuzzwork API"),
+    )
+
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="item_configs"
+    )
+    item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+
+    manual_me = models.IntegerField(
+        default=0, help_text="Manual Material Efficiency override (0-10)"
+    )
+    manual_te = models.IntegerField(
+        default=0, help_text="Manual Time Efficiency override (0-20)"
+    )
+    manual_price = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Override price, especially useful for Faction items",
+    )
+
+    target_threshold = models.IntegerField(
+        default=0, help_text="Minimum stock level required in Hangars"
+    )
+    auto_produce = models.BooleanField(
+        default=False,
+        help_text="Automatically create ProductionTask if stock < threshold",
+    )
+
+    build_or_buy = models.CharField(
+        max_length=10, choices=(("BUILD", "Build"), ("BUY", "Buy")), default="BUILD"
+    )
+    bom_source = models.CharField(
+        max_length=10, choices=BOM_CHOICES, default="FUZZWORK"
+    )
+
+    class Meta:
+        verbose_name = "Corp Item Config"
+        verbose_name_plural = "Corp Item Configs"
+        unique_together = (("corporation", "item_type"),)
+
+    def __str__(self):
+        return f"Config for {self.item_type.name}"
+
+
+class CorpHangarConfig(models.Model):
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="hangar_configs"
+    )
+    location_id = models.BigIntegerField(help_text="The station or structure ID")
+    flag_id = models.IntegerField(help_text="The hangar flag ID (e.g. 4 for Hangar 1)")
+    description = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="User friendly name for this hangar",
+    )
+
+    class Meta:
+        verbose_name = "Corp Hangar Config"
+        verbose_name_plural = "Corp Hangar Configs"
+
+    def __str__(self):
+        return f"{self.corporation.corporation_ticker} Hangar: {self.description or self.flag_id}"
+
+
+class CorpInventory(models.Model):
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="inventory"
+    )
+    item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    quantity = models.BigIntegerField(default=0)
+
+    location_id = models.BigIntegerField()
+    flag_id = models.IntegerField()
+
+    manual_override = models.BooleanField(
+        default=False, help_text="If true, ESI sync will not overwrite this quantity"
+    )
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Corp Inventory"
+        verbose_name_plural = "Corp Inventories"
+        unique_together = (("corporation", "item_type", "location_id", "flag_id"),)
+
+    def __str__(self):
+        return f"{self.quantity}x {self.item_type.name} at {self.location_id}"
+
+
+class TaxConfig(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="tax_config"
+    )
+    industry_tax_rate = models.FloatField(
+        default=0.0, help_text="Tax % applied to industry jobs"
+    )
+    broker_fee_rate = models.FloatField(default=0.0, help_text="Broker fee %")
+
+    class Meta:
+        verbose_name = "Tax Config"
+        verbose_name_plural = "Tax Configs"
+
+    def __str__(self):
+        return f"{self.corporation.corporation_ticker} Tax Config"

@@ -9,7 +9,6 @@ from celery import shared_task
 # Alliance Auth
 from allianceauth import __title_useragent__, __url__, __version__
 from allianceauth.eveonline import __esi_compatibility_date__
-from allianceauth.services.modules.discord.models import DiscordUser
 from esi.exceptions import HTTPNotModified
 from esi.models import Token
 from esi.openapi_clients import ESIClientProvider
@@ -38,6 +37,7 @@ class IndustryESIProvider(ESIClientProvider):
                 "GetCharactersCharacterIdPlanets",
                 "GetCharactersCharacterIdPlanetsPlanetId",
                 "GetUniverseSchematicsSchematicId",
+                "GetCorporationsCorporationIdAssets",
             ],
         )
 
@@ -317,7 +317,6 @@ def update_character_pi(character_id=None):
                         type_id = getattr(pin, "type_id")
                         schematic_id = getattr(pin, "schematic_id", None)
                         extractor_details = getattr(pin, "extractor_details", None)
-                        factory_details = getattr(pin, "factory_details", None)
 
                         ensure_eve_type(type_id)
 
@@ -385,3 +384,119 @@ def update_character_pi(character_id=None):
 
         except Exception as e:
             logger.error(f"Failed to fetch PI for {token.character_id}: {e}")
+
+
+@shared_task
+def task_sync_corp_inventory():
+    """Fetch corporate assets from ESI for configured Hangars."""
+
+    from .models import CorpHangarConfig, CorpInventory
+
+    hangar_configs = CorpHangarConfig.objects.all()
+    corps = {hc.corporation_id for hc in hangar_configs}
+
+    for corp_id in corps:
+        configs_for_corp = [hc for hc in hangar_configs if hc.corporation_id == corp_id]
+
+        # We need a director token for this corp
+        # Assuming CorporationSyncConfig is used for general sync character
+        sync_config = CorporationSyncConfig.objects.filter(
+            corporation_id=corp_id
+        ).first()
+        if not sync_config:
+            continue
+
+        token = Token.objects.filter(
+            character_id=sync_config.sync_character.character_id,
+            scopes__name="esi-assets.read_corporation_assets.v1",
+        ).first()
+
+        if not token:
+            continue
+
+        try:
+            assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
+                corporation_id=corp_id, token=token
+            ).result()
+
+            # Filter assets matching location_id and flag_id
+            filtered_assets = []
+            for asset in assets:
+                location_id = getattr(asset, "location_id")
+                flag_id = getattr(asset, "location_flag")
+
+                # Check if this asset is in a configured hangar
+                if any(
+                    hc.location_id == location_id and hc.flag_id == flag_id
+                    for hc in configs_for_corp
+                ):
+                    type_id = getattr(asset, "type_id")
+                    quantity = getattr(
+                        asset, "quantity", 1
+                    )  # single items don't always have quantity field
+                    ensure_eve_type(type_id)
+                    filtered_assets.append(
+                        {
+                            "type_id": type_id,
+                            "quantity": quantity,
+                            "location_id": location_id,
+                            "flag_id": flag_id,
+                        }
+                    )
+
+            # Update CorpInventory (only for items not manually overridden)
+            if filtered_assets:
+                # Group by type, location, flag
+                # Standard Library
+                from collections import defaultdict
+
+                grouped = defaultdict(int)
+                for fa in filtered_assets:
+                    grouped[(fa["type_id"], fa["location_id"], fa["flag_id"])] += fa[
+                        "quantity"
+                    ]
+
+                for (type_id, loc_id, flg_id), qty in grouped.items():
+                    inv, created = CorpInventory.objects.get_or_create(
+                        corporation_id=corp_id,
+                        item_type_id=type_id,
+                        location_id=loc_id,
+                        flag_id=flg_id,
+                        defaults={"quantity": qty},
+                    )
+                    if not inv.manual_override:
+                        inv.quantity = qty
+                        inv.save()
+
+        except Exception as e:
+            logger.error(f"Failed to fetch assets for corp {corp_id}: {e}")
+
+
+@shared_task
+def task_pull_market_data():
+    """Fetch Jita prices for PI, Moon, Gas, and Minerals via Fuzzwork."""
+    logger.info("Market Data Pull initiated.")
+    # Implementation requires querying the fuzzwork market API for the specific types
+    # This is a placeholder for the actual API call logic
+    pass
+
+
+@shared_task
+def task_bom_explosion(order_id):
+    """Calculate BOM and create ProductionTasks based on Build vs Buy configuration."""
+    from .models import CorpItemConfig, MemberOrder
+
+    order = MemberOrder.objects.filter(id=order_id).first()
+    if not order:
+        return
+
+    for item in order.items.all():
+        config = CorpItemConfig.objects.filter(item_type=item.item_type).first()
+
+        # Determine build or buy
+        if config and config.build_or_buy == "BUY":
+            # Create a BUY task
+            pass
+        else:
+            # SDE or Fuzzwork explosion
+            pass

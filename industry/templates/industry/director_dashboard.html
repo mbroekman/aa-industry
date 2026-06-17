@@ -1,0 +1,106 @@
+{% extends "industry/base.html" %}
+{% load i18n humanize %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-chess-king"></i> {% trans "Director Control Panel" %}</h1>
+            <div>
+                <a href="{% url 'industry:director_inventory' %}" class="btn btn-info"><i class="fas fa-boxes"></i> Inventory Analytics</a>
+                <a href="{% url 'industry:director_config' %}" class="btn btn-warning"><i class="fas fa-cogs"></i> Configurations</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Orders Management -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">{% trans "Active Member Orders" %}</h3>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Character</th>
+                                <th>Total Price</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in all_orders %}
+                            <tr>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.character.character_name }}</td>
+                                <td>{{ order.total_price|floatformat:2|intcomma }} ISK</td>
+                                <td>{{ order.get_status_display }}</td>
+                                <td>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%;"></div>
+                                    </div>
+                                    <small>{{ order.progress_percent }}%</small>
+                                </td>
+                                <td>
+                                    <!-- In a real scenario, this would post to a view to manage the order -->
+                                    <button class="btn btn-sm btn-danger"><i class="fas fa-times"></i> Cancel</button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center">No orders found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Tasks Management -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-secondary">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="card-title mb-0">{% trans "Production Task Management" %}</h3>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Assigned To</th>
+                                <th>Hidden</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in all_tasks %}
+                            <tr>
+                                <td>{{ task.item_type.name }}</td>
+                                <td>{{ task.quantity }}</td>
+                                <td>{{ task.get_status_display }}</td>
+                                <td>
+                                    <span class="badge {% if task.priority == 'HIGH' %}bg-danger{% elif task.priority == 'NORMAL' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                        {{ task.priority }}
+                                    </span>
+                                </td>
+                                <td>{{ task.assigned_to.character_name|default:"-" }}</td>
+                                <td>{% if task.hidden %}<i class="fas fa-eye-slash text-danger"></i>{% else %}<i class="fas fa-eye text-success"></i>{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center">No tasks found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -34,4 +34,7 @@ urlpatterns = [
         views.industrialist_leaderboard,
         name="industrialist_leaderboard",
     ),
+    path("director/", views.director_dashboard, name="director_dashboard"),
+    path("director/inventory/", views.director_inventory, name="director_inventory"),
+    path("director/config/", views.director_config, name="director_config"),
 ]

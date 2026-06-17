@@ -6,6 +6,10 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 
 - **Personal Dashboard**: Users can easily track their active, completed, and delivered industry jobs.
 - **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs from a centralized overview.
+- **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and receive real-time quotes.
+- **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, and compete on the Gamification Leaderboards.
+- **Director Control Panel**: Complete ERP solution for directors to manage orders, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices.
+- **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
 - **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, and countdown timers for active extraction.
 - **Discord Integration**: Receive automatic Direct Messages via Discord when a personal industry job finishes.
 - **DataTables**: Clean, sortable, and searchable tables for quick insights.
@@ -76,11 +80,16 @@ Assign the following permissions in the Django Admin panel:
 - `industry.basic_access`: Grants access to the Personal Dashboard (intended for all members).
 - `industry.corp_access`: Grants access to the Corporate Dashboard (intended for Directors or Industry Managers).
 
-### 3. Adding ESI Tokens
+### 3. Required ESI Scopes (SSO Grants)
 
-- **Personal Jobs**: Users must log in, open the **Industry App**, and click the **Add Personal Token** button on the dashboard. This will prompt Eve SSO to grant the required `esi-industry.read_character_jobs.v1` scope.
-- **Corporate Jobs**: A character with the **Director** role must click the **Add Corporate Token** button on the Corporate Dashboard. Afterwards, an admin must link this character in the Django Admin interface under **Corporation Sync Configuration**.
-- **Planetary Interaction**: To view PI data, the user must authorize the `esi-planets.manage_planets.v1` scope via the Alliance Auth Tokens / Services page.
+This plugin requires specific ESI scopes depending on the features you want to use. Make sure these are configured in your Alliance Auth Eve Online SSO settings:
+
+- **`esi-industry.read_character_jobs.v1`**: Required for Personal Dashboard. Users grant this via the "Add Personal Token" button.
+- **`esi-industry.read_corporation_jobs.v1`**: Required for Corporate Dashboard. Directors grant this via the "Add Corporate Token" button.
+- **`esi-planets.manage_planets.v1`**: Required for Planetary Interaction tracking. Users grant this via the AA Tokens page.
+- **`esi-assets.read_corporation_assets.v1`**: Required for the Core Engine to synchronize Corporate Inventory Hangars for the Director Control Panel. Directors grant this via the AA Tokens page.
+
+*Note: For Corporate Syncs, after adding a token, an Admin must link the Director character in the Django Admin interface under **Corporation Sync Configuration**.*
 
 ### 4. Background Syncing
 
@@ -105,6 +114,16 @@ CELERYBEAT_SCHEDULE["industry_update_corporation_jobs"] = {
 CELERYBEAT_SCHEDULE["industry_update_character_pi"] = {
     "task": "industry.tasks.update_character_pi",
     "schedule": crontab(minute="0"),
+}
+
+CELERYBEAT_SCHEDULE["industry_sync_corp_inventory"] = {
+    "task": "industry.tasks.task_sync_corp_inventory",
+    "schedule": crontab(minute="*/15"),
+}
+
+CELERYBEAT_SCHEDULE["industry_pull_market_data"] = {
+    "task": "industry.tasks.task_pull_market_data",
+    "schedule": crontab(hour="11", minute="30"),  # Around EVE Downtime
 }
 ```
 

@@ -263,8 +263,6 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 @permission_required("industry.industrialist_access")
 def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main execution dashboard for industrialists"""
-    # Django
-    from django.db.models import Sum
 
     from .models import CorpMOTD, CorporationIndustryJob, ProductionTask
 
@@ -418,3 +416,76 @@ def industrialist_leaderboard(request: WSGIRequest) -> HttpResponse:
         "personal_history": personal_history,
     }
     return render(request, "industry/industrialist_leaderboard.html", context)
+
+
+# ==============================================================================
+# Domain 3: Director Control Panel
+# ==============================================================================
+
+
+@login_required
+@permission_required("industry.corp_access")
+def director_dashboard(request: WSGIRequest) -> HttpResponse:
+    """Main dashboard for Directors to manage orders and jobs."""
+    from .models import MemberOrder, ProductionTask
+
+    # We show orders for characters in the director's corps
+    all_orders = MemberOrder.objects.all().order_by("-created_at")
+    all_tasks = ProductionTask.objects.all().order_by("-created_at")
+
+    context = {
+        "title": "Director Control Panel",
+        "all_orders": all_orders,
+        "all_tasks": all_tasks,
+    }
+    return render(request, "industry/director_dashboard.html", context)
+
+
+@login_required
+@permission_required("industry.corp_access")
+def director_inventory(request: WSGIRequest) -> HttpResponse:
+    """Inventory and Analytics for Directors."""
+    # Django
+    from django.db.models import Sum
+
+    from .models import CorpInventory, CorpItemConfig
+
+    inventory = CorpInventory.objects.values(
+        "item_type__name", "item_type__id"
+    ).annotate(total_qty=Sum("quantity"))
+
+    configs = CorpItemConfig.objects.filter(target_threshold__gt=0)
+    low_stock = []
+
+    inv_dict = {item["item_type__id"]: item["total_qty"] for item in inventory}
+
+    for config in configs:
+        current_qty = inv_dict.get(config.item_type.id, 0)
+        if current_qty < config.target_threshold:
+            low_stock.append(
+                {
+                    "item_type": config.item_type,
+                    "current_qty": current_qty,
+                    "target": config.target_threshold,
+                    "deficit": config.target_threshold - current_qty,
+                }
+            )
+
+    context = {
+        "title": "Director Inventory & Analytics",
+        "inventory": inventory,
+        "low_stock": low_stock,
+    }
+    return render(request, "industry/director_inventory.html", context)
+
+
+@login_required
+@permission_required("industry.corp_access")
+def director_config(request: WSGIRequest) -> HttpResponse:
+    """Mass edit form for Item Configurations."""
+    from .models import CorpItemConfig
+
+    configs = CorpItemConfig.objects.all()
+
+    context = {"title": "Item Configurations", "configs": configs}
+    return render(request, "industry/director_config.html", context)

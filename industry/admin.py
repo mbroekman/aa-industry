@@ -3,7 +3,22 @@
 # Django
 from django.contrib import admin
 
-from .models import CharacterIndustryJob, CorporationIndustryJob, CorporationSyncConfig
+from .models import (
+    CharacterIndustryJob,
+    CorpHangarConfig,
+    CorpInventory,
+    CorpItemConfig,
+    CorpMOTD,
+    CorporationIndustryJob,
+    CorporationSyncConfig,
+    CorpPricingConfig,
+    CorpTypeDiscount,
+    MemberOrder,
+    OrderFit,
+    OrderItem,
+    ProductionTask,
+    TaxConfig,
+)
 
 
 @admin.register(CharacterIndustryJob)
@@ -28,15 +43,6 @@ class CorporationIndustryJobAdmin(admin.ModelAdmin):
 @admin.register(CorporationSyncConfig)
 class CorporationSyncConfigAdmin(admin.ModelAdmin):
     list_display = ("corporation", "sync_character")
-
-
-from .models import (
-    CorpPricingConfig,
-    CorpTypeDiscount,
-    MemberOrder,
-    OrderFit,
-    OrderItem,
-)
 
 
 @admin.register(CorpPricingConfig)
@@ -66,9 +72,6 @@ class MemberOrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline, OrderFitInline]
 
 
-from .models import CorpMOTD, ProductionTask
-
-
 @admin.register(CorpMOTD)
 class CorpMOTDAdmin(admin.ModelAdmin):
     list_display = ("corporation", "updated_at", "updated_by")
@@ -79,3 +82,41 @@ class ProductionTaskAdmin(admin.ModelAdmin):
     list_display = ("item_type", "quantity", "status", "assigned_to", "created_at")
     list_filter = ("status", "created_at")
     search_fields = ("assigned_to__character_name", "item_type__name")
+
+
+@admin.register(CorpItemConfig)
+class CorpItemConfigAdmin(admin.ModelAdmin):
+    list_display = (
+        "corporation",
+        "item_type",
+        "build_or_buy",
+        "bom_source",
+        "target_threshold",
+        "auto_produce",
+    )
+    list_filter = ("build_or_buy", "bom_source", "auto_produce")
+    search_fields = ("item_type__name", "corporation__corporation_name")
+
+
+@admin.register(CorpHangarConfig)
+class CorpHangarConfigAdmin(admin.ModelAdmin):
+    list_display = ("corporation", "location_id", "flag_id", "description")
+
+
+@admin.register(CorpInventory)
+class CorpInventoryAdmin(admin.ModelAdmin):
+    list_display = (
+        "corporation",
+        "item_type",
+        "quantity",
+        "location_id",
+        "flag_id",
+        "manual_override",
+    )
+    list_filter = ("manual_override", "corporation")
+    search_fields = ("item_type__name",)
+
+
+@admin.register(TaxConfig)
+class TaxConfigAdmin(admin.ModelAdmin):
+    list_display = ("corporation", "industry_tax_rate", "broker_fee_rate")
