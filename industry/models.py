@@ -470,7 +470,9 @@ class CorpHangarConfig(models.Model):
         EveCorporationInfo, on_delete=models.CASCADE, related_name="hangar_configs"
     )
     location_id = models.BigIntegerField(help_text="The station or structure ID")
-    flag_id = models.IntegerField(help_text="The hangar flag ID (e.g. 4 for Hangar 1)")
+    flag_id = models.CharField(
+        max_length=50, help_text="The hangar flag ID (e.g. CorpSAG1)"
+    )
     description = models.CharField(
         max_length=100,
         blank=True,
@@ -494,7 +496,7 @@ class CorpInventory(models.Model):
     quantity = models.BigIntegerField(default=0)
 
     location_id = models.BigIntegerField()
-    flag_id = models.IntegerField()
+    flag_id = models.CharField(max_length=50)
 
     manual_override = models.BooleanField(
         default=False, help_text="If true, ESI sync will not overwrite this quantity"

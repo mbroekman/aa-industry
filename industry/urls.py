@@ -37,4 +37,14 @@ urlpatterns = [
     path("director/", views.director_dashboard, name="director_dashboard"),
     path("director/inventory/", views.director_inventory, name="director_inventory"),
     path("director/config/", views.director_config, name="director_config"),
+    path(
+        "director/config/discover/",
+        views.director_discover_hangars,
+        name="director_discover_hangars",
+    ),
+    path(
+        "director/sync-inventory/",
+        views.trigger_inventory_sync,
+        name="trigger_inventory_sync",
+    ),
 ]

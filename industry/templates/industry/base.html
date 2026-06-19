@@ -1,9 +1,13 @@
 {% extends 'allianceauth/base-bs5.html' %}
 
-{% load i18n %}
+{% load i18n static %}
 
 {% block page_title %}
     {% translate "Industry Plugin" %}
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'industry/css/industry.css' %}">
 {% endblock %}
 
 {% block header_nav_brand %}
@@ -14,5 +18,39 @@
     <div class="allianceauth-industry-plugin">
         <!-- Tabs removed in favor of separate main menu items -->
         {% block details %}{% endblock %}
+
+        <!-- Global Loading Overlay -->
+        <div id="industry-loading-overlay" class="industry-loading-overlay" style="display: none;">
+            <div class="industry-spinner-container">
+                <div class="industry-spinner"></div>
+                <h4 class="mt-3 text-amarr-gold">Processing Request...</h4>
+                <p class="text-muted small">Communicating with EVE Online servers.<br>This may take a few moments.</p>
+            </div>
+        </div>
     </div>
+{% endblock %}
+
+{% block extra_javascript %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show overlay on clicking links with show-loader class
+            const loaderLinks = document.querySelectorAll('a.show-loader');
+            loaderLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Don't show if it's opening in a new tab
+                    if (this.target !== '_blank') {
+                        document.getElementById('industry-loading-overlay').style.display = 'flex';
+                    }
+                });
+            });
+
+            // Show overlay on submitting forms with show-loader class
+            const loaderForms = document.querySelectorAll('form.show-loader');
+            loaderForms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    document.getElementById('industry-loading-overlay').style.display = 'flex';
+                });
+            });
+        });
+    </script>
 {% endblock %}

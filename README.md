@@ -87,11 +87,22 @@ This plugin requires specific ESI scopes depending on the features you want to u
 - **`esi-industry.read_character_jobs.v1`**: Required for Personal Dashboard. Users grant this via the "Add Personal Token" button.
 - **`esi-industry.read_corporation_jobs.v1`**: Required for Corporate Dashboard. Directors grant this via the "Add Corporate Token" button.
 - **`esi-planets.manage_planets.v1`**: Required for Planetary Interaction tracking. Users grant this via the AA Tokens page.
-- **`esi-assets.read_corporation_assets.v1`**: Required for the Core Engine to synchronize Corporate Inventory Hangars for the Director Control Panel. Directors grant this via the AA Tokens page.
+- **`esi-assets.read_corporation_assets.v1`**: Required for the Core Engine to synchronize Corporate Inventory Hangars. Directors grant this via the "Add Corporate Token" button.
+- **`esi-universe.read_structures.v1`**: Required to resolve public Upwell structure names in EVE. Directors grant this via the "Add Corporate Token" button.
+- **`esi-corporations.read_structures.v1`**: Required for the Director Control Panel to discover and resolve names for structures owned by the corporation. Directors grant this via the "Add Corporate Token" button.
 
-*Note: For Corporate Syncs, after adding a token, an Admin must link the Director character in the Django Admin interface under **Corporation Sync Configuration**.*
+### 4. Corporate Inventory Setup
 
-### 4. Background Syncing
+To track your corporate inventory, you **must explicitly configure which hangars to track** (to avoid syncing thousands of irrelevant items and hitting ESI rate limits):
+
+1. Navigate to the **Director Dashboard** and click **Configurations**.
+1. Click the **Discover Hangars** button to scan your corporation's assets via ESI.
+1. Add the specific hangars (e.g. "Corp Hangar 1") that you want to track.
+1. Go to the **Director Inventory** page and click the **Sync Inventory** button to manually force an initial sync. After that, the background Celery task will keep it updated.
+
+*Note: For Corporate Syncs, an Admin must link the Director character in the Django Admin interface under **Corporation Sync Configuration**.*
+
+### 5. Background Syncing
 
 The app relies on Celery tasks to periodically fetch data from EVE Online. To run these tasks automatically, add the following to your `myauth/settings/local.py`:
 

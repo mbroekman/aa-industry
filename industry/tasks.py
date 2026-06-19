@@ -38,6 +38,9 @@ class IndustryESIProvider(ESIClientProvider):
                 "GetCharactersCharacterIdPlanetsPlanetId",
                 "GetUniverseSchematicsSchematicId",
                 "GetCorporationsCorporationIdAssets",
+                "PostUniverseNames",
+                "GetUniverseStructuresStructureId",
+                "GetUniverseStationsStationId",
             ],
         )
 
@@ -382,6 +385,9 @@ def update_character_pi(character_id=None):
                         f"Failed to fetch PI pins for planet {char_planet.planet_id}: {e}"
                     )
 
+        except HTTPNotModified:
+            # 304 Not Modified is expected, nothing changed.
+            pass
         except Exception as e:
             logger.error(f"Failed to fetch PI for {token.character_id}: {e}")
 
@@ -416,7 +422,7 @@ def task_sync_corp_inventory():
 
         try:
             assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
-                corporation_id=corp_id, token=token
+                corporation_id=sync_config.corporation.corporation_id, token=token
             ).result()
 
             # Filter assets matching location_id and flag_id
@@ -468,6 +474,9 @@ def task_sync_corp_inventory():
                         inv.quantity = qty
                         inv.save()
 
+        except HTTPNotModified:
+            # 304 Not Modified is expected, nothing changed.
+            pass
         except Exception as e:
             logger.error(f"Failed to fetch assets for corp {corp_id}: {e}")
 
