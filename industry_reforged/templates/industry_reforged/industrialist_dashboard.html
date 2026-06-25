@@ -1,0 +1,278 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n humanize %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h3>{% trans "Industrialist Dashboard" %}</h3>
+            <a href="{% url 'industry_reforged:industrialist_leaderboard' %}" class="btn btn-success"><i
+                    class="fas fa-trophy"></i> {% trans "Leaderboards & History" %}</a>
+        </div>
+    </div>
+
+
+
+    {% if motd %}
+    <div class="alert alert-info shadow-sm mb-4">
+        <h4 class="alert-heading text-white"><i class="fas fa-bullhorn text-warning"></i> Message of the Day</h4>
+        <p class="mb-0 text-white">{{ motd.message|linebreaksbr }}</p>
+        <hr style="border-color: rgba(212,175,55,0.3);">
+        <small class="text-muted">Last updated: <span class="numeric">{{ motd.updated_at|date:"Y-m-d H:i"
+                }}</span></small>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Job Market -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0"><i class="fas fa-store"></i> {% trans "Job Market (Unclaimed)" %}</h4>
+                    <button type="button" onclick="submitShoppingList('unclaimed')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <div class="table-responsive" id="unclaimedTableContainer">
+                            <table class="table table-striped table-hover m-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center"><input type="checkbox" onclick="toggleSelectAllUnclaimed(this)"></th>
+                                        <th>{% trans "Item" %}</th>
+                                        <th class="text-end">{% trans "Qty" %}</th>
+                                        <th class="text-end">{% trans "Reward Value" %}</th>
+                                        <th class="text-end">{% trans "Action" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for task in unclaimed_tasks %}
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="checkbox" name="task_ids" value="{{ task.id }}" class="unclaimed-checkbox">
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
+                                                    alt="{{ task.item_type.name }}" width="24" height="24"
+                                                    class="me-2 rounded">
+                                                <span>{{ task.item_type.name }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end numeric">{{ task.quantity }}</td>
+                                        <td class="text-end numeric text-warning">
+                                            {{task.gamification_value|floatformat:0|intcomma }}</td>
+                                        <td class="text-end">
+                                            <form method="post" action="{% url 'industry_reforged:claim_task' task.id %}"
+                                                class="d-inline">
+                                                {% csrf_token %}
+                                                <select name="character_id"
+                                                    class="form-select form-select-sm d-inline w-auto me-1 bg-dark text-white border-secondary"
+                                                    required>
+                                                    {% for ownership in request.user.character_ownerships.all %}
+                                                    <option value="{{ ownership.character.character_id }}">
+                                                        {{ownership.character.character_name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-success">Claim</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">No open tasks available. Good
+                                            job!</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Active Production -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0"><i class="fas fa-hammer"></i> {% trans "My Active Production" %}</h4>
+                    <button type="button" onclick="submitShoppingList('active')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <div class="table-responsive" id="activeTableContainer">
+                            <table class="table table-striped table-hover m-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center"><input type="checkbox" onclick="toggleSelectAllActive(this)"></th>
+                                        <th>{% trans "Item" %}</th>
+                                        <th class="text-end">{% trans "Qty" %}</th>
+                                        <th>{% trans "Assigned To" %}</th>
+                                        <th class="text-end">{% trans "Action" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for task in my_tasks %}
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="checkbox" name="task_ids" value="{{ task.id }}" class="active-checkbox">
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
+                                                    alt="{{ task.item_type.name }}" width="24" height="24"
+                                                    class="me-2 rounded">
+                                                <span>{{ task.item_type.name }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end numeric">{{ task.quantity }}</td>
+                                        <td>{{ task.assigned_to.character_name }}</td>
+                                        <td class="text-end">
+                                            <form method="post" action="{% url 'industry_reforged:complete_task' task.id %}"
+                                                class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-primary"><i
+                                                        class="fas fa-check"></i> Complete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">You have no active tasks. Claim
+                                            some from the Job Market!</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- My Completed Tasks -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 h-100">
+                <div class="card-header">
+                    <h4 class="card-title mb-0"><i class="fas fa-check-circle"></i> {% trans "My Completed Tasks" %}</h4>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Item" %}</th>
+                                    <th class="text-end">{% trans "Qty" %}</th>
+                                    <th>{% trans "Assigned To" %}</th>
+                                    <th class="text-end">{% trans "Completed At" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in my_completed_tasks %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
+                                                alt="{{ task.item_type.name }}" width="24" height="24"
+                                                class="me-2 rounded">
+                                            <span class="text-muted text-decoration-line-through">{{ task.item_type.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end numeric text-muted">{{ task.quantity }}</td>
+                                    <td class="text-muted">{{ task.assigned_to.character_name }}</td>
+                                    <td class="text-end text-muted numeric">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No recently completed tasks.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Corp Active Jobs (ESI Sync) -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 mb-4">
+                <div class="card-header">
+                    <h4 class="card-title mb-0"><i class="fas fa-industry"></i> {% trans "Corp Active Jobs Overview" %}
+                    </h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Product" %}</th>
+                                    <th class="text-end">{% trans "Runs" %}</th>
+                                    <th>{% trans "Installer" %}</th>
+                                    <th>{% trans "End Date" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in corp_active_jobs %}
+                                <tr>
+                                    <td>
+                                        {% if job.product_type %}
+                                        <div class="d-flex align-items-center">
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32"
+                                                alt="{{ job.product_type.name }}" width="24" height="24"
+                                                class="me-2 rounded">
+                                            <span>{{ job.product_type.name }}</span>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end numeric">{{ job.runs }}</td>
+                                    <td>{{ job.installer.character_name|default:"Unknown" }}</td>
+                                    <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No active corp jobs found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleSelectAllUnclaimed(source) {
+        checkboxes = document.getElementsByClassName('unclaimed-checkbox');
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+    function toggleSelectAllActive(source) {
+        checkboxes = document.getElementsByClassName('active-checkbox');
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+
+    function submitShoppingList(type) {
+        var checkboxes = document.getElementsByClassName(type + '-checkbox');
+        var selectedIds = [];
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            if(checkboxes[i].checked) {
+                selectedIds.push(checkboxes[i].value);
+            }
+        }
+
+        if (selectedIds.length === 0) {
+            alert("{% trans 'Please select at least one task.' %}");
+            return;
+        }
+
+        var url = "{% url 'industry_reforged:shopping_list' %}?task_ids=" + selectedIds.join("&task_ids=");
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

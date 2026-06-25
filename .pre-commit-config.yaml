@@ -28,6 +28,7 @@ exclude: |
   (?x)(
     .github/|
     LICENSE|
+    README\.md|
     .min(.css|.css.map|.js|.js.map)|
     locale/|
     static/(.*)/libs/
@@ -138,6 +139,7 @@ repos:
       - id: stylelint
         name: Stylelint
         description: Check for problems in CSS files.
+        exclude: industry_reforged/static/industry_reforged/css/industry\.css
         language: node
         args:
           - --formatter=compact
@@ -179,6 +181,7 @@ repos:
       - id: editorconfig-checker
         name: EditorConfig Checker
         description: Check for compliance with the definitions in the EditorConfig file.
+        exclude: .*\.md$
 
   - repo: https://github.com/adamchainz/django-upgrade
     rev: 4864562a5d05a7ff3bce99bc31f892eeb396fc00  # frozen: 1.30.0

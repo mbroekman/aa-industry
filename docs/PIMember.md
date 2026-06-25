@@ -22,28 +22,28 @@ Om alle details op te slaan, stellen we de volgende modellen voor:
 
 1. **CharacterPlanet**
 
-   - Karakter (Koppeling naar EveCharacter)
-   - Planet ID & Systeem ID
-   - Planet Type (Barren, Lava, Oceanic, etc.)
-   - Upgrade Level (Command Center level 0-5)
-   - Aantal Pins (gebouwen)
-   - Laatste ESI Update
+- Karakter (Koppeling naar EveCharacter)
+- Planet ID & Systeem ID
+- Planet Type (Barren, Lava, Oceanic, etc.)
+- Upgrade Level (Command Center level 0-5)
+- Aantal Pins (gebouwen)
+- Laatste ESI Update
 
 1. **PlanetPin (Gebouwen op de planeet)**
 
-   - Planeet (Koppeling naar CharacterPlanet)
-   - Pin ID
-   - Type (Extractor Control Unit, Spaceport, Basic/Advanced/High-Tech Factory, Storage Facility, Command Center)
-   - **Voor Extractors:**
-     - Welk materiaal wordt gewonnen (Product Type ID)
-     - Expiry Time (Wanneer stopt de extractor?)
-     - Cycle Time
-     - Huidige Yield
-   - **Voor Factories:**
-     - Welk Schematic draait er?
-     - Laatste keer dat de cyclus draaide
-   - **Voor Storage/Spaceports:**
-     - Opslagcapaciteit en huidige vulling (om te waarschuwen als hij vol zit)
+- Planeet (Koppeling naar CharacterPlanet)
+- Pin ID
+- Type (Extractor Control Unit, Spaceport, Basic/Advanced/High-Tech Factory, Storage Facility, Command Center)
+- **Voor Extractors:**
+  - Welk materiaal wordt gewonnen (Product Type ID)
+  - Expiry Time (Wanneer stopt de extractor?)
+  - Cycle Time
+  - Huidige Yield
+- **Voor Factories:**
+  - Welk Schematic draait er?
+  - Laatste keer dat de cyclus draaide
+- **Voor Storage/Spaceports:**
+  - Opslagcapaciteit en huidige vulling (om te waarschuwen als hij vol zit)
 
 ## Functionaliteiten & UI (Dashboard)
 
@@ -52,12 +52,15 @@ Op het PI Dashboard (of als nieuwe tab onder Personal Industry) willen we de vol
 1. **Overzicht van Planeten:**
    Een lijst met alle gekoloniseerde planeten per karakter, inclusief het Command Center level.
 1. **Detailweergave per Planeet:**
-   - **Extractie Status:** Een aftelklok (countdown) die aangeeft wanneer de extractors stoppen met boren.
-   - **Productie:** Welke materialen er momenteel worden gefabriceerd (bijv. "Coolant", "Enriched Uranium").
-   - **Opslag Waarschuwingen:** Visuele progressie-balkjes (progress bars) voor de Spaceports en Storage Facilities. Als een opslag meer dan 90% vol is, kleurt deze rood.
+
+- **Extractie Status:** Een aftelklok (countdown) die aangeeft wanneer de extractors stoppen met boren.
+- **Productie:** Welke materialen er momenteel worden gefabriceerd (bijv. "Coolant", "Enriched Uranium").
+- **Opslag Waarschuwingen:** Visuele progressie-balkjes (progress bars) voor de Spaceports en Storage Facilities. Als een opslag meer dan 90% vol is, kleurt deze rood.
+
 1. **Discord Notificaties (Optioneel):**
-   - "Je extractors op planeet X (Systeem Y) zijn gestopt."
-   - "Je Spaceport op planeet X is voor 95% vol."
+
+- "Je extractors op planeet X (Systeem Y) zijn gestopt."
+- "Je Spaceport op planeet X is voor 95% vol."
 
 ## Implementatie Stappen
 

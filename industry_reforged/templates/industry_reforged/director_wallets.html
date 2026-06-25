@@ -1,0 +1,129 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n humanize %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h3><i class="fas fa-wallet"></i> {% trans "Corporate Wallets" %}</h3>
+            <div>
+                <a href="{% url 'industry_reforged:trigger_wallet_sync' %}" class="btn btn-success">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </a>
+                <a href="{% url 'industry_reforged:director_dashboard' %}" class="btn btn-outline-light ms-2">
+                    <i class="fas fa-arrow-left"></i> Back to Director Panel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balances Pills -->
+    <div class="row mb-4">
+        {% for div in divisions %}
+        <div class="col-md-3 col-sm-6 mb-3">
+            <a href="{% url 'industry_reforged:director_wallets' %}?division={{ div.id }}" class="text-decoration-none">
+                <div class="card border-0 border-secondary {% if selected_division_id == div.id %}border-primary{% endif %}"
+                    >
+                    <div class="card-body text-center p-3">
+                        <h6 class="text-muted mb-1">{{ div.name }}</h6>
+                        <h4 class="mb-0 numeric text-white">{{ div.balance|floatformat:2|intcomma }} ISK</h4>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No wallet data available. Make sure the Corporate Sync character has the wallet scope and then sync data.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Journals Table -->
+    {% if selected_division_id %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">{% trans "Journal Entries" %}</h4>
+                </div>
+                <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover dataTable m-0" id="journalTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Balance</th>
+                                    <th>Description / Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for j in journals %}
+                                <tr>
+                                    <td>{{ j.date|date:"Y-m-d H:i" }}</td>
+                                    <td><span class="badge bg-secondary">{{ j.ref_type }}</span></td>
+                                    <td class="numeric {% if j.amount > 0 %}text-success{% elif j.amount < 0 %}text-danger{% endif %}">
+                                        {{ j.amount|floatformat:2|intcomma }} ISK
+                                    </td>
+                                    <td class="numeric text-muted">{{ j.balance|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        {% if j.description %}{{ j.description }}{% endif %}
+                                        {% if j.description and j.reason %}<br>{% endif %}
+                                        {% if j.reason %}<small class="text-muted">{{ j.reason }}</small>{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        $('#journalTable').DataTable({
+            "order": [[ 0, "desc" ]],
+            "pageLength": 50,
+            "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
+            "language": {
+                "search": "Filter Journals:"
+            },
+            initComplete: function () {
+                this.api().columns(1).every( function () {
+                    var column = this;
+                    // Create a select element and append it to the DataTables filter section
+                    var select = $('<select class="form-select form-select-sm d-inline-block w-auto ms-2" ><option value="">All Types</option></select>')
+                        .appendTo( $('#journalTable_filter') )
+                        .on( 'change', function () {
+                            var val = $.fn.dataTable.util.escapeRegex(
+                                $(this).val()
+                            );
+                            column
+                                .search( val ? '^'+val+'$' : '', true, false )
+                                .draw();
+                        } );
+
+                    column.data().unique().sort().each( function ( d, j ) {
+                        // Extract text from the span badge
+                        var textValue = $('<div>').html(d).text().trim();
+                        if (textValue) {
+                            select.append( '<option value="'+textValue+'">'+textValue+'</option>' );
+                        }
+                    } );
+                } );
+            }
+        });
+    });
+</script>
+{% endblock %}

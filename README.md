@@ -9,6 +9,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and receive real-time quotes.
 - **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, and compete on the Gamification Leaderboards.
 - **Director Control Panel**: Complete ERP solution for directors to manage orders, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices.
+- **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
 - **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, and countdown timers for active extraction.
 - **Discord Integration**: Receive automatic Direct Messages via Discord when a personal industry job finishes.
@@ -38,7 +39,7 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
    From your application directory (or via PyPI if published):
 
    ```bash
-   pip install -e /path/to/aa-industry
+   pip install -e /path/to/aa-industry-reforged
    ```
 
 1. **Configure Settings**:
@@ -47,7 +48,7 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
    ```python
    INSTALLED_APPS += [
        "eveuniverse",
-       "industry",
+       "industry_reforged",
    ]
    ```
 
@@ -90,6 +91,7 @@ This plugin requires specific ESI scopes depending on the features you want to u
 - **`esi-assets.read_corporation_assets.v1`**: Required for the Core Engine to synchronize Corporate Inventory Hangars. Directors grant this via the "Add Corporate Token" button.
 - **`esi-universe.read_structures.v1`**: Required to resolve public Upwell structure names in EVE. Directors grant this via the "Add Corporate Token" button.
 - **`esi-corporations.read_structures.v1`**: Required for the Director Control Panel to discover and resolve names for structures owned by the corporation. Directors grant this via the "Add Corporate Token" button.
+- **`esi-wallet.read_corporation_wallets.v1`**: Required to track corporate wallet balances and journal transactions. Directors grant this via the "Add Corporate Token" button.
 
 ### 4. Corporate Inventory Setup
 
@@ -100,7 +102,7 @@ To track your corporate inventory, you **must explicitly configure which hangars
 1. Add the specific hangars (e.g. "Corp Hangar 1") that you want to track.
 1. Go to the **Director Inventory** page and click the **Sync Inventory** button to manually force an initial sync. After that, the background Celery task will keep it updated.
 
-*Note: For Corporate Syncs, an Admin must link the Director character in the Django Admin interface under **Corporation Sync Configuration**.*
+*Note: Corporate Sync Configuration is automatically created when a Director clicks the 'Add Corporate Token' button.*
 
 ### 5. Background Syncing
 
@@ -113,28 +115,33 @@ if "CELERYBEAT_SCHEDULE" not in locals():
     CELERYBEAT_SCHEDULE = {}
 
 CELERYBEAT_SCHEDULE["industry_update_character_jobs"] = {
-    "task": "industry.tasks.update_character_jobs",
+    "task": "industry_reforged.tasks.update_character_jobs",
     "schedule": crontab(minute="*/30"),
 }
 
 CELERYBEAT_SCHEDULE["industry_update_corporation_jobs"] = {
-    "task": "industry.tasks.update_corporation_jobs",
+    "task": "industry_reforged.tasks.update_corporation_jobs",
     "schedule": crontab(minute="*/30"),
 }
 
 CELERYBEAT_SCHEDULE["industry_update_character_pi"] = {
-    "task": "industry.tasks.update_character_pi",
+    "task": "industry_reforged.tasks.update_character_pi",
     "schedule": crontab(minute="0"),
 }
 
 CELERYBEAT_SCHEDULE["industry_sync_corp_inventory"] = {
-    "task": "industry.tasks.task_sync_corp_inventory",
+    "task": "industry_reforged.tasks.task_sync_corp_inventory",
     "schedule": crontab(minute="*/15"),
 }
 
 CELERYBEAT_SCHEDULE["industry_pull_market_data"] = {
-    "task": "industry.tasks.task_pull_market_data",
+    "task": "industry_reforged.tasks.task_pull_market_data",
     "schedule": crontab(hour="11", minute="30"),  # Around EVE Downtime
+}
+
+CELERYBEAT_SCHEDULE["industry_sync_corp_wallets"] = {
+    "task": "industry_reforged.tasks.task_sync_corp_wallets",
+    "schedule": crontab(minute="*/30"),
 }
 ```
 

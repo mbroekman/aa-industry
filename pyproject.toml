@@ -5,16 +5,16 @@ requires = [
 ]
 
 [project]
-name = "aa-industry"
+name = "aa-industry-reforged"
 description = "Industry Plugin for Alliance Auth (GitHub Version)"
 readme = "README.md"
 keywords = [
     "allianceauth",
-    "industry",
+    "industry_reforged",
 ]
 license = { file = "LICENSE" }
 authors = [
-    { name = "Peter Pfeufer", email = "develop@ppfeufer.de" },
+    { name = "Maddog Broekman", email = "maddogbroekman@gmail.com" },
 ]
 requires-python = ">=3.10,<3.14"
 classifiers = [
@@ -40,11 +40,11 @@ dependencies = [
     "allianceauth>=5",
     "django-eveuniverse",
 ]
-urls.Changelog = "https://github.com/3gods/aa-industry.git/blob/master/CHANGELOG.md"
-urls.Tracker = "https://github.com/3gods/aa-industry.git/issues"
+urls.Changelog = "https://github.com/mbroekman/aa-industry.git/blob/master/CHANGELOG.md"
+urls.Tracker = "https://github.com/mbroekman/aa-industry/issues"
 
 [tool.hatch]
-version.path = "industry/__init__.py"
+version.path = "industry_reforged/__init__.py"
 build.include = [
-    "/industry",
+    "/industry_reforged",
 ]

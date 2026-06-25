@@ -1,0 +1,73 @@
+/*
+    Alliance Auth Industry Plugin - Styles
+*/
+
+/* Dashboard Stat Boxes */
+.stat-box {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.125); /* Standard Bootstrap border color */
+    background: rgba(0, 0, 0, 0.03); /* Slight background for distinction */
+    transition: all 0.2s ease;
+}
+
+.stat-box:hover {
+    border-color: var(--bs-primary);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.stat-box .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--bs-primary);
+    font-family: monospace;
+}
+
+.stat-box .stat-label {
+    font-size: 0.85rem;
+    color: var(--bs-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Loading Overlay */
+.industry-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.industry-spinner-container {
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    padding: 2.5rem 4rem;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.industry-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--bs-primary);
+    border-radius: 50%;
+    animation: industry-spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes industry-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
