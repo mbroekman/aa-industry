@@ -22,6 +22,11 @@ urlpatterns = [
     path("orders/<int:order_id>/accept/", views.accept_quote, name="accept_quote"),
     path("orders/<int:order_id>/reject/", views.reject_quote, name="reject_quote"),
     path(
+        "orders/<int:order_id>/provide-quote/",
+        views.provide_quote,
+        name="provide_quote",
+    ),
+    path(
         "industrialist/", views.industrialist_dashboard, name="industrialist_dashboard"
     ),
     path("industrialist/claim/<int:task_id>/", views.claim_task, name="claim_task"),

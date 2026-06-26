@@ -11,6 +11,7 @@ from .models import (
     CorpMOTD,
     CorporationIndustryJob,
     CorporationSyncConfig,
+    CorporationWebhookConfig,
     CorpPricingConfig,
     CorpTypeDiscount,
     MemberOrder,
@@ -120,3 +121,14 @@ class CorpInventoryAdmin(admin.ModelAdmin):
 @admin.register(TaxConfig)
 class TaxConfigAdmin(admin.ModelAdmin):
     list_display = ("corporation", "industry_tax_rate", "broker_fee_rate")
+
+
+@admin.register(CorporationWebhookConfig)
+class CorporationWebhookConfigAdmin(admin.ModelAdmin):
+    list_display = (
+        "corporation",
+        "orders_webhook",
+        "jobs_webhook",
+        "wallets_webhook",
+        "inventory_webhook",
+    )

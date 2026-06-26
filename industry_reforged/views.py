@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
 from esi.decorators import token_required
@@ -142,7 +143,9 @@ def trigger_pi_sync(request: WSGIRequest) -> HttpResponse:
 
     messages.success(
         request,
-        "Planetary Interaction sync has been queued in the background. Please refresh in a few minutes.",
+        _(
+            "Planetary Interaction sync has been queued in the background. Please refresh in a few minutes."
+        ),
     )
     return redirect("industry_reforged:personal_dashboard")
 
@@ -172,7 +175,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     task_ids = request.GET.getlist("task_ids")
 
     if not order_ids and not task_ids:
-        messages.warning(request, "No items selected for shopping list.")
+        messages.warning(request, _("No items selected for shopping list."))
         return redirect(request.headers.get("referer", "industry_reforged:index"))
 
     user_characters = request.user.character_ownerships.all().values_list(
@@ -256,7 +259,9 @@ def create_order(request: WSGIRequest) -> HttpResponse:
         character_id = request.POST.get("character_id")
 
         if not fit_text or not character_id:
-            messages.error(request, "Please provide an EFT fit and select a character.")
+            messages.error(
+                request, _("Please provide an EFT fit and select a character.")
+            )
             return redirect("industry_reforged:create_order")
 
         # Alliance Auth
@@ -266,7 +271,7 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             character_id=character_id, character_ownership__user=request.user
         ).first()
         if not character:
-            messages.error(request, "Invalid character selected.")
+            messages.error(request, _("Invalid character selected."))
             return redirect("industry_reforged:create_order")
 
         from .models import MemberOrder, OrderFit, OrderItem
@@ -282,7 +287,7 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             )
 
         if not parsed_items:
-            messages.error(request, "No valid items found in the fit.")
+            messages.error(request, _("No valid items found in the fit."))
             return redirect("industry_reforged:create_order")
 
         # Optional: Apply corp discount if user's main character is in a corp with config
@@ -292,7 +297,7 @@ def create_order(request: WSGIRequest) -> HttpResponse:
         total_price, item_details = calculate_quote(parsed_items, corporation)
 
         order = MemberOrder.objects.create(
-            character=character, status="QUOTED", total_price=total_price
+            character=character, status="REQUESTED", total_price=total_price
         )
 
         OrderFit.objects.create(order=order, raw_fit_text=fit_text)
@@ -310,7 +315,31 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             )
         OrderItem.objects.bulk_create(order_items)
 
-        messages.success(request, "Order parsed and quoted successfully!")
+        # Discord Webhook Notification
+        if corporation:
+            from .models import CorporationWebhookConfig
+
+            webhook_config = CorporationWebhookConfig.objects.filter(
+                corporation=corporation
+            ).first()
+            if webhook_config and webhook_config.orders_webhook:
+                from .utils.discord import send_discord_webhook
+
+                embed = {
+                    "title": f"New Quote Requested: Order #{order.id}",
+                    "description": f"**{character.character_name}** has requested a quote.",
+                    "color": 3447003,  # Blue
+                    "fields": [
+                        {
+                            "name": "Total Quoted Price",
+                            "value": f"{total_price:,.2f} ISK",
+                            "inline": False,
+                        }
+                    ],
+                }
+                send_discord_webhook(webhook_config.orders_webhook, embed)
+
+        messages.success(request, _("Order parsed and quoted successfully!"))
         return redirect("industry_reforged:view_quote", order_id=order.id)
 
     characters = request.user.character_ownerships.all().select_related("character")
@@ -327,12 +356,17 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     )
     from .models import MemberOrder
 
-    order = MemberOrder.objects.filter(
-        id=order_id, character_id__in=user_characters
-    ).first()
+    order = MemberOrder.objects.filter(id=order_id).first()
 
     if not order:
-        messages.error(request, "Order not found or access denied.")
+        messages.error(request, _("Order not found."))
+        return redirect("industry_reforged:orders_dashboard")
+
+    # Access control: owner OR director
+    if order.character_id not in user_characters and not request.user.has_perm(
+        "industry_reforged.corp_access"
+    ):
+        messages.error(request, _("Access denied."))
         return redirect("industry_reforged:orders_dashboard")
 
     from .utils.bom_engine import calculate_order_bom
@@ -350,13 +384,77 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
 
+    # Calculate original price from items
+    original_price = sum(item.line_total for item in order.items.all())
+    savings = original_price - order.total_price
+
     context = {
         "title": f"Order #{order.id}",
         "order": order,
         "bom_materials": bom_materials.values() if bom_materials else [],
         "total_bom_price": total_bom_price,
+        "original_price": original_price,
+        "savings": savings,
+        "is_owner": order.character_id in user_characters,
     }
     return render(request, "industry_reforged/view_quote.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Director provides a final quote for a requested order"""
+    if request.method == "POST":
+        from .models import MemberOrder
+
+        order = MemberOrder.objects.filter(id=order_id, status="REQUESTED").first()
+        if not order:
+            messages.error(request, _("Order not found or is not in REQUESTED status."))
+            return redirect("industry_reforged:director_dashboard")
+
+        try:
+            new_total = float(request.POST.get("total_price", 0))
+            if new_total < 0:
+                raise ValueError("Price cannot be negative")
+
+            order.total_price = new_total
+            order.status = "QUOTED"
+            # Django
+            from django.utils import timezone
+
+            order.quoted_at = timezone.now()
+            order.save()
+
+            # Optionally send a Discord webhook notification here to inform the user
+            main_char = request.user.profile.main_character
+            corporation = main_char.corporation if main_char else None
+            if corporation:
+                from .models import CorporationWebhookConfig
+
+                webhook_config = CorporationWebhookConfig.objects.filter(
+                    corporation=corporation
+                ).first()
+                if webhook_config and webhook_config.orders_webhook:
+                    from .utils.discord import send_discord_webhook
+
+                    embed = {
+                        "title": f"Quote Provided: Order #{order.id}",
+                        "description": f"A quote of **{new_total:,.2f} ISK** has been provided for your order. Please review and accept.",
+                        "color": 3447003,  # Blue
+                    }
+                    send_discord_webhook(webhook_config.orders_webhook, embed)
+
+            messages.success(
+                request,
+                _("Quote of %(total)s ISK submitted successfully.")
+                % {"total": f"{new_total:,.2f}"},
+            )
+        except ValueError:
+            messages.error(request, _("Invalid price provided."))
+
+        return redirect("industry_reforged:view_quote", order_id=order.id)
+
+    return redirect("industry_reforged:director_dashboard")
 
 
 @login_required
@@ -373,6 +471,10 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     if order:
         order.status = "ACCEPTED"
+        # Django
+        from django.utils import timezone
+
+        order.accepted_at = timezone.now()
         order.save()
 
         # Create Production Tasks
@@ -389,9 +491,30 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             )
         ProductionTask.objects.bulk_create(tasks_to_create)
 
+        # Discord Webhook Notification
+        main_char = request.user.profile.main_character
+        corporation = main_char.corporation if main_char else None
+        if corporation:
+            from .models import CorporationWebhookConfig
+
+            webhook_config = CorporationWebhookConfig.objects.filter(
+                corporation=corporation
+            ).first()
+            if webhook_config and webhook_config.orders_webhook:
+                from .utils.discord import send_discord_webhook
+
+                embed = {
+                    "title": f"Quote Accepted: Order #{order.id}",
+                    "description": f"**{order.character.character_name}** has accepted the quote. Tasks generated.",
+                    "color": 3066993,  # Green
+                }
+                send_discord_webhook(webhook_config.orders_webhook, embed)
+
         messages.success(
             request,
-            "Quote accepted! Your order is now in progress and tasks have been generated for builders.",
+            _(
+                "Quote accepted! Your order is now in progress and tasks have been generated for builders."
+            ),
         )
     return redirect("industry_reforged:orders_dashboard")
 
@@ -411,7 +534,27 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     if order:
         order.status = "REJECTED"
         order.save()
-        messages.info(request, "Quote rejected and order cancelled.")
+
+        # Discord Webhook Notification
+        main_char = request.user.profile.main_character
+        corporation = main_char.corporation if main_char else None
+        if corporation:
+            from .models import CorporationWebhookConfig
+
+            webhook_config = CorporationWebhookConfig.objects.filter(
+                corporation=corporation
+            ).first()
+            if webhook_config and webhook_config.orders_webhook:
+                from .utils.discord import send_discord_webhook
+
+                embed = {
+                    "title": f"Quote Rejected: Order #{order.id}",
+                    "description": f"**{order.character.character_name}** has rejected the quote.",
+                    "color": 15158332,  # Red
+                }
+                send_discord_webhook(webhook_config.orders_webhook, embed)
+
+        messages.info(request, _("Quote rejected and order cancelled."))
     return redirect("industry_reforged:orders_dashboard")
 
 
@@ -481,7 +624,7 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             character_id=character_id, character_ownership__user=request.user
         ).first()
         if not character:
-            messages.error(request, "Invalid character selected.")
+            messages.error(request, _("Invalid character selected."))
             return redirect("industry_reforged:industrialist_dashboard")
 
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
@@ -497,7 +640,7 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 request, f"Successfully claimed {task.quantity}x {task.item_type.name}."
             )
         else:
-            messages.error(request, "Task is no longer available or does not exist.")
+            messages.error(request, _("Task is no longer available or does not exist."))
 
     return redirect("industry_reforged:industrialist_dashboard")
 
@@ -534,7 +677,7 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 request, f"Marked {task.quantity}x {task.item_type.name} as completed!"
             )
         else:
-            messages.error(request, "Task not found or not assigned to you.")
+            messages.error(request, _("Task not found or not assigned to you."))
 
     return redirect("industry_reforged:industrialist_dashboard")
 
@@ -594,7 +737,9 @@ def trigger_inventory_sync(request: WSGIRequest) -> HttpResponse:
     task_sync_corp_inventory.delay()
     messages.success(
         request,
-        "Corporate Inventory sync has been queued in the background. Please refresh in a few minutes.",
+        _(
+            "Corporate Inventory sync has been queued in the background. Please refresh in a few minutes."
+        ),
     )
     return redirect("industry_reforged:director_inventory")
 
@@ -680,7 +825,7 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
     corporation = main_char.corporation if main_char else None
 
     if not corporation:
-        messages.error(request, "You are not part of a corporation.")
+        messages.error(request, _("You are not part of a corporation."))
         return redirect("industry_reforged:director_config")
 
     if request.method == "POST":
@@ -704,7 +849,9 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
     if not sync_config:
         messages.warning(
             request,
-            "No corporate sync configuration found. Please add a corporate token first.",
+            _(
+                "No corporate sync configuration found. Please add a corporate token first."
+            ),
         )
         return redirect("industry_reforged:director_config")
 
@@ -721,7 +868,9 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
     if not token:
         messages.warning(
             request,
-            "Corporate sync character does not have the required asset and structure scopes. Please add a new corporate token.",
+            _(
+                "Corporate sync character does not have the required asset and structure scopes. Please add a new corporate token."
+            ),
         )
         return redirect("industry_reforged:director_config")
 
@@ -825,7 +974,9 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
         discovered_hangars.sort(key=lambda x: x["item_count"], reverse=True)
 
     except Exception as e:
-        messages.error(request, f"Failed to fetch assets via ESI: {e}")
+        messages.error(
+            request, _("Failed to fetch assets via ESI: %(error)s") % {"error": e}
+        )
 
     context = {"discovered_hangars": discovered_hangars}
     return render(request, "industry_reforged/director_discover_hangars.html", context)
@@ -883,6 +1034,8 @@ def trigger_wallet_sync(request: WSGIRequest) -> HttpResponse:
     task_sync_corp_wallets.delay()
     messages.success(
         request,
-        "Corporate Wallet sync has been queued in the background. Please refresh in a few minutes.",
+        _(
+            "Corporate Wallet sync has been queued in the background. Please refresh in a few minutes."
+        ),
     )
     return redirect("industry_reforged:director_wallets")

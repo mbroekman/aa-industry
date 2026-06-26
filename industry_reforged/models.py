@@ -7,6 +7,7 @@ from eveuniverse.models import EveType
 
 # Django
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
@@ -54,8 +55,8 @@ class CharacterIndustryJob(models.Model):
     location_id = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Character Industry Job"
-        verbose_name_plural = "Character Industry Jobs"
+        verbose_name = _("Character Industry Job")
+        verbose_name_plural = _("Character Industry Jobs")
 
     @property
     def activity_name(self):
@@ -119,8 +120,8 @@ class CorporationIndustryJob(models.Model):
     wallet_division = models.IntegerField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Corporation Industry Job"
-        verbose_name_plural = "Corporation Industry Jobs"
+        verbose_name = _("Corporation Industry Job")
+        verbose_name_plural = _("Corporation Industry Jobs")
 
     @property
     def activity_name(self):
@@ -166,11 +167,44 @@ class CorporationSyncConfig(models.Model):
     )
 
     class Meta:
-        verbose_name = "Corporation Sync Configuration"
-        verbose_name_plural = "Corporation Sync Configurations"
+        verbose_name = _("Corporation Sync Configuration")
+        verbose_name_plural = _("Corporation Sync Configurations")
 
     def __str__(self):
         return f"{self.corporation.corporation_name} Sync Config"
+
+
+class CorporationWebhookConfig(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo,
+        on_delete=models.CASCADE,
+        related_name="industry_webhooks",
+    )
+    orders_webhook = models.URLField(
+        blank=True, null=True, help_text="Webhook URL for new Orders and Quotes."
+    )
+    jobs_webhook = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Webhook URL for Corporate Industry Jobs completion.",
+    )
+    wallets_webhook = models.URLField(
+        blank=True, null=True, help_text="Webhook URL for low wallet balance warnings."
+    )
+    wallet_warning_threshold = models.BigIntegerField(
+        default=500000000,
+        help_text="Balance below which a warning is sent (default: 500 million ISK).",
+    )
+    inventory_webhook = models.URLField(
+        blank=True, null=True, help_text="Webhook URL for low inventory warnings."
+    )
+
+    class Meta:
+        verbose_name = _("Discord Webhook Configuration")
+        verbose_name_plural = _("Discord Webhook Configurations")
+
+    def __str__(self):
+        return f"{self.corporation.corporation_name} Webhooks"
 
 
 class CharacterPlanet(models.Model):
@@ -187,8 +221,8 @@ class CharacterPlanet(models.Model):
     last_update = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Character Planet"
-        verbose_name_plural = "Character Planets"
+        verbose_name = _("Character Planet")
+        verbose_name_plural = _("Character Planets")
         unique_together = (("character", "planet_id"),)
 
     def __str__(self):
@@ -240,8 +274,8 @@ class PlanetPin(models.Model):
     notification_sent = models.BooleanField(default=False)
 
     class Meta:
-        verbose_name = "Planet Pin"
-        verbose_name_plural = "Planet Pins"
+        verbose_name = _("Planet Pin")
+        verbose_name_plural = _("Planet Pins")
         unique_together = (("planet", "pin_id"),)
 
     def __str__(self):
@@ -306,8 +340,8 @@ class CorpPricingConfig(models.Model):
     )
 
     class Meta:
-        verbose_name = "Corp Pricing Config"
-        verbose_name_plural = "Corp Pricing Configs"
+        verbose_name = _("Corp Pricing Config")
+        verbose_name_plural = _("Corp Pricing Configs")
 
     def __str__(self):
         return f"{self.corporation.corporation_name} Pricing"
@@ -323,8 +357,8 @@ class CorpTypeDiscount(models.Model):
     )
 
     class Meta:
-        verbose_name = "Corp Type Discount"
-        verbose_name_plural = "Corp Type Discounts"
+        verbose_name = _("Corp Type Discount")
+        verbose_name_plural = _("Corp Type Discounts")
         unique_together = (("config", "eve_type"),)
 
     def __str__(self):
@@ -350,12 +384,14 @@ class MemberOrder(models.Model):
     )
     total_price = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
+    quoted_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, null=True)
 
     class Meta:
-        verbose_name = "Member Order"
-        verbose_name_plural = "Member Orders"
+        verbose_name = _("Member Order")
+        verbose_name_plural = _("Member Orders")
 
     def __str__(self):
         return f"Order #{self.id} by {self.character.character_name} - {self.status}"
@@ -379,8 +415,8 @@ class OrderItem(models.Model):
     discount_applied = models.FloatField(default=0.0)
 
     class Meta:
-        verbose_name = "Order Item"
-        verbose_name_plural = "Order Items"
+        verbose_name = _("Order Item")
+        verbose_name_plural = _("Order Items")
 
     def __str__(self):
         return f"{self.quantity}x {self.item_type.name} for Order #{self.order_id}"
@@ -397,8 +433,8 @@ class OrderFit(models.Model):
     raw_fit_text = models.TextField()
 
     class Meta:
-        verbose_name = "Order Fit"
-        verbose_name_plural = "Order Fits"
+        verbose_name = _("Order Fit")
+        verbose_name_plural = _("Order Fits")
 
     def __str__(self):
         return f"Fit for Order #{self.order_id}"
@@ -415,8 +451,8 @@ class CorpMOTD(models.Model):
     )
 
     class Meta:
-        verbose_name = "Corp MOTD"
-        verbose_name_plural = "Corp MOTDs"
+        verbose_name = _("Corp MOTD")
+        verbose_name_plural = _("Corp MOTDs")
 
     def __str__(self):
         return f"MOTD for {self.corporation.corporation_name}"
@@ -485,8 +521,8 @@ class ProductionTask(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Production Task"
-        verbose_name_plural = "Production Tasks"
+        verbose_name = _("Production Task")
+        verbose_name_plural = _("Production Tasks")
 
     def __str__(self):
         return f"{self.quantity}x {self.item_type.name} - {self.status}"
@@ -520,6 +556,7 @@ class CorpItemConfig(models.Model):
     target_threshold = models.IntegerField(
         default=0, help_text="Minimum stock level required in Hangars"
     )
+    last_low_stock_warning = models.DateTimeField(null=True, blank=True)
     auto_produce = models.BooleanField(
         default=False,
         help_text="Automatically create ProductionTask if stock < threshold",
@@ -533,8 +570,8 @@ class CorpItemConfig(models.Model):
     )
 
     class Meta:
-        verbose_name = "Corp Item Config"
-        verbose_name_plural = "Corp Item Configs"
+        verbose_name = _("Corp Item Config")
+        verbose_name_plural = _("Corp Item Configs")
         unique_together = (("corporation", "item_type"),)
 
     def __str__(self):
@@ -557,8 +594,8 @@ class CorpHangarConfig(models.Model):
     )
 
     class Meta:
-        verbose_name = "Corp Hangar Config"
-        verbose_name_plural = "Corp Hangar Configs"
+        verbose_name = _("Corp Hangar Config")
+        verbose_name_plural = _("Corp Hangar Configs")
 
     def __str__(self):
         return f"{self.corporation.corporation_ticker} Hangar: {self.description or self.flag_id}"
@@ -580,8 +617,8 @@ class CorpInventory(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Corp Inventory"
-        verbose_name_plural = "Corp Inventories"
+        verbose_name = _("Corp Inventory")
+        verbose_name_plural = _("Corp Inventories")
         unique_together = (("corporation", "item_type", "location_id", "flag_id"),)
 
     def __str__(self):
@@ -598,8 +635,8 @@ class TaxConfig(models.Model):
     broker_fee_rate = models.FloatField(default=0.0, help_text="Broker fee %")
 
     class Meta:
-        verbose_name = "Tax Config"
-        verbose_name_plural = "Tax Configs"
+        verbose_name = _("Tax Config")
+        verbose_name_plural = _("Tax Configs")
 
     def __str__(self):
         return f"{self.corporation.corporation_ticker} Tax Config"
@@ -613,10 +650,11 @@ class CorpWalletDivision(models.Model):
     name = models.CharField(max_length=100)
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
     last_updated = models.DateTimeField(auto_now=True)
+    last_warning = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Corp Wallet Division"
-        verbose_name_plural = "Corp Wallet Divisions"
+        verbose_name = _("Corp Wallet Division")
+        verbose_name_plural = _("Corp Wallet Divisions")
         unique_together = (("corporation", "division"),)
 
     def __str__(self):
@@ -644,8 +682,8 @@ class CorpWalletJournal(models.Model):
     tax_receiver_id = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Corp Wallet Journal"
-        verbose_name_plural = "Corp Wallet Journals"
+        verbose_name = _("Corp Wallet Journal")
+        verbose_name_plural = _("Corp Wallet Journals")
         unique_together = (("division", "journal_id"),)
         ordering = ["-date"]
 

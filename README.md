@@ -6,15 +6,18 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 
 - **Personal Dashboard**: Users can easily track their active, completed, and delivered industry jobs.
 - **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs from a centralized overview.
-- **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and receive real-time quotes.
+- **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow (Director approval -> User acceptance).
 - **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, and compete on the Gamification Leaderboards.
-- **Director Control Panel**: Complete ERP solution for directors to manage orders, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices.
+- **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices.
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
 - **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, and countdown timers for active extraction.
-- **Discord Integration**: Receive automatic Direct Messages via Discord when a personal industry job finishes.
+- **Discord Integration**: 
+  - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
+  - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed or quotes are updated.
+- **Multilingual Support (i18n)**: Fully translatable UI using Django gettext (`django.po`). Prepare custom translations for your community (e.g., English, Dutch, etc.).
 - **DataTables**: Clean, sortable, and searchable tables for quick insights.
-- **Countdown Timers**: Real-time countdown timers indicating exactly when active jobs will finish.
+- **Modern UI**: Consistent, tab-based layouts integrating natively with standard Alliance Auth themes.
 - **SDE Integration**: Resolves blueprint and product Type IDs into readable names and official EVE Online icons.
 
 ## Prerequisites

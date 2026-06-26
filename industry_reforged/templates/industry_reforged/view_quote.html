@@ -5,168 +5,243 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3>{% trans "Quote for Order #" %}<span class="numeric">{{ order.id }}</span></h3>
+            <h3>{% trans "Order #" %}<span class="numeric">{{ order.id }}</span></h3>
             <div>
-                {% if order.status == 'QUOTED' %}
-                    <a href="{% url 'industry_reforged:reject_quote' order.id %}" class="btn btn-outline-danger me-2"><i class="fas fa-times"></i> {% trans "Reject" %}</a>
-                    <a href="{% url 'industry_reforged:accept_quote' order.id %}" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Accept Quote" %}</a>
-                {% else %}
-                    <a href="{% url 'industry_reforged:orders_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back to Orders" %}</a>
+                {% if order.status == 'REQUESTED' %}
+                    {% if perms.industry_reforged.corp_access %}
+                        <span class="text-warning fw-bold me-3"><i class="fas fa-exclamation-triangle"></i> {% trans "Requires Quote" %}</span>
+                    {% else %}
+                        <span class="text-muted fst-italic me-3">{% trans "Pending Quote from Director" %}</span>
+                    {% endif %}
+                {% elif order.status == 'QUOTED' %}
+                    {% if is_owner %}
+                        <a href="{% url 'industry_reforged:reject_quote' order.id %}" class="btn btn-outline-danger me-2"><i class="fas fa-times"></i> {% trans "Reject" %}</a>
+                        <a href="{% url 'industry_reforged:accept_quote' order.id %}" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Accept Quote" %}</a>
+                    {% else %}
+                        <span class="text-muted fst-italic me-3">{% trans "Pending Acceptance by User" %}</span>
+                    {% endif %}
                 {% endif %}
+                <a href="{% url 'industry_reforged:orders_dashboard' %}" onclick="history.back(); return false;" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
             </div>
         </div>
     </div>
 
-
-
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card border-0 mb-4 h-100">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> {% trans "Itemized Invoice" %}</h3>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped m-0">
-                            <thead>
-                                <tr>
-                                    <th>{% trans "Item" %}</th>
-                                    <th class="text-end">{% trans "Quantity" %}</th>
-                                    <th class="text-end">{% trans "Discount" %}</th>
-                                    <th class="text-end">{% trans "Unit Price" %}</th>
-                                    <th class="text-end">{% trans "Total" %}</th>
-                                </tr>
-                            </thead>
-                        <tbody>
-                            {% for item in order.items.all %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                        <span>{{ item.item_type.name }}</span>
-                                    </div>
-                                </td>
-                                <td class="text-end numeric">{{ item.quantity }}</td>
-                                <td class="text-end numeric">
-                                    {% if item.discount_applied > 0 %}
-                                        <span class="text-success">{{ item.discount_applied }}%</span>
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td class="text-end numeric">{{ item.price_per_unit|floatformat:2|intcomma }} ISK</td>
-                                <td class="text-end fw-bold numeric text-warning">{{ item.line_total|floatformat:2|intcomma }} ISK</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="5" class="text-center">No items found.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="4" class="text-end fs-4">{% trans "Grand Total:" %}</th>
-                                <th class="text-end fs-4 text-warning numeric">{{ order.total_price|floatformat:2|intcomma }} ISK</th>
-                            </tr>
-                        </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 mb-4 bg-dark h-100">
-                <div class="card-header border-bottom border-secondary">
-                    <h3 class="card-title text-white">{% trans "Order Details" %}</h3>
+    <!-- Quote Submission Form for Directors -->
+    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning bg-dark">
+                <div class="card-header border-warning text-warning">
+                    <h4 class="card-title mb-0"><i class="fas fa-hand-holding-usd"></i> {% trans "Provide Quote" %}</h4>
                 </div>
                 <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-4">{% trans "Status" %}</dt>
-                        <dd class="col-sm-8">
-                            <div>
-                                {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">Requested</span>
-                                {% elif order.status == 'QUOTED' %}<span class="badge bg-primary">Quoted</span>
-                                {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">Accepted</span>
-                                {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
-                                {% elif order.status == 'READY' %}<span class="badge bg-primary">Ready</span>
-                                {% elif order.status == 'DELIVERED' %}<span class="badge bg-success">Delivered</span>
-                                {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">Rejected</span>
-                                {% endif %}
-                            </div>
-                            {% if order.production_tasks.exists %}
-                                <div class="progress mt-2"  title="{{ order.progress_percent }}% Completed">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                <small class="text-muted numeric">{{ order.progress_percent }}% completed</small>
-                            {% endif %}
-                        </dd>
-
-                        <dt class="col-sm-4">{% trans "Character" %}</dt>
-                        <dd class="col-sm-8">{{ order.character.character_name }}</dd>
-
-                        <dt class="col-sm-4">{% trans "Created" %}</dt>
-                        <dd class="col-sm-8 numeric">{{ order.created_at|date:"Y-m-d H:i" }}</dd>
-                    </dl>
-
-                    {% if order.fit %}
-                    <hr style="border-color: rgba(255,255,255,0.1);">
-                    <h5 class="text-warning">{% trans "Raw Fit" %}</h5>
-                    <pre class="bg-dark p-2 text-white border border-secondary rounded" style="max-height: 200px; overflow-y: auto;"><code>{{ order.fit.raw_fit_text }}</code></pre>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if bom_materials %}
-    <div class="row">
-        <div class="col-12">
-            <div class="accordion mb-4" id="bomAccordion">
-                <div class="accordion-item bg-dark border-secondary">
-                    <h2 class="accordion-header" id="headingBom">
-                        <button class="accordion-button collapsed bg-dark text-white border-bottom border-secondary shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBom" aria-expanded="false" aria-controls="collapseBom">
-                            <i class="fas fa-boxes me-2 text-primary"></i> <span class="fs-4">Estimated Bill of Materials (BOM)</span>
-                        </button>
-                    </h2>
-                    <div id="collapseBom" class="accordion-collapse collapse" aria-labelledby="headingBom" data-bs-parent="#bomAccordion">
-                        <div class="accordion-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-striped m-0">
-                                    <thead>
-                                        <tr>
-                                            <th>{% trans "Material" %}</th>
-                                            <th class="text-end">{% trans "Quantity Required" %}</th>
-                                            <th class="text-end">{% trans "Est. Jita Unit Price" %}</th>
-                                            <th class="text-end">{% trans "Est. Total Cost" %}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for mat in bom_materials %}
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
-                                                    <span>{{ mat.name }}</span>
-                                                </div>
-                                            </td>
-                                            <td class="text-end numeric">{{ mat.quantity|intcomma }}</td>
-                                            <td class="text-end numeric text-muted">{{ mat.price_per_unit|floatformat:2|intcomma }} ISK</td>
-                                            <td class="text-end numeric text-warning">{{ mat.total_price|floatformat:2|intcomma }} ISK</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <th colspan="3" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
-                                            <th class="text-end fs-5 text-warning numeric">{{ total_bom_price|floatformat:2|intcomma }} ISK</th>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                    <p class="text-white">{% trans "Review the order details and the estimated BOM cost, then provide a final quote." %}</p>
+                    <form method="post" action="{% url 'industry_reforged:provide_quote' order.id %}" class="row gx-3 gy-2 align-items-center">
+                        {% csrf_token %}
+                        <div class="col-sm-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-secondary border-secondary text-white">ISK</span>
+                                <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary" name="total_price" value="{{ order.total_price|floatformat:2|stringformat:'f' }}" required>
                             </div>
                         </div>
-                    </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-warning"><i class="fas fa-check-circle"></i> {% trans "Submit Quote" %}</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
+
+    <div class="card border-0 mb-4 bg-transparent">
+        <div class="card-header p-0 border-bottom-0">
+            <ul class="nav nav-tabs" id="order-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab" aria-controls="details-pane" aria-selected="true">{% trans "Order Details" %}</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bom-tab" data-bs-toggle="tab" data-bs-target="#bom-pane" type="button" role="tab" aria-controls="bom-pane" aria-selected="false">{% trans "Bill of Materials" %}</button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-0 mt-3">
+            <div class="tab-content" id="order-tabsContent">
+
+                <!-- TAB 1: ORDER DETAILS -->
+                <div class="tab-pane fade show active" id="details-pane" role="tabpanel" aria-labelledby="details-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-md-8 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> {% trans "Itemized Invoice" %}</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>{% trans "Item" %}</th>
+                                                    <th class="text-end">{% trans "Quantity" %}</th>
+                                                    <th class="text-end">{% trans "Discount" %}</th>
+                                                    <th class="text-end">{% trans "Unit Price" %}</th>
+                                                    <th class="text-end">{% trans "Total" %}</th>
+                                                </tr>
+                                            </thead>
+                                        <tbody>
+                                            {% for item in order.items.all %}
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                        <span>{{ item.item_type.name }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end numeric">{{ item.quantity }}</td>
+                                                <td class="text-end numeric">
+                                                    {% if item.discount_applied > 0 %}
+                                                        <span class="text-success">{{ item.discount_applied }}%</span>
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end numeric">{{ item.price_per_unit|floatformat:2|intcomma }} ISK</td>
+                                                <td class="text-end fw-bold numeric text-warning">{{ item.line_total|floatformat:2|intcomma }} ISK</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr><td colspan="5" class="text-center">No items found.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th colspan="4" class="text-end text-muted">{% trans "Original Jita Price (Est.):" %}</th>
+                                                <th class="text-end text-muted numeric">{{ original_price|floatformat:2|intcomma }} ISK</th>
+                                            </tr>
+                                            {% if savings > 0 %}
+                                            <tr>
+                                                <th colspan="4" class="text-end text-success">{% trans "Your Savings (Corp Discount / Adjustment):" %}</th>
+                                                <th class="text-end text-success numeric">-{{ savings|floatformat:2|intcomma }} ISK</th>
+                                            </tr>
+                                            {% endif %}
+                                            <tr>
+                                                <th colspan="4" class="text-end fs-4">{% trans "Current Quote Total:" %}</th>
+                                                <th class="text-end fs-4 text-warning numeric">{{ order.total_price|floatformat:2|intcomma }} ISK</th>
+                                            </tr>
+                                        </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card border-0 bg-dark h-100">
+                                <div class="card-header border-bottom border-secondary">
+                                    <h3 class="card-title text-white">{% trans "Order Details" %}</h3>
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row">
+                                        <dt class="col-sm-4">{% trans "Status" %}</dt>
+                                        <dd class="col-sm-8">
+                                            <div>
+                                                {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">Requested</span>
+                                                {% elif order.status == 'QUOTED' %}<span class="badge bg-primary">Quoted</span>
+                                                {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">Accepted</span>
+                                                {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
+                                                {% elif order.status == 'READY' %}<span class="badge bg-primary">Ready</span>
+                                                {% elif order.status == 'DELIVERED' %}<span class="badge bg-success">Delivered</span>
+                                                {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">Rejected</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if order.production_tasks.exists %}
+                                                <div class="progress mt-2"  title="{{ order.progress_percent }}% Completed">
+                                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                                <small class="text-muted numeric">{{ order.progress_percent }}% completed</small>
+                                            {% endif %}
+                                        </dd>
+
+                                        <dt class="col-sm-4">{% trans "Character" %}</dt>
+                                        <dd class="col-sm-8 mb-3">{{ order.character.character_name }}</dd>
+
+                                        <dt class="col-sm-4 text-muted"><i class="fas fa-calendar-plus"></i> {% trans "Created" %}</dt>
+                                        <dd class="col-sm-8 text-muted numeric">{{ order.created_at|date:"Y-m-d H:i" }}</dd>
+
+                                        {% if order.quoted_at %}
+                                        <dt class="col-sm-4 text-warning"><i class="fas fa-file-invoice-dollar"></i> {% trans "Quoted" %}</dt>
+                                        <dd class="col-sm-8 text-warning numeric">{{ order.quoted_at|date:"Y-m-d H:i" }}</dd>
+                                        {% endif %}
+
+                                        {% if order.accepted_at %}
+                                        <dt class="col-sm-4 text-success"><i class="fas fa-check-circle"></i> {% trans "Accepted" %}</dt>
+                                        <dd class="col-sm-8 text-success numeric">{{ order.accepted_at|date:"Y-m-d H:i" }}</dd>
+                                        {% endif %}
+                                    </dl>
+
+                                    {% if order.fit %}
+                                    <hr style="border-color: rgba(255,255,255,0.1);">
+                                    <h5 class="text-warning">{% trans "Raw Fit" %}</h5>
+                                    <pre class="bg-dark p-2 text-white border border-secondary rounded" style="max-height: 200px; overflow-y: auto;"><code>{{ order.fit.raw_fit_text }}</code></pre>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End Row -->
+                </div> <!-- End Tab 1 -->
+
+                <!-- TAB 2: BOM -->
+                <div class="tab-pane fade" id="bom-pane" role="tabpanel" aria-labelledby="bom-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-boxes me-2"></i> {% trans "Estimated Bill of Materials (BOM)" %}</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>{% trans "Material" %}</th>
+                                                    <th class="text-end">{% trans "Quantity Required" %}</th>
+                                                    <th class="text-end">{% trans "Est. Jita Unit Price" %}</th>
+                                                    <th class="text-end">{% trans "Est. Total Cost" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% if bom_materials %}
+                                                    {% for mat in bom_materials %}
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
+                                                                <span>{{ mat.name }}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-end numeric">{{ mat.quantity|intcomma }}</td>
+                                                        <td class="text-end numeric text-muted">{{ mat.price_per_unit|floatformat:2|intcomma }} ISK</td>
+                                                        <td class="text-end numeric text-warning">{{ mat.total_price|floatformat:2|intcomma }} ISK</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <tr><td colspan="4" class="text-center text-muted">{% trans "No BOM available." %}</td></tr>
+                                                {% endif %}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th colspan="3" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
+                                                    <th class="text-end fs-5 text-warning numeric">{{ total_bom_price|floatformat:2|intcomma }} ISK</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End Row -->
+                </div> <!-- End Tab 2 -->
+
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

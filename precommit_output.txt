@@ -1,0 +1,68 @@
+check-ast (Python).......................................................Passed
+check-yaml (YAML)....................................(no files to check)Skipped
+check-json (JSON)....................................(no files to check)Skipped
+check-toml (TOML)....................................(no files to check)Skipped
+check-xml (XML)......................................(no files to check)Skipped
+Check for merge conflict strings.........................................Passed
+Check for large files....................................................Passed
+Detect private key.......................................................Passed
+Check for case conflicts.................................................Passed
+Check for docstring in first line........................................Passed
+Check for debug statements...............................................Passed
+Fix requirements.txt.................................(no files to check)Skipped
+Fix byte order marker....................................................Passed
+Check for built-in literals..............................................Passed
+Mixed line ending........................................................Passed
+Trailing whitespace......................................................Passed
+Check for shebangs in executables....................(no files to check)Skipped
+End of file fixer........................................................Passed
+ESLint...............................................(no files to check)Skipped
+Stylelint............................................(no files to check)Skipped
+Check for blanket noqa...................................................Passed
+Check for blanket type ignore............................................Passed
+Check for mock methods...................................................Passed
+Check for eval...........................................................Passed
+Check for log warn.......................................................Passed
+Use type annotations.....................................................Passed
+EditorConfig Checker.....................................................Passed
+Django upgrade...........................................................Passed
+PyUpgrade................................................................Passed
+Flake8...................................................................Failed
+- hook id: flake8
+- exit code: 1
+
+industry_reforged/views.py:145:9: F821 undefined name '_'
+industry_reforged/views.py:177:35: F821 undefined name '_'
+industry_reforged/views.py:262:26: F821 undefined name '_'
+industry_reforged/views.py:273:37: F821 undefined name '_'
+industry_reforged/views.py:289:37: F821 undefined name '_'
+industry_reforged/views.py:341:35: F821 undefined name '_'
+industry_reforged/views.py:361:33: F821 undefined name '_'
+industry_reforged/views.py:368:33: F821 undefined name '_'
+industry_reforged/views.py:411:37: F821 undefined name '_'
+industry_reforged/views.py:448:17: F821 undefined name '_'
+industry_reforged/views.py:452:37: F821 undefined name '_'
+industry_reforged/views.py:514:13: F821 undefined name '_'
+industry_reforged/views.py:556:32: F821 undefined name '_'
+industry_reforged/views.py:626:37: F821 undefined name '_'
+industry_reforged/views.py:642:37: F821 undefined name '_'
+industry_reforged/views.py:679:37: F821 undefined name '_'
+industry_reforged/views.py:739:9: F821 undefined name '_'
+industry_reforged/views.py:827:33: F821 undefined name '_'
+industry_reforged/views.py:851:13: F821 undefined name '_'
+industry_reforged/views.py:870:13: F821 undefined name '_'
+industry_reforged/views.py:977:22: F821 undefined name '_'
+industry_reforged/views.py:1036:9: F821 undefined name '_'
+
+YesQA....................................................................Passed
+Isort....................................................................Passed
+Black disable checker....................................................Passed
+Black....................................................................Passed
+Blacken docs.............................................................Passed
+Mdformat.................................................................Passed
+tox.ini formatter....................................(no files to check)Skipped
+pyproject.toml formatter.............................(no files to check)Skipped
+Validate pyproject.toml..............................(no files to check)Skipped
+Check GitHub Actions.................................(no files to check)Skipped
+Check GitHub Workflows...............................(no files to check)Skipped
+Check Dependabot Configuration.......................(no files to check)Skipped

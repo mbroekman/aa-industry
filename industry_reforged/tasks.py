@@ -212,6 +212,11 @@ def update_corporation_jobs():
                             character_id=installer_eve_id
                         ).first()
 
+                    existing = CorporationIndustryJob.objects.filter(
+                        job_id=job_id
+                    ).first()
+                    was_active = existing and existing.status == "active"
+
                     # Add job logic similar to character jobs
                     obj, created = CorporationIndustryJob.objects.update_or_create(
                         job_id=job_id,
@@ -234,6 +239,30 @@ def update_corporation_jobs():
                             "wallet_division": getattr(job, "wallet_division", None),
                         },
                     )
+
+                    if was_active and obj.status == "ready":
+                        from .models import CorporationWebhookConfig
+
+                        webhook_config = CorporationWebhookConfig.objects.filter(
+                            corporation=config.corporation
+                        ).first()
+                        if webhook_config and webhook_config.jobs_webhook:
+                            from .utils.discord import send_discord_webhook
+
+                            p_name = (
+                                obj.product_type.name if obj.product_type else "Unknown"
+                            )
+                            i_name = (
+                                obj.installer.character_name
+                                if obj.installer
+                                else "Unknown"
+                            )
+                            embed = {
+                                "title": f"Corporate Job Ready: {p_name}",
+                                "description": f"Job **{obj.job_id}** is now ready to be delivered by **{i_name}**.",
+                                "color": 15844367,  # Gold
+                            }
+                            send_discord_webhook(webhook_config.jobs_webhook, embed)
 
                 # Any jobs in our DB for this corp that are NOT in the fetched list
                 # have aged out of ESI (meaning they are completed/delivered/cancelled > 90 days ago).
@@ -328,12 +357,19 @@ def update_character_pi(character_id=None):
 
                     pins = getattr(planet_details, "pins", [])
 
-                    # Clear old pins
-                    char_planet.pins.all().delete()
+                    # Keep track of active pin ids to delete removed pins
+                    active_pin_ids = []
 
-                    pin_objects = []
+                    # Django timezone
+                    # Django
+                    from django.utils import timezone
+
+                    now = timezone.now()
+
                     for pin in pins:
                         pin_id = getattr(pin, "pin_id")
+                        active_pin_ids.append(pin_id)
+
                         type_id = getattr(pin, "type_id")
                         schematic_id = getattr(pin, "schematic_id", None)
                         extractor_details = getattr(pin, "extractor_details", None)
@@ -378,22 +414,42 @@ def update_character_pi(character_id=None):
                             extraction_yield = qty_per_cycle
                             ensure_eve_type(product_type_id)
 
-                        pin_objects.append(
-                            PlanetPin(
-                                planet=char_planet,
-                                pin_id=pin_id,
-                                type_id=type_id,
-                                install_time=install_time,
-                                expiry_time=expiry_time,
-                                cycle_time=cycle_time,
-                                extraction_yield=extraction_yield,
-                                product_type_id=product_type_id,
-                                schematic_id=schematic_id,
-                                last_cycle_start=last_cycle_start,
-                            )
+                        pin_obj, created = PlanetPin.objects.update_or_create(
+                            planet=char_planet,
+                            pin_id=pin_id,
+                            defaults={
+                                "type_id": type_id,
+                                "install_time": install_time,
+                                "expiry_time": expiry_time,
+                                "cycle_time": cycle_time,
+                                "extraction_yield": extraction_yield,
+                                "product_type_id": product_type_id,
+                                "schematic_id": schematic_id,
+                                "last_cycle_start": last_cycle_start,
+                            },
                         )
 
-                    PlanetPin.objects.bulk_create(pin_objects)
+                        # Notification Logic for Extractor Expiry
+                        if pin_obj.is_extractor and pin_obj.expiry_time:
+                            if now >= pin_obj.expiry_time:
+                                if not pin_obj.notification_sent:
+                                    planet_name = (
+                                        char_planet.planet_type.name
+                                        if char_planet.planet_type
+                                        else f"Planeet {char_planet.planet_id}"
+                                    )
+                                    message = f"Je extractor op je **{planet_name}** is zojuist gestopt. Tijd om deze opnieuw aan te zetten!"
+                                    notify_discord_user(character, message)
+                                    pin_obj.notification_sent = True
+                                    pin_obj.save()
+                            else:
+                                # Extractor has future expiry, meaning it was restarted
+                                if pin_obj.notification_sent:
+                                    pin_obj.notification_sent = False
+                                    pin_obj.save()
+
+                    # Remove pins that are no longer on the planet
+                    char_planet.pins.exclude(pin_id__in=active_pin_ids).delete()
 
                 except HTTPNotModified:
                     continue
@@ -491,6 +547,50 @@ def task_sync_corp_inventory():
                         inv.quantity = qty
                         inv.save()
 
+            # Check low stock thresholds
+            # Standard Library
+            import datetime
+
+            # Django
+            from django.db.models import Sum
+            from django.utils import timezone
+
+            from .models import CorpItemConfig, CorporationWebhookConfig
+
+            now = timezone.now()
+            configs = CorpItemConfig.objects.filter(
+                corporation_id=corp_id, target_threshold__gt=0
+            )
+            webhook_config = CorporationWebhookConfig.objects.filter(
+                corporation_id=corp_id
+            ).first()
+
+            for config in configs:
+                total_qty = (
+                    CorpInventory.objects.filter(
+                        corporation_id=corp_id, item_type=config.item_type
+                    ).aggregate(total=Sum("quantity"))["total"]
+                    or 0
+                )
+
+                if total_qty < config.target_threshold:
+                    if not config.last_low_stock_warning or (
+                        now - config.last_low_stock_warning
+                    ) > datetime.timedelta(days=1):
+                        if webhook_config and webhook_config.inventory_webhook:
+                            from .utils.discord import send_discord_webhook
+
+                            embed = {
+                                "title": f"Low Stock Warning: {config.item_type.name}",
+                                "description": f"Total stock is **{total_qty}**, which is below the threshold of **{config.target_threshold}**.",
+                                "color": 15158332,  # Red
+                            }
+                            send_discord_webhook(
+                                webhook_config.inventory_webhook, embed
+                            )
+                        config.last_low_stock_warning = now
+                        config.save()
+
         except HTTPNotModified:
             # 304 Not Modified is expected, nothing changed.
             pass
@@ -570,6 +670,43 @@ def task_sync_corp_wallets():
                         div.name = f"Division {division_id}"
                         div.save()
                     divisions_map[division_id] = div
+
+                    # Standard Library
+                    import datetime
+
+                    # Django
+                    from django.utils import timezone
+
+                    from .models import CorporationWebhookConfig
+
+                    now = timezone.now()
+
+                    webhook_config = CorporationWebhookConfig.objects.filter(
+                        corporation=config.corporation
+                    ).first()
+                    threshold = (
+                        webhook_config.wallet_warning_threshold
+                        if webhook_config
+                        else 500000000
+                    )
+
+                    if balance < threshold:
+                        if not div.last_warning or (
+                            now - div.last_warning
+                        ) > datetime.timedelta(days=1):
+                            if webhook_config and webhook_config.wallets_webhook:
+                                from .utils.discord import send_discord_webhook
+
+                                embed = {
+                                    "title": f"Low Wallet Balance: {div.name}",
+                                    "description": f"Balance is **{balance:,.2f} ISK**, which is below the threshold of **{threshold:,.2f} ISK**.",
+                                    "color": 15158332,  # Red
+                                }
+                                send_discord_webhook(
+                                    webhook_config.wallets_webhook, embed
+                                )
+                            div.last_warning = now
+                            div.save()
 
             # 2. Fetch journal entries for each division
             for division_id, div_obj in divisions_map.items():
