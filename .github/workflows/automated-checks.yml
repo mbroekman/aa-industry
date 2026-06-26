@@ -170,12 +170,20 @@ jobs:
         with:
           python-version-file: 'pyproject.toml' # Read the Python version from the pyproject.toml file
 
+      # Install System Dependencies
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
       # Install Tools
       - name: Install Tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install --upgrade build
-          python -m pip install --upgrade setuptools wheel
+          python -m pip install --upgrade setuptools wheel Django
+
+      # Compile Translations
+      - name: Compile Translations
+        run: django-admin compilemessages -l nl
 
       # Build Package
       - name: Package Build
