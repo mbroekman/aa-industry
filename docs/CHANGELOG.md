@@ -7,83 +7,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
-## [0.0.9] - 2024-06-16
-
-### Removed
-
-- Support for Python 3.8 and Python 3.9
-
-## [0.0.8] - 2024-03-16
-
-> [!NOTE]
->
-> **This version needs at least Alliance Auth v4.0.0!**
+## [0.1.0b5] - 2026-06-27
 
 ### Added
 
-- Compatibility to Alliance Auth v4
-  - Bootstrap 5
-  - Django 4.2
-
-### Removed
-
-- Compatibility to Alliance Auth v3
-
-## [0.0.7] - 2023-09-27
-
-> [!NOTE]
->
-> **This is the last version compatible with Alliance Auth v3.**
+- Order deletion functionality for owners and directors (restricted to REQUESTED or QUOTED statuses).
+- Replaced native browser confirmation popups with Bootstrap 5 modals for order deletion to match Alliance Auth styling.
+- Global sidebar menu item for the Industry Leaderboard.
+- Loading overlay during order quote generation to improve UX.
+- Comprehensive group permissions proposal documentation.
 
 ### Changed
 
-- Moved the build process to PEP 621 / pyproject.toml
-- Test suite updated
+- Lowered Leaderboard permission requirement from `industrialist_access` to `basic_access` so all members can view top builders.
+- Updated GitHub Actions CI/CD workflows to compile translations (`gettext`) before building PyPI packages.
+- Updated `tox.ini` to use the native Django test runner instead of a custom script.
 
-## [0.0.6] - 2023-07-23
+### Fixed
 
-### Added
-
-- Ukrainian to language handling in `Makefile`
-
-## [0.0.5] - 2023-04-18
-
-### Added
-
-- Directory for translation files
-
-## [0.0.4] - 2022-11-26
-
-### Added
-
-- Directory for static files
-
-### Changed
-
-- GitHub actions updated
-- `pre-commit` config updated and applied
-- Industry test improved
-
-## [0.0.3] - 2022-09-15
-
-### Added
-
-- `SITE_URL` to test settings
-
-## [0.0.2] - 2022-08-17
-
-### Added
-
-- Build artifact to GitHub workflows
-- `MANIFEST.in` re-added
-
-### Changed
-
-- Test settings updated for Alliance Auth v3
-- Package name in setup.cfg for PyPi
-
-## [0.0.1] - 2022-03-12
-
-### Added
-
-- Initial version
+- Test suite failures by adding `eveuniverse` to the local test environment `INSTALLED_APPS`.
+- Fixed coverage reporting by correcting the source path to `industry_reforged` in `.coveragerc`.
+- Removed dynamic version number from app `verbose_name` to keep Django Admin permission names clean and static.
