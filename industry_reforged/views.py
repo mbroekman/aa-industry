@@ -559,6 +559,41 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
 
 @login_required
+@permission_required("industry_reforged.basic_access")
+def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
+    user_characters = request.user.character_ownerships.all().values_list(
+        "character_id", flat=True
+    )
+
+    from .models import MemberOrder
+
+    # Check if the user is a director or the owner
+    is_director = request.user.has_perm("industry_reforged.corp_access")
+
+    if is_director:
+        order = MemberOrder.objects.filter(
+            id=order_id, status__in=["REQUESTED", "QUOTED"]
+        ).first()
+    else:
+        order = MemberOrder.objects.filter(
+            id=order_id,
+            character_id__in=user_characters,
+            status__in=["REQUESTED", "QUOTED"],
+        ).first()
+
+    if order:
+        order.delete()
+        messages.success(request, _("Order successfully deleted."))
+    else:
+        messages.error(
+            request,
+            _("Order could not be found or you don't have permission to delete it."),
+        )
+
+    return redirect("industry_reforged:orders_dashboard")
+
+
+@login_required
 @permission_required("industry_reforged.industrialist_access")
 def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main execution dashboard for industrialists"""
@@ -683,7 +718,7 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
 
 @login_required
-@permission_required("industry_reforged.industrialist_access")
+@permission_required("industry_reforged.basic_access")
 def industrialist_leaderboard(request: WSGIRequest) -> HttpResponse:
     """Leaderboard and History view"""
     # Django

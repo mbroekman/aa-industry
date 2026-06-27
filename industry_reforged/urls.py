@@ -21,6 +21,7 @@ urlpatterns = [
     path("orders/<int:order_id>/", views.view_quote, name="view_quote"),
     path("orders/<int:order_id>/accept/", views.accept_quote, name="accept_quote"),
     path("orders/<int:order_id>/reject/", views.reject_quote, name="reject_quote"),
+    path("orders/<int:order_id>/delete/", views.delete_order, name="delete_order"),
     path(
         "orders/<int:order_id>/provide-quote/",
         views.provide_quote,

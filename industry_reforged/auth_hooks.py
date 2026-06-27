@@ -102,7 +102,6 @@ class IndustrialistMenuItem(MenuItemHook):
             "industry_reforged:industrialist_dashboard",
             navactive=[
                 "industry_reforged:industrialist_dashboard",
-                "industry_reforged:industrialist_leaderboard",
             ],
         )
 
@@ -144,6 +143,30 @@ class DirectorMenuItem(MenuItemHook):
 def register_director_menu():
     """Register the director menu item"""
     return DirectorMenuItem()
+
+
+class LeaderboardMenuItem(MenuItemHook):
+    """Menu entry for Leaderboard (Viewable by everyone)"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("Industry Leaderboard"),
+            "fas fa-trophy fa-fw",
+            "industry_reforged:industrialist_leaderboard",
+            navactive=["industry_reforged:industrialist_leaderboard"],
+        )
+
+    def render(self, request):
+        if request.user.has_perm("industry_reforged.basic_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_leaderboard_menu():
+    """Register the leaderboard menu item"""
+    return LeaderboardMenuItem()
 
 
 @hooks.register("url_hook")

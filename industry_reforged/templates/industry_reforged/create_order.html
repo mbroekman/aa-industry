@@ -18,7 +18,7 @@
                 <div class="card-header">
                     <h3 class="card-title">{% trans "Paste EFT Fit" %}</h3>
                 </div>
-                <form method="post" action="{% url 'industry_reforged:create_order' %}">
+                <form method="post" action="{% url 'industry_reforged:create_order' %}" class="show-loader">
                     {% csrf_token %}
                     <div class="card-body">
                         <div class="mb-3">
