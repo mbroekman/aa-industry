@@ -30,6 +30,7 @@ ______________________________________________________________________
 
 This is the central marketplace for corporate builders.
 
+- **Industry Status (MOTD)**: The top of the dashboard displays a real-time summary of the corporate industry, including the number of active orders, open tasks on the market, active corporate jobs, and the total ISK value in progress. This acts as a dynamic Message of the Day, complementing any manual announcements set by directors.
 - **Job Market (Unclaimed)**: Once a member accepts an order, the system breaks the order down into individual Production Tasks. As a builder, you can "Claim" these tasks here.
 - **My Active Production**: An overview of the tasks you have claimed and are currently building. Once you finish a job in EVE Online, you can mark the task as "Complete" here.
 
@@ -38,9 +39,11 @@ This is the central marketplace for corporate builders.
 - Every completed task rewards you with points (based on the ISK value of the produced item).
 - On the **Leaderboard**, you can see who the most active builders in the corporation are, ranked both by total tasks completed and total ISK value produced.
 
-### 2.3 Shopping List
+### 2.3 Shopping List & Full Production Tree
 
-- Extremely useful for buyers and builders: generate a "Shopping List" of required raw materials for a specific order or a group of tasks. You can copy this list with a single click in the EVE Online "Multibuy" format.
+- **Order & Task Shopping Lists**: Extremely useful for buyers and builders: generate a "Shopping List" of required raw materials for a specific order or a group of tasks. You can copy this list with a single click in the EVE Online "Multibuy" format.
+- **Recursive BOM Drilldown**: When viewing the details of an Order, Industrialists have access to an exclusive **"Full Production Tree"** tab. This provides an interactive, recursive breakdown of the Bill of Materials. You can drill down through complex intermediate components all the way down to base raw materials (Minerals, PI, etc.).
+- **Component Sourcing**: Next to every intermediate component in the Production Tree, you will find a dedicated Shopping Cart icon. Clicking it instantly generates a specific raw material shopping list for *that particular component* at the exact quantity required. This gives builders full flexibility to decide which sub-components they want to build themselves and which they prefer to buy off the market.
 
 ______________________________________________________________________
 

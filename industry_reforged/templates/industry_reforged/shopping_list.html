@@ -5,7 +5,12 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3><i class="fas fa-shopping-cart"></i> {% trans "Consolidated Shopping List" %}</h3>
+            <div>
+                <h3 class="mb-0"><i class="fas fa-shopping-cart"></i> {% trans "Consolidated Shopping List" %}</h3>
+                {% if custom_item_name %}
+                    <h5 class="text-info mt-2 mb-0">{% trans "For:" %} {{ custom_item_name }} (x{{ custom_item_quantity }})</h5>
+                {% endif %}
+            </div>
             <div>
                 <button onclick="copyMultibuy()" class="btn btn-warning me-2" id="copyBtn"><i class="fas fa-copy"></i> {% trans "Copy for EVE Multibuy" %}</button>
                 <a href="javascript:history.back()" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>

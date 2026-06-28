@@ -173,8 +173,11 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     """Generate a consolidated Shopping List for selected orders."""
     order_ids = request.GET.getlist("order_ids")
     task_ids = request.GET.getlist("task_ids")
+    type_id = request.GET.get("type_id")
+    quantity = request.GET.get("quantity")
+    item_name = request.GET.get("item_name")
 
-    if not order_ids and not task_ids:
+    if not order_ids and not task_ids and not type_id:
         messages.warning(request, _("No items selected for shopping list."))
         return redirect(request.headers.get("referer", "industry_reforged:index"))
 
@@ -227,6 +230,47 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             else:
                 bom[mat_id] = data
 
+    if type_id and quantity:
+        quantity = int(quantity)
+        # Standard Library
+        import math
+
+        from .utils.bom_engine import get_fuzzwork_bom
+
+        materials = get_fuzzwork_bom(type_id)
+
+        corp_info = None
+        main_char = request.user.profile.main_character
+        if main_char and main_char.corporation:
+            corp_info = main_char.corporation
+
+        me_level = 0
+        if corp_info:
+            from .models import CorpItemConfig
+
+            config = CorpItemConfig.objects.filter(
+                item_type_id=type_id, corporation=corp_info
+            ).first()
+            if config:
+                me_level = config.manual_me
+
+        for mat in materials:
+            mat_type_id = mat.get("typeid")
+            base_qty = mat.get("quantity", 0)
+
+            required_qty = max(
+                1, math.ceil(base_qty * quantity * (1 - (me_level / 100.0)))
+            )
+
+            if mat_type_id in bom:
+                bom[mat_type_id]["quantity"] += required_qty
+            else:
+                bom[mat_type_id] = {
+                    "type_id": mat_type_id,
+                    "name": mat.get("name"),
+                    "quantity": required_qty,
+                }
+
     total_bom_price = 0
     sorted_bom = []
     if bom:
@@ -244,6 +288,8 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         "title": "Consolidated Shopping List",
         "orders": orders,
         "tasks": tasks,
+        "custom_item_name": item_name,
+        "custom_item_quantity": quantity,
         "bom_materials": sorted_bom,
         "total_bom_price": total_bom_price,
     }
@@ -388,6 +434,14 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     original_price = sum(item.line_total for item in order.items.all())
     savings = original_price - order.total_price
 
+    recursive_bom_tree = []
+    if request.user.has_perm(
+        "industry_reforged.industrialist_access"
+    ) or request.user.has_perm("industry_reforged.corp_access"):
+        from .utils.bom_engine import calculate_recursive_order_bom
+
+        recursive_bom_tree = calculate_recursive_order_bom(order)
+
     context = {
         "title": f"Order #{order.id}",
         "order": order,
@@ -396,6 +450,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "original_price": original_price,
         "savings": savings,
         "is_owner": order.character_id in user_characters,
+        "recursive_bom_tree": recursive_bom_tree,
     }
     return render(request, "industry_reforged/view_quote.html", context)
 
@@ -634,9 +689,24 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         corporation__corporation_id__in=user_corps, status="active"
     ).select_related("blueprint_type", "product_type", "installer")
 
+    # Django
+    from django.db.models import Sum
+
+    from .models import MemberOrder
+
+    orders_qs = MemberOrder.objects.filter(status__in=["ACCEPTED", "IN_PRODUCTION"])
+    dynamic_motd_stats = {
+        "orders_in_production": orders_qs.count(),
+        "open_tasks": unclaimed_tasks.count(),
+        "active_jobs": corp_active_jobs.count(),
+        "value_in_progress": orders_qs.aggregate(total=Sum("total_price"))["total"]
+        or 0.0,
+    }
+
     context = {
         "title": "Industrialist Dashboard",
         "motd": motd,
+        "dynamic_motd_stats": dynamic_motd_stats,
         "unclaimed_tasks": unclaimed_tasks,
         "my_tasks": my_tasks,
         "my_completed_tasks": my_completed_tasks,

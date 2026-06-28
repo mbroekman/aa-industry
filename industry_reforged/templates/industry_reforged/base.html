@@ -56,5 +56,12 @@
                 });
             });
         });
+
+        window.addEventListener('pageshow', function (event) {
+            // Hide the overlay if the page is restored from the bfcache (e.g. user clicked Back)
+            if (event.persisted) {
+                document.getElementById('industry-loading-overlay').style.display = 'none';
+            }
+        });
     </script>
 {% endblock %}

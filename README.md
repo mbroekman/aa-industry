@@ -7,7 +7,8 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Personal Dashboard**: Users can easily track their active, completed, and delivered industry jobs.
 - **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs from a centralized overview.
 - **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow (Director approval -> User acceptance).
-- **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, and compete on the Gamification Leaderboards.
+- **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD.
+- **Recursive BOM Drilldown**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components.
 - **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices.
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
@@ -27,7 +28,7 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
 - Alliance Auth v5.x
 - **django-esi** v4.0.0+ (Included by default in Alliance Auth v5.x)
 - **django-eveuniverse**: Used for resolving Type IDs to Item Names and Icons.
-- **Alliance Auth Discord Service**: Required if you want users to receive Direct Messages upon job completion.
+- **Alliance Auth Discord Bot** (`aadiscordbot`): Required if you want users to receive Direct Messages upon job completion or if you intend to use Corporate Webhooks.
 - A working Celery setup (standard in Alliance Auth) for background synchronization tasks.
 
 ## Installation

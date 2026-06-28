@@ -60,7 +60,7 @@
                                 <td class="text-end numeric text-warning">{{ order.total_price|floatformat:2|intcomma }} ISK</td>
                                 <td class="text-end numeric">{{ order.created_at|date:"Y-m-d H:i" }}</td>
                                 <td class="text-end">
-                                    <a href="{% url 'industry_reforged:view_quote' order.id %}" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i> {% trans "View" %}</a>
+                                    <a href="{% url 'industry_reforged:view_quote' order.id %}" class="btn btn-sm btn-primary show-loader"><i class="fas fa-eye"></i> {% trans "View" %}</a>
                                     {% if order.status == 'REQUESTED' or order.status == 'QUOTED' %}
                                     <button type="button" class="btn btn-sm btn-danger ms-1" data-bs-toggle="modal" data-bs-target="#deleteOrderModal" data-bs-delete-url="{% url 'industry_reforged:delete_order' order.id %}"><i class="fas fa-trash"></i></button>
                                     {% endif %}

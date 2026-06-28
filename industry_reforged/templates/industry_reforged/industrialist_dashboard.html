@@ -11,15 +11,41 @@
         </div>
     </div>
 
-    {% if motd %}
-    <div class="alert alert-info shadow-sm mb-4">
-        <h4 class="alert-heading text-white"><i class="fas fa-bullhorn text-warning"></i> Message of the Day</h4>
-        <p class="mb-0 text-white">{{ motd.message|linebreaksbr }}</p>
-        <hr style="border-color: rgba(212,175,55,0.3);">
-        <small class="text-muted">Last updated: <span class="numeric">{{ motd.updated_at|date:"Y-m-d H:i"
-                }}</span></small>
+    <div class="card border-info bg-dark mb-4 shadow-sm" style="border: 1px solid #17a2b8;">
+        <div class="card-body pb-2">
+            <h4 class="card-title text-white mb-3"><i class="fas fa-bullhorn text-warning"></i> {% trans "Message of the Day & Industry Status" %}</h4>
+
+            {% if motd %}
+                <p class="mb-3 text-white fs-5">{{ motd.message|linebreaksbr }}</p>
+                <div class="text-end mt-1 mb-2">
+                    <small class="text-muted">{% trans "Last updated:" %} <span class="numeric">{{ motd.updated_at|date:"Y-m-d H:i" }}</span></small>
+                </div>
+            {% else %}
+                <p class="mb-3 text-white fs-5 fst-italic">{% trans "Welcome to the Industrialist Dashboard. Happy building!" %}</p>
+            {% endif %}
+
+            <hr style="border-color: rgba(255,255,255,0.1);">
+
+            <div class="row text-center mt-3">
+                <div class="col-6 col-md-3 mb-3">
+                    <h5 class="text-muted mb-1" style="font-size: 0.9rem;"><i class="fas fa-industry"></i> {% trans "Orders in Production" %}</h5>
+                    <h3 class="text-primary numeric mb-0">{{ dynamic_motd_stats.orders_in_production }}</h3>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <h5 class="text-muted mb-1" style="font-size: 0.9rem;"><i class="fas fa-clipboard-list"></i> {% trans "Open Job Market" %}</h5>
+                    <h3 class="text-warning numeric mb-0">{{ dynamic_motd_stats.open_tasks }}</h3>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <h5 class="text-muted mb-1" style="font-size: 0.9rem;"><i class="fas fa-cogs"></i> {% trans "Active Corp Jobs" %}</h5>
+                    <h3 class="text-info numeric mb-0">{{ dynamic_motd_stats.active_jobs }}</h3>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <h5 class="text-muted mb-1" style="font-size: 0.9rem;"><i class="fas fa-coins"></i> {% trans "Value in Progress" %}</h5>
+                    <h4 class="text-success numeric mb-0">{{ dynamic_motd_stats.value_in_progress|floatformat:0|intcomma }} ISK</h4>
+                </div>
+            </div>
+        </div>
     </div>
-    {% endif %}
 
     <div class="card border-0 mb-4 bg-transparent">
         <div class="card-header p-0 border-bottom-0">
@@ -272,6 +298,26 @@
 </div> <!-- End Container Fluid -->
 
 <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Restore active tab from sessionStorage
+        var activeTab = sessionStorage.getItem('industrialistActiveTab');
+        if (activeTab) {
+            var triggerEl = document.querySelector('button[data-bs-target="' + activeTab + '"]');
+            if (triggerEl) {
+                var tab = new bootstrap.Tab(triggerEl);
+                tab.show();
+            }
+        }
+
+        // Save active tab to sessionStorage when changed
+        var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabEls.forEach(function(el) {
+            el.addEventListener('shown.bs.tab', function (event) {
+                sessionStorage.setItem('industrialistActiveTab', event.target.getAttribute('data-bs-target'));
+            });
+        });
+    });
+
     function toggleSelectAllUnclaimed(source) {
         checkboxes = document.getElementsByClassName('unclaimed-checkbox');
         for(var i=0, n=checkboxes.length;i<n;i++) {

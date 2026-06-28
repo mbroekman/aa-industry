@@ -143,3 +143,73 @@ def calculate_tasks_bom(tasks, corp_info=None):
                 }
 
     return bom
+
+
+def get_recursive_bom_tree(type_id, name, quantity, me_dict, depth=0):
+    """
+    Recursively fetch manufacturing materials to build a hierarchical BOM.
+    """
+    if depth > 15:  # Safety limit for recursion
+        return {
+            "type_id": type_id,
+            "name": name,
+            "quantity": quantity,
+            "sub_materials": [],
+        }
+
+    materials = get_fuzzwork_bom(type_id)
+    sub_materials = []
+
+    for mat in materials:
+        mat_type_id = mat.get("typeid")
+        mat_name = mat.get("name")
+        base_qty = mat.get("quantity", 0)
+
+        # Apply ME discount if configured
+        me_level = me_dict.get(mat_type_id, 0)
+        required_qty = max(1, math.ceil(base_qty * quantity * (1 - (me_level / 100.0))))
+
+        child_node = get_recursive_bom_tree(
+            mat_type_id, mat_name, required_qty, me_dict, depth + 1
+        )
+        sub_materials.append(child_node)
+
+    return {
+        "type_id": type_id,
+        "name": name,
+        "quantity": quantity,
+        "sub_materials": sub_materials,
+    }
+
+
+def calculate_recursive_order_bom(order):
+    """
+    Calculates the hierarchical Bill of Materials for a MemberOrder.
+    Returns a list of trees (one for each requested item).
+    """
+    # Alliance Auth
+    from allianceauth.eveonline.models import EveCorporationInfo
+
+    # AA Industry App
+    from industry_reforged.models import CorpItemConfig
+
+    me_dict = {}
+    try:
+        corp_info = EveCorporationInfo.objects.get(
+            corporation_id=order.character.corporation_id
+        )
+        for config in CorpItemConfig.objects.filter(corporation=corp_info):
+            me_dict[config.item_type_id] = config.manual_me
+    except Exception:
+        pass
+
+    tree = []
+    for item in order.items.all():
+        type_id = item.item_type.id
+        quantity = item.quantity
+        name = item.item_type.name
+
+        node = get_recursive_bom_tree(type_id, name, quantity, me_dict)
+        tree.append(node)
+
+    return tree

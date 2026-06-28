@@ -1,0 +1,32 @@
+{% load i18n humanize %}
+
+<div class="bom-node border-start border-2 border-secondary ps-3 mb-2 mt-2">
+    <div class="d-flex align-items-center justify-content-between p-2 rounded bg-dark" style="border: 1px solid rgba(255,255,255,0.05);">
+        <div class="d-flex align-items-center">
+            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ node.type_id }}/icon?size=32" alt="{{ node.name }}" width="24" height="24" class="me-2 rounded">
+            <strong>{{ node.name }}</strong>
+            <span class="ms-3 badge bg-secondary">{{ node.quantity|floatformat:0|intcomma }}</span>
+        </div>
+
+        {% if node.sub_materials %}
+            <div>
+                <a href="{% url 'industry_reforged:shopping_list' %}?type_id={{ node.type_id }}&quantity={{ node.quantity|floatformat:0 }}&item_name={{ node.name|urlencode }}" class="btn btn-sm btn-outline-warning me-2 show-loader" title="{% trans 'Shopping List for this component' %}">
+                    <i class="fas fa-shopping-cart"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ node.type_id }}-{{ prefix }}" aria-expanded="false" aria-controls="collapse-{{ node.type_id }}-{{ prefix }}">
+                    <i class="fas fa-chevron-down"></i> {% trans "Drilldown" %}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if node.sub_materials %}
+        <div class="collapse mt-2" id="collapse-{{ node.type_id }}-{{ prefix }}">
+            <div class="card card-body bg-transparent border-0 p-0 ps-3">
+                {% for child in node.sub_materials %}
+                    {% include "industry_reforged/partials/bom_tree_node.html" with node=child prefix=prefix|add:forloop.counter|stringformat:"s" %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
