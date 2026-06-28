@@ -9,8 +9,9 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow (Director approval -> User acceptance).
 - **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD.
 - **Recursive BOM Drilldown**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components.
-- **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices.
+- **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices entirely from the front-end (no Django Admin access required).
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
+- **Smart ISK Formatting**: Features a built-in abbreviation engine that automatically formats large ISK values and displays precise tooltip translations (e.g., K, M, B, T) when hovered.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
 - **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, and countdown timers for active extraction.
 - **Discord Integration**: 
@@ -19,7 +20,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Multilingual Support (i18n)**: Fully translatable UI using Django gettext (`django.po`). Prepare custom translations for your community (e.g., English, Dutch, etc.).
 - **DataTables**: Clean, sortable, and searchable tables for quick insights.
 - **Modern UI**: Consistent, tab-based layouts integrating natively with standard Alliance Auth themes.
-- **SDE Integration**: Resolves blueprint and product Type IDs into readable names and official EVE Online icons.
+- **SDE Integration**: Resolves blueprint and product Type IDs into readable names and official EVE Online icons automatically by typing item names.
 
 ## Prerequisites
 

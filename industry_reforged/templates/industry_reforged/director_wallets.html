@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n humanize %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -26,7 +27,7 @@
                     >
                     <div class="card-body text-center p-3">
                         <h6 class="text-muted mb-1">{{ div.name }}</h6>
-                        <h4 class="mb-0 numeric text-white">{{ div.balance|floatformat:2|intcomma }} ISK</h4>
+                        <h4 class="mb-0 numeric text-white">{{ div.balance|eve_isk }}</h4>
                     </div>
                 </div>
             </a>
@@ -66,7 +67,7 @@
                                     <td>{{ j.date|date:"Y-m-d H:i" }}</td>
                                     <td><span class="badge bg-secondary">{{ j.ref_type }}</span></td>
                                     <td class="numeric {% if j.amount > 0 %}text-success{% elif j.amount < 0 %}text-danger{% endif %}">
-                                        {{ j.amount|floatformat:2|intcomma }} ISK
+                                        {{ j.amount|eve_isk }}
                                     </td>
                                     <td class="numeric text-muted">{{ j.balance|floatformat:2|intcomma }}</td>
                                     <td>

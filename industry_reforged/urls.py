@@ -45,6 +45,46 @@ urlpatterns = [
     path("director/inventory/", views.director_inventory, name="director_inventory"),
     path("director/config/", views.director_config, name="director_config"),
     path(
+        "director/config/item/add/",
+        views.director_config_item_edit,
+        name="director_config_item_add",
+    ),
+    path(
+        "director/config/item/<int:config_id>/",
+        views.director_config_item_edit,
+        name="director_config_item_edit",
+    ),
+    path(
+        "director/config/item/<int:config_id>/delete/",
+        views.director_config_item_delete,
+        name="director_config_item_delete",
+    ),
+    path(
+        "director/config/pricing/",
+        views.director_config_pricing_edit,
+        name="director_config_pricing_edit",
+    ),
+    path(
+        "director/config/tax/",
+        views.director_config_tax_edit,
+        name="director_config_tax_edit",
+    ),
+    path(
+        "director/config/discount/add/",
+        views.director_config_discount_edit,
+        name="director_config_discount_add",
+    ),
+    path(
+        "director/config/discount/<int:discount_id>/",
+        views.director_config_discount_edit,
+        name="director_config_discount_edit",
+    ),
+    path(
+        "director/config/discount/<int:discount_id>/delete/",
+        views.director_config_discount_delete,
+        name="director_config_discount_delete",
+    ),
+    path(
         "director/config/discover/",
         views.director_discover_hangars,
         name="director_discover_hangars",

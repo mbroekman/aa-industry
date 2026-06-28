@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
+## [0.1.0b7] - 2026-06-28
+
+### Added
+
+- **Functional Separation of Configurations**: Moved all corporate item configurations, global pricing, type discounts, and tax configurations out of the restricted Django Admin into the Director Control Panel.
+- **EveType Smart Resolution**: Adding items to configurations now allows typing the item name (e.g., "Aeon") instead of selecting from a list of thousands of IDs.
+- **Dynamic Quotes**: When a Director or User views a Quote in the "REQUESTED" state, the system now dynamically recalculates the price on the fly to immediately reflect any new corporate pricing configurations or overrides.
+- **ISK Abbreviation Tooltips**: Created a new `eve_isk` template filter that automatically adds a hover tooltip to large ISK amounts, instantly translating numbers like "14,000,000,000.00 ISK" to "14.00B ISK" (K, M, B, T).
+
+### Fixed
+
+- Fixed an issue where manual price overrides (`CorpItemConfig.manual_price`) were ignored when generating a Quote or calculating Shopping List totals.
+
 ## [0.1.0b6] - 2026-06-27
 
 ### Added

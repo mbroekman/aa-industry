@@ -50,6 +50,27 @@ def get_fuzzwork_prices(type_ids):
     return prices
 
 
+def get_prices_with_overrides(type_ids, corporation=None):
+    """
+    Fetch Jita prices for a list of type IDs, but apply any manual price
+    overrides defined in CorpItemConfig for the given corporation.
+    """
+    prices = get_fuzzwork_prices(type_ids)
+
+    if corporation:
+        from ..models import CorpItemConfig
+
+        configs = CorpItemConfig.objects.filter(
+            corporation=corporation,
+            item_type_id__in=type_ids,
+            manual_price__isnull=False,
+        )
+        for config in configs:
+            prices[config.item_type_id] = float(config.manual_price)
+
+    return prices
+
+
 def calculate_quote(parsed_items, corporation=None):
     """
     Takes a dict of {EveType: quantity} and an optional EveCorporationInfo.
@@ -58,7 +79,7 @@ def calculate_quote(parsed_items, corporation=None):
     - item_details: List of dicts with price breakdown
     """
     type_ids = [t.id for t in parsed_items.keys()]
-    market_prices = get_fuzzwork_prices(type_ids)
+    market_prices = get_prices_with_overrides(type_ids, corporation)
 
     config = None
     if corporation:

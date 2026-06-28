@@ -5,14 +5,51 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
+from allianceauth.eveonline.models import EveCharacter
 from esi.decorators import token_required
+from esi.models import Token
 
-from .models import CharacterIndustryJob, CharacterPlanet, CorporationIndustryJob
-from .tasks import update_character_pi
+from .forms import (
+    CorpItemConfigForm,
+    CorpPricingConfigForm,
+    CorpTypeDiscountForm,
+)
+from .models import (
+    CharacterIndustryJob,
+    CharacterPlanet,
+    CorpHangarConfig,
+    CorpInventory,
+    CorpItemConfig,
+    CorpMOTD,
+    CorporationIndustryJob,
+    CorporationSyncConfig,
+    CorporationWebhookConfig,
+    CorpPricingConfig,
+    CorpTypeDiscount,
+    CorpWalletDivision,
+    CorpWalletJournal,
+    MemberOrder,
+    OrderFit,
+    OrderItem,
+    ProductionTask,
+    TaxConfig,
+)
+from .tasks import task_sync_corp_inventory, task_sync_corp_wallets, update_character_pi
+from .utils.bom_engine import (
+    calculate_order_bom,
+    calculate_recursive_order_bom,
+    calculate_tasks_bom,
+    get_fuzzwork_bom,
+)
+from .utils.discord import send_discord_webhook
+from .utils.fit_parser import parse_fit_text
+from .utils.pricing_engine import calculate_quote, get_prices_with_overrides
 
 
 @login_required
@@ -113,11 +150,6 @@ def add_personal_token(request: WSGIRequest, token) -> HttpResponse:
 )
 def add_corporate_token(request: WSGIRequest, token) -> HttpResponse:
     """View to request a corporate token and automatically configure sync."""
-    # Alliance Auth
-    from allianceauth.eveonline.models import EveCharacter
-
-    from .models import CorporationSyncConfig
-
     character = EveCharacter.objects.filter(character_id=token.character_id).first()
     if character and character.corporation:
         CorporationSyncConfig.objects.update_or_create(
@@ -157,7 +189,6 @@ def orders_dashboard(request: WSGIRequest) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    from .models import MemberOrder
 
     orders = MemberOrder.objects.filter(character_id__in=user_characters).order_by(
         "-created_at"
@@ -184,10 +215,6 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-
-    from .models import MemberOrder, ProductionTask
-    from .utils.bom_engine import calculate_order_bom, calculate_tasks_bom
-    from .utils.pricing_engine import get_fuzzwork_prices
 
     bom = {}
     orders = []
@@ -235,8 +262,6 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         # Standard Library
         import math
 
-        from .utils.bom_engine import get_fuzzwork_bom
-
         materials = get_fuzzwork_bom(type_id)
 
         corp_info = None
@@ -246,8 +271,6 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
 
         me_level = 0
         if corp_info:
-            from .models import CorpItemConfig
-
             config = CorpItemConfig.objects.filter(
                 item_type_id=type_id, corporation=corp_info
             ).first()
@@ -275,7 +298,13 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     sorted_bom = []
     if bom:
         mat_ids = list(bom.keys())
-        prices = get_fuzzwork_prices(mat_ids)
+
+        corp_info = None
+        main_char = request.user.profile.main_character
+        if main_char and main_char.corporation:
+            corp_info = main_char.corporation
+
+        prices = get_prices_with_overrides(mat_ids, corp_info)
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
@@ -310,19 +339,12 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             )
             return redirect("industry_reforged:create_order")
 
-        # Alliance Auth
-        from allianceauth.eveonline.models import EveCharacter
-
         character = EveCharacter.objects.filter(
             character_id=character_id, character_ownership__user=request.user
         ).first()
         if not character:
             messages.error(request, _("Invalid character selected."))
             return redirect("industry_reforged:create_order")
-
-        from .models import MemberOrder, OrderFit, OrderItem
-        from .utils.fit_parser import parse_fit_text
-        from .utils.pricing_engine import calculate_quote
 
         parsed_items, unrecognized = parse_fit_text(fit_text)
 
@@ -363,14 +385,10 @@ def create_order(request: WSGIRequest) -> HttpResponse:
 
         # Discord Webhook Notification
         if corporation:
-            from .models import CorporationWebhookConfig
-
             webhook_config = CorporationWebhookConfig.objects.filter(
                 corporation=corporation
             ).first()
             if webhook_config and webhook_config.orders_webhook:
-                from .utils.discord import send_discord_webhook
-
                 embed = {
                     "title": f"New Quote Requested: Order #{order.id}",
                     "description": f"**{character.character_name}** has requested a quote.",
@@ -400,7 +418,6 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    from .models import MemberOrder
 
     order = MemberOrder.objects.filter(id=order_id).first()
 
@@ -415,15 +432,34 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         messages.error(request, _("Access denied."))
         return redirect("industry_reforged:orders_dashboard")
 
-    from .utils.bom_engine import calculate_order_bom
-    from .utils.pricing_engine import get_fuzzwork_prices
+    # If the order is still REQUESTED, we recalculate the quote dynamically
+    # so that any new Item Configurations or Type Discounts are applied immediately.
+    corp_info = None
+    main_char = request.user.profile.main_character
+    if main_char and main_char.corporation:
+        corp_info = main_char.corporation
+
+    if order.status == "REQUESTED":
+        parsed_items = {item.item_type: item.quantity for item in order.items.all()}
+        new_total, item_details = calculate_quote(parsed_items, corp_info)
+
+        for detail in item_details:
+            order_item = order.items.filter(item_type=detail["eve_type"]).first()
+            if order_item:
+                order_item.price_per_unit = detail["final_price_per_unit"]
+                order_item.discount_applied = detail["discount_percent"]
+                order_item.save()
+
+        order.total_price = new_total
+        order.save()
 
     bom_materials = calculate_order_bom(order)
 
     total_bom_price = 0
     if bom_materials:
         mat_ids = list(bom_materials.keys())
-        prices = get_fuzzwork_prices(mat_ids)
+
+        prices = get_prices_with_overrides(mat_ids, corp_info)
         for mat_id, data in bom_materials.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
@@ -438,8 +474,6 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     if request.user.has_perm(
         "industry_reforged.industrialist_access"
     ) or request.user.has_perm("industry_reforged.corp_access"):
-        from .utils.bom_engine import calculate_recursive_order_bom
-
         recursive_bom_tree = calculate_recursive_order_bom(order)
 
     context = {
@@ -460,8 +494,6 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Director provides a final quote for a requested order"""
     if request.method == "POST":
-        from .models import MemberOrder
-
         order = MemberOrder.objects.filter(id=order_id, status="REQUESTED").first()
         if not order:
             messages.error(request, _("Order not found or is not in REQUESTED status."))
@@ -474,8 +506,6 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             order.total_price = new_total
             order.status = "QUOTED"
-            # Django
-            from django.utils import timezone
 
             order.quoted_at = timezone.now()
             order.save()
@@ -484,14 +514,10 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             main_char = request.user.profile.main_character
             corporation = main_char.corporation if main_char else None
             if corporation:
-                from .models import CorporationWebhookConfig
-
                 webhook_config = CorporationWebhookConfig.objects.filter(
                     corporation=corporation
                 ).first()
                 if webhook_config and webhook_config.orders_webhook:
-                    from .utils.discord import send_discord_webhook
-
                     embed = {
                         "title": f"Quote Provided: Order #{order.id}",
                         "description": f"A quote of **{new_total:,.2f} ISK** has been provided for your order. Please review and accept.",
@@ -518,7 +544,6 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    from .models import MemberOrder, ProductionTask
 
     order = MemberOrder.objects.filter(
         id=order_id, character_id__in=user_characters, status="QUOTED"
@@ -526,8 +551,6 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     if order:
         order.status = "ACCEPTED"
-        # Django
-        from django.utils import timezone
 
         order.accepted_at = timezone.now()
         order.save()
@@ -550,14 +573,10 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         main_char = request.user.profile.main_character
         corporation = main_char.corporation if main_char else None
         if corporation:
-            from .models import CorporationWebhookConfig
-
             webhook_config = CorporationWebhookConfig.objects.filter(
                 corporation=corporation
             ).first()
             if webhook_config and webhook_config.orders_webhook:
-                from .utils.discord import send_discord_webhook
-
                 embed = {
                     "title": f"Quote Accepted: Order #{order.id}",
                     "description": f"**{order.character.character_name}** has accepted the quote. Tasks generated.",
@@ -580,7 +599,6 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    from .models import MemberOrder
 
     order = MemberOrder.objects.filter(
         id=order_id, character_id__in=user_characters, status="QUOTED"
@@ -594,14 +612,10 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         main_char = request.user.profile.main_character
         corporation = main_char.corporation if main_char else None
         if corporation:
-            from .models import CorporationWebhookConfig
-
             webhook_config = CorporationWebhookConfig.objects.filter(
                 corporation=corporation
             ).first()
             if webhook_config and webhook_config.orders_webhook:
-                from .utils.discord import send_discord_webhook
-
                 embed = {
                     "title": f"Quote Rejected: Order #{order.id}",
                     "description": f"**{order.character.character_name}** has rejected the quote.",
@@ -619,8 +633,6 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-
-    from .models import MemberOrder
 
     # Check if the user is a director or the owner
     is_director = request.user.has_perm("industry_reforged.corp_access")
@@ -652,8 +664,6 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
 @permission_required("industry_reforged.industrialist_access")
 def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main execution dashboard for industrialists"""
-
-    from .models import CorpMOTD, CorporationIndustryJob, ProductionTask
 
     # Setup corp context
     main_char = request.user.profile.main_character
@@ -692,8 +702,6 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     # Django
     from django.db.models import Sum
 
-    from .models import MemberOrder
-
     orders_qs = MemberOrder.objects.filter(status__in=["ACCEPTED", "IN_PRODUCTION"])
     dynamic_motd_stats = {
         "orders_in_production": orders_qs.count(),
@@ -720,10 +728,6 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
         character_id = request.POST.get("character_id")
-        # Alliance Auth
-        from allianceauth.eveonline.models import EveCharacter
-
-        from .models import ProductionTask
 
         character = EveCharacter.objects.filter(
             character_id=character_id, character_ownership__user=request.user
@@ -734,9 +738,6 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
         if task:
-            # Django
-            from django.utils import timezone
-
             task.status = "IN_PRODUCTION"
             task.assigned_to = character
             task.assigned_at = timezone.now()
@@ -757,15 +758,11 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
         user_characters = request.user.character_ownerships.all().values_list(
             "character_id", flat=True
         )
-        from .models import ProductionTask
 
         task = ProductionTask.objects.filter(
             id=task_id, assigned_to_id__in=user_characters, status="IN_PRODUCTION"
         ).first()
         if task:
-            # Django
-            from django.utils import timezone
-
             task.status = "COMPLETED"
             task.completed_at = timezone.now()
             task.save()
@@ -793,8 +790,6 @@ def industrialist_leaderboard(request: WSGIRequest) -> HttpResponse:
     """Leaderboard and History view"""
     # Django
     from django.db.models import Count, Sum
-
-    from .models import ProductionTask
 
     # Leaderboard by points (gamification_value)
     leaderboard_isk = (
@@ -837,7 +832,6 @@ def industrialist_leaderboard(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def trigger_inventory_sync(request: WSGIRequest) -> HttpResponse:
     """Manually trigger Corporate Inventory sync"""
-    from .tasks import task_sync_corp_inventory
 
     task_sync_corp_inventory.delay()
     messages.success(
@@ -853,7 +847,6 @@ def trigger_inventory_sync(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def director_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main dashboard for Directors to manage orders and jobs."""
-    from .models import MemberOrder, ProductionTask
 
     # We show orders for characters in the director's corps
     all_orders = MemberOrder.objects.all().order_by("-created_at")
@@ -873,8 +866,6 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     """Inventory and Analytics for Directors."""
     # Django
     from django.db.models import Sum
-
-    from .models import CorpInventory, CorpItemConfig
 
     inventory = CorpInventory.objects.values(
         "item_type__name", "item_type__id"
@@ -909,11 +900,28 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def director_config(request: WSGIRequest) -> HttpResponse:
     """Mass edit form for Item Configurations."""
-    from .models import CorpItemConfig
 
-    configs = CorpItemConfig.objects.all()
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
 
-    context = {"title": "Item Configurations", "configs": configs}
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:index")
+
+    item_configs = CorpItemConfig.objects.filter(corporation=corporation)
+    pricing_config, created = CorpPricingConfig.objects.get_or_create(
+        corporation=corporation
+    )
+    type_discounts = CorpTypeDiscount.objects.filter(config=pricing_config)
+    tax_config, created_tax = TaxConfig.objects.get_or_create(corporation=corporation)
+
+    context = {
+        "title": "Configurations",
+        "configs": item_configs,
+        "pricing_config": pricing_config,
+        "type_discounts": type_discounts,
+        "tax_config": tax_config,
+    }
     return render(request, "industry_reforged/director_config.html", context)
 
 
@@ -921,10 +929,6 @@ def director_config(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
     """Tool to discover corporate hangars by scanning the first few pages of assets."""
-    # Alliance Auth
-    from esi.models import Token
-
-    from .models import CorpHangarConfig, CorporationSyncConfig
 
     main_char = request.user.profile.main_character
     corporation = main_char.corporation if main_char else None
@@ -1091,7 +1095,6 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def director_wallets(request: WSGIRequest) -> HttpResponse:
     """Corporate Wallets and Transactions"""
-    from .models import CorpWalletDivision, CorpWalletJournal
 
     # We show wallets for the first configured corp for simplicity, or all user corps
     user_corps = request.user.character_ownerships.all().values_list(
@@ -1134,7 +1137,6 @@ def director_wallets(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def trigger_wallet_sync(request: WSGIRequest) -> HttpResponse:
     """Manually trigger Wallet sync"""
-    from .tasks import task_sync_corp_wallets
 
     task_sync_corp_wallets.delay()
     messages.success(
@@ -1144,3 +1146,196 @@ def trigger_wallet_sync(request: WSGIRequest) -> HttpResponse:
         ),
     )
     return redirect("industry_reforged:director_wallets")
+
+
+# Django
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_item_edit(
+    request: WSGIRequest, config_id: int = None
+) -> HttpResponse:
+    from .models import CorpItemConfig
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    if config_id:
+        instance = get_object_or_404(
+            CorpItemConfig, id=config_id, corporation=corporation
+        )
+    else:
+        instance = CorpItemConfig(corporation=corporation)
+
+    if request.method == "POST":
+        form = CorpItemConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Item configuration saved successfully."))
+            return redirect(reverse("industry_reforged:director_config") + "#items")
+    else:
+        form = CorpItemConfigForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": (
+                _("Edit Item Configuration")
+                if config_id
+                else _("Add Item Configuration")
+            ),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#items",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_item_delete(request: WSGIRequest, config_id: int) -> HttpResponse:
+    from .models import CorpItemConfig
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    config = get_object_or_404(CorpItemConfig, id=config_id, corporation=corporation)
+    config.delete()
+    messages.success(request, _("Item configuration deleted."))
+    return redirect(reverse("industry_reforged:director_config") + "#items")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_pricing_edit(request: WSGIRequest) -> HttpResponse:
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    instance, created = CorpPricingConfig.objects.get_or_create(corporation=corporation)
+
+    if request.method == "POST":
+        form = CorpPricingConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Global pricing configuration saved."))
+            return redirect(reverse("industry_reforged:director_config") + "#pricing")
+    else:
+        form = CorpPricingConfigForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Edit Global Pricing Configuration"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#pricing",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_discount_edit(
+    request: WSGIRequest, discount_id: int = None
+) -> HttpResponse:
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    pricing_config, created = CorpPricingConfig.objects.get_or_create(
+        corporation=corporation
+    )
+
+    if discount_id:
+        instance = get_object_or_404(
+            CorpTypeDiscount, id=discount_id, config=pricing_config
+        )
+    else:
+        instance = CorpTypeDiscount(config=pricing_config)
+
+    if request.method == "POST":
+        form = CorpTypeDiscountForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Type discount saved successfully."))
+            return redirect(reverse("industry_reforged:director_config") + "#discounts")
+    else:
+        form = CorpTypeDiscountForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Edit Type Discount") if discount_id else _("Add Type Discount"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#discounts",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_discount_delete(
+    request: WSGIRequest, discount_id: int
+) -> HttpResponse:
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    pricing_config = get_object_or_404(CorpPricingConfig, corporation=corporation)
+    discount = get_object_or_404(
+        CorpTypeDiscount, id=discount_id, config=pricing_config
+    )
+    discount.delete()
+    messages.success(request, _("Type discount deleted."))
+    return redirect(reverse("industry_reforged:director_config") + "#discounts")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_tax_edit(request: WSGIRequest) -> HttpResponse:
+    from .forms import TaxConfigForm
+    from .models import TaxConfig
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    instance, created = TaxConfig.objects.get_or_create(corporation=corporation)
+
+    if request.method == "POST":
+        form = TaxConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("System taxes saved successfully."))
+            return redirect(reverse("industry_reforged:director_config") + "#pricing")
+    else:
+        form = TaxConfigForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Edit System Taxes"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#pricing",
+        },
+    )

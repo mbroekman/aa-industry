@@ -7,18 +7,14 @@ from .models import (
     CharacterIndustryJob,
     CorpHangarConfig,
     CorpInventory,
-    CorpItemConfig,
     CorpMOTD,
     CorporationIndustryJob,
     CorporationSyncConfig,
     CorporationWebhookConfig,
-    CorpPricingConfig,
-    CorpTypeDiscount,
     MemberOrder,
     OrderFit,
     OrderItem,
     ProductionTask,
-    TaxConfig,
 )
 
 
@@ -44,16 +40,6 @@ class CorporationIndustryJobAdmin(admin.ModelAdmin):
 @admin.register(CorporationSyncConfig)
 class CorporationSyncConfigAdmin(admin.ModelAdmin):
     list_display = ("corporation", "sync_character")
-
-
-@admin.register(CorpPricingConfig)
-class CorpPricingConfigAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "default_discount_percent")
-
-
-@admin.register(CorpTypeDiscount)
-class CorpTypeDiscountAdmin(admin.ModelAdmin):
-    list_display = ("config", "eve_type", "discount_percent")
 
 
 class OrderItemInline(admin.TabularInline):
@@ -85,20 +71,6 @@ class ProductionTaskAdmin(admin.ModelAdmin):
     search_fields = ("assigned_to__character_name", "item_type__name")
 
 
-@admin.register(CorpItemConfig)
-class CorpItemConfigAdmin(admin.ModelAdmin):
-    list_display = (
-        "corporation",
-        "item_type",
-        "build_or_buy",
-        "bom_source",
-        "target_threshold",
-        "auto_produce",
-    )
-    list_filter = ("build_or_buy", "bom_source", "auto_produce")
-    search_fields = ("item_type__name", "corporation__corporation_name")
-
-
 @admin.register(CorpHangarConfig)
 class CorpHangarConfigAdmin(admin.ModelAdmin):
     list_display = ("corporation", "location_id", "flag_id", "description")
@@ -116,11 +88,6 @@ class CorpInventoryAdmin(admin.ModelAdmin):
     )
     list_filter = ("manual_override", "corporation")
     search_fields = ("item_type__name",)
-
-
-@admin.register(TaxConfig)
-class TaxConfigAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "industry_tax_rate", "broker_fee_rate")
 
 
 @admin.register(CorporationWebhookConfig)

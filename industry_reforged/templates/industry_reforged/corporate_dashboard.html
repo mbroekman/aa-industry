@@ -1,5 +1,6 @@
 {% extends 'industry_reforged/base.html' %}
 {% load i18n %}
+{% load industry_tags %}
 {% load humanize %}
 
 {% block details %}
@@ -66,7 +67,7 @@
                                     </td>
                                     <td class="text-end numeric">{{ job.runs }}</td>
                                     <td class="text-end numeric">{% if job.probability %}{{ job.probability|floatformat:2 }}%{% endif %}</td>
-                                    <td class="text-end numeric text-warning">{{ job.cost|floatformat:2|intcomma }}</td>
+                                    <td class="text-end numeric text-warning">{{ job.cost|eve_isk }}</td>
                                     <td>{{ job.wallet_division }}</td>
                                     <td>
                                         <span class="badge {% if job.is_ready %}bg-success{% elif job.status == 'active' %}bg-primary{% else %}bg-secondary{% endif %}">
@@ -125,7 +126,7 @@
                                     </td>
                                     <td class="text-end numeric">{{ job.runs }}</td>
                                     <td class="text-end numeric">{{ job.successful_runs|default_if_none:"-" }}</td>
-                                    <td class="text-end numeric text-warning">{{ job.cost|floatformat:2|intcomma }}</td>
+                                    <td class="text-end numeric text-warning">{{ job.cost|eve_isk }}</td>
                                     <td>{{ job.wallet_division }}</td>
                                     <td>
                                         <span class="badge {% if job.status == 'delivered' %}bg-primary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">

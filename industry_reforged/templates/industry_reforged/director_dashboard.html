@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n humanize %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -56,7 +57,7 @@
                                 <tr>
                                     <td>#{{ order.id }}</td>
                                     <td>{{ order.character.character_name }}</td>
-                                    <td class="numeric text-warning text-end">{{order.total_price|floatformat:2|intcomma }} ISK</td>
+                                    <td class="numeric text-warning text-end">{{order.total_price|eve_isk }}</td>
                                     <td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td>
                                     <td>
                                         <div class="progress mt-1"

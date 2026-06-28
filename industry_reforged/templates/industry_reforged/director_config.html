@@ -1,37 +1,63 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n humanize %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3><i class="fas fa-cogs"></i> {% trans "Director Item Configurations" %}</h3>
-            <a href="{% url 'industry_reforged:director_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back</a>
+            <h3><i class="fas fa-cogs"></i> {% trans "Director Configurations" %}</h3>
+            <a href="{% url 'industry_reforged:director_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
         </div>
-        <p class="text-muted">Set specific production and pricing rules for items here. These configurations dictate how the Core Engine calculates Bill of Materials, Prices, and Thresholds.</p>
+        <p class="text-muted">{% trans "Set corporate rules for production, material efficiency, and pricing overrides." %}</p>
     </div>
 
-    <div class="row">
-        <div class="col-12 text-end mb-3">
-            <a href="{% url 'industry_reforged:add_corporate_token' %}" class="btn btn-primary me-2"><i class="fas fa-key"></i> Grant Corp Token (Assets, Jobs & Structures)</a>
-            <a href="{% url 'industry_reforged:director_discover_hangars' %}" class="btn btn-success show-loader"><i class="fas fa-search"></i> Discover Hangars</a>
+    <div class="row mb-3">
+        <div class="col-12 text-end">
+            <a href="{% url 'industry_reforged:add_corporate_token' %}" class="btn btn-outline-primary me-2"><i class="fas fa-key"></i> {% trans "Grant Corp Token" %}</a>
+            <a href="{% url 'industry_reforged:director_discover_hangars' %}" class="btn btn-outline-success show-loader"><i class="fas fa-search"></i> {% trans "Discover Hangars" %}</a>
         </div>
-        <div class="col-12">
-            <div class="card border-0 mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title mb-0"><i class="fas fa-cog"></i> {% trans "Global Configurations" %}</h3>
-                    <button class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Add New Rule</button>
+    </div>
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button" role="tab" aria-controls="items" aria-selected="true">
+                <i class="fas fa-cubes"></i> {% trans "Item Configurations" %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pricing-tab" data-bs-toggle="tab" data-bs-target="#pricing" type="button" role="tab" aria-controls="pricing" aria-selected="false">
+                <i class="fas fa-tags"></i> {% trans "Global Pricing" %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="discounts-tab" data-bs-toggle="tab" data-bs-target="#discounts" type="button" role="tab" aria-controls="discounts" aria-selected="false">
+                <i class="fas fa-percent"></i> {% trans "Type Discounts" %}
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab panes -->
+    <div class="tab-content" id="configTabsContent">
+
+        <!-- ITEM CONFIGS TAB -->
+        <div class="tab-pane fade show active" id="items" role="tabpanel" aria-labelledby="items-tab">
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-cogs text-primary"></i> {% trans "Specific Item Rules" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_item_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Item Rule" %}</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover m-0">
-                            <thead>
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
                                 <tr>
                                     <th>Item</th>
                                     <th>BOM Strategy</th>
                                     <th class="text-end">ME/TE</th>
                                     <th class="text-end">Price Override</th>
-                                    <th class="text-end">Threshold (Target)</th>
+                                    <th class="text-end">Threshold</th>
                                     <th class="text-center">Auto Produce</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
@@ -41,32 +67,131 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ config.item_type.id }}/icon?size=32" alt="{{ config.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                            <span>{{ config.item_type.name }}</span>
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ config.item_type.id }}/icon?size=32" alt="{{ config.item_type.name }}" width="32" height="32" class="me-3 rounded bg-dark">
+                                            <span class="fw-bold">{{ config.item_type.name }}</span>
                                         </div>
                                     </td>
                                     <td>
                                         <span class="badge {% if config.build_or_buy == 'BUILD' %}bg-primary{% else %}bg-secondary{% endif %}">
                                             {{ config.get_build_or_buy_display }}
                                         </span>
-                                        <small class="d-block text-muted">{{ config.get_bom_source_display }}</small>
+                                        <small class="d-block text-muted mt-1">{{ config.get_bom_source_display }}</small>
                                     </td>
                                     <td class="text-end numeric">ME: {{ config.manual_me }}%<br>TE: {{ config.manual_te }}%</td>
-                                    <td class="text-end numeric text-warning">{% if config.manual_price %}{{ config.manual_price|intcomma }}{% else %}<em class="text-muted">Auto</em>{% endif %}</td>
+                                    <td class="text-end numeric text-warning fw-bold">{% if config.manual_price %}{{ config.manual_price|eve_isk }}{% else %}<span class="text-muted fw-normal"><em>Auto (Fuzzwork)</em></span>{% endif %}</td>
                                     <td class="text-end numeric">{{ config.target_threshold|intcomma }}</td>
                                     <td class="text-center">{% if config.auto_produce %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
                                     <td class="text-end">
-                                        <button class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></button>
+                                        <a href="{% url 'industry_reforged:director_config_item_edit' config.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                        <a href="{% url 'industry_reforged:director_config_item_delete' config.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('{% trans "Are you sure you want to delete this rule?" %}');"><i class="fas fa-trash"></i></a>
                                     </td>
                                 </tr>
                                 {% empty %}
-                            <tr><td colspan="7" class="text-center text-muted">No rules configured. Defaults apply.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                <tr><td colspan="7" class="text-center text-muted p-4">{% trans "No item rules configured. Global defaults apply." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- GLOBAL PRICING TAB -->
+        <div class="tab-pane fade" id="pricing" role="tabpanel" aria-labelledby="pricing-tab">
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-tags text-primary"></i> {% trans "Global Pricing Configuration" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted text-uppercase mb-1">{% trans "Default Corporate Discount" %}</h6>
+                            <p class="fs-4 mb-0 fw-bold">
+                                {% if pricing_config.default_discount_percent > 0 %}
+                                    <span class="text-success">{{ pricing_config.default_discount_percent }}% OFF</span>
+                                {% else %}
+                                    0% (Jita Price)
+                                {% endif %}
+                            </p>
+                            <small class="text-muted">{% trans "Applied automatically to all member orders unless overridden by a Type Discount." %}</small>
+                            <div class="mt-2">
+                                <a href="{% url 'industry_reforged:director_config_pricing_edit' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> {% trans "Edit Discount" %}</a>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted text-uppercase mb-1">{% trans "System Taxes & Fees" %}</h6>
+                            <p class="fs-5 mb-0">
+                                <strong>{% trans "Industry Tax Rate" %}:</strong> {{ tax_config.industry_tax_rate }}%<br>
+                                <strong>{% trans "Broker Fee Rate" %}:</strong> {{ tax_config.broker_fee_rate }}%
+                            </p>
+                            <small class="text-muted">{% trans "Used to calculate realistic build costs and margins." %}</small>
+                            <div class="mt-2">
+                                <a href="{% url 'industry_reforged:director_config_tax_edit' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> {% trans "Edit Taxes" %}</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TYPE DISCOUNTS TAB -->
+        <div class="tab-pane fade" id="discounts" role="tabpanel" aria-labelledby="discounts-tab">
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-percent text-primary"></i> {% trans "Specific Type Discounts" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_discount_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Type Discount" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="text-end">Discount Percent</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for discount in type_discounts %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ discount.eve_type.id }}/icon?size=32" alt="{{ discount.eve_type.name }}" width="32" height="32" class="me-3 rounded bg-dark">
+                                            <span class="fw-bold">{{ discount.eve_type.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end numeric fw-bold text-success">{{ discount.discount_percent }}%</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_discount_edit' discount.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                        <a href="{% url 'industry_reforged:director_config_discount_delete' discount.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('{% trans "Are you sure you want to delete this discount?" %}');"><i class="fas fa-trash"></i></a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted p-4">{% trans "No specific type discounts configured." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
+{% endblock %}
+
+{% block extra_javascript %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var hash = window.location.hash;
+        if (hash) {
+            var triggerEl = document.querySelector('button[data-bs-target="' + hash + '"]');
+            if (triggerEl) {
+                var tab = new bootstrap.Tab(triggerEl);
+                tab.show();
+            }
+        }
+    });
+</script>
 {% endblock %}

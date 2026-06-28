@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n humanize %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -41,7 +42,7 @@
                 </div>
                 <div class="col-6 col-md-3 mb-3">
                     <h5 class="text-muted mb-1" style="font-size: 0.9rem;"><i class="fas fa-coins"></i> {% trans "Value in Progress" %}</h5>
-                    <h4 class="text-success numeric mb-0">{{ dynamic_motd_stats.value_in_progress|floatformat:0|intcomma }} ISK</h4>
+                    <h4 class="text-success numeric mb-0">{{ dynamic_motd_stats.value_in_progress|eve_isk }}</h4>
                 </div>
             </div>
         </div>

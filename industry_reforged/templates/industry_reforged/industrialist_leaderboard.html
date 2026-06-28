@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n humanize %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -64,7 +65,7 @@
                                 <tr>
                                     <td class="numeric"><strong>{{ forloop.counter }}</strong></td>
                                     <td>{{ entry.assigned_to__character_name }}</td>
-                                    <td class="text-end fw-bold text-warning numeric">{{ entry.total_isk|floatformat:0|intcomma }}</td>
+                                    <td class="text-end fw-bold text-warning numeric">{{ entry.total_isk|eve_isk }}</td>
                                 </tr>
                             {% empty %}
                             <tr>
