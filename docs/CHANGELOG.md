@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
+## [0.1.0b9] - Unreleased
+
+### Fixed
+
+- Fixed a display bug in the Order Details view where corporate discounts were applied correctly to the final price, but the "Original Jita Price" and "Savings" footer incorrectly showed the already discounted total. Individual discounted items now clearly show their original price crossed out next to the discounted price.
+- Fixed an issue where the "Provide Quote" input field for Directors was incorrectly empty instead of being pre-filled with the calculated total order price. Added a convenient visual tooltip helper next to the input to quickly read large ISK abbreviations.
+
 ## [0.1.0b8] - 2026-06-29
 
 ### Changed

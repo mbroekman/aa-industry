@@ -425,6 +425,21 @@ class OrderItem(models.Model):
     def line_total(self):
         return self.price_per_unit * self.quantity
 
+    @property
+    def original_price_per_unit(self):
+        if self.discount_applied == 0:
+            return self.price_per_unit
+
+        # Avoid division by zero if discount is somehow 100%
+        if self.discount_applied >= 100:
+            return self.price_per_unit
+
+        return float(self.price_per_unit) / (1.0 - (self.discount_applied / 100.0))
+
+    @property
+    def original_line_total(self):
+        return self.original_price_per_unit * self.quantity
+
 
 class OrderFit(models.Model):
     order = models.OneToOneField(

@@ -467,9 +467,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
 
-    # Calculate original price from items
-    original_price = sum(item.line_total for item in order.items.all())
-    savings = original_price - order.total_price
+    # Calculate original price from items before any discounts
+    original_price = sum(item.original_line_total for item in order.items.all())
+    savings = float(original_price) - float(order.total_price)
 
     recursive_bom_tree = []
     if request.user.has_perm(
