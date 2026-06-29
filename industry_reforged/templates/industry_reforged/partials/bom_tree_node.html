@@ -13,8 +13,8 @@
                 <a href="{% url 'industry_reforged:shopping_list' %}?type_id={{ node.type_id }}&quantity={{ node.quantity|floatformat:0 }}&item_name={{ node.name|urlencode }}" class="btn btn-sm btn-outline-warning me-2 show-loader" title="{% trans 'Shopping List for this component' %}">
                     <i class="fas fa-shopping-cart"></i>
                 </a>
-                <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ node.type_id }}-{{ prefix }}" aria-expanded="false" aria-controls="collapse-{{ node.type_id }}-{{ prefix }}">
-                    <i class="fas fa-chevron-down"></i> {% trans "Drilldown" %}
+                <button class="btn btn-sm btn-outline-light drilldown-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ node.type_id }}-{{ prefix }}" aria-expanded="false" aria-controls="collapse-{{ node.type_id }}-{{ prefix }}">
+                    <i class="fas fa-chevron-down transition-icon"></i> {% trans "Drilldown" %}
                 </button>
             </div>
         {% endif %}

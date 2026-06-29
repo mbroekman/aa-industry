@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
+## [0.1.0b8] - 2026-06-29
+
+### Changed
+
+- Removed the "View Order BOM" (`+`) magnifying glass icon from the Industrialist Dashboard. Industrialists can generate an item-specific BOM directly using the "Shopping List" functionality.
+- Replaced the browser-native confirmation popup for generating Shopping Lists with a consistent, styled Bootstrap modal.
+- Hid the "Bill of Materials" tab on the Order View page from standard users (`basic_access`). Only Directors and Industrialists can now view the detailed raw material costs and BOM for an order.
+- Improved the Recursive Production Tree (Drilldown) UI on the Order View page: added visual indicators (rotating chevrons) to show expanded/collapsed states, and introduced a single "Toggle All Drilldowns" button to easily expand or collapse the entire tree at once.
+
+### Fixed
+
+- Fixed a major calculation error in the BOM engine where the `productQuantity` (blueprint output yield) was ignored. This caused items that produce in batches (like ammunition, rockets, and drones) to wildly over-calculate the required raw materials and BOM cost by up to 100x.
+- Fixed a broken HTML layout in the Industrialist Leaderboard where the right column (Top Builders by ISK) overlapped the left column due to an unclosed HTML tag.
+
 ## [0.1.0b7] - 2026-06-28
 
 ### Added

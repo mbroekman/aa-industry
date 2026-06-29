@@ -16,9 +16,9 @@ FUZZWORK_BOM_API = "https://fuzzwork.co.uk/blueprint/api/blueprint.php?typeid="
 def get_fuzzwork_bom(type_id):
     """
     Fetch the manufacturing materials for a specific blueprint/type from Fuzzwork.
-    Returns a list of dicts: [{"typeid": int, "name": str, "quantity": int}, ...]
+    Returns a tuple: (list of dicts, product_quantity)
     """
-    cache_key = f"industry_reforged_bom_{type_id}"
+    cache_key = f"industry_reforged_bom_v2_{type_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -30,13 +30,17 @@ def get_fuzzwork_bom(type_id):
             data = resp.json()
             # "1" is the activity ID for Manufacturing
             manufacturing_materials = data.get("activityMaterials", {}).get("1", [])
+            product_quantity = data.get("blueprintDetails", {}).get(
+                "productQuantity", 1
+            )
             # Cache for 1 week (60 * 60 * 24 * 7)
-            cache.set(cache_key, manufacturing_materials, 604800)
-            return manufacturing_materials
+            result = (manufacturing_materials, product_quantity)
+            cache.set(cache_key, result, 604800)
+            return result
     except Exception as e:
         logger.error(f"Failed to fetch Fuzzwork BOM for type_id {type_id}: {e}")
 
-    return []
+    return ([], 1)
 
 
 def calculate_order_bom(order):
@@ -76,17 +80,15 @@ def calculate_order_bom(order):
         except Exception:
             pass
 
-        materials = get_fuzzwork_bom(type_id)
+        materials, yield_qty = get_fuzzwork_bom(type_id)
+        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
+
         for mat in materials:
             mat_type_id = mat.get("typeid")
             base_qty = mat.get("quantity", 0)
 
-            # Simple BOM math: (base_qty * quantity) * (1 - me_level/100)
-            # In EVE, fractional materials are usually rounded up per job run, but for an estimation
-            # across an entire order, this provides a highly accurate Shopping List.
-            required_qty = max(
-                1, math.ceil(base_qty * quantity * (1 - (me_level / 100.0)))
-            )
+            # Simple BOM math
+            required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
@@ -124,14 +126,14 @@ def calculate_tasks_bom(tasks, corp_info=None):
             except Exception:
                 pass
 
-        materials = get_fuzzwork_bom(type_id)
+        materials, yield_qty = get_fuzzwork_bom(type_id)
+        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
+
         for mat in materials:
             mat_type_id = mat.get("typeid")
             base_qty = mat.get("quantity", 0)
 
-            required_qty = max(
-                1, math.ceil(base_qty * quantity * (1 - (me_level / 100.0)))
-            )
+            required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
@@ -157,7 +159,8 @@ def get_recursive_bom_tree(type_id, name, quantity, me_dict, depth=0):
             "sub_materials": [],
         }
 
-    materials = get_fuzzwork_bom(type_id)
+    materials, yield_qty = get_fuzzwork_bom(type_id)
+    runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
     sub_materials = []
 
     for mat in materials:
@@ -167,7 +170,7 @@ def get_recursive_bom_tree(type_id, name, quantity, me_dict, depth=0):
 
         # Apply ME discount if configured
         me_level = me_dict.get(mat_type_id, 0)
-        required_qty = max(1, math.ceil(base_qty * quantity * (1 - (me_level / 100.0))))
+        required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
 
         child_node = get_recursive_bom_tree(
             mat_type_id, mat_name, required_qty, me_dict, depth + 1

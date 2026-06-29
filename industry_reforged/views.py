@@ -262,7 +262,8 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         # Standard Library
         import math
 
-        materials = get_fuzzwork_bom(type_id)
+        materials, yield_qty = get_fuzzwork_bom(type_id)
+        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         corp_info = None
         main_char = request.user.profile.main_character
@@ -281,9 +282,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             mat_type_id = mat.get("typeid")
             base_qty = mat.get("quantity", 0)
 
-            required_qty = max(
-                1, math.ceil(base_qty * quantity * (1 - (me_level / 100.0)))
-            )
+            required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
@@ -425,9 +424,11 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         messages.error(request, _("Order not found."))
         return redirect("industry_reforged:orders_dashboard")
 
-    # Access control: owner OR director
-    if order.character_id not in user_characters and not request.user.has_perm(
-        "industry_reforged.corp_access"
+    # Access control: owner OR director OR industrialist
+    if (
+        order.character_id not in user_characters
+        and not request.user.has_perm("industry_reforged.corp_access")
+        and not request.user.has_perm("industry_reforged.industrialist_access")
     ):
         messages.error(request, _("Access denied."))
         return redirect("industry_reforged:orders_dashboard")

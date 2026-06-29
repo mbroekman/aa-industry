@@ -298,6 +298,24 @@
     </div> <!-- End Card wrapper -->
 </div> <!-- End Container Fluid -->
 
+<!-- Shopping List Error Modal -->
+<div class="modal fade" id="shoppingListErrorModal" tabindex="-1" aria-labelledby="shoppingListErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shoppingListErrorModalLabel">{% trans "Selection Required" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% trans "Please select at least one task to generate a Shopping List." %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% trans "OK" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Restore active tab from sessionStorage
@@ -342,7 +360,8 @@
         }
 
         if (selectedIds.length === 0) {
-            alert("{% trans 'Please select at least one task.' %}");
+            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            errorModal.show();
             return;
         }
 

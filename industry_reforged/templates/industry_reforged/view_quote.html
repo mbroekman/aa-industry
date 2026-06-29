@@ -3,6 +3,14 @@
 {% load industry_tags %}
 
 {% block details %}
+<style>
+    .drilldown-btn[aria-expanded="true"] .transition-icon {
+        transform: rotate(180deg);
+    }
+    .transition-icon {
+        transition: transform 0.2s ease-in-out;
+    }
+</style>
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
@@ -66,9 +74,11 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab" aria-controls="details-pane" aria-selected="true">{% trans "Order Details" %}</button>
                 </li>
+                {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="bom-tab" data-bs-toggle="tab" data-bs-target="#bom-pane" type="button" role="tab" aria-controls="bom-pane" aria-selected="false">{% trans "Bill of Materials" %}</button>
                 </li>
+                {% endif %}
                 {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-pane" type="button" role="tab" aria-controls="tree-pane" aria-selected="false">{% trans "Full Production Tree" %}</button>
@@ -200,6 +210,7 @@
                 </div> <!-- End Tab 1 -->
 
                 <!-- TAB 2: BOM -->
+                {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
                 <div class="tab-pane fade" id="bom-pane" role="tabpanel" aria-labelledby="bom-tab" tabindex="0">
                     <div class="row">
                         <div class="col-12 mb-4">
@@ -250,6 +261,7 @@
                         </div>
                     </div> <!-- End Row -->
                 </div> <!-- End Tab 2 -->
+                {% endif %}
 
                 <!-- TAB 3: TREE -->
                 {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
@@ -257,8 +269,11 @@
                     <div class="row">
                         <div class="col-12 mb-4">
                             <div class="card border-0 h-100 bg-dark">
-                                <div class="card-header border-bottom border-secondary">
-                                    <h3 class="card-title text-white"><i class="fas fa-sitemap me-2 text-info"></i> {% trans "Recursive Production Tree" %}</h3>
+                                <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center">
+                                    <h3 class="card-title text-white mb-0"><i class="fas fa-sitemap me-2 text-info"></i> {% trans "Recursive Production Tree" %}</h3>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-light" onclick="toggleAllDrilldowns(this)" data-expanded="false"><i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}</button>
+                                    </div>
                                 </div>
                                 <div class="card-body p-4" style="max-height: 800px; overflow-y: auto;">
                                     {% if recursive_bom_tree %}
@@ -303,4 +318,34 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleAllDrilldowns(btn) {
+        var isExpanding = btn.getAttribute('data-expanded') !== 'true';
+        var elements = document.querySelectorAll('.bom-node .collapse');
+
+        elements.forEach(function(el) {
+            var bsCollapse = bootstrap.Collapse.getOrCreateInstance(el, {toggle: false});
+            if (isExpanding) {
+                bsCollapse.show();
+            } else {
+                bsCollapse.hide();
+            }
+
+            // Sync aria-expanded on the individual buttons so the chevron rotates
+            var drilldownBtn = document.querySelector('[data-bs-target="#' + el.id + '"]');
+            if (drilldownBtn) {
+                drilldownBtn.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+            }
+        });
+
+        // Update the main toggle button state
+        btn.setAttribute('data-expanded', isExpanding ? 'true' : 'false');
+        if (isExpanding) {
+            btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> {% trans "Collapse All" %}';
+        } else {
+            btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}';
+        }
+    }
+</script>
 {% endblock %}
