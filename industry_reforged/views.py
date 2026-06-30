@@ -556,19 +556,70 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         order.accepted_at = timezone.now()
         order.save()
 
-        # Create Production Tasks
-        tasks_to_create = []
-        for item in order.items.all():
-            tasks_to_create.append(
-                ProductionTask(
-                    item_type=item.item_type,
-                    quantity=item.quantity,
+        # Get the corp config to calculate the reward value
+        pricing_config = None
+        if order.character.corporation:
+            pricing_config = CorpPricingConfig.objects.filter(
+                corporation=order.character.corporation
+            ).first()
+
+        reward_percent = (
+            pricing_config.builder_reward_percent if pricing_config else 0.0
+        )
+
+        # Calculate full BOM tree
+        recursive_bom_tree = calculate_recursive_order_bom(order)
+
+        # Extract all unique type_ids for pricing
+        all_type_ids = set()
+
+        def extract_types(node):
+            all_type_ids.add(node["type_id"])
+            for sub in node.get("sub_materials", []):
+                extract_types(sub)
+
+        for tree in recursive_bom_tree:
+            extract_types(tree)
+
+        # Get prices
+        corp_info = order.character.corporation if order.character else None
+        prices = get_prices_with_overrides(list(all_type_ids), corp_info)
+
+        # Third Party
+        from eveuniverse.models import EveType
+
+        eve_types = {t.id: t for t in EveType.objects.filter(id__in=list(all_type_ids))}
+
+        # Recursive task creation
+        def build_tasks(node, parent_task=None):
+            # Only create a task if it has sub_materials (it's built)
+            if node.get("sub_materials"):
+                type_id = node["type_id"]
+                quantity = node["quantity"]
+                eve_type = eve_types.get(type_id)
+                if not eve_type:
+                    eve_type, _ = EveType.objects.get_or_create_esi(id=type_id)
+                    eve_types[type_id] = eve_type
+
+                price_per_unit = prices.get(type_id, 0)
+                line_total = float(price_per_unit) * quantity
+                task_reward_value = line_total * (reward_percent / 100.0)
+
+                task = ProductionTask.objects.create(
+                    item_type=eve_type,
+                    quantity=quantity,
                     status="UNCLAIMED",
                     created_from_order=order,
-                    gamification_value=item.line_total,
+                    gamification_value=line_total,
+                    builder_reward=task_reward_value,
+                    bom_parent=parent_task,
                 )
-            )
-        ProductionTask.objects.bulk_create(tasks_to_create)
+
+                for sub in node.get("sub_materials", []):
+                    build_tasks(sub, parent_task=task)
+
+        for tree in recursive_bom_tree:
+            build_tasks(tree, parent_task=None)
 
         # Discord Webhook Notification
         main_char = request.user.profile.main_character
@@ -674,10 +725,40 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     if corporation:
         motd = CorpMOTD.objects.filter(corporation=corporation).first()
 
+    # Helper to convert a queryset into a depth-sorted tree list
+    def build_task_tree(qs):
+        roots = []
+        task_map = {}
+        for t in qs:
+            t.depth = 0
+            t.children_list = []
+            task_map[t.id] = t
+
+        for t in qs:
+            if t.bom_parent_id and t.bom_parent_id in task_map:
+                task_map[t.bom_parent_id].children_list.append(t)
+            else:
+                roots.append(t)
+
+        flattened = []
+
+        def flatten(node, d):
+            node.depth = d
+            flattened.append(node)
+            for child in node.children_list:
+                flatten(child, d + 1)
+
+        for root in roots:
+            flatten(root, 0)
+        return flattened
+
     # Unclaimed tasks
-    unclaimed_tasks = ProductionTask.objects.filter(status="UNCLAIMED").order_by(
-        "-created_at"
+    unclaimed_tasks_qs = (
+        ProductionTask.objects.filter(status="UNCLAIMED")
+        .select_related("item_type", "bom_parent", "created_from_order")
+        .order_by("-created_from_order__created_at", "id")
     )
+    unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
 
     # My active tasks
     user_characters = request.user.character_ownerships.all().values_list(
@@ -706,7 +787,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     orders_qs = MemberOrder.objects.filter(status__in=["ACCEPTED", "IN_PRODUCTION"])
     dynamic_motd_stats = {
         "orders_in_production": orders_qs.count(),
-        "open_tasks": unclaimed_tasks.count(),
+        "open_tasks": len(unclaimed_tasks),
         "active_jobs": corp_active_jobs.count(),
         "value_in_progress": orders_qs.aggregate(total=Sum("total_price"))["total"]
         or 0.0,
@@ -742,7 +823,31 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             task.status = "IN_PRODUCTION"
             task.assigned_to = character
             task.assigned_at = timezone.now()
+
+            # Prevent double-dipping: If character owns any ancestor task, this task's reward is 0
+            def has_owned_ancestor(t, char):
+                current = t.bom_parent
+                while current:
+                    if current.assigned_to == char:
+                        return True
+                    current = current.bom_parent
+                return False
+
+            if has_owned_ancestor(task, character):
+                task.builder_reward = 0
+
             task.save()
+
+            # Prevent double-dipping: If character already owned sub-components, nullify their rewards
+            def zero_owned_descendants(t, char):
+                for child in t.bom_children.all():
+                    if child.assigned_to == char and child.builder_reward > 0:
+                        child.builder_reward = 0
+                        child.save(update_fields=["builder_reward"])
+                    zero_owned_descendants(child, char)
+
+            zero_owned_descendants(task, character)
+
             messages.success(
                 request, f"Successfully claimed {task.quantity}x {task.item_type.name}."
             )

@@ -113,9 +113,13 @@
                                     0% (Jita Price)
                                 {% endif %}
                             </p>
-                            <small class="text-muted">{% trans "Applied automatically to all member orders unless overridden by a Type Discount." %}</small>
+                            <h6 class="text-muted text-uppercase mb-1 mt-3">{% trans "Builder Reward" %}</h6>
+                            <p class="fs-5 mb-0 fw-bold text-warning">
+                                {{ pricing_config.builder_reward_percent }}%
+                            </p>
+                            <small class="text-muted">{% trans "Applied automatically to all member orders and tasks unless overridden." %}</small>
                             <div class="mt-2">
-                                <a href="{% url 'industry_reforged:director_config_pricing_edit' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> {% trans "Edit Discount" %}</a>
+                                <a href="{% url 'industry_reforged:director_config_pricing_edit' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> {% trans "Edit Pricing" %}</a>
                             </div>
                         </div>
 

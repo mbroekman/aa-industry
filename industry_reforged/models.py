@@ -338,6 +338,10 @@ class CorpPricingConfig(models.Model):
         default=0.0,
         help_text="Default discount % applied to Jita prices (e.g. 10.0 for 10% off)",
     )
+    builder_reward_percent = models.FloatField(
+        default=0.0,
+        help_text="Percentage of the item value given as a financial reward to the builder",
+    )
 
     class Meta:
         verbose_name = _("Corp Pricing Config")
@@ -528,6 +532,12 @@ class ProductionTask(models.Model):
         decimal_places=2,
         default=0.00,
         help_text="Calculated ISK value of the task for leaderboards",
+    )
+    builder_reward = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=0.00,
+        help_text="Actual calculated ISK payout reward for completing this task",
     )
 
     # Timestamps

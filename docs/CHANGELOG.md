@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
-## [0.1.0b9] - Unreleased
+## [0.1.0b10] - Unreleased
+
+### Added
+
+- **Builder Reward Percentage**: Introduced a configurable `builder_reward_percent` for Production Tasks. Directors can now set a fixed percentage in the Control Panel that calculates exactly how much ISK an Industrialist earns for building an item. The "Reward Value" column on the Industrialist Dashboard now displays this actual ISK payout, while the `gamification_value` continues to track the full ship value separately for the Top Builders leaderboard.
+- **Hierarchical Task Generation**: Re-architected Quote Acceptance. Accepting a quote now dynamically generates a recursive Bill of Materials tree and creates claimable `ProductionTask`s for the top-level item *and every intermediate manufacturable component* (raw materials excluded). This allows multiple industrialists to collaborate on complex build chains (e.g. one builds the Capital Parts, another builds the Hull).
+- **Double-Dipping Prevention**: Implemented smart reward nullification when claiming tasks. If an industrialist claims a sub-component task, and later claims the parent task, the reward for the sub-component is automatically reduced to `0.00` ISK to prevent the corporation from double-paying rewards for the same production line.
+- **Job Market Search**: Added a real-time, client-side search bar to the Industrialist Dashboard, allowing builders to instantly filter the (now much larger) list of unclaimed hierarchical tasks by item name.
+- **Developer Tools**: Added a new management command `python manage.py wipe_industry_data` to safely clear all existing test orders and production tasks during development/beta testing.
+
+## [0.1.0b9] - 2026-06-29
 
 ### Fixed
 

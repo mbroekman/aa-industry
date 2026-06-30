@@ -70,9 +70,15 @@
                     <div class="row">
                         <div class="col-12 mb-4">
                             <div class="card border-0 h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <h4 class="card-title mb-0"><i class="fas fa-store"></i> {% trans "Job Market (Unclaimed)" %}</h4>
-                                    <button type="button" onclick="submitShoppingList('unclaimed')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="input-group input-group-sm" style="width: 250px;">
+                                            <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-search"></i></span>
+                                            <input type="text" id="marketSearchInput" class="form-control bg-dark border-secondary text-white" placeholder="{% trans 'Search item name...' %}">
+                                        </div>
+                                        <button type="button" onclick="submitShoppingList('unclaimed')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                                    </div>
                                 </div>
                                 <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
                                     <div class="table-responsive" id="unclaimedTableContainer">
@@ -93,16 +99,22 @@
                                                         <input type="checkbox" name="task_ids" value="{{ task.id }}" class="unclaimed-checkbox">
                                                     </td>
                                                     <td>
-                                                        <div class="d-flex align-items-center">
+                                                        <div class="d-flex align-items-center" style="padding-left: {% widthratio task.depth|default:0 1 25 %}px;">
+                                                            {% if task.depth > 0 %}
+                                                                <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2" style="font-size: 0.8rem;"></i>
+                                                            {% endif %}
                                                             <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
                                                                 class="me-2 rounded">
-                                                            <span>{{ task.item_type.name }}</span>
+                                                            <div>
+                                                                <span>{{ task.item_type.name }}</span>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
                                                     <td class="text-end numeric text-warning">
-                                                        {{task.gamification_value|floatformat:0|intcomma }}</td>
+                                                        {{ task.builder_reward|floatformat:0|intcomma }}
+                                                    </td>
                                                     <td class="text-end">
                                                         <form method="post" action="{% url 'industry_reforged:claim_task' task.id %}"
                                                             class="d-inline">
@@ -167,7 +179,12 @@
                                                             <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
                                                                 class="me-2 rounded">
-                                                            <span>{{ task.item_type.name }}</span>
+                                                            <div>
+                                                                <span>{{ task.item_type.name }}</span>
+                                                                {% if task.bom_parent %}
+                                                                <br><small class="text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> {% trans "Sub-component of" %} {{ task.bom_parent.item_type.name }}</small>
+                                                                {% endif %}
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
@@ -218,8 +235,13 @@
                                                         <div class="d-flex align-items-center">
                                                             <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
-                                                                class="me-2 rounded">
-                                                            <span class="text-muted text-decoration-line-through">{{ task.item_type.name }}</span>
+                                                                class="me-2 rounded opacity-50">
+                                                            <div>
+                                                                <span class="text-muted text-decoration-line-through">{{ task.item_type.name }}</span>
+                                                                {% if task.bom_parent %}
+                                                                <br><small class="text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> {% trans "Sub-component of" %} {{ task.bom_parent.item_type.name }}</small>
+                                                                {% endif %}
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td class="text-end numeric text-muted">{{ task.quantity }}</td>
@@ -368,5 +390,28 @@
         var url = "{% url 'industry_reforged:shopping_list' %}?task_ids=" + selectedIds.join("&task_ids=");
         window.location.href = url;
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById('marketSearchInput');
+        if(searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const filter = this.value.toLowerCase();
+                const table = document.getElementById('unclaimedTableContainer').querySelector('table');
+                const trs = table.querySelectorAll('tbody tr');
+
+                trs.forEach(function(tr) {
+                    const td = tr.querySelectorAll('td')[1];
+                    if (td) {
+                        const text = td.textContent || td.innerText;
+                        if (text.toLowerCase().indexOf(filter) > -1) {
+                            tr.style.display = "";
+                        } else {
+                            tr.style.display = "none";
+                        }
+                    }
+                });
+            });
+        }
+    });
 </script>
 {% endblock %}

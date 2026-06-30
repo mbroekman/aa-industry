@@ -109,7 +109,16 @@ To track your corporate inventory, you **must explicitly configure which hangars
 
 *Note: Corporate Sync Configuration is automatically created when a Director clicks the 'Add Corporate Token' button.*
 
-### 5. Background Syncing
+### 5. Pricing & Builder Rewards
+
+By default, the Industry Reforged quote engine uses raw Jita prices (and `0%` builder rewards). To customize this:
+
+1. Navigate to the **Director Dashboard** and click **Configurations**.
+2. Under the **Global Pricing** tab, you can set:
+   - **Default Discount**: A global discount applied to raw materials (e.g., `10.0` for 10% off Jita for alliance members).
+   - **Builder Reward Percent**: The percentage of the total ship/item value that should be calculated and presented as a direct ISK payout for the industrialist who builds it.
+
+### 6. Background Syncing
 
 The app relies on Celery tasks to periodically fetch data from EVE Online. To run these tasks automatically, add the following to your `myauth/settings/local.py`:
 

@@ -92,9 +92,12 @@ class CorpItemConfigForm(forms.ModelForm):
 class CorpPricingConfigForm(forms.ModelForm):
     class Meta:
         model = CorpPricingConfig
-        fields = ["default_discount_percent"]
+        fields = ["default_discount_percent", "builder_reward_percent"]
         widgets = {
             "default_discount_percent": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "builder_reward_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
         }
