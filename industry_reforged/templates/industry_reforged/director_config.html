@@ -171,24 +171,20 @@
                                 {% for d in type_discounts %}
                                 <tr>
                                     <td>
-                                        {% if d.item_type %}
+                                        {% if d.eve_type %}
                                         <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ d.item_type.id }}/icon?size=32" alt="{{ d.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                            <span>{{ d.item_type.name }}</span>
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ d.eve_type.id }}/icon?size=32" alt="{{ d.eve_type.name }}" width="24" height="24" class="me-2 rounded bg-dark">
+                                            <span>{{ d.eve_type.name }}</span>
                                         </div>
-                                        {% elif d.item_group %}
-                                        <span><i class="fas fa-folder text-warning"></i> {{ d.item_group.name }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge {% if d.item_type %}bg-primary{% else %}bg-warning{% endif %}">
-                                            {% if d.item_type %}Specific Type{% else %}Entire Group{% endif %}
-                                        </span>
+                                        <span class="badge bg-primary">Specific Type</span>
                                     </td>
                                     <td class="text-end numeric text-success">-{{ d.discount_percent }}%</td>
                                     <td class="text-end">
                                         <a href="{% url 'industry_reforged:director_config_discount_edit' d.id %}" class="btn btn-sm btn-secondary"><i class="fas fa-edit"></i></a>
-                                        <button class="btn btn-sm btn-danger ms-1" data-bs-toggle="modal" data-bs-target="#deleteDiscountModal" data-bs-delete-url="{% url 'industry_reforged:director_config_discount_delete' d.id %}"><i class="fas fa-trash"></i></button>
+                                        <a href="{% url 'industry_reforged:director_config_discount_delete' d.id %}" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('{% trans "Are you sure you want to delete this discount?" %}');"><i class="fas fa-trash"></i></a>
                                     </td>
                                 </tr>
                                 {% empty %}

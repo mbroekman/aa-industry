@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
+## [0.1.0b12] - Unreleased
+
+### Fixed
+
+- **Director Config**: Fixed a bug where creating duplicate Item Configurations or Type Discounts would crash the application with a 500 Server Error (IntegrityError). The form now correctly catches this and displays a user-friendly validation error.
+- **Director Config**: Fixed the "Type Discounts" tab template to correctly display the specific item type instead of an empty space, and restored the missing delete button functionality.
+
 ## [0.1.0b11] - Unreleased
 
 ### Added

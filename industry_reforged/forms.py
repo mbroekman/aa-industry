@@ -85,6 +85,17 @@ class CorpItemConfigForm(forms.ModelForm):
         item_name = cleaned_data.get("item_name")
         if item_name:
             eve_type = resolve_eve_type(item_name)
+
+            qs = CorpItemConfig.objects.filter(
+                corporation=self.instance.corporation, item_type=eve_type
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error(
+                    "item_name", _("A configuration for this item already exists.")
+                )
+
             self.instance.item_type = eve_type
         return cleaned_data
 
@@ -145,5 +156,16 @@ class CorpTypeDiscountForm(forms.ModelForm):
         item_name = cleaned_data.get("item_name")
         if item_name:
             eve_type = resolve_eve_type(item_name)
+
+            qs = CorpTypeDiscount.objects.filter(
+                config=self.instance.config, eve_type=eve_type
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error(
+                    "item_name", _("A discount rule for this item already exists.")
+                )
+
             self.instance.eve_type = eve_type
         return cleaned_data
