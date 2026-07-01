@@ -38,6 +38,7 @@ from .models import (
     OrderFit,
     OrderItem,
     ProductionTask,
+    TaskExecutionLog,
     TaxConfig,
 )
 from .tasks import task_sync_corp_inventory, task_sync_corp_wallets, update_character_pi
@@ -50,6 +51,43 @@ from .utils.bom_engine import (
 from .utils.discord import send_discord_webhook
 from .utils.fit_parser import parse_fit_text
 from .utils.pricing_engine import calculate_quote, get_prices_with_overrides
+
+
+def notify_order_ready(order: MemberOrder):
+    # Django
+    from django.contrib.auth.models import User
+    from django.db.models import Q
+
+    # Alliance Auth
+    from allianceauth.notifications.models import Notification
+
+    # 1. Auth Notification to Directors
+    directors = User.objects.filter(
+        Q(groups__permissions__codename="director_access")
+        | Q(user_permissions__codename="director_access")
+    ).distinct()
+
+    message = f"Order #{order.id} from {order.character.character_name} is ready for delivery! Total price: {order.total_price} ISK. Payment Reference: {order.payment_reference}"
+
+    for director in directors:
+        Notification.objects.notify_user(
+            user=director,
+            title=f"Order #{order.id} Ready",
+            message=message,
+            level="success",
+        )
+
+    # 2. Discord Webhook
+    webhook_config = CorporationWebhookConfig.objects.filter(
+        corporation=order.corporation
+    ).first()
+    if webhook_config and webhook_config.directors_webhook:
+        embed = {
+            "title": f"Order #{order.id} Ready",
+            "description": f"**{order.character.character_name}**'s order is fully built and ready to be delivered!\nPayment Reference: `{order.payment_reference}`\nTotal: `{order.total_price:,.2f} ISK`",
+            "color": 3066993,  # Green
+        }
+        send_discord_webhook(webhook_config.directors_webhook, embed)
 
 
 @login_required
@@ -363,8 +401,16 @@ def create_order(request: WSGIRequest) -> HttpResponse:
 
         total_price, item_details = calculate_quote(parsed_items, corporation)
 
+        # Django
+        from django.utils.crypto import get_random_string
+
+        ref = "ORD-" + get_random_string(4).upper() + "-" + get_random_string(4).upper()
+
         order = MemberOrder.objects.create(
-            character=character, status="REQUESTED", total_price=total_price
+            character=character,
+            status="REQUESTED",
+            total_price=total_price,
+            payment_reference=ref,
         )
 
         OrderFit.objects.create(order=order, raw_fit_text=fit_text)
@@ -387,7 +433,7 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             webhook_config = CorporationWebhookConfig.objects.filter(
                 corporation=corporation
             ).first()
-            if webhook_config and webhook_config.orders_webhook:
+            if webhook_config and webhook_config.directors_webhook:
                 embed = {
                     "title": f"New Quote Requested: Order #{order.id}",
                     "description": f"**{character.character_name}** has requested a quote.",
@@ -400,7 +446,7 @@ def create_order(request: WSGIRequest) -> HttpResponse:
                         }
                     ],
                 }
-                send_discord_webhook(webhook_config.orders_webhook, embed)
+                send_discord_webhook(webhook_config.directors_webhook, embed)
 
         messages.success(request, _("Order parsed and quoted successfully!"))
         return redirect("industry_reforged:view_quote", order_id=order.id)
@@ -761,12 +807,25 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
 
     # My active tasks
+    # Django
+    from django.db.models import Count, Q
+
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    my_tasks = ProductionTask.objects.filter(
-        status="IN_PRODUCTION", assigned_to_id__in=user_characters
-    ).order_by("-assigned_at")
+    my_tasks_qs = (
+        ProductionTask.objects.filter(
+            status="IN_PRODUCTION", assigned_to_id__in=user_characters
+        )
+        .select_related("item_type", "bom_parent")
+        .annotate(
+            incomplete_children_count=Count(
+                "bom_children", filter=~Q(bom_children__status="COMPLETED")
+            )
+        )
+        .order_by("-assigned_at", "id")
+    )
+    my_tasks = build_task_tree(my_tasks_qs)
 
     # My completed tasks (limit to recent 10 to avoid clutter)
     my_completed_tasks = ProductionTask.objects.filter(
@@ -781,8 +840,22 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         corporation__corporation_id__in=user_corps, status="active"
     ).select_related("blueprint_type", "product_type", "installer")
 
+    # Standard Library
+    import random
+
     # Django
     from django.db.models import Sum
+
+    slogans = [
+        _("Keep the forge burning!"),
+        _("Building the future of the corporation, one module at a time."),
+        _("Industry is the backbone of our fleet."),
+        _("Another day, another Capital ship."),
+        _("Tritanium flows where the industrialists go."),
+        _("Measure twice, build once."),
+        _("The anvil never sleeps."),
+        _("Forging victory out of raw materials."),
+    ]
 
     orders_qs = MemberOrder.objects.filter(status__in=["ACCEPTED", "IN_PRODUCTION"])
     dynamic_motd_stats = {
@@ -791,6 +864,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "active_jobs": corp_active_jobs.count(),
         "value_in_progress": orders_qs.aggregate(total=Sum("total_price"))["total"]
         or 0.0,
+        "slogan": random.choice(slogans),
     }
 
     context = {
@@ -859,6 +933,62 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
 @login_required
 @permission_required("industry_reforged.industrialist_access")
+def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
+    if request.method == "POST":
+        character_id = request.POST.get("character_id")
+        task_ids = request.POST.getlist("task_ids")
+
+        character = EveCharacter.objects.filter(
+            character_id=character_id, character_ownership__user=request.user
+        ).first()
+        if not character:
+            messages.error(request, _("Invalid character selected."))
+            return redirect("industry_reforged:industrialist_dashboard")
+
+        tasks = ProductionTask.objects.filter(id__in=task_ids, status="UNCLAIMED")
+        if tasks.exists():
+            count = 0
+            for task in tasks:
+                task.status = "IN_PRODUCTION"
+                task.assigned_to = character
+                task.assigned_at = timezone.now()
+
+                # Prevent double-dipping: If character owns any ancestor task, this task's reward is 0
+                def has_owned_ancestor(t, char):
+                    current = t.bom_parent
+                    while current:
+                        if current.assigned_to == char:
+                            return True
+                        current = current.bom_parent
+                    return False
+
+                if has_owned_ancestor(task, character):
+                    task.builder_reward = 0
+
+                task.save()
+
+                # Prevent double-dipping: If character already owned sub-components, nullify their rewards
+                def zero_owned_descendants(t, char):
+                    for child in t.bom_children.all():
+                        if child.assigned_to == char and child.builder_reward > 0:
+                            child.builder_reward = 0
+                            child.save(update_fields=["builder_reward"])
+                        zero_owned_descendants(child, char)
+
+                zero_owned_descendants(task, character)
+                count += 1
+
+            messages.success(request, f"Successfully claimed {count} tasks.")
+        else:
+            messages.error(
+                request, _("No valid tasks selected or they are already claimed.")
+            )
+
+    return redirect("industry_reforged:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
         user_characters = request.user.character_ownerships.all().values_list(
@@ -869,6 +999,15 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             id=task_id, assigned_to_id__in=user_characters, status="IN_PRODUCTION"
         ).first()
         if task:
+            if task.bom_children.exclude(status="COMPLETED").exists():
+                messages.error(
+                    request,
+                    _(
+                        "Cannot complete this task because one or more sub-tasks are not yet completed."
+                    ),
+                )
+                return redirect("industry_reforged:industrialist_dashboard")
+
             task.status = "COMPLETED"
             task.completed_at = timezone.now()
             task.save()
@@ -880,12 +1019,66 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 if not remaining:
                     order.status = "READY"
                     order.save()
+                    notify_order_ready(order)
 
             messages.success(
                 request, f"Marked {task.quantity}x {task.item_type.name} as completed!"
             )
         else:
             messages.error(request, _("Task not found or not assigned to you."))
+
+    return redirect("industry_reforged:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.industrialist_access")
+def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
+    if request.method == "POST":
+        task_ids = request.POST.getlist("task_ids")
+        user_characters = request.user.character_ownerships.all().values_list(
+            "character_id", flat=True
+        )
+
+        tasks = ProductionTask.objects.filter(
+            id__in=task_ids, assigned_to_id__in=user_characters, status="IN_PRODUCTION"
+        )
+        if tasks.exists():
+            for task in tasks:
+                # Check if it has any incomplete children that are NOT in this bulk list
+                incomplete_children = task.bom_children.exclude(
+                    status="COMPLETED"
+                ).exclude(id__in=task_ids)
+                if incomplete_children.exists():
+                    messages.error(
+                        request,
+                        _(
+                            "Cannot complete {} because some sub-tasks are not completed and not selected."
+                        ).format(task.item_type.name),
+                    )
+                    return redirect("industry_reforged:industrialist_dashboard")
+
+            # Update all to completed
+            count = tasks.update(status="COMPLETED", completed_at=timezone.now())
+
+            # Check orders for completion
+            for task in tasks:
+                if task.created_from_order:
+                    order = task.created_from_order
+                    if (
+                        not order.production_tasks.exclude(status="COMPLETED").exists()
+                        and order.status != "READY"
+                    ):
+                        order.status = "READY"
+                        order.save()
+                        notify_order_ready(order)
+
+            messages.success(
+                request, f"Successfully marked {count} tasks as completed."
+            )
+        else:
+            messages.error(
+                request, _("No valid tasks selected or they are already completed.")
+            )
 
     return redirect("industry_reforged:industrialist_dashboard")
 
@@ -953,17 +1146,177 @@ def trigger_inventory_sync(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def director_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main dashboard for Directors to manage orders and jobs."""
+    # Django
+    from django.db.models import Count, Sum
+
+    from .models import BuilderPayoutBatch
 
     # We show orders for characters in the director's corps
     all_orders = MemberOrder.objects.all().order_by("-created_at")
     all_tasks = ProductionTask.objects.all().order_by("-created_at")
 
+    payout_tasks = (
+        ProductionTask.objects.filter(
+            status="COMPLETED", builder_reward__gt=0, payout_batch__isnull=True
+        )
+        .select_related("assigned_to", "item_type")
+        .order_by("-completed_at")[:200]
+    )
+
+    payout_summary = (
+        ProductionTask.objects.filter(
+            status="COMPLETED", builder_reward__gt=0, payout_batch__isnull=True
+        )
+        .values("assigned_to__id", "assigned_to__character_name")
+        .annotate(total_reward=Sum("builder_reward"), task_count=Count("id"))
+        .order_by("-total_reward")
+    )
+
+    payout_batches = BuilderPayoutBatch.objects.all().order_by("-created_at")
+
     context = {
         "title": "Director Control Panel",
         "all_orders": all_orders,
         "all_tasks": all_tasks,
+        "payout_tasks": payout_tasks,
+        "payout_summary": payout_summary,
+        "payout_batches": payout_batches,
     }
     return render(request, "industry_reforged/director_dashboard.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Mark an order as DELIVERED and notify the buyer."""
+    if request.method == "POST":
+        order = get_object_or_404(MemberOrder, id=order_id)
+        if order.status == "READY":
+            order.status = "DELIVERED"
+            order.save()
+            messages.success(request, f"Order #{order.id} marked as DELIVERED.")
+
+            # Notify the buyer
+            # Alliance Auth
+            from allianceauth.notifications.models import Notification
+
+            user = None
+            try:
+                user = order.character.character_ownership.user
+            except Exception:
+                pass
+
+            if user:
+                Notification.objects.notify_user(
+                    user=user,
+                    title=f"Order #{order.id} Delivered!",
+                    message=f"Your order #{order.id} for {order.total_price} ISK has been contracted to you in-game.",
+                    level="success",
+                )
+        else:
+            messages.error(request, "Order must be in READY state to be delivered.")
+    return redirect("industry_reforged:director_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Manually mark an order as PAID."""
+    if request.method == "POST":
+        order = get_object_or_404(MemberOrder, id=order_id)
+        if not order.is_paid:
+            order.is_paid = True
+            order.save()
+            messages.success(
+                request,
+                f"Order #{order.id} ({order.payment_reference}) manually marked as PAID.",
+            )
+        else:
+            messages.error(request, "Order is already paid.")
+    return redirect("industry_reforged:director_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
+    """Generate a BuilderPayoutBatch for a specific builder."""
+    if request.method == "POST":
+        builder_id = request.POST.get("builder_id")
+
+        # Django
+        from django.db.models import Sum
+        from django.utils.crypto import get_random_string
+
+        from .models import BuilderPayoutBatch, EveCharacter
+
+        builder = get_object_or_404(EveCharacter, id=builder_id)
+
+        # Get tasks
+        tasks = ProductionTask.objects.filter(
+            status="COMPLETED",
+            assigned_to=builder,
+            builder_reward__gt=0,
+            payout_batch__isnull=True,
+        )
+
+        if not tasks.exists():
+            messages.warning(
+                request, f"No pending payouts found for {builder.character_name}."
+            )
+            return redirect("industry_reforged:director_dashboard")
+
+        total_amount = tasks.aggregate(total=Sum("builder_reward"))["total"]
+
+        # Generate random unique ref like PAY-ABCD-1234
+        ref = "PAY-" + get_random_string(4).upper() + "-" + get_random_string(4).upper()
+
+        # Assuming the director's corp is paying. We'll just take the first corporation for now.
+        # Ideally, it's the corp of the order or the director's corp.
+        main_char = request.user.profile.main_character
+        corporation = main_char.corporation if main_char else None
+
+        if not corporation:
+            messages.error(
+                request, "You are not part of a corporation to create payouts."
+            )
+            return redirect("industry_reforged:director_dashboard")
+
+        batch = BuilderPayoutBatch.objects.create(
+            corporation=corporation,
+            builder=builder,
+            total_amount=total_amount,
+            payment_reference=ref,
+            status="PENDING",
+        )
+
+        # Assign tasks to batch
+        tasks.update(payout_batch=batch)
+        messages.success(
+            request,
+            f"Generated Payout Batch for {builder.character_name} with reference: {ref}",
+        )
+
+    return redirect("industry_reforged:director_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
+    """Manually mark a BuilderPayoutBatch as paid."""
+    from .models import BuilderPayoutBatch
+
+    if request.method == "POST":
+        batch = get_object_or_404(BuilderPayoutBatch, id=batch_id)
+        if batch.status == "PENDING":
+            batch.status = "PAID"
+            batch.paid_at = timezone.now()
+            batch.save()
+            messages.success(
+                request, f"Payout Batch {batch.payment_reference} marked as PAID."
+            )
+        else:
+            messages.error(request, "Batch is already paid.")
+    return redirect("industry_reforged:director_dashboard")
 
 
 @login_required
@@ -1020,6 +1373,8 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     )
     type_discounts = CorpTypeDiscount.objects.filter(config=pricing_config)
     tax_config, created_tax = TaxConfig.objects.get_or_create(corporation=corporation)
+    hangars = CorpHangarConfig.objects.filter(corporation=corporation)
+    task_logs = TaskExecutionLog.objects.all().order_by("task_name")
 
     context = {
         "title": "Configurations",
@@ -1027,6 +1382,8 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "pricing_config": pricing_config,
         "type_discounts": type_discounts,
         "tax_config": tax_config,
+        "hangars": hangars,
+        "task_logs": task_logs,
     }
     return render(request, "industry_reforged/director_config.html", context)
 
@@ -1195,6 +1552,32 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
 
     context = {"discovered_hangars": discovered_hangars}
     return render(request, "industry_reforged/director_discover_hangars.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_hangar_toggle(request: WSGIRequest, hangar_id: int) -> HttpResponse:
+    """Toggle a hangar's active status."""
+    from .models import CorpHangarConfig
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    hangar = get_object_or_404(CorpHangarConfig, id=hangar_id, corporation=corporation)
+    hangar.is_active = not hangar.is_active
+    hangar.save()
+
+    status = _("activated") if hangar.is_active else _("disabled")
+    messages.success(
+        request,
+        _("Hangar %(name)s has been %(status)s.")
+        % {"name": hangar.description or hangar.flag_id, "status": status},
+    )
+    return redirect(reverse("industry_reforged:director_config") + "#hangars")
 
 
 @login_required

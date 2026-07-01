@@ -31,10 +31,16 @@ urlpatterns = [
         "industrialist/", views.industrialist_dashboard, name="industrialist_dashboard"
     ),
     path("industrialist/claim/<int:task_id>/", views.claim_task, name="claim_task"),
+    path("industrialist/bulk-claim/", views.bulk_claim_tasks, name="bulk_claim_tasks"),
     path(
         "industrialist/complete/<int:task_id>/",
         views.complete_task,
         name="complete_task",
+    ),
+    path(
+        "industrialist/bulk-complete/",
+        views.bulk_complete_tasks,
+        name="bulk_complete_tasks",
     ),
     path(
         "industrialist/leaderboard/",
@@ -42,6 +48,26 @@ urlpatterns = [
         name="industrialist_leaderboard",
     ),
     path("director/", views.director_dashboard, name="director_dashboard"),
+    path(
+        "director/order/<int:order_id>/deliver/",
+        views.mark_order_delivered,
+        name="mark_order_delivered",
+    ),
+    path(
+        "director/order/<int:order_id>/paid/",
+        views.mark_order_paid,
+        name="mark_order_paid",
+    ),
+    path(
+        "director/payout/generate/",
+        views.generate_payout_batch,
+        name="generate_payout_batch",
+    ),
+    path(
+        "director/payout/batch/<int:batch_id>/paid/",
+        views.mark_payout_batch_paid,
+        name="mark_payout_batch_paid",
+    ),
     path("director/inventory/", views.director_inventory, name="director_inventory"),
     path("director/config/", views.director_config, name="director_config"),
     path(
@@ -88,6 +114,11 @@ urlpatterns = [
         "director/config/discover/",
         views.director_discover_hangars,
         name="director_discover_hangars",
+    ),
+    path(
+        "director/config/hangar/<int:hangar_id>/toggle/",
+        views.director_config_hangar_toggle,
+        name="director_config_hangar_toggle",
     ),
     path(
         "director/wallets/",

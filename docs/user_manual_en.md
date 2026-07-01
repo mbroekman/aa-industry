@@ -20,7 +20,8 @@ Members can use the plugin to order ships, modules, and structures from the corp
 
 - **Placing an Order**: Click "New Order", select a character, and paste a complete *EFT/Pyfa fit* into the text box. The plugin will automatically parse and calculate the required Bill of Materials.
 - **Quoting Flow**: After submission, your order enters the `REQUESTED` status. A director will review the order and provide a price quote. Once done, the status changes to `QUOTED`.
-- **Acceptance**: You can review the quote, compare it to estimated Jita prices to see your corporate discount (savings), and click "Accept Quote" to finalize it. The order is then forwarded to the corporate builders.
+- **Acceptance & Payment**: You can review the quote, compare it to estimated Jita prices to see your corporate discount (savings), and click "Accept Quote" to finalize it. The order is then forwarded to the corporate builders. Your order will be assigned a unique **Payment Reference** (e.g., `ORD-ABCD-1234`). You must transfer the ISK to the corporation wallet using this exact reference as the reason. The system will automatically detect your payment and mark the order as "Paid".
+- **Delivery**: Once all builders complete their tasks, your order is ready. A director will contract the goods to you in-game and mark the order as "Delivered" in Auth, which will send you an in-app notification.
 
 ______________________________________________________________________
 
@@ -31,8 +32,9 @@ ______________________________________________________________________
 This is the central marketplace for corporate builders.
 
 - **Industry Status (MOTD)**: The top of the dashboard displays a real-time summary of the corporate industry, including the number of active orders, open tasks on the market, active corporate jobs, and the total ISK value in progress. This acts as a dynamic Message of the Day, complementing any manual announcements set by directors.
-- **Job Market (Unclaimed)**: Once a member accepts an order, the system breaks the order down into individual Production Tasks. As a builder, you can "Claim" these tasks here.
-- **My Active Production**: An overview of the tasks you have claimed and are currently building. Once you finish a job in EVE Online, you can mark the task as "Complete" here.
+- **Job Market (Unclaimed)**: Once a member accepts an order, the system breaks the order down into individual Production Tasks. As a builder, you can "Claim" these tasks here. You can also select parent tasks to automatically claim all their sub-components.
+- **My Active Production**: An overview of the tasks you have claimed and are currently building. Once you finish a job in EVE Online, you can mark the task as "Complete" here. Parent tasks can only be completed once all sub-tasks are done.
+- **Builder Payouts**: Completed tasks that have an ISK reward are queued up for a payout. Directors will regularly bundle these into "Payout Batches". Once the corporation transfers the ISK to you with the batch's unique `PAY-` reference, the system automatically marks it as Paid.
 
 ### 2.2 Leaderboards & Gamification
 
@@ -53,9 +55,10 @@ ______________________________________________________________________
 
 The command center for the industrial backbone of the corporation.
 
-- **Active Member Orders**: A comprehensive overview of all incoming member orders.
+- **Active Member Orders**: A comprehensive overview of all incoming member orders, showing their progress and automated payment status. Once an order's tasks are fully built, it shifts to `READY`. You can then contract the items in-game and click **"Deliver"** to notify the buyer.
 - **Quoting Flow**: Click on any `REQUESTED` order to view its Bill of Materials and provide a custom, manual Quote. You will immediately see the estimated raw material costs while setting the price.
 - **Production Tasks**: Manage the individual building tasks. See who claimed which task and manually complete or revoke tasks if necessary.
+- **Pending Payouts & Batches**: View a summary of unpaid rewards per builder. You can click **"Generate Batch"** to bundle a builder's pending tasks into a single payout with a unique `PAY-` reference. When you transfer the ISK from the corp wallet to the builder using this reference, the system will automatically mark the batch as Paid.
 
 ### 3.2 Inventory & Analytics
 
@@ -66,17 +69,21 @@ The command center for the industrial backbone of the corporation.
 
 - Monitor the ISK balance across all 7 corporate wallet divisions.
 - View and filter the detailed **Journal** to analyze corporate income and expenses (e.g., order payments or tax incomes).
+- **Automated Wallet Processing**: The background task that synchronizes wallets will automatically read journal entries. If it spots incoming ISK matching an `ORD-` payment reference, it marks the order as paid. If it spots outgoing ISK matching a `PAY-` reference, it marks the builder's payout batch as paid.
 
 ### 3.4 Configuration & Rules (Director Config)
 
 - **Global Configurations**: Set whether the corporation "Builds" (BUILD) or "Buys" (BUY) specific items.
 - Define manual ME/TE (Material/Time Efficiency) values, fixed prices, and the desired threshold for "Low Stock Alerts" per item.
-- **Discover Hangars**: Before inventory can be synced, you must use "Discover Hangars" to instruct the plugin *which* specific corporate hangars in which structures should be monitored.
+- **Tracked Hangars (Hangar Configurations)**: Before inventory can be synced, you must use "Discover Hangars" to instruct the plugin to scan your corporate assets. Discovered hangars will appear in the **Hangar Configurations** tab. To activate them for tracking in your Inventory and Low Stock Alerts, you must currently toggle them to *Active* via the Django Admin interface.
+- **System Health Monitor**: Track the real-time execution status of all Celery background tasks directly from the frontend. This tab provides insights into the success/failure state, execution duration, and full Python error logs for tasks like ESI synchronizations and PI notifications.
 
 ### 3.5 Corporate Discord Webhooks
 
 - In addition to Direct Messages for members, directors can configure corporate webhooks.
-- Add your webhook URL via the Django Admin Panel (`Discord Webhook Configurations`). The plugin will then send automated alerts to your designated Discord channel whenever a member places a **New Order** or when a **Quote is provided**.
+- Add your webhook URLs via the Django Admin Panel (`Discord Webhook Configurations`).
+  - **Orders Webhook**: A general webhook for announcements when a member places a **New Order** or when a **Quote is provided**.
+  - **Directors Webhook**: A specific webhook for Director-only action alerts, such as when a new quote needs to be calculated or when an order is **Ready for Delivery**.
 
 ______________________________________________________________________
 

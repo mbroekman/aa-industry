@@ -16,7 +16,9 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, and countdown timers for active extraction.
 - **Discord Integration**: 
   - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
-  - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed or quotes are updated.
+  - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed, quotes are updated, or orders are fully built and ready for delivery.
+- **Automated Payment Tracking**: Generate unique references for member orders and builder payouts. The background ESI Wallet Sync task automatically reads the corporate wallet journal and marks orders/payouts as "Paid" when the matching reference and ISK amount are detected.
+- **System Health Monitor**: A dedicated tab in the Director Configurations page that provides real-time logging and status updates for all Celery background tasks, including exact execution duration and Python error stack traces.
 - **Multilingual Support (i18n)**: Fully translatable UI using Django gettext (`django.po`). Prepare custom translations for your community (e.g., English, Dutch, etc.).
 - **DataTables**: Clean, sortable, and searchable tables for quick insights.
 - **Modern UI**: Consistent, tab-based layouts integrating natively with standard Alliance Auth themes.
@@ -84,7 +86,8 @@ Since this plugin relies on `django-eveuniverse` to resolve Item Types, make sur
 Assign the following permissions in the Django Admin panel:
 
 - `industry.basic_access`: Grants access to the Personal Dashboard (intended for all members).
-- `industry.corp_access`: Grants access to the Corporate Dashboard (intended for Directors or Industry Managers).
+- `industry.industrialist_access`: Grants access to the Industrialist Dashboard, allowing users to view the job market and claim production tasks (intended for corporate builders).
+- `industry.corp_access`: Grants access to the Corporate Dashboard and Director Control Panel (intended for Directors or Industry Managers).
 
 ### 3. Required ESI Scopes (SSO Grants)
 
@@ -156,6 +159,11 @@ CELERYBEAT_SCHEDULE["industry_pull_market_data"] = {
 CELERYBEAT_SCHEDULE["industry_sync_corp_wallets"] = {
     "task": "industry_reforged.tasks.task_sync_corp_wallets",
     "schedule": crontab(minute="*/30"),
+}
+
+CELERYBEAT_SCHEDULE["industry_notify_pi_extractors"] = {
+    "task": "industry_reforged.tasks.task_notify_expired_extractors",
+    "schedule": crontab(minute="15,45"),  # Twice an hour
 }
 ```
 

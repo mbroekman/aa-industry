@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [In Development] - Unreleased
 
-## [0.1.0b10] - Unreleased
+## [0.1.0b11] - Unreleased
+
+### Added
+
+- **Automated Order Delivery & Payment Tracking**: Orders now automatically track their payment status using a unique `ORD-` reference. A background task (`task_process_wallet_payments`) scans ESI Corporation Wallet Journals to automatically mark orders as "Paid" when the matching ISK and reference are found.
+- **Order Delivery Workflow**: Added a "Mark as Delivered" button for Directors to finalize "READY" orders. Doing so triggers an Alliance Auth in-app notification to the buyer that their in-game contract is ready.
+- **Industrialist Payout Batches**: Directors can now generate "Payout Batches" for individual builders, bundling all completed unpaid tasks into a single payout with a unique `PAY-` reference.
+- **Automated Builder Payouts**: The Wallet Sync background task automatically marks payout batches and their associated tasks as "Paid" when the corporation transfers ISK out to the builder using the correct `PAY-` reference.
+- **Automated Notifications & Webhooks**: When all tasks for an order are complete (Order moves to `READY`), all users with `director_access` receive an Alliance Auth in-app notification. If configured, a Discord webhook is also sent containing the price and payment reference.
+- **Hierarchical Task Selection**: The Industrialist Dashboard now supports recursive checkbox selection. Selecting a parent task automatically selects all child sub-tasks. Added a "Global Complete" button alongside "Global Claim".
+- **Dynamic Slogans**: Added random, industry-themed motivational slogans to the Industrialist Dashboard MOTD section.
+- **System Health Monitor**: Added a new "System Health" tab to the Director Configurations page. This provides a clean overview of all Celery background tasks, displaying their latest status, run time, duration, and error traces.
+
+### Changed
+
+- **Task Completion Constraints**: Parent tasks can now only be marked as completed if all of their underlying child tasks are already completed.
+- **Dashboard UI Improvements**: "My Active Production" tab now visually groups tasks hierarchically (parent-child relationship) to clarify the build sequence. Improved visibility of Payout amounts and added ISK hover tooltips to payout summaries.
+
+### Fixed
+
+- **Hangar Configuration UI**: Added the missing "Hangar Configurations" tab to the Director Config page so discovered hangars can actually be viewed.
+- **Loader Javascript**: Fixed a bug where the loading overlay (`show-loader`) was broken on the Director Config and Wallet pages due to missing template super blocks.
+
+## [0.1.0b10] - 2026-06-30
 
 ### Added
 

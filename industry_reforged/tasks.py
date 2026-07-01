@@ -1,10 +1,17 @@
 """App Tasks"""
 
 # Standard Library
+import datetime
 import logging
+import time
+import traceback
+from functools import wraps
 
 # Third Party
 from celery import shared_task
+
+# Django
+from django.utils import timezone
 
 # Alliance Auth
 from allianceauth import __title_useragent__, __url__, __version__
@@ -19,9 +26,42 @@ from .models import (
     CorporationIndustryJob,
     CorporationSyncConfig,
     PlanetPin,
+    TaskExecutionLog,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def log_task_execution(task_name):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            log_entry, _ = TaskExecutionLog.objects.update_or_create(
+                task_name=task_name,
+                defaults={
+                    "status": "RUNNING",
+                    "message": "",
+                    "last_run": timezone.now(),
+                },
+            )
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                log_entry.status = "SUCCESS"
+                log_entry.message = "Task completed successfully."
+                return result
+            except Exception as e:
+                log_entry.status = "FAILED"
+                log_entry.message = f"Error: {str(e)}\n\n{traceback.format_exc()}"
+                raise
+            finally:
+                log_entry.duration_seconds = time.time() - start_time
+                log_entry.last_run = timezone.now()
+                log_entry.save()
+
+        return wrapper
+
+    return decorator
 
 
 class IndustryESIProvider(ESIClientProvider):
@@ -84,6 +124,7 @@ def ensure_eve_type(type_id):
 
 
 @shared_task
+@log_task_execution("Update Character Jobs")
 def update_character_jobs():
     """Fetch personal industry jobs from ESI for all users who have given the token."""
     tokens = Token.objects.filter(scopes__name="esi-industry.read_character_jobs.v1")
@@ -99,9 +140,24 @@ def update_character_jobs():
             if not character:
                 continue
 
-            jobs = esi.client.Industry.GetCharactersCharacterIdIndustryJobs(
-                character_id=token.character_id, token=token, include_completed=True
-            ).result()
+            jobs = []
+            page = 1
+            while True:
+                response = esi.client.Industry.GetCharactersCharacterIdIndustryJobs(
+                    character_id=token.character_id,
+                    token=token,
+                    include_completed=True,
+                    page=page,
+                ).response()
+
+                if response.swagger_result:
+                    jobs.extend(response.swagger_result)
+
+                # Check for X-Pages header
+                pages = response.header.get("X-Pages", 1)
+                if page >= int(pages):
+                    break
+                page += 1
 
             if jobs is not None:
                 logger.info(
@@ -152,9 +208,9 @@ def update_character_jobs():
                 # Any jobs in our DB for this character that are NOT in the fetched list
                 # have aged out of ESI (meaning they are completed/delivered/cancelled > 90 days ago).
                 fetched_job_ids = [getattr(j, "job_id") for j in jobs]
-                CharacterIndustryJob.objects.filter(character=character).exclude(
-                    job_id__in=fetched_job_ids
-                ).update(status="delivered")
+                CharacterIndustryJob.objects.filter(
+                    character=character, status__in=["active", "paused", "ready"]
+                ).exclude(job_id__in=fetched_job_ids).update(status="delivered")
 
         except HTTPNotModified:
             # 304 Not Modified, ignore
@@ -166,6 +222,7 @@ def update_character_jobs():
 
 
 @shared_task
+@log_task_execution("Update Corporation Jobs")
 def update_corporation_jobs():
     """Fetch corporate industry jobs from ESI for configured corps."""
     configs = CorporationSyncConfig.objects.select_related(
@@ -185,11 +242,23 @@ def update_corporation_jobs():
             continue
 
         try:
-            jobs = esi.client.Industry.GetCorporationsCorporationIdIndustryJobs(
-                corporation_id=config.corporation.corporation_id,
-                token=token,
-                include_completed=True,
-            ).result()
+            jobs = []
+            page = 1
+            while True:
+                response = esi.client.Industry.GetCorporationsCorporationIdIndustryJobs(
+                    corporation_id=config.corporation.corporation_id,
+                    token=token,
+                    include_completed=True,
+                    page=page,
+                ).response()
+
+                if response.swagger_result:
+                    jobs.extend(response.swagger_result)
+
+                pages = response.header.get("X-Pages", 1)
+                if page >= int(pages):
+                    break
+                page += 1
 
             if jobs is not None:
                 logger.info(
@@ -268,7 +337,8 @@ def update_corporation_jobs():
                 # have aged out of ESI (meaning they are completed/delivered/cancelled > 90 days ago).
                 fetched_job_ids = [getattr(j, "job_id") for j in jobs]
                 CorporationIndustryJob.objects.filter(
-                    corporation=config.corporation
+                    corporation=config.corporation,
+                    status__in=["active", "paused", "ready"],
                 ).exclude(job_id__in=fetched_job_ids).update(status="delivered")
         except HTTPNotModified:
             # 304 Not Modified, ignore
@@ -280,6 +350,7 @@ def update_corporation_jobs():
 
 
 @shared_task
+@log_task_execution("Update Character Pi")
 def update_character_pi(character_id=None):
     """Fetch PI planets and pins from ESI for all users or a specific user."""
     tokens_query = Token.objects.filter(scopes__name="esi-planets.manage_planets.v1")
@@ -466,6 +537,7 @@ def update_character_pi(character_id=None):
 
 
 @shared_task
+@log_task_execution("Task Sync Corp Inventory")
 def task_sync_corp_inventory():
     """Fetch corporate assets from ESI for configured Hangars."""
 
@@ -599,6 +671,7 @@ def task_sync_corp_inventory():
 
 
 @shared_task
+@log_task_execution("Task Pull Market Data")
 def task_pull_market_data():
     """Fetch Jita prices for PI, Moon, Gas, and Minerals via Fuzzwork."""
     logger.info("Market Data Pull initiated.")
@@ -608,6 +681,7 @@ def task_pull_market_data():
 
 
 @shared_task
+@log_task_execution("Task Bom Explosion")
 def task_bom_explosion(order_id):
     """Calculate BOM and create ProductionTasks based on Build vs Buy configuration."""
     from .models import CorpItemConfig, MemberOrder
@@ -629,6 +703,7 @@ def task_bom_explosion(order_id):
 
 
 @shared_task
+@log_task_execution("Task Sync Corp Wallets")
 def task_sync_corp_wallets():
     """Fetch corporate wallets and journals from ESI."""
     from .models import CorporationSyncConfig, CorpWalletDivision, CorpWalletJournal
@@ -670,12 +745,6 @@ def task_sync_corp_wallets():
                         div.name = f"Division {division_id}"
                         div.save()
                     divisions_map[division_id] = div
-
-                    # Standard Library
-                    import datetime
-
-                    # Django
-                    from django.utils import timezone
 
                     from .models import CorporationWebhookConfig
 
@@ -773,8 +842,12 @@ def task_sync_corp_wallets():
                 f"Failed to fetch wallets for corp {config.corporation.corporation_id}: {e}"
             )
 
+    # After syncing wallets, check for any payments that match pending payouts or orders
+    task_process_wallet_payments.delay()
+
 
 @shared_task
+@log_task_execution("Task Notify Expired Extractors")
 def task_notify_expired_extractors():
     """Check for expired PI extractors and send notifications via Alliance Auth notify."""
     # Django
@@ -813,3 +886,76 @@ def task_notify_expired_extractors():
             # Mark as notified even if user doesn't exist, so we don't keep trying
             pin.notification_sent = True
             pin.save(update_fields=["notification_sent"])
+
+
+@shared_task
+@log_task_execution("Task Process Wallet Payments")
+def task_process_wallet_payments():
+    """Process new wallet journal entries and match them to Orders and Payouts."""
+    from .models import (
+        BuilderPayoutBatch,
+        CorpWalletJournal,
+        EveCorporationInfo,
+        MemberOrder,
+        WalletJournalSyncState,
+    )
+
+    # Ensure all corps have a sync state
+    for corp in EveCorporationInfo.objects.all():
+        WalletJournalSyncState.objects.get_or_create(corporation=corp)
+
+    states = WalletJournalSyncState.objects.all()
+
+    # Pre-fetch pending payments
+    unpaid_orders = {
+        order.payment_reference: order
+        for order in MemberOrder.objects.filter(is_paid=False)
+        .exclude(payment_reference__isnull=True)
+        .exclude(payment_reference="")
+    }
+    pending_batches = {
+        batch.payment_reference: batch
+        for batch in BuilderPayoutBatch.objects.filter(status="PENDING")
+    }
+
+    if not unpaid_orders and not pending_batches:
+        return  # Nothing to look for
+
+    for state in states:
+        entries = CorpWalletJournal.objects.filter(
+            division__corporation=state.corporation,
+            journal_id__gt=state.last_journal_id,
+        ).order_by("journal_id")
+
+        if not entries.exists():
+            continue
+
+        highest_id = state.last_journal_id
+
+        for entry in entries:
+            highest_id = max(highest_id, entry.journal_id)
+            reason = entry.reason or ""
+
+            # Incoming payment (Client -> Corp)
+            if entry.amount is not None and entry.amount > 0:
+                for ref, order in unpaid_orders.items():
+                    if ref in reason and entry.amount >= order.total_price:
+                        order.is_paid = True
+                        order.save()
+                        # Also mark it as PAID in our local dictionary so we don't process it twice
+                        unpaid_orders.pop(ref, None)
+                        break
+
+            # Outgoing payment (Corp -> Builder)
+            elif entry.amount is not None and entry.amount < 0:
+                for ref, batch in pending_batches.items():
+                    if ref in reason and abs(entry.amount) >= batch.total_amount:
+                        batch.status = "PAID"
+                        batch.paid_at = timezone.now()
+                        batch.save()
+                        pending_batches.pop(ref, None)
+                        break
+
+        # Save highest processed ID
+        state.last_journal_id = highest_id
+        state.save()

@@ -36,6 +36,16 @@
                 <i class="fas fa-percent"></i> {% trans "Type Discounts" %}
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="hangars-tab" data-bs-toggle="tab" data-bs-target="#hangars" type="button" role="tab" aria-controls="hangars" aria-selected="false">
+                <i class="fas fa-warehouse"></i> {% trans "Hangar Configurations" %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="health-tab" data-bs-toggle="tab" data-bs-target="#health" type="button" role="tab" aria-controls="health" aria-selected="false">
+                <i class="fas fa-heartbeat"></i> {% trans "System Health" %}
+            </button>
+        </li>
     </ul>
 
     <!-- Tab panes -->
@@ -141,38 +151,161 @@
 
         <!-- TYPE DISCOUNTS TAB -->
         <div class="tab-pane fade" id="discounts" role="tabpanel" aria-labelledby="discounts-tab">
-            <div class="card border-0 mb-4 shadow-sm">
+            <div class="card border-0 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-percent text-primary"></i> {% trans "Specific Type Discounts" %}</h5>
-                    <a href="{% url 'industry_reforged:director_config_discount_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Type Discount" %}</a>
+                    <h5 class="card-title mb-0"><i class="fas fa-percent text-success"></i> {% trans "Type Discounts" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_discount_add' %}" class="btn btn-sm btn-success"><i class="fas fa-plus"></i> {% trans "Add Discount" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Type / Group" %}</th>
+                                    <th>{% trans "Rule Type" %}</th>
+                                    <th class="text-end">{% trans "Discount %" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in type_discounts %}
+                                <tr>
+                                    <td>
+                                        {% if d.item_type %}
+                                        <div class="d-flex align-items-center">
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ d.item_type.id }}/icon?size=32" alt="{{ d.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                            <span>{{ d.item_type.name }}</span>
+                                        </div>
+                                        {% elif d.item_group %}
+                                        <span><i class="fas fa-folder text-warning"></i> {{ d.item_group.name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if d.item_type %}bg-primary{% else %}bg-warning{% endif %}">
+                                            {% if d.item_type %}Specific Type{% else %}Entire Group{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end numeric text-success">-{{ d.discount_percent }}%</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_discount_edit' d.id %}" class="btn btn-sm btn-secondary"><i class="fas fa-edit"></i></a>
+                                        <button class="btn btn-sm btn-danger ms-1" data-bs-toggle="modal" data-bs-target="#deleteDiscountModal" data-bs-delete-url="{% url 'industry_reforged:director_config_discount_delete' d.id %}"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">{% trans "No specific discounts configured. Everyone pays full price (or markup)." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HANGARS TAB -->
+        <div class="tab-pane fade" id="hangars" role="tabpanel" aria-labelledby="hangars-tab">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-warehouse text-info"></i> {% trans "Tracked Hangars" %}</h5>
+                    <a href="{% url 'industry_reforged:director_discover_hangars' %}" class="btn btn-sm btn-info show-loader"><i class="fas fa-search"></i> {% trans "Discover Hangars" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Hangar Name/Flag" %}</th>
+                                    <th>{% trans "Location ID" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hangar in hangars %}
+                                <tr>
+                                    <td>{{ hangar.description|default:hangar.flag_id }}</td>
+                                    <td class="numeric">{{ hangar.location_id }}</td>
+                                    <td>
+                                        {% if hangar.is_active %}
+                                        <span class="badge bg-success">{% trans "Active" %}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{% trans "Disabled" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form method="post" action="{% url 'industry_reforged:director_config_hangar_toggle' hangar.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            {% if hangar.is_active %}
+                                            <button type="submit" class="btn btn-sm btn-outline-warning"><i class="fas fa-power-off"></i> {% trans "Disable" %}</button>
+                                            {% else %}
+                                            <button type="submit" class="btn btn-sm btn-outline-success"><i class="fas fa-power-off"></i> {% trans "Enable" %}</button>
+                                            {% endif %}
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        {% trans "No hangars discovered. Click 'Discover Hangars' to scan your corporate assets." %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="p-3 bg-dark text-muted small">
+                            <i class="fas fa-info-circle"></i> {% trans "Hangars must be active to be included in inventory syncs." %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SYSTEM HEALTH TAB -->
+        <div class="tab-pane fade" id="health" role="tabpanel" aria-labelledby="health-tab">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-heartbeat text-danger"></i> {% trans "Background Task Logs" %}</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-striped table-hover m-0 align-middle">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>Item</th>
-                                    <th class="text-end">Discount Percent</th>
-                                    <th class="text-end">Actions</th>
+                                    <th>{% trans "Task Name" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                    <th>{% trans "Last Run" %}</th>
+                                    <th class="text-end">{% trans "Duration" %}</th>
+                                    <th>{% trans "Message" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for discount in type_discounts %}
+                                {% for log in task_logs %}
                                 <tr>
+                                    <td class="fw-bold">{{ log.task_name }}</td>
                                     <td>
-                                        <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ discount.eve_type.id }}/icon?size=32" alt="{{ discount.eve_type.name }}" width="32" height="32" class="me-3 rounded bg-dark">
-                                            <span class="fw-bold">{{ discount.eve_type.name }}</span>
-                                        </div>
+                                        {% if log.status == 'SUCCESS' %}
+                                            <span class="badge bg-success">Success</span>
+                                        {% elif log.status == 'FAILED' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Running</span>
+                                        {% endif %}
                                     </td>
-                                    <td class="text-end numeric fw-bold text-success">{{ discount.discount_percent }}%</td>
-                                    <td class="text-end">
-                                        <a href="{% url 'industry_reforged:director_config_discount_edit' discount.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
-                                        <a href="{% url 'industry_reforged:director_config_discount_delete' discount.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('{% trans "Are you sure you want to delete this discount?" %}');"><i class="fas fa-trash"></i></a>
+                                    <td>{{ log.last_run|naturaltime }}</td>
+                                    <td class="text-end numeric">{{ log.duration_seconds|floatformat:2 }}s</td>
+                                    <td>
+                                        {% if log.status == 'FAILED' and log.message %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="popover" title="Error Details" data-bs-content="{{ log.message }}">
+                                                <i class="fas fa-exclamation-triangle"></i> View Error
+                                            </button>
+                                        {% else %}
+                                            <span class="text-muted small">{{ log.message|truncatechars:50 }}</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="3" class="text-center text-muted p-4">{% trans "No specific type discounts configured." %}</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted p-4">{% trans "No tasks have run yet." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -185,7 +318,9 @@
 </div>
 {% endblock %}
 
+
 {% block extra_javascript %}
+{{ block.super }}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         var hash = window.location.hash;

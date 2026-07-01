@@ -68,7 +68,7 @@ Het commandocentrum voor de industriële ruggengraat van de corporatie.
 
 - **Global Configurations**: Stel in welke items de corporatie "Bouwt" (BUILD) of "Koopt" (BUY).
 - Bepaal per item de handmatige ME/TE (Material/Time Efficiency) waarden, vaste prijzen, en de gewenste drempelwaarde voor "Low Stock Alerts".
-- **Discover Hangars**: Voordat de inventaris gesynchroniseerd kan worden, moet je via "Discover Hangars" aangeven *welke* specifieke corporatie-hangars in welke structuren door de plugin in de gaten gehouden moeten worden.
+- **Tracked Hangars (Hangar Configurations)**: Voordat de inventaris gesynchroniseerd kan worden, moet je via de knop "Discover Hangars" je bezittingen scannen. Gevonden hangars verschijnen in het **Hangar Configurations** tabblad. Om ze daadwerkelijk te synchroniseren voor Inventory en Low Stock Alerts, dien je ze momenteel via het Django Admin paneel op *Active* te zetten.
 
 ### 3.5 Corporate Discord Webhooks
 

@@ -188,8 +188,8 @@ msgstr ""
 
 #: templates/industry_reforged/base.html:6
 #: templates/industry_reforged/base.html:16
-msgid "Industry Plugin"
-msgstr ""
+msgid "Industry Reforged"
+msgstr "Industry Reforged"
 
 #: templates/industry_reforged/create_order.html:8
 msgid "Create New Order"

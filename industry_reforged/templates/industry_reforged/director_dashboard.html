@@ -34,6 +34,12 @@
                         <i class="fas fa-hammer"></i> Production Tasks
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="payouts-tab" data-bs-toggle="tab" data-bs-target="#payouts-pane"
+                        type="button" role="tab" aria-controls="payouts-pane" aria-selected="false">
+                        <i class="fas fa-money-bill-wave"></i> Pending Payouts
+                    </button>
+                </li>
             </ul>
         </div>
         <div class="card-body">
@@ -47,6 +53,7 @@
                                     <th>Order ID</th>
                                     <th>Character</th>
                                     <th>Total Price</th>
+                                    <th>Payment Ref</th>
                                     <th>Status</th>
                                     <th>Progress</th>
                                     <th>Action</th>
@@ -58,7 +65,25 @@
                                     <td>#{{ order.id }}</td>
                                     <td>{{ order.character.character_name }}</td>
                                     <td class="numeric text-warning text-end">{{order.total_price|eve_isk }}</td>
-                                    <td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td>
+                                    <td>
+                                        {% if order.payment_reference %}
+                                            <code>{{ order.payment_reference }}</code>
+                                            {% if order.is_paid %}
+                                                <span class="badge bg-success ms-1"><i class="fas fa-check"></i> Paid</span>
+                                            {% else %}
+                                                <span class="badge bg-danger ms-1">Unpaid</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.status == 'READY' %}
+                                            <span class="badge bg-success"><i class="fas fa-box-open"></i> {{ order.get_status_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <div class="progress mt-1"
                                             >
@@ -70,7 +95,25 @@
                                         <small class="numeric">{{ order.progress_percent|floatformat:2 }}%</small>
                                     </td>
                                     <td>
-                                        <a href="{% url 'industry_reforged:view_quote' order.id %}" class="btn btn-sm btn-primary show-loader"><i class="fas fa-eye"></i> View</a>
+                                        <div class="btn-group">
+                                            <a href="{% url 'industry_reforged:view_quote' order.id %}" class="btn btn-sm btn-primary show-loader"><i class="fas fa-eye"></i> View</a>
+                                            {% if not order.is_paid %}
+                                            <form method="post" action="{% url 'industry_reforged:mark_order_paid' order.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Manually mark Order #{{ order.id }} as PAID?')">
+                                                    <i class="fas fa-check-double"></i> Mark Paid
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            {% if order.status == 'READY' %}
+                                            <form method="post" action="{% url 'industry_reforged:mark_order_delivered' order.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to mark this as delivered? Ensure the contract is made in-game.')">
+                                                    <i class="fas fa-truck"></i> Deliver
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -94,6 +137,7 @@
                                     <th>Status</th>
                                     <th>Priority</th>
                                     <th>Assigned To</th>
+                                    <th class="text-end">Reward</th>
                                     <th>Hidden</th>
                                 </tr>
                             </thead>
@@ -110,16 +154,154 @@
                                         </span>
                                     </td>
                                     <td>{{ task.assigned_to.character_name|default:"-" }}</td>
+                                    <td class="text-end numeric text-warning">{% if task.builder_reward %}{{ task.builder_reward|eve_isk }}{% else %}-{% endif %}</td>
                                     <td>{% if task.hidden %}<i class="fas fa-eye-slash text-danger"></i>{% else %}<i
                                             class="fas fa-eye text-success"></i>{% endif %}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center">No tasks found.</td>
+                                    <td colspan="7" class="text-center">No tasks found.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Payouts Tab -->
+                <div class="tab-pane fade" id="payouts-pane" role="tabpanel" aria-labelledby="payouts-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-md-5 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0"><i class="fas fa-users"></i> {% trans "Payout Summary by Builder" %}</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-striped table-hover m-0">
+                                        <thead>
+                                            <tr>
+                                                <th>{% trans "Builder" %}</th>
+                                                <th class="text-end">{% trans "Completed Tasks" %}</th>
+                                                <th class="text-end">{% trans "Total Pending Payout" %}</th>
+                                                <th class="text-end">{% trans "Action" %}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for summary in payout_summary %}
+                                            <tr>
+                                                <td class="fw-bold">{{ summary.assigned_to__character_name }}</td>
+                                                <td class="text-end numeric">{{ summary.task_count }}</td>
+                                                <td class="text-end numeric text-warning fw-bold">{{ summary.total_reward|eve_isk }}</td>
+                                                <td class="text-end">
+                                                    <form method="post" action="{% url 'industry_reforged:generate_payout_batch' %}">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="builder_id" value="{{ summary.assigned_to__id }}">
+                                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Generate a payout batch for {{ summary.assigned_to__character_name }}?')">
+                                                            <i class="fas fa-file-invoice-dollar"></i> Generate Batch
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-4">{% trans "No pending payouts!" %}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-7 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0"><i class="fas fa-list"></i> {% trans "Recent Completed Tasks with Rewards" %}</h5>
+                                    <small class="text-muted">{% trans "Showing up to 200 tasks" %}</small>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                                    <table class="table table-striped table-hover m-0">
+                                        <thead>
+                                            <tr>
+                                                <th>{% trans "Item" %}</th>
+                                                <th class="text-end">{% trans "Qty" %}</th>
+                                                <th>{% trans "Assigned To" %}</th>
+                                                <th class="text-end">{% trans "Reward" %}</th>
+                                                <th class="text-end">{% trans "Completed" %}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for task in payout_tasks %}
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32" alt="{{ task.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                        <span>{{ task.item_type.name }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end numeric">{{ task.quantity }}</td>
+                                                <td>{{ task.assigned_to.character_name }}</td>
+                                                <td class="text-end numeric text-warning">{{ task.builder_reward|eve_isk }}</td>
+                                                <td class="text-end numeric text-muted small">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-4">{% trans "No completed tasks with rewards." %}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card border-0">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0"><i class="fas fa-file-invoice"></i> {% trans "Active Payout Batches" %}</h5>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-striped table-hover m-0">
+                                        <thead>
+                                            <tr>
+                                                <th>{% trans "Reference" %}</th>
+                                                <th>{% trans "Builder" %}</th>
+                                                <th class="text-end">{% trans "Total Amount" %}</th>
+                                                <th>{% trans "Status" %}</th>
+                                                <th class="text-end">{% trans "Generated On" %}</th>
+                                                <th class="text-end">{% trans "Action" %}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for batch in payout_batches %}
+                                            {% if batch.status == 'PENDING' %}
+                                            <tr>
+                                                <td><code>{{ batch.payment_reference }}</code></td>
+                                                <td>{{ batch.builder.character_name }}</td>
+                                                <td class="text-end numeric text-warning fw-bold">{{ batch.total_amount|eve_isk }}</td>
+                                                <td><span class="badge bg-warning text-dark">{{ batch.status }}</span></td>
+                                                <td class="text-end numeric">{{ batch.created_at|date:"Y-m-d H:i" }}</td>
+                                                <td class="text-end">
+                                                    <form method="post" action="{% url 'industry_reforged:mark_payout_batch_paid' batch.id %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Manually mark {{ batch.payment_reference }} as PAID?')">
+                                                            <i class="fas fa-check-double"></i> Mark Paid
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted py-4">{% trans "No active payout batches." %}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

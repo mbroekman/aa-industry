@@ -25,6 +25,10 @@
                 <p class="mb-3 text-white fs-5 fst-italic">{% trans "Welcome to the Industrialist Dashboard. Happy building!" %}</p>
             {% endif %}
 
+            <div class="text-center mt-2 mb-1">
+                <span class="text-warning fst-italic"><i class="fas fa-quote-left fa-sm me-2 opacity-50"></i>{{ dynamic_motd_stats.slogan }}<i class="fas fa-quote-right fa-sm ms-2 opacity-50"></i></span>
+            </div>
+
             <hr style="border-color: rgba(255,255,255,0.1);">
 
             <div class="row text-center mt-3">
@@ -78,6 +82,17 @@
                                             <input type="text" id="marketSearchInput" class="form-control bg-dark border-secondary text-white" placeholder="{% trans 'Search item name...' %}">
                                         </div>
                                         <button type="button" onclick="submitShoppingList('unclaimed')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                                        <div class="vr bg-secondary mx-1"></div>
+                                        <form method="post" action="{% url 'industry_reforged:bulk_claim_tasks' %}" id="bulkClaimForm" class="d-flex align-items-center gap-1 mb-0">
+                                            {% csrf_token %}
+                                            <select name="character_id" class="form-select form-select-sm bg-dark text-white border-secondary w-auto" required>
+                                                <option value="" disabled selected>{% trans "Select Character" %}</option>
+                                                {% for ownership in request.user.character_ownerships.all %}
+                                                <option value="{{ ownership.character.character_id }}">{{ ownership.character.character_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="button" onclick="submitBulkClaim()" class="btn btn-sm btn-success"><i class="fas fa-hand-holding-usd"></i> {% trans "Claim Selected" %}</button>
+                                        </form>
                                     </div>
                                 </div>
                                 <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
@@ -96,7 +111,7 @@
                                                 {% for task in unclaimed_tasks %}
                                                 <tr>
                                                     <td class="text-center">
-                                                        <input type="checkbox" name="task_ids" value="{{ task.id }}" class="unclaimed-checkbox">
+                                                        <input type="checkbox" name="task_ids" value="{{ task.id }}" class="unclaimed-checkbox" data-task-id="{{ task.id }}" data-parent-id="{{ task.bom_parent_id|default:'' }}" onchange="toggleTaskAndChildren(this)">
                                                     </td>
                                                     <td>
                                                         <div class="d-flex align-items-center" style="padding-left: {% widthratio task.depth|default:0 1 25 %}px;">
@@ -113,7 +128,7 @@
                                                     </td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
                                                     <td class="text-end numeric text-warning">
-                                                        {{ task.builder_reward|floatformat:0|intcomma }}
+                                                        {{ task.builder_reward|eve_isk }}
                                                     </td>
                                                     <td class="text-end">
                                                         <form method="post" action="{% url 'industry_reforged:claim_task' task.id %}"
@@ -154,7 +169,14 @@
                             <div class="card border-0 h-100">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h4 class="card-title mb-0"><i class="fas fa-hammer"></i> {% trans "My Active Production" %}</h4>
-                                    <button type="button" onclick="submitShoppingList('active')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" onclick="submitShoppingList('active')" class="btn btn-sm btn-warning"><i class="fas fa-shopping-cart"></i> BOM</button>
+                                        <div class="vr bg-secondary mx-1"></div>
+                                        <form method="post" action="{% url 'industry_reforged:bulk_complete_tasks' %}" id="bulkCompleteForm" class="d-flex align-items-center mb-0">
+                                            {% csrf_token %}
+                                            <button type="button" onclick="submitBulkComplete()" class="btn btn-sm btn-success"><i class="fas fa-check-double"></i> {% trans "Complete Selected" %}</button>
+                                        </form>
+                                    </div>
                                 </div>
                                 <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
                                     <div class="table-responsive" id="activeTableContainer">
@@ -165,6 +187,7 @@
                                                     <th>{% trans "Item" %}</th>
                                                     <th class="text-end">{% trans "Qty" %}</th>
                                                     <th>{% trans "Assigned To" %}</th>
+                                                    <th class="text-end">{% trans "Reward" %}</th>
                                                     <th class="text-end">{% trans "Action" %}</th>
                                                 </tr>
                                             </thead>
@@ -172,35 +195,41 @@
                                                 {% for task in my_tasks %}
                                                 <tr>
                                                     <td class="text-center">
-                                                        <input type="checkbox" name="task_ids" value="{{ task.id }}" class="active-checkbox">
+                                                        <input type="checkbox" name="task_ids" value="{{ task.id }}" class="active-checkbox" data-task-id="{{ task.id }}" data-parent-id="{{ task.bom_parent_id|default:'' }}" onchange="toggleTaskAndChildrenActive(this)">
                                                     </td>
                                                     <td>
-                                                        <div class="d-flex align-items-center">
+                                                        <div class="d-flex align-items-center" style="padding-left: {% widthratio task.depth|default:0 1 25 %}px;">
+                                                            {% if task.depth > 0 %}
+                                                                <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2" style="font-size: 0.8rem;"></i>
+                                                            {% endif %}
                                                             <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
                                                                 class="me-2 rounded">
                                                             <div>
                                                                 <span>{{ task.item_type.name }}</span>
-                                                                {% if task.bom_parent %}
-                                                                <br><small class="text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> {% trans "Sub-component of" %} {{ task.bom_parent.item_type.name }}</small>
-                                                                {% endif %}
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
                                                     <td>{{ task.assigned_to.character_name }}</td>
+                                                    <td class="text-end numeric text-warning">{{ task.builder_reward|eve_isk }}</td>
                                                     <td class="text-end">
                                                         <form method="post" action="{% url 'industry_reforged:complete_task' task.id %}"
                                                             class="d-inline">
                                                             {% csrf_token %}
+                                                            {% if task.incomplete_children_count > 0 %}
+                                                            <button type="submit" class="btn btn-sm btn-secondary" disabled title="{% trans 'Sub-tasks must be completed first' %}"><i
+                                                                    class="fas fa-times"></i> Complete</button>
+                                                            {% else %}
                                                             <button type="submit" class="btn btn-sm btn-primary"><i
                                                                     class="fas fa-check"></i> Complete</button>
+                                                            {% endif %}
                                                         </form>
                                                     </td>
                                                 </tr>
                                                 {% empty %}
                                                 <tr>
-                                                    <td colspan="5" class="text-center text-muted py-4">You have no active tasks. Claim
+                                                    <td colspan="6" class="text-center text-muted py-4">You have no active tasks. Claim
                                                         some from the Job Market!</td>
                                                 </tr>
                                                 {% endfor %}
@@ -225,6 +254,7 @@
                                                     <th>{% trans "Item" %}</th>
                                                     <th class="text-end">{% trans "Qty" %}</th>
                                                     <th>{% trans "Assigned To" %}</th>
+                                                    <th class="text-end">{% trans "Reward Earned" %}</th>
                                                     <th class="text-end">{% trans "Completed At" %}</th>
                                                 </tr>
                                             </thead>
@@ -246,6 +276,7 @@
                                                     </td>
                                                     <td class="text-end numeric text-muted">{{ task.quantity }}</td>
                                                     <td class="text-muted">{{ task.assigned_to.character_name }}</td>
+                                                    <td class="text-end numeric text-success">{{ task.builder_reward|eve_isk }}</td>
                                                     <td class="text-end text-muted numeric">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
                                                 </tr>
                                                 {% empty %}
@@ -413,5 +444,99 @@
             });
         }
     });
+
+    function toggleTaskAndChildren(checkbox) {
+        const taskId = checkbox.getAttribute('data-task-id');
+        const isChecked = checkbox.checked;
+        const children = document.querySelectorAll(`input.unclaimed-checkbox[data-parent-id="${taskId}"]`);
+        children.forEach(child => {
+            if (child.checked !== isChecked) {
+                child.checked = isChecked;
+                toggleTaskAndChildren(child);
+            }
+        });
+    }
+
+    function submitBulkClaim() {
+        var checkboxes = document.getElementsByClassName('unclaimed-checkbox');
+        var selectedIds = [];
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            if(checkboxes[i].checked) {
+                selectedIds.push(checkboxes[i].value);
+            }
+        }
+
+        if (selectedIds.length === 0) {
+            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
+            document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to claim.' %}";
+            errorModal.show();
+            return;
+        }
+
+        var form = document.getElementById('bulkClaimForm');
+        var charSelect = form.querySelector('select[name="character_id"]');
+        if (!charSelect.value) {
+            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Character Required' %}";
+            document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select a character to claim the tasks for.' %}";
+            errorModal.show();
+            return;
+        }
+
+        // Add hidden inputs for selected tasks
+        selectedIds.forEach(function(id) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'task_ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        form.submit();
+    }
+
+    function toggleTaskAndChildrenActive(checkbox) {
+        const taskId = checkbox.getAttribute('data-task-id');
+        const isChecked = checkbox.checked;
+        const children = document.querySelectorAll(`input.active-checkbox[data-parent-id="${taskId}"]`);
+        children.forEach(child => {
+            if (child.checked !== isChecked) {
+                child.checked = isChecked;
+                toggleTaskAndChildrenActive(child);
+            }
+        });
+    }
+
+    function submitBulkComplete() {
+        var checkboxes = document.getElementsByClassName('active-checkbox');
+        var selectedIds = [];
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            if(checkboxes[i].checked) {
+                selectedIds.push(checkboxes[i].value);
+            }
+        }
+
+        if (selectedIds.length === 0) {
+            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
+            document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to complete.' %}";
+            errorModal.show();
+            return;
+        }
+
+        var form = document.getElementById('bulkCompleteForm');
+
+        // Add hidden inputs for selected tasks
+        selectedIds.forEach(function(id) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'task_ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        form.submit();
+    }
 </script>
 {% endblock %}

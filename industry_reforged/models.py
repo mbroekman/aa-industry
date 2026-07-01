@@ -183,6 +183,11 @@ class CorporationWebhookConfig(models.Model):
     orders_webhook = models.URLField(
         blank=True, null=True, help_text="Webhook URL for new Orders and Quotes."
     )
+    directors_webhook = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Webhook URL for Director-specific action alerts (e.g. New Quotes Requested, Orders Ready for Delivery).",
+    )
     jobs_webhook = models.URLField(
         blank=True,
         null=True,
@@ -393,6 +398,11 @@ class MemberOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, null=True)
 
+    payment_reference = models.CharField(
+        max_length=50, unique=True, null=True, blank=True
+    )
+    is_paid = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = _("Member Order")
         verbose_name_plural = _("Member Orders")
@@ -477,6 +487,33 @@ class CorpMOTD(models.Model):
         return f"MOTD for {self.corporation.corporation_name}"
 
 
+class BuilderPayoutBatch(models.Model):
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="payout_batches"
+    )
+    builder = models.ForeignKey(
+        EveCharacter, on_delete=models.CASCADE, related_name="payout_batches"
+    )
+    total_amount = models.DecimalField(max_digits=17, decimal_places=2)
+    payment_reference = models.CharField(max_length=50, unique=True)
+    status = models.CharField(
+        max_length=20,
+        choices=(("PENDING", "Pending"), ("PAID", "Paid")),
+        default="PENDING",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Builder Payout Batch")
+        verbose_name_plural = _("Builder Payout Batches")
+
+    def __str__(self):
+        return (
+            f"{self.payment_reference} - {self.builder.character_name} ({self.status})"
+        )
+
+
 class ProductionTask(models.Model):
     STATUS_CHOICES = (
         ("UNCLAIMED", "Unclaimed"),
@@ -545,12 +582,20 @@ class ProductionTask(models.Model):
     assigned_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    payout_batch = models.ForeignKey(
+        BuilderPayoutBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tasks",
+    )
+
     class Meta:
         verbose_name = _("Production Task")
         verbose_name_plural = _("Production Tasks")
 
     def __str__(self):
-        return f"{self.quantity}x {self.item_type.name} - {self.status}"
+        return f"{self.quantity}x {self.item_type.name} for Job {self.id}"
 
 
 class CorpItemConfig(models.Model):
@@ -617,6 +662,9 @@ class CorpHangarConfig(models.Model):
         null=True,
         help_text="User friendly name for this hangar",
     )
+    is_active = models.BooleanField(
+        default=True, help_text="Include this hangar in inventory syncs"
+    )
 
     class Meta:
         verbose_name = _("Corp Hangar Config")
@@ -644,10 +692,27 @@ class CorpInventory(models.Model):
     class Meta:
         verbose_name = _("Corp Inventory")
         verbose_name_plural = _("Corp Inventories")
-        unique_together = (("corporation", "item_type", "location_id", "flag_id"),)
+        unique_together = (("corporation", "item_type"),)
 
     def __str__(self):
-        return f"{self.quantity}x {self.item_type.name} at {self.location_id}"
+        return f"{self.quantity}x {self.item_type.name} in {self.corporation.corporation_ticker}"
+
+
+class WalletJournalSyncState(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="wallet_sync_state"
+    )
+    last_journal_id = models.BigIntegerField(default=0)
+    last_sync = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Wallet Journal Sync State")
+        verbose_name_plural = _("Wallet Journal Sync States")
+
+    def __str__(self):
+        return (
+            f"{self.corporation.corporation_ticker} - Last ID: {self.last_journal_id}"
+        )
 
 
 class TaxConfig(models.Model):
@@ -714,3 +779,23 @@ class CorpWalletJournal(models.Model):
 
     def __str__(self):
         return f"Journal {self.journal_id} - {self.ref_type}"
+
+
+class TaskExecutionLog(models.Model):
+    STATUS_CHOICES = (
+        ("SUCCESS", "Success"),
+        ("FAILED", "Failed"),
+        ("RUNNING", "Running"),
+    )
+    task_name = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="RUNNING")
+    last_run = models.DateTimeField(auto_now=True)
+    duration_seconds = models.FloatField(default=0.0)
+    message = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _("Task Execution Log")
+        verbose_name_plural = _("Task Execution Logs")
+
+    def __str__(self):
+        return f"{self.task_name} - {self.status}"
