@@ -45,8 +45,9 @@ from .tasks import task_sync_corp_inventory, task_sync_corp_wallets, update_char
 from .utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
-    calculate_tasks_bom,
-    get_fuzzwork_bom,
+    calculate_recursive_tasks_bom,
+    get_recursive_bom_tree,
+    get_sde_bom,
 )
 from .utils.discord import send_discord_webhook
 from .utils.fit_parser import parse_fit_text
@@ -257,18 +258,29 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     bom = {}
     orders = []
     tasks = []
+    recursive_bom_tree = []
+
+    def extract_leaves(tree_nodes, aggregated_bom):
+        for node in tree_nodes:
+            if not node.get("sub_materials"):
+                mat_type_id = node["type_id"]
+                if mat_type_id in aggregated_bom:
+                    aggregated_bom[mat_type_id]["quantity"] += node["quantity"]
+                else:
+                    aggregated_bom[mat_type_id] = {
+                        "type_id": mat_type_id,
+                        "name": node["name"],
+                        "quantity": node["quantity"],
+                    }
+            else:
+                extract_leaves(node["sub_materials"], aggregated_bom)
 
     if order_ids:
         orders = MemberOrder.objects.filter(
             id__in=order_ids, character_id__in=user_characters
         )
         for order in orders:
-            order_bom = calculate_order_bom(order)
-            for mat_id, data in order_bom.items():
-                if mat_id in bom:
-                    bom[mat_id]["quantity"] += data["quantity"]
-                else:
-                    bom[mat_id] = data
+            recursive_bom_tree.extend(calculate_recursive_order_bom(order))
 
     if task_ids:
         # User can view tasks if they have basic_access (to claim them) or corp_access.
@@ -288,20 +300,13 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         if main_char and main_char.corporation:
             corp_info = main_char.corporation
 
-        task_bom = calculate_tasks_bom(tasks, corp_info=corp_info)
-        for mat_id, data in task_bom.items():
-            if mat_id in bom:
-                bom[mat_id]["quantity"] += data["quantity"]
-            else:
-                bom[mat_id] = data
+        recursive_bom_tree.extend(
+            calculate_recursive_tasks_bom(tasks, corp_info=corp_info)
+        )
 
     if type_id and quantity:
         quantity = int(quantity)
-        # Standard Library
-        import math
-
-        materials, yield_qty = get_fuzzwork_bom(type_id)
-        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
+        materials, yield_qty = get_sde_bom(type_id)
 
         corp_info = None
         main_char = request.user.profile.main_character
@@ -316,20 +321,12 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             if config:
                 me_level = config.manual_me
 
-        for mat in materials:
-            mat_type_id = mat.get("typeid")
-            base_qty = mat.get("quantity", 0)
+        node = get_recursive_bom_tree(
+            type_id, item_name or str(type_id), quantity, {type_id: me_level}
+        )
+        recursive_bom_tree.append(node)
 
-            required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
-
-            if mat_type_id in bom:
-                bom[mat_type_id]["quantity"] += required_qty
-            else:
-                bom[mat_type_id] = {
-                    "type_id": mat_type_id,
-                    "name": mat.get("name"),
-                    "quantity": required_qty,
-                }
+    extract_leaves(recursive_bom_tree, bom)
 
     total_bom_price = 0
     sorted_bom = []
@@ -351,13 +348,14 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         sorted_bom = sorted(bom.values(), key=lambda x: x["name"])
 
     context = {
-        "title": "Consolidated Shopping List",
+        "title": _("Shopping List"),
         "orders": orders,
         "tasks": tasks,
         "custom_item_name": item_name,
         "custom_item_quantity": quantity,
         "bom_materials": sorted_bom,
         "total_bom_price": total_bom_price,
+        "recursive_bom_tree": recursive_bom_tree,
     }
     return render(request, "industry_reforged/shopping_list.html", context)
 
@@ -551,10 +549,39 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             if new_total < 0:
                 raise ValueError("Price cannot be negative")
 
-            order.total_price = new_total
-            order.status = "QUOTED"
+            upfront = float(request.POST.get("upfront_payment", 0))
+            if upfront < 0 or upfront > new_total:
+                raise ValueError("Upfront payment must be between 0 and total price")
 
+            order.total_price = new_total
+            order.upfront_payment = upfront
+
+            # Treat upfront payment as already paid by the user
+            if upfront > 0:
+                order.amount_paid = upfront
+
+            order.status = "QUOTED"
             order.quoted_at = timezone.now()
+
+            note_str = request.POST.get("note", "").strip()
+            ts = timezone.now().strftime("%Y-%m-%d %H:%M")
+
+            # Combine upfront payment logging and custom note
+            log_entries = []
+            if upfront > 0:
+                log_entries.append(
+                    f"[{ts}] Quote: Registered downpayment of {upfront:,.2f} ISK."
+                )
+            if note_str:
+                log_entries.append(f"[{ts}] Quote Note: {note_str}")
+
+            if log_entries:
+                combined_note = "\n".join(log_entries)
+                if order.notes:
+                    order.notes += f"\n{combined_note}"
+                else:
+                    order.notes = combined_note
+
             order.save()
 
             # Optionally send a Discord webhook notification here to inform the user
@@ -1221,18 +1248,55 @@ def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
 @login_required
 @permission_required("industry_reforged.corp_access")
 def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
-    """Manually mark an order as PAID."""
+    """Manually process payment (partial or full) and optional notes."""
     if request.method == "POST":
         order = get_object_or_404(MemberOrder, id=order_id)
         if not order.is_paid:
-            order.is_paid = True
+            amount_str = request.POST.get("amount")
+            note_str = request.POST.get("note", "").strip()
+
+            # Standard Library
+            from decimal import Decimal
+
+            # Django
+            from django.utils import timezone
+
+            try:
+                if amount_str:
+                    amount = Decimal(amount_str.replace(",", "."))
+                else:
+                    # Default to remaining if not provided
+                    amount = order.total_price - order.amount_paid
+            except (ValueError, TypeError, ArithmeticError):
+                messages.error(request, "Invalid amount provided.")
+                return redirect("industry_reforged:director_dashboard")
+
+            if amount > 0:
+                order.amount_paid += amount
+
+            if note_str or amount > 0:
+                ts = timezone.now().strftime("%Y-%m-%d %H:%M")
+                log_note = f"[{ts}] Manual Entry: "
+                if amount > 0:
+                    log_note += f"Processed {amount:,.2f} ISK. "
+                if note_str:
+                    log_note += f"Note: {note_str}"
+
+                if order.notes:
+                    order.notes += f"\n{log_note}"
+                else:
+                    order.notes = log_note
+
+            if order.amount_paid >= order.total_price:
+                order.is_paid = True
+
             order.save()
             messages.success(
                 request,
-                f"Order #{order.id} ({order.payment_reference}) manually marked as PAID.",
+                f"Order #{order.id} ({order.payment_reference}) payment updated.",
             )
         else:
-            messages.error(request, "Order is already paid.")
+            messages.error(request, "Order is already fully paid.")
     return redirect("industry_reforged:director_dashboard")
 
 
@@ -1527,6 +1591,19 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
                             location_names[loc_id] = f"Unknown Structure ({loc_id})"
             except Exception:
                 location_names[loc_id] = f"Unknown Location ({loc_id})"
+
+        # Fallback to corptools EveLocation if available for any still unknown structures
+        try:
+            # Third Party
+            from corptools.models import EveLocation
+
+            for loc_id, name in location_names.items():
+                if "Unknown" in name:
+                    loc = EveLocation.objects.filter(location_id=loc_id).first()
+                    if loc:
+                        location_names[loc_id] = loc.location_name
+        except ImportError:
+            pass
 
         # Check which ones are already configured
         configured = CorpHangarConfig.objects.filter(corporation=corporation)

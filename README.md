@@ -1,5 +1,11 @@
 # Alliance Auth Industry Plugin
 
+[![PyPI version](https://img.shields.io/pypi/v/aa-industry-reforged)](https://pypi.org/project/aa-industry-reforged/)
+[![Python versions](https://img.shields.io/pypi/pyversions/aa-industry-reforged)](https://pypi.org/project/aa-industry-reforged/)
+[![Tests](https://github.com/mbroekman/aa-industry/actions/workflows/automated-checks.yml/badge.svg)](https://github.com/mbroekman/aa-industry/actions/workflows/automated-checks.yml)
+[![Discord](https://img.shields.io/discord/1066236968032768000?color=blue&label=Alliance%20Auth&logo=discord)](https://discord.gg/allianceauth)
+
+
 A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) to help corporation and alliance members track their EVE Online industry operations. This app utilizes the EVE Swagger Interface (ESI) to synchronize industry jobs directly into your Alliance Auth environment.
 
 ## Features
@@ -8,7 +14,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs from a centralized overview.
 - **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow (Director approval -> User acceptance).
 - **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD.
-- **Recursive BOM Drilldown**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components.
+- **Recursive BOM Drilldown & Shopping List Treeview**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components, and view fully interactive Production Trees directly within the Consolidated Shopping Lists.
 - **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices entirely from the front-end (no Django Admin access required).
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
 - **Smart ISK Formatting**: Features a built-in abbreviation engine that automatically formats large ISK values and displays precise tooltip translations (e.g., K, M, B, T) when hovered.
@@ -17,7 +23,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Discord Integration**: 
   - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
   - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed, quotes are updated, or orders are fully built and ready for delivery.
-- **Automated Payment Tracking**: Generate unique references for member orders and builder payouts. The background ESI Wallet Sync task automatically reads the corporate wallet journal and marks orders/payouts as "Paid" when the matching reference and ISK amount are detected.
+- **Automated Payment Tracking**: Generate unique references for member orders and builder payouts. The background ESI Wallet Sync task automatically reads the corporate wallet journal, accumulates partial payments, logs them as order notes, and marks orders as "Paid" once the full amount is reached. Supports upfront payment requirements (downpayments).
 - **System Health Monitor**: A dedicated tab in the Director Configurations page that provides real-time logging and status updates for all Celery background tasks, including exact execution duration and Python error stack traces.
 - **Multilingual Support (i18n)**: Fully translatable UI using Django gettext (`django.po`). Prepare custom translations for your community (e.g., English, Dutch, etc.).
 - **DataTables**: Clean, sortable, and searchable tables for quick insights.
@@ -58,6 +64,14 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
        "industry_reforged",
    ]
    ```
+
+1. **Load Industry Data**:
+   To ensure the app can calculate Bills of Materials for both Manufacturing and Reactions without relying on third-party APIs, you must load the EVE Online Industry Activities into your local database:
+
+   ```bash
+   python manage.py eveuniverse_load_data types --types-enabled-sections industry_activities
+   ```
+   *(Note: This creates background tasks. Depending on your Celery workers, it may take a few minutes to fully populate the database).*
 
 1. **Run Migrations**:
    Update your database to include the new models.
@@ -100,6 +114,18 @@ This plugin requires specific ESI scopes depending on the features you want to u
 - **`esi-universe.read_structures.v1`**: Required to resolve public Upwell structure names in EVE. Directors grant this via the "Add Corporate Token" button.
 - **`esi-corporations.read_structures.v1`**: Required for the Director Control Panel to discover and resolve names for structures owned by the corporation. Directors grant this via the "Add Corporate Token" button.
 - **`esi-wallet.read_corporation_wallets.v1`**: Required to track corporate wallet balances and journal transactions. Directors grant this via the "Add Corporate Token" button.
+
+#### Automating Scopes for all Users
+To prevent members from having to manually authorize additional PI or Industry tokens, you can configure Alliance Auth to **automatically request these scopes** during the standard "Add Character" login flow. Add the following to your `myauth/settings/local.py`:
+
+```python
+LOGIN_TOKEN_SCOPES = [
+    'publicData',
+    'esi-planets.manage_planets.v1',
+    'esi-industry.read_character_jobs.v1',
+]
+```
+*(This ensures every character added to your Auth natively supports the personal dashboards without requiring a separate "Grant Token" button click).*
 
 ### 4. Corporate Inventory Setup
 
@@ -168,3 +194,7 @@ CELERYBEAT_SCHEDULE["industry_notify_pi_extractors"] = {
 ```
 
 After updating `local.py`, be sure to restart your Celery worker and Celery Beat services.
+
+## License
+Copyright (c) 2026 Maddog Broekman. All rights reserved.
+Licensed under the [MIT License](LICENSE).

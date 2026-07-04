@@ -3,44 +3,59 @@ import logging
 import math
 
 # Third Party
-import requests
+# Eve Universe
+from eveuniverse.models import EveIndustryActivityMaterial, EveIndustryActivityProduct
 
 # Django
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
-FUZZWORK_BOM_API = "https://fuzzwork.co.uk/blueprint/api/blueprint.php?typeid="
 
-
-def get_fuzzwork_bom(type_id):
+def get_sde_bom(type_id):
     """
-    Fetch the manufacturing materials for a specific blueprint/type from Fuzzwork.
+    Fetch the manufacturing or reaction materials for a specific product/type from local SDE.
     Returns a tuple: (list of dicts, product_quantity)
     """
-    cache_key = f"industry_reforged_bom_v2_{type_id}"
+    cache_key = f"industry_reforged_bom_sde_{type_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     try:
-        url = f"{FUZZWORK_BOM_API}{type_id}"
-        resp = requests.get(url, verify=False, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            # "1" is the activity ID for Manufacturing
-            manufacturing_materials = data.get("activityMaterials", {}).get("1", [])
-            product_quantity = data.get("blueprintDetails", {}).get(
-                "productQuantity", 1
-            )
-            # Cache for 1 week (60 * 60 * 24 * 7)
-            result = (manufacturing_materials, product_quantity)
-            cache.set(cache_key, result, 604800)
-            return result
-    except Exception as e:
-        logger.error(f"Failed to fetch Fuzzwork BOM for type_id {type_id}: {e}")
+        # Find the product entry. Activity 1 = Manufacturing, 11 = Reactions.
+        product_entry = EveIndustryActivityProduct.objects.filter(
+            product_eve_type_id=type_id, activity_id__in=[1, 11]
+        ).first()
 
-    return ([], 1)
+        if not product_entry:
+            return ([], 1)
+
+        blueprint_id = product_entry.eve_type_id
+        activity_id = product_entry.activity_id
+        product_quantity = product_entry.quantity
+
+        materials = EveIndustryActivityMaterial.objects.filter(
+            eve_type_id=blueprint_id, activity_id=activity_id
+        ).select_related("material_eve_type")
+
+        manufacturing_materials = []
+        for mat in materials:
+            manufacturing_materials.append(
+                {
+                    "typeid": mat.material_eve_type_id,
+                    "name": mat.material_eve_type.name,
+                    "quantity": mat.quantity,
+                    "maketype": activity_id,
+                }
+            )
+
+        result = (manufacturing_materials, product_quantity)
+        cache.set(cache_key, result, 604800)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to fetch SDE BOM for type_id {type_id}: {e}")
+        return ([], 1)
 
 
 def calculate_order_bom(order):
@@ -80,7 +95,7 @@ def calculate_order_bom(order):
         except Exception:
             pass
 
-        materials, yield_qty = get_fuzzwork_bom(type_id)
+        materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
@@ -126,7 +141,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
             except Exception:
                 pass
 
-        materials, yield_qty = get_fuzzwork_bom(type_id)
+        materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
@@ -159,7 +174,7 @@ def get_recursive_bom_tree(type_id, name, quantity, me_dict, depth=0):
             "sub_materials": [],
         }
 
-    materials, yield_qty = get_fuzzwork_bom(type_id)
+    materials, yield_qty = get_sde_bom(type_id)
     runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
     sub_materials = []
 
@@ -211,6 +226,34 @@ def calculate_recursive_order_bom(order):
         type_id = item.item_type.id
         quantity = item.quantity
         name = item.item_type.name
+
+        node = get_recursive_bom_tree(type_id, name, quantity, me_dict)
+        tree.append(node)
+
+    return tree
+
+
+def calculate_recursive_tasks_bom(tasks, corp_info=None):
+    """
+    Calculates the hierarchical Bill of Materials for a list of ProductionTasks.
+    Returns a list of trees (one for each task).
+    """
+    # AA Industry App
+    from industry_reforged.models import CorpItemConfig
+
+    me_dict = {}
+    if corp_info:
+        try:
+            for config in CorpItemConfig.objects.filter(corporation=corp_info):
+                me_dict[config.item_type_id] = config.manual_me
+        except Exception:
+            pass
+
+    tree = []
+    for task in tasks:
+        type_id = task.item_type_id
+        quantity = task.quantity
+        name = task.item_type.name
 
         node = get_recursive_bom_tree(type_id, name, quantity, me_dict)
         tree.append(node)

@@ -7,14 +7,18 @@ from .models import (
     CharacterIndustryJob,
     CorpHangarConfig,
     CorpInventory,
+    CorpItemConfig,
     CorpMOTD,
     CorporationIndustryJob,
     CorporationSyncConfig,
     CorporationWebhookConfig,
+    CorpPricingConfig,
+    CorpTypeDiscount,
     MemberOrder,
     OrderFit,
     OrderItem,
     ProductionTask,
+    TaxConfig,
 )
 
 
@@ -99,3 +103,31 @@ class CorporationWebhookConfigAdmin(admin.ModelAdmin):
         "wallets_webhook",
         "inventory_webhook",
     )
+
+
+class CorpTypeDiscountInline(admin.TabularInline):
+    model = CorpTypeDiscount
+    extra = 1
+    raw_id_fields = ("eve_type",)
+
+
+@admin.register(CorpPricingConfig)
+class CorpPricingConfigAdmin(admin.ModelAdmin):
+    list_display = ("corporation", "default_discount_percent", "builder_reward_percent")
+    search_fields = ("corporation__corporation_name",)
+    raw_id_fields = ("corporation",)
+    inlines = [CorpTypeDiscountInline]
+
+
+@admin.register(TaxConfig)
+class TaxConfigAdmin(admin.ModelAdmin):
+    list_display = ("corporation", "industry_tax_rate", "broker_fee_rate")
+    search_fields = ("corporation__corporation_name",)
+    raw_id_fields = ("corporation",)
+
+
+@admin.register(CorpItemConfig)
+class CorpItemConfigAdmin(admin.ModelAdmin):
+    list_display = ("corporation", "item_type", "manual_price")
+    search_fields = ("corporation__corporation_name", "item_type__name")
+    raw_id_fields = ("corporation", "item_type")

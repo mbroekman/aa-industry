@@ -52,16 +52,34 @@
                     <p class="text-white">{% trans "Review the order details and the estimated BOM cost, then provide a final quote." %}</p>
                     <form method="post" action="{% url 'industry_reforged:provide_quote' order.id %}" class="row gx-3 gy-2 align-items-center">
                         {% csrf_token %}
-                        <div class="col-sm-4">
+                        <div class="col-sm-3">
+                            <label class="form-label text-white mb-1 small">Total Price</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-secondary border-secondary text-white">ISK</span>
-                                <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary" name="total_price" value="{{ order.total_price|stringformat:'.2f' }}" required>
+                                <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary isk-format-input" id="quoteTotal" name="total_price" value="{{ order.total_price|stringformat:'.2f' }}" required>
                             </div>
                             <div class="form-text mt-1 text-info">
-                                {% trans "Est. Value:" %} {{ order.total_price|eve_isk_short }}
+                                {% trans "Est. Value:" %} {{ order.total_price|eve_isk_short }} <span id="quoteTotal-helper" class="text-warning fw-bold ms-2"></span>
                             </div>
                         </div>
-                        <div class="col-auto">
+                        <div class="col-sm-3">
+                            <label class="form-label text-white mb-1 small">Upfront Payment</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-secondary border-secondary text-white">ISK</span>
+                                <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary isk-format-input" id="quoteUpfront" name="upfront_payment" value="0.00" required>
+                            </div>
+                            <div class="form-text mt-1 text-muted">
+                                {% trans "Optional downpayment" %} <span id="quoteUpfront-helper" class="text-warning fw-bold ms-2"></span>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-white mb-1 small">Note</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" name="note" placeholder="e.g. 50% upfront required">
+                            <div class="form-text mt-1 text-muted">
+                                {% trans "Optional quote note" %}
+                            </div>
+                        </div>
+                        <div class="col-auto mt-4">
                             <button type="submit" class="btn btn-warning"><i class="fas fa-check-circle"></i> {% trans "Submit Quote" %}</button>
                         </div>
                     </form>
@@ -204,7 +222,29 @@
                                         <dt class="col-sm-4 text-success"><i class="fas fa-check-circle"></i> {% trans "Accepted" %}</dt>
                                         <dd class="col-sm-8 text-success numeric">{{ order.accepted_at|date:"Y-m-d H:i" }}</dd>
                                         {% endif %}
+
+                                        {% if order.status != 'REQUESTED' and order.status != 'REJECTED' %}
+                                        <div class="w-100 my-2 border-bottom border-secondary"></div>
+
+
+                                        <dt class="col-sm-4 text-info">{% trans "Amount Paid" %}</dt>
+                                        <dd class="col-sm-8 text-info numeric">{{ order.amount_paid|eve_isk }}</dd>
+
+                                        <dt class="col-sm-4 text-danger">{% trans "Remaining" %}</dt>
+                                        <dd class="col-sm-8 text-danger numeric">{{ order.remaining_balance|eve_isk }}</dd>
+                                        {% endif %}
                                     </dl>
+
+                                    {% if order.notes %}
+                                    <div class="card bg-dark border-info mb-4 shadow">
+                                        <div class="card-header border-info bg-info bg-opacity-10 text-info fw-bold fs-5">
+                                            <i class="fas fa-comment-dots me-2"></i> {% trans "Order Notes / Quote" %}
+                                        </div>
+                                        <div class="card-body">
+                                            <div style="white-space: pre-wrap; font-family: inherit; font-size: 1.1rem; line-height: 1.5;" class="text-light">{{ order.notes }}</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
 
                                     {% if order.fit %}
                                     <hr style="border-color: rgba(255,255,255,0.1);">
@@ -277,20 +317,21 @@
                     <div class="row">
                         <div class="col-12 mb-4">
                             <div class="card border-0 h-100 bg-dark">
-                                <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center">
+                                <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <h3 class="card-title text-white mb-0"><i class="fas fa-sitemap me-2 text-info"></i> {% trans "Recursive Production Tree" %}</h3>
-                                    <div>
-                                        <button class="btn btn-sm btn-outline-light" onclick="toggleAllDrilldowns(this)" data-expanded="false"><i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}</button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="text" id="treeSearchInput" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="{% trans 'Search tree...' %}" onkeyup="filterTreeDelay()" style="width: 200px;">
+                                        <button class="btn btn-sm btn-outline-light text-nowrap" onclick="toggleAllDrilldowns(this)" data-expanded="false"><i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}</button>
                                     </div>
                                 </div>
-                                <div class="card-body p-4" style="max-height: 800px; overflow-y: auto;">
+                                <div class="card-body p-4 position-relative" style="max-height: 800px; overflow-y: auto;">
+                                    <div id="treeLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center bg-dark" style="z-index: 10; opacity: 0.9; display: none !important;">
+                                        <div class="spinner-border text-light mb-2" role="status" style="width: 3rem; height: 3rem;"></div>
+                                        <h5 class="text-light">{% trans "Processing Tree..." %}</h5>
+                                    </div>
                                     {% if recursive_bom_tree %}
                                         {% for root_node in recursive_bom_tree %}
                                             <div class="mb-4">
-                                                <h4 class="text-warning mb-3">
-                                                    <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ root_node.type_id }}/icon?size=32" alt="{{ root_node.name }}" width="32" height="32" class="me-2 rounded">
-                                                    {{ root_node.name }} <span class="badge bg-secondary ms-2">x{{ root_node.quantity|floatformat:0|intcomma }}</span>
-                                                </h4>
                                                 {% include "industry_reforged/partials/bom_tree_node.html" with node=root_node prefix=forloop.counter|stringformat:"s" %}
                                             </div>
                                         {% endfor %}
@@ -328,24 +369,91 @@
 </div>
 
 <script>
+    var searchTimeout = null;
+
+    function filterTreeDelay() {
+        var overlay = document.getElementById('treeLoadingOverlay');
+        overlay.style.setProperty('display', 'flex', 'important');
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            filterTree();
+            overlay.style.setProperty('display', 'none', 'important');
+        }, 300);
+    }
+
+    function filterTree() {
+        var query = document.getElementById('treeSearchInput').value.toLowerCase();
+        var allNodes = document.querySelectorAll('.bom-node');
+        var allRows = document.querySelectorAll('.bom-node > .d-flex');
+
+        if (!query) {
+            allNodes.forEach(function(node) {
+                node.style.setProperty('display', '', '');
+            });
+            return;
+        }
+
+        // Hide all first
+        allNodes.forEach(function(node) {
+            node.style.setProperty('display', 'none', 'important');
+        });
+
+        // Find matches and reveal parents
+        allRows.forEach(function(row) {
+            var nameEl = row.querySelector('strong');
+            if (nameEl && nameEl.innerText.toLowerCase().includes(query)) {
+                var node = row.closest('.bom-node');
+                if (node) {
+                    node.style.setProperty('display', '', '');
+
+                    var parent = node.parentElement.closest('.bom-node');
+                    while (parent) {
+                        parent.style.setProperty('display', '', '');
+                        var bsCollapseEl = parent.querySelector('.collapse');
+                        if (bsCollapseEl) {
+                            var bsCollapse = bootstrap.Collapse.getOrCreateInstance(bsCollapseEl, {toggle: false});
+                            bsCollapse.show();
+                            var btn = parent.querySelector('.drilldown-btn');
+                            if (btn) btn.setAttribute('aria-expanded', 'true');
+                        }
+                        parent = parent.parentElement.closest('.bom-node');
+                    }
+                }
+            }
+        });
+    }
+
     function toggleAllDrilldowns(btn) {
         var isExpanding = btn.getAttribute('data-expanded') !== 'true';
         var elements = document.querySelectorAll('.bom-node .collapse');
+        var overlay = document.getElementById('treeLoadingOverlay');
 
-        elements.forEach(function(el) {
-            var bsCollapse = bootstrap.Collapse.getOrCreateInstance(el, {toggle: false});
+        // Show loading overlay
+        overlay.style.setProperty('display', 'flex', 'important');
+        btn.disabled = true;
+
+        // Allow browser to render the overlay before freezing the thread
+        setTimeout(function() {
+            elements.forEach(function(el) {
+                var bsCollapse = bootstrap.Collapse.getOrCreateInstance(el, {toggle: false});
+                if (isExpanding) {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                }
+
+                // Sync aria-expanded on the individual buttons so the chevron rotates
+                var drilldownBtn = document.querySelector('[data-bs-target="#' + el.id + '"]');
+                if (drilldownBtn) {
+                    drilldownBtn.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                }
+            });
+
             if (isExpanding) {
-                bsCollapse.show();
+                btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> {% trans "Collapse All" %}';
+                btn.setAttribute('data-expanded', 'true');
             } else {
-                bsCollapse.hide();
-            }
-
-            // Sync aria-expanded on the individual buttons so the chevron rotates
-            var drilldownBtn = document.querySelector('[data-bs-target="#' + el.id + '"]');
-            if (drilldownBtn) {
-                drilldownBtn.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
-            }
-        });
 
         // Update the main toggle button state
         btn.setAttribute('data-expanded', isExpanding ? 'true' : 'false');
@@ -355,5 +463,30 @@
             btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}';
         }
     }
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        function formatISK(val) {
+            if(!val) return "";
+            let num = parseFloat(val);
+            if(isNaN(num)) return "";
+            if(num >= 1000000000) return (num / 1000000000).toFixed(2) + "b";
+            if(num >= 1000000) return (num / 1000000).toFixed(2) + "m";
+            if(num >= 1000) return (num / 1000).toFixed(2) + "k";
+            return num.toFixed(2);
+        }
+
+        document.querySelectorAll('.isk-format-input').forEach(input => {
+            function updateHelper() {
+                let helper = document.getElementById(input.id + '-helper');
+                if(helper) {
+                    let formatted = formatISK(input.value);
+                    helper.textContent = formatted ? `( ${formatted} )` : '';
+                }
+            }
+            input.addEventListener('input', updateHelper);
+            updateHelper(); // trigger on load
+        });
+    });
 </script>
 {% endblock %}

@@ -16,17 +16,17 @@
         <div class="card-body pb-2">
             <h4 class="card-title text-white mb-3"><i class="fas fa-bullhorn text-warning"></i> {% trans "Message of the Day & Industry Status" %}</h4>
 
-            {% if motd %}
+            {% if motd and motd.message %}
                 <p class="mb-3 text-white fs-5">{{ motd.message|linebreaksbr }}</p>
                 <div class="text-end mt-1 mb-2">
                     <small class="text-muted">{% trans "Last updated:" %} <span class="numeric">{{ motd.updated_at|date:"Y-m-d H:i" }}</span></small>
                 </div>
-            {% else %}
-                <p class="mb-3 text-white fs-5 fst-italic">{% trans "Welcome to the Industrialist Dashboard. Happy building!" %}</p>
             {% endif %}
 
-            <div class="text-center mt-2 mb-1">
-                <span class="text-warning fst-italic"><i class="fas fa-quote-left fa-sm me-2 opacity-50"></i>{{ dynamic_motd_stats.slogan }}<i class="fas fa-quote-right fa-sm ms-2 opacity-50"></i></span>
+            <div class="text-center mt-3 mb-2">
+                <h5 class="text-warning fst-italic fw-bold mb-0">
+                    <i class="fas fa-quote-left fa-sm me-2 opacity-50"></i>{{ dynamic_motd_stats.slogan }}<i class="fas fa-quote-right fa-sm ms-2 opacity-50"></i>
+                </h5>
             </div>
 
             <hr style="border-color: rgba(255,255,255,0.1);">
@@ -369,6 +369,19 @@
     </div>
 </div>
 
+<!-- Shopping List Loading Modal -->
+<div class="modal fade" id="shoppingListLoadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary text-center p-5">
+            <div class="modal-body">
+                <div class="spinner-border text-light mb-3" role="status" style="width: 4rem; height: 4rem;"></div>
+                <h4 class="text-light">{% trans "Calculating Shopping List..." %}</h4>
+                <p class="text-muted mb-0">{% trans "This may take a few seconds for large production trees." %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Restore active tab from sessionStorage
@@ -413,12 +426,16 @@
         }
 
         if (selectedIds.length === 0) {
-            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
             errorModal.show();
             return;
         }
 
         var url = "{% url 'industry_reforged:shopping_list' %}?task_ids=" + selectedIds.join("&task_ids=");
+
+        var loadingModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListLoadingModal'));
+        loadingModal.show();
+
         window.location.href = url;
     }
 
@@ -467,7 +484,7 @@
         }
 
         if (selectedIds.length === 0) {
-            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
             document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
             document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to claim.' %}";
             errorModal.show();
@@ -477,7 +494,7 @@
         var form = document.getElementById('bulkClaimForm');
         var charSelect = form.querySelector('select[name="character_id"]');
         if (!charSelect.value) {
-            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
             document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Character Required' %}";
             document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select a character to claim the tasks for.' %}";
             errorModal.show();
@@ -518,7 +535,7 @@
         }
 
         if (selectedIds.length === 0) {
-            var errorModal = new bootstrap.Modal(document.getElementById('shoppingListErrorModal'));
+            var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
             document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
             document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to complete.' %}";
             errorModal.show();

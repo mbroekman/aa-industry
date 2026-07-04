@@ -9,6 +9,7 @@ from functools import wraps
 
 # Third Party
 from celery import shared_task
+from eveuniverse.models import EveType
 
 # Django
 from django.utils import timezone
@@ -79,6 +80,7 @@ class IndustryESIProvider(ESIClientProvider):
                 "GetUniverseSchematicsSchematicId",
                 "GetCorporationsCorporationIdAssets",
                 "PostUniverseNames",
+                "PostUniverseIds",
                 "GetUniverseStructuresStructureId",
                 "GetUniverseStationsStationId",
                 "GetCorporationsCorporationIdWallets",
@@ -388,13 +390,13 @@ def update_character_pi(character_id=None):
                             "temperate": 11,
                             "ice": 12,
                             "gas": 13,
-                            "oceanic": 14,
-                            "lava": 2014,
-                            "barren": 2015,
-                            "storm": 2016,
-                            "plasma": 2017,
+                            "oceanic": 2014,
+                            "lava": 2015,
+                            "barren": 2016,
+                            "storm": 2017,
+                            "plasma": 2063,
                         }
-                        planet_type_id = PLANET_TYPE_MAP.get(planet_type_str, 2015)
+                        planet_type_id = PLANET_TYPE_MAP.get(planet_type_str, 2016)
 
                         system_id = getattr(p, "solar_system_id")
                         upgrade_level = getattr(p, "upgrade_level")
@@ -431,7 +433,82 @@ def update_character_pi(character_id=None):
                     # Keep track of active pin ids to delete removed pins
                     active_pin_ids = []
 
-                    # Django timezone
+                    # ESI Bug: Planetary Interaction pins always return the "Barren" variant's type_id.
+                    # We must map it back to the correct variant for the given planet type.
+                    PI_PIN_MAP = {
+                        2473: {
+                            "Temperate": 2481,
+                            "Ice": 2493,
+                            "Gas": 2492,
+                            "Oceanic": 2490,
+                            "Lava": 2469,
+                            "Barren": 2473,
+                            "Storm": 2483,
+                            "Plasma": 2471,
+                        },
+                        2474: {
+                            "Temperate": 2480,
+                            "Ice": 2491,
+                            "Gas": 2494,
+                            "Oceanic": 2485,
+                            "Lava": 2470,
+                            "Barren": 2474,
+                            "Storm": 2484,
+                            "Plasma": 2472,
+                        },
+                        2475: {"Temperate": 2482, "Barren": 2475},
+                        2524: {
+                            "Temperate": 2254,
+                            "Ice": 2533,
+                            "Gas": 2534,
+                            "Oceanic": 2525,
+                            "Lava": 2549,
+                            "Barren": 2524,
+                            "Storm": 2550,
+                            "Plasma": 2551,
+                        },
+                        2541: {
+                            "Temperate": 2562,
+                            "Ice": 2257,
+                            "Gas": 2536,
+                            "Oceanic": 2535,
+                            "Lava": 2558,
+                            "Barren": 2541,
+                            "Storm": 2561,
+                            "Plasma": 2560,
+                        },
+                        2544: {
+                            "Temperate": 2256,
+                            "Ice": 2552,
+                            "Gas": 2543,
+                            "Oceanic": 2542,
+                            "Lava": 2555,
+                            "Barren": 2544,
+                            "Storm": 2557,
+                            "Plasma": 2556,
+                        },
+                        2848: {
+                            "Temperate": 3068,
+                            "Ice": 3061,
+                            "Gas": 3060,
+                            "Oceanic": 3063,
+                            "Lava": 3062,
+                            "Barren": 2848,
+                            "Storm": 3067,
+                            "Plasma": 3064,
+                        },
+                    }
+                    PLANET_ID_TO_NAME = {
+                        11: "Temperate",
+                        12: "Ice",
+                        13: "Gas",
+                        2014: "Oceanic",
+                        2015: "Lava",
+                        2016: "Barren",
+                        2017: "Storm",
+                        2063: "Plasma",
+                    }
+
                     # Django
                     from django.utils import timezone
 
@@ -442,6 +519,16 @@ def update_character_pi(character_id=None):
                         active_pin_ids.append(pin_id)
 
                         type_id = getattr(pin, "type_id")
+
+                        # Apply mapping to fix ESI bug (ESI sometimes returns generic variants like Barren or Storm for all planets)
+                        planet_category = PLANET_ID_TO_NAME.get(
+                            char_planet.planet_type_id, "Barren"
+                        )
+                        for mapping in PI_PIN_MAP.values():
+                            if type_id in mapping.values():
+                                type_id = mapping.get(planet_category, type_id)
+                                break
+
                         schematic_id = getattr(pin, "schematic_id", None)
                         extractor_details = getattr(pin, "extractor_details", None)
 
@@ -456,23 +543,66 @@ def update_character_pi(character_id=None):
                         extraction_yield = None
 
                         if schematic_id:
-                            try:
-                                res = esi.client.Planetary_Interaction.GetUniverseSchematicsSchematicId(
-                                    schematic_id=schematic_id
-                                ).result()
-                                # Third Party
-                                from eveuniverse.models import EveType
+                            # Try to find another pin that already resolved this schematic
+                            existing = (
+                                PlanetPin.objects.filter(schematic_id=schematic_id)
+                                .exclude(product_type_id__isnull=True)
+                                .first()
+                            )
+                            if existing:
+                                product_type_id = existing.product_type_id
+                            else:
+                                try:
+                                    # Third Party
+                                    import requests
 
-                                t = EveType.objects.filter(
-                                    name=res.schematic_name
-                                ).first()
-                                if t:
-                                    product_type_id = t.id
-                                    ensure_eve_type(product_type_id)
-                            except Exception as e:
-                                logger.warning(
-                                    f"Could not resolve schematic {schematic_id}: {e}"
-                                )
+                                    # Use raw requests to bypass django-esi caching which throws HTTPNotModified
+                                    url = f"https://esi.evetech.net/latest/universe/schematics/{schematic_id}/"
+                                    r = requests.get(url, timeout=10)
+                                    if r.status_code == 200:
+                                        data = r.json()
+                                        schematic_name = data.get("schematic_name")
+
+                                        t = EveType.objects.filter(
+                                            name=schematic_name
+                                        ).first()
+                                        if not t:
+                                            # Fallback: resolve ID from ESI if not loaded locally
+                                            try:
+                                                id_res = esi.client.Universe.post_universe_ids(
+                                                    names=[schematic_name]
+                                                ).result()
+                                                inv_types = getattr(
+                                                    id_res, "inventory_types", []
+                                                )
+                                                if inv_types:
+                                                    first_inv = inv_types[0]
+                                                    resolved_id = getattr(
+                                                        first_inv, "id", None
+                                                    )
+                                                    if not resolved_id and isinstance(
+                                                        first_inv, dict
+                                                    ):
+                                                        resolved_id = first_inv.get(
+                                                            "id"
+                                                        )
+
+                                                    if resolved_id:
+                                                        ensure_eve_type(resolved_id)
+                                                        t = EveType.objects.filter(
+                                                            id=resolved_id
+                                                        ).first()
+                                            except Exception as inner_e:
+                                                logger.warning(
+                                                    f"Could not resolve universe ID for {schematic_name}: {inner_e}"
+                                                )
+
+                                        if t:
+                                            product_type_id = t.id
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Could not resolve schematic {schematic_id}: {e}"
+                                    )
 
                         if extractor_details:
                             product_type_id = getattr(
@@ -938,12 +1068,21 @@ def task_process_wallet_payments():
 
             # Incoming payment (Client -> Corp)
             if entry.amount is not None and entry.amount > 0:
-                for ref, order in unpaid_orders.items():
-                    if ref in reason and entry.amount >= order.total_price:
-                        order.is_paid = True
+                # Iterate over a list of items so we can safely modify/pop the dict if needed
+                for ref, order in list(unpaid_orders.items()):
+                    if ref in reason:
+                        order.amount_paid += entry.amount
+                        note = f"[{timezone.now().strftime('%Y-%m-%d %H:%M')}] Auto Sync: Received payment of {entry.amount:,.2f} ISK."
+                        if order.notes:
+                            order.notes += f"\n{note}"
+                        else:
+                            order.notes = note
+
+                        if order.amount_paid >= order.total_price:
+                            order.is_paid = True
+                            unpaid_orders.pop(ref, None)
+
                         order.save()
-                        # Also mark it as PAID in our local dictionary so we don't process it twice
-                        unpaid_orders.pop(ref, None)
                         break
 
             # Outgoing payment (Corp -> Builder)

@@ -44,7 +44,7 @@ This is the central marketplace for corporate builders.
 ### 2.3 Shopping List & Full Production Tree
 
 - **Order & Task Shopping Lists**: Extremely useful for buyers and builders: generate a "Shopping List" of required raw materials for a specific order or a group of tasks. You can copy this list with a single click in the EVE Online "Multibuy" format.
-- **Recursive BOM Drilldown**: When viewing the details of an Order, Industrialists have access to an exclusive **"Full Production Tree"** tab. This provides an interactive, recursive breakdown of the Bill of Materials. You can drill down through complex intermediate components all the way down to base raw materials (Minerals, PI, etc.).
+- **Recursive BOM Drilldown**: When viewing the details of an Order, Industrialists have access to an exclusive **"Full Production Tree"** tab. This provides an interactive, recursive breakdown of the Bill of Materials based on the local SDE database. You can drill down through complex intermediate components all the way down to base raw materials (Minerals, PI, Moon Goo, etc.), including full support for **Reactions**.
 - **Component Sourcing**: Next to every intermediate component in the Production Tree, you will find a dedicated Shopping Cart icon. Clicking it instantly generates a specific raw material shopping list for *that particular component* at the exact quantity required. This gives builders full flexibility to decide which sub-components they want to build themselves and which they prefer to buy off the market.
 
 ______________________________________________________________________
@@ -74,11 +74,19 @@ The command center for the industrial backbone of the corporation.
 ### 3.4 Configuration & Rules (Director Config)
 
 - **Global Configurations**: Set whether the corporation "Builds" (BUILD) or "Buys" (BUY) specific items.
-- Define manual ME/TE (Material/Time Efficiency) values, fixed prices, and the desired threshold for "Low Stock Alerts" per item.
+- Define manual ME/TE (Material/Time Efficiency) values and the desired threshold for "Low Stock Alerts" per item.
 - **Tracked Hangars (Hangar Configurations)**: Before inventory can be synced, you must use "Discover Hangars" to instruct the plugin to scan your corporate assets. Discovered hangars will appear in the **Hangar Configurations** tab. To activate them for tracking in your Inventory and Low Stock Alerts, you must currently toggle them to *Active* via the Django Admin interface.
 - **System Health Monitor**: Track the real-time execution status of all Celery background tasks directly from the frontend. This tab provides insights into the success/failure state, execution duration, and full Python error logs for tasks like ESI synchronizations and PI notifications.
 
-### 3.5 Corporate Discord Webhooks
+### 3.5 Django Admin Configurations (Pricing & Taxes)
+
+Certain advanced configurations are currently managed strictly via the **Alliance Auth Admin Panel** (under `Industry Reforged`):
+
+- **Corp Pricing Config**: Configure the default corporate discount percentage and the builder reward percentage for a specific corporation. You can also specify granular discounts per item category (e.g., ships vs. modules) via the "Corp Type Discounts" inline.
+- **Corp Item Config**: Manually override the Jita buy/sell price for specific items (highly useful for unique Faction items with erratic market histories).
+- **Tax Config**: Define the standard Industry Tax and Broker Fee percentages applicable to your corporation.
+
+### 3.6 Corporate Discord Webhooks
 
 - In addition to Direct Messages for members, directors can configure corporate webhooks.
 - Add your webhook URLs via the Django Admin Panel (`Discord Webhook Configurations`).
@@ -91,6 +99,6 @@ ______________________________________________________________________
 
 The plugin runs largely autonomously in the background via Celery tasks:
 
-- **Pricing Engine**: The plugin fetches live market data from the Fuzzwork API to calculate reliable ISK values for Bills of Materials and orders.
+- **BOM & Pricing Engine**: The plugin relies entirely on the local `eveuniverse` SDE for calculating Bills of Materials (including Manufacturing and Reactions). To calculate raw ISK prices, it fetches live market data from the Fuzzwork API.
 - **Synchronization**: Every 15 to 30 minutes, the plugin synchronizes Wallets, Corporate Inventory, Personal Jobs, and Planetary Interaction via the EVE Swagger Interface (ESI).
 - **Multilingual Support (i18n)**: The interface supports multiple languages. If users change their preferred language in Alliance Auth (e.g., to Dutch), the plugin will automatically display the translated interface.

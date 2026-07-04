@@ -3,6 +3,14 @@
 {% load industry_tags %}
 
 {% block details %}
+<style>
+    .drilldown-btn[aria-expanded="true"] .transition-icon {
+        transform: rotate(180deg);
+    }
+    .transition-icon {
+        transition: transform 0.2s ease-in-out;
+    }
+</style>
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
@@ -21,8 +29,24 @@
 
 
 
-    <div class="card border-0 mb-4 bg-dark h-100">
-        <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center">
+    <div class="card border-0 mb-4 bg-transparent">
+        <div class="card-header p-0 border-bottom-0">
+            <ul class="nav nav-tabs" id="shopping-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="flat-tab" data-bs-toggle="tab" data-bs-target="#flat-pane" type="button" role="tab" aria-controls="flat-pane" aria-selected="true"><i class="fas fa-list me-2"></i>{% trans "Flat Overview" %}</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-pane" type="button" role="tab" aria-controls="tree-pane" aria-selected="false"><i class="fas fa-sitemap me-2"></i>{% trans "Production Tree" %}</button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-0 mt-3">
+            <div class="tab-content" id="shopping-tabsContent">
+
+                <!-- TAB 1: FLAT -->
+                <div class="tab-pane fade show active" id="flat-pane" role="tabpanel" aria-labelledby="flat-tab" tabindex="0">
+                    <div class="card border-0 h-100 bg-dark">
+                        <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center">
             <h3 class="card-title text-white mb-0">{% trans "Bill of Materials Overview" %}</h3>
             <span class="badge bg-primary fs-6">{{ bom_materials|length }} Materials</span>
         </div>
@@ -65,11 +89,133 @@
         </div>
     </div>
 </div>
+<!-- END TAB 1 -->
+
+        <!-- TAB 2: TREE -->
+        <div class="tab-pane fade" id="tree-pane" role="tabpanel" aria-labelledby="tree-tab" tabindex="0">
+            <div class="card border-0 h-100 bg-dark">
+                <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h3 class="card-title text-white mb-0">{% trans "Recursive Production Tree" %}</h3>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" id="treeSearchInput" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="{% trans 'Search tree...' %}" onkeyup="filterTreeDelay()" style="width: 200px;">
+                        <button class="btn btn-sm btn-outline-light text-nowrap" onclick="toggleAllDrilldowns(this)" data-expanded="false"><i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}</button>
+                    </div>
+                </div>
+                <div class="card-body p-4 position-relative" style="max-height: 800px; overflow-y: auto;">
+                    <div id="treeLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center bg-dark" style="z-index: 10; opacity: 0.9; display: none !important;">
+                        <div class="spinner-border text-light mb-2" role="status" style="width: 3rem; height: 3rem;"></div>
+                        <h5 class="text-light">{% trans "Processing Tree..." %}</h5>
+                    </div>
+                    {% if recursive_bom_tree %}
+                        {% for root_node in recursive_bom_tree %}
+                            <div class="mb-4">
+                                {% include "industry_reforged/partials/bom_tree_node.html" with node=root_node prefix=forloop.counter|stringformat:"s" %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">{% trans "No production tree available." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- END TAB 2 -->
+
+    </div>
+</div>
+</div>
+</div>
 
 <textarea id="multibuyText" style="display:none;">{% for mat in bom_materials %}{{ mat.name }} {{ mat.quantity }}
 {% endfor %}</textarea>
 
 <script>
+    var searchTimeout = null;
+
+    function filterTreeDelay() {
+        var overlay = document.getElementById('treeLoadingOverlay');
+        overlay.style.setProperty('display', 'flex', 'important');
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            filterTree();
+            overlay.style.setProperty('display', 'none', 'important');
+        }, 300);
+    }
+
+    function filterTree() {
+        var query = document.getElementById('treeSearchInput').value.toLowerCase();
+        var allNodes = document.querySelectorAll('.bom-node');
+        var allRows = document.querySelectorAll('.bom-node > .d-flex');
+
+        if (!query) {
+            allNodes.forEach(function(node) {
+                node.style.setProperty('display', '', '');
+            });
+            return;
+        }
+
+        // Hide all first
+        allNodes.forEach(function(node) {
+            node.style.setProperty('display', 'none', 'important');
+        });
+
+        // Find matches and reveal parents
+        allRows.forEach(function(row) {
+            var nameEl = row.querySelector('strong');
+            if (nameEl && nameEl.innerText.toLowerCase().includes(query)) {
+                var node = row.closest('.bom-node');
+                if (node) {
+                    node.style.setProperty('display', '', '');
+
+                    var parent = node.parentElement.closest('.bom-node');
+                    while (parent) {
+                        parent.style.setProperty('display', '', '');
+                        var bsCollapseEl = parent.querySelector('.collapse');
+                        if (bsCollapseEl) {
+                            var bsCollapse = bootstrap.Collapse.getOrCreateInstance(bsCollapseEl, {toggle: false});
+                            bsCollapse.show();
+                            var btn = parent.querySelector('.drilldown-btn');
+                            if (btn) btn.setAttribute('aria-expanded', 'true');
+                        }
+                        parent = parent.parentElement.closest('.bom-node');
+                    }
+                }
+            }
+        });
+    }
+    function toggleAllDrilldowns(btn) {
+        var isExpanding = btn.getAttribute('data-expanded') !== 'true';
+        var elements = document.querySelectorAll('.bom-node .collapse');
+        var overlay = document.getElementById('treeLoadingOverlay');
+
+        // Show loading overlay
+        overlay.style.setProperty('display', 'flex', 'important');
+        btn.disabled = true;
+
+        // Allow browser to render the overlay before freezing the thread
+        setTimeout(function() {
+            elements.forEach(function(el) {
+                var bsCollapse = bootstrap.Collapse.getOrCreateInstance(el, {toggle: false});
+                if (isExpanding) {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                }
+            });
+
+            if (isExpanding) {
+                btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> {% trans "Collapse All" %}';
+                btn.setAttribute('data-expanded', 'true');
+            } else {
+                btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}';
+                btn.setAttribute('data-expanded', 'false');
+            }
+
+            // Hide loading overlay
+            overlay.style.setProperty('display', 'none', 'important');
+            btn.disabled = false;
+        }, 50);
+    }
     function copyMultibuy() {
         var text = document.getElementById("multibuyText").value;
         navigator.clipboard.writeText(text).then(function() {

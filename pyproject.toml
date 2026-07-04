@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "aa-industry-reforged"
-description = "Industry Plugin for Alliance Auth (GitHub Version)"
+description = "Industry Plugin for Alliance Auth"
 readme = "README.md"
 keywords = [
     "allianceauth",
@@ -22,7 +22,7 @@ classifiers = [
     "Framework :: Django",
     "Framework :: Django :: 5.2",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
@@ -40,7 +40,9 @@ dependencies = [
     "allianceauth>=5",
     "django-eveuniverse",
 ]
-urls.Changelog = "https://github.com/mbroekman/aa-industry.git/blob/master/CHANGELOG.md"
+urls.Changelog = "https://github.com/mbroekman/aa-industry/blob/main/CHANGELOG.md"
+urls.Homepage = "https://github.com/mbroekman/aa-industry"
+urls.Source = "https://github.com/mbroekman/aa-industry"
 urls.Tracker = "https://github.com/mbroekman/aa-industry/issues"
 
 [tool.hatch]

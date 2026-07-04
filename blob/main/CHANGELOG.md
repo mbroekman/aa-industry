@@ -5,16 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [In Development] - Unreleased
+## [0.1.0b13] - Unreleased
 
-## [0.1.0b12] - Unreleased
+### Added
+
+- **PI End Products**: The Planetary Interaction Character cards now visibly display the highest tier end products (T1-T4) produced across all their planets, allowing for an instant overview of what each character is manufacturing.
+- **Partial & Upfront Payments**: Added support for upfront payments and partial payments. Directors can now specify an optional upfront payment when quoting an order.
+- **Wallet Scanner Enhancements**: The automated ESI wallet scanner now processes partial payments, accumulates the `amount_paid`, and logs every transaction to the order notes. The order automatically transitions to "Paid" once the full amount is reached.
+- **Quote & Payment Modals**: Overhauled the manual payment flow and quoting logic. Added a dynamic ISK formatting visual helper (e.g., `100.00m`) that updates instantly as directors type amounts. Quoting an order now allows for appending custom notes, and specifying an upfront payment will automatically register as a completed partial payment, accurately updating the `amount_paid` and `Remaining Balance`.
+- **Order Notes Display**: Order Notes are now beautifully rendered directly on the Order Details page (above the Raw Fit block), providing a timeline of partial payments, auto-sync wallet detections, and manual director notes.
+- **Order Details Financials**: The order details page now clearly displays the `Amount Paid` and `Remaining Balance`, avoiding duplicate data by removing the confusing "Upfront Reqd" label.
+- **Manual Payment Override**: Removed the 100% completion restriction for marking an order as paid manually. Replaced native browser popups with a modern Bootstrap modal that supports custom partial payment amounts and optional notes.
+- **Shopping List Loading Modal**: Implemented a global full-screen "Processing" modal with a spinner when generating Shopping Lists from the Member Jobs and Orders Dashboards, improving user feedback during heavy BOM calculations.
+- **Shopping List Tree Search**: Added a quick search bar to the Production Tree tab that dynamically filters and auto-expands parent nodes to highlight matched items.
+- **Shopping List Treeview**: Upgraded the Consolidated Shopping List page to include a new interactive "Production Tree" tab. Users can now view a fully recursive drill-down tree of all materials across multiple selected orders or tasks.
+- **Planetary Interaction Dashboard Redesign**: Completely overhauled the personal PI interface into a clean, 3-level Card and Modal drill-down system. Level 1 groups planets into Character cards. Level 2 lists Planet cards with a live countdown of the most urgent extractor. Level 3 uses a detailed popup modal grouping Extractors (with timers), Factories (categorized by tier T1-T4 and status), and Infrastructure.
+- **Reaction & Invention Support (Local SDE)**: Migrated the entire Bill of Materials (BOM) calculation engine from the external Fuzzwork API to the local `eveuniverse` SDE. The system now seamlessly calculates material requirements for Reactions (Activity ID 11) in addition to standard Manufacturing, and relies entirely on local database queries for lightning-fast, highly accurate data.
+- **Admin Configuration Settings**: Registered the `CorpPricingConfig`, `CorpItemConfig`, and `TaxConfig` models to the Django Admin panel, allowing administrators to properly configure discounts, rewards, tax rates, and manual item price overrides.
+
+### Changed
+
+- **Prominent Quotes/Notes**: Order Notes (and Director Quotes) are now styled much more prominently as a bright alert block on the Order Details page, positioned above the raw fit to ensure they aren't missed.
+- **Flat BOM Optimization**: The "Flat Overview" tab on the Shopping List now recursively aggregates ONLY the base raw materials (minerals, PI, etc.) needed to produce the entire order from scratch. This prevents double-counting costs for intermediate components and provides a highly accurate purchasing list.
+- **UI Enhancements**: Made the dynamic motivational slogan on the Industrialist Dashboard larger and more prominent.
+- **Confirmation Modals**: Replaced all native browser popups (`window.confirm`) on the Director Dashboard (e.g., Mark Paid, Deliver, Generate Batch) with modern, uniform Bootstrap modals.
+- **Admin Optimization**: Added `raw_id_fields` to foreign keys linked to large tables (such as `EveType` and `EveCorporationInfo`) in the Django Admin interface. This prevents the browser from crashing and freezing when attempting to render dropdown menus with over 40,000 items.
+
+### Fixed
+
+- **PI Product Sync**: Fixed a synchronization issue where previously fetched Planetary Interaction factories would fail to show their output product (e.g. "No Schematic") due to an ESI 304 cache loop. The background sync now safely resolves all missing products and schematics.
+- **MOTD Fallback**: Fixed an issue where clearing or removing the Corp MOTD would unexpectedly show a hardcoded fallback text ("Welcome to the Industrialist Dashboard") instead of just hiding the text.
+- **PI Pin ESI Bug Fix**: Implemented a workaround for a known ESI API bug where Planetary Interaction infrastructure pins (such as Basic Industry Facilities or Command Centers) are universally returned as the "Barren" variant. The sync logic now actively intercepts these and correctly remaps them to the appropriate environmental variant (e.g. Lava, Oceanic) based on the target planet.
+- **Shopping List (BOM) Error Modal**: Fixed a Javascript bug on the Industrialist Dashboard where clicking the BOM button repeatedly without selecting any tasks would fail to show the error modal the second time.
+- **Shopping List Crash Fix**: Resolved a critical backend error where generating a Shopping List (BOM) for individual production tasks would result in an empty treeview or a server crash.
+
+## [0.1.0b12] - 2026-07-01
 
 ### Fixed
 
 - **Director Config**: Fixed a bug where creating duplicate Item Configurations or Type Discounts would crash the application with a 500 Server Error (IntegrityError). The form now correctly catches this and displays a user-friendly validation error.
 - **Director Config**: Fixed the "Type Discounts" tab template to correctly display the specific item type instead of an empty space, and restored the missing delete button functionality.
 
-## [0.1.0b11] - Unreleased
+## [0.1.0b11] - 2026-06-30
 
 ### Added
 

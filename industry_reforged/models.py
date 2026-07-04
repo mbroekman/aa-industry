@@ -252,6 +252,54 @@ class CharacterPlanet(models.Model):
             summary[key]["count"] += 1
         return summary.values()
 
+    @property
+    def end_products(self):
+        """Returns a list of EveType objects representing the highest tier products produced on this planet."""
+        high_tech = self.high_tech_factories
+        if high_tech:
+            return list({f.product_type for f in high_tech if f.product_type})
+        advanced = self.advanced_factories
+        if advanced:
+            return list({f.product_type for f in advanced if f.product_type})
+        basic = self.basic_factories
+        if basic:
+            return list({f.product_type for f in basic if f.product_type})
+        return []
+
+    @property
+    def extractors(self):
+        return [p for p in self.pins.all() if p.is_extractor]
+
+    @property
+    def basic_factories(self):
+        return [p for p in self.pins.all() if p.is_basic_factory]
+
+    @property
+    def advanced_factories(self):
+        return [p for p in self.pins.all() if p.is_advanced_factory]
+
+    @property
+    def high_tech_factories(self):
+        return [p for p in self.pins.all() if p.is_high_tech_factory]
+
+    @property
+    def storage_pins(self):
+        return [p for p in self.pins.all() if p.is_storage_facility or p.is_launchpad]
+
+    @property
+    def command_centers(self):
+        return [p for p in self.pins.all() if p.is_command_center]
+
+    @property
+    def earliest_extractor_expiry(self):
+        extractors = self.extractors
+        if not extractors:
+            return None
+        valid_expiries = [e.expiry_time for e in extractors if e.expiry_time]
+        if not valid_expiries:
+            return None
+        return min(valid_expiries)
+
 
 class PlanetPin(models.Model):
     planet = models.ForeignKey(
@@ -294,18 +342,47 @@ class PlanetPin(models.Model):
     def is_factory(self):
         return (
             self.type
-            and "Facility" in self.type.name
+            and ("Facility" in self.type.name or "Plant" in self.type.name)
             and "Storage" not in self.type.name
         )
 
     @property
+    def is_basic_factory(self):
+        return self.type and "Basic Industry Facility" in self.type.name
+
+    @property
+    def is_advanced_factory(self):
+        return self.type and "Advanced Industry Facility" in self.type.name
+
+    @property
+    def is_high_tech_factory(self):
+        return self.type and "High Tech Production Plant" in self.type.name
+
+    @property
+    def is_launchpad(self):
+        return self.type and "Launchpad" in self.type.name
+
+    @property
+    def is_storage_facility(self):
+        return self.type and "Storage Facility" in self.type.name
+
+    @property
+    def is_command_center(self):
+        return self.type and "Command Center" in self.type.name
+
+    @property
     def is_storage(self):
-        return self.type and (
-            "Storage" in self.type.name
-            or "Spaceport" in self.type.name
-            or "Command Center" in self.type.name
-            or "Launchpad" in self.type.name
-        )
+        return self.is_launchpad or self.is_storage_facility or self.is_command_center
+
+    @property
+    def status_label(self):
+        if self.is_extractor:
+            return "Expired" if self.is_expired else "Running"
+        if self.is_factory:
+            if self.schematic_id:
+                return "Configured"
+            return "Idle"
+        return "Online"
 
     @property
     def progress_percent(self):
@@ -392,6 +469,8 @@ class MemberOrder(models.Model):
         max_length=20, choices=ORDER_STATUS_CHOICES, default="REQUESTED"
     )
     total_price = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    upfront_payment = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    amount_paid = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
     quoted_at = models.DateTimeField(null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
@@ -409,6 +488,10 @@ class MemberOrder(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} by {self.character.character_name} - {self.status}"
+
+    @property
+    def remaining_balance(self):
+        return max(0, self.total_price - self.amount_paid)
 
     @property
     def progress_percent(self):

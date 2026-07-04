@@ -166,168 +166,225 @@
 
                     {% if planets %}
                     {% regroup planets by character as char_planets %}
-                    <div class="accordion" id="charAccordion">
-                        {% for char_group in char_planets %}
-                        <div class="accordion-item bg-transparent border-0 mb-4">
-                            <h4 class="accordion-header" id="headingChar{{ char_group.grouper.character_id }}">
-                                <button class="accordion-button collapsed bg-transparent border-bottom border-secondary ps-0 py-2 d-flex align-items-center shadow-none" type="button" data-bs-toggle="collapse"
-                                    data-bs-target="#collapseChar{{ char_group.grouper.character_id }}" aria-expanded="false"
-                                    aria-controls="collapseChar{{ char_group.grouper.character_id }}">
-                                    <img src="https://images.evetech.net/characters/{{ char_group.grouper.character_id }}/portrait?size=32"
-                                        alt="{{ char_group.grouper.character_name }}"
-                                        class="rounded-circle border border-secondary me-3">
-                                    <span class="text-primary fs-4">{{ char_group.grouper.character_name }}</span>
-                                    {% if char_group.list.0.character_needs_attention %}
-                                    <span class="badge bg-danger ms-auto"><i class="fas fa-exclamation-triangle"></i> Expired</span>
-                                    {% endif %}
-                                </button>
-                            </h4>
 
-                            <div id="collapseChar{{ char_group.grouper.character_id }}" class="accordion-collapse collapse"
-                                aria-labelledby="headingChar{{ char_group.grouper.character_id }}" data-bs-parent="#charAccordion">
-                                <div class="accordion-body px-0 pt-3 pb-0">
-                                    <div class="accordion" id="piAccordion{{ char_group.grouper.character_id }}">
-                                        {% for planet in char_group.list %}
-                                        <div class="accordion-item">
-                                            <h2 class="accordion-header" id="heading{{ planet.planet_id }}">
-                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                    data-bs-target="#collapse{{ planet.planet_id }}" aria-expanded="false"
-                                                    aria-controls="collapse{{ planet.planet_id }}">
-                                                    {% if planet.planet_type %}
-                                                    <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                        src="https://images.evetech.net/types/{{ planet.planet_type.id }}/icon?size=32"
-                                                        alt="{{ planet.planet_type.name }}" class="me-2">
-                                                    {{ planet.planet_type.name }}
-                                                    {% endif %}
-                                                    &nbsp;- Command Center Level {{ planet.upgrade_level }} (Pins: {{ planet.num_pins }})
-                                                    &nbsp;- Last Updated: {{ planet.last_update|date:"Y-m-d H:i" }}
-                                                    {% if planet.has_expired_extractors %}
-                                                    <span class="badge bg-danger ms-auto"><i class="fas fa-exclamation-triangle"></i> Expired</span>
-                                                    {% endif %}
-                                                </button>
-                                            </h2>
-                                            <div id="collapse{{ planet.planet_id }}" class="accordion-collapse collapse"
-                                                aria-labelledby="heading{{ planet.planet_id }}" data-bs-parent="#piAccordion{{ char_group.grouper.character_id }}">
-                                <div class="accordion-body">
-                                    <div class="row">
-                                        <!-- Extractors -->
-                                        <div class="col-md-4">
-                                            <h5 class="text-center border-bottom pb-2">⛏️ Extractors</h5>
-                                            {% for pin in planet.pins.all %}
-                                            {% if pin.is_extractor %}
-                                            <div class="card mb-3 border-0 bg-dark">
-                                                <div class="card-body p-2 text-center">
-                                                    <div class="d-flex justify-content-center align-items-center mb-1">
-                                                        {% if pin.type %}
-                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                            src="https://images.evetech.net/types/{{ pin.type.id }}/icon?size=32"
-                                                            alt="{{ pin.type.name }}" title="{{ pin.type.name }}">
-                                                        {% endif %}
+                    <style>
+                    .char-card:hover, .planet-card:hover {
+                        border-color: var(--bs-primary) !important;
+                        transform: translateY(-2px);
+                        transition: all 0.2s ease;
+                        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5) !important;
+                    }
+                    </style>
 
-                                                        {% if pin.product_type %}
-                                                        <i class="fas fa-arrow-right mx-2 text-muted"></i>
-                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                            src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32"
-                                                            alt="{{ pin.product_type.name }}"
-                                                            title="{{ pin.product_type.name }}">
-                                                        {% endif %}
-                                                    </div>
-
-                                                    <div class="small fw-bold mt-1">
-                                                        {% if pin.is_expired %}
-                                                        <span class="text-danger">EXPIRED</span>
-                                                        {% else %}
-                                                        <span class="text-success">EXTRACTING</span>
-                                                        {% endif %}
-                                                    </div>
-
-                                                    {% if pin.expiry_time %}
-                                                    <div class="progress mt-2" style="height: 10px;">
-                                                        <div class="progress-bar {% if pin.is_expired %}bg-danger{% elif pin.progress_percent > 80 %}bg-warning{% else %}bg-success progress-bar-striped progress-bar-animated{% endif %}"
-                                                            role="progressbar"
-                                                            style="width: {{ pin.progress_percent }}%;"
-                                                            aria-valuenow="{{ pin.progress_percent }}" aria-valuemin="0"
-                                                            aria-valuemax="100"></div>
-                                                    </div>
-                                                    <div class="small text-muted mt-1">
-                                                        {% if pin.is_expired %}
-                                                        Finished
-                                                        {% else %}
-                                                        <span class="local-time" data-timestamp="{{ pin.expiry_time|date:'c' }}">
-                                                            {{ pin.expiry_time|date:"Y-m-d H:i" }} UTC
-                                                        </span>
-                                                        <br>
-                                                        <small>({{ pin.expiry_time|timeuntil }} left)</small>
-                                                        {% endif %}
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            {% endif %}
-                                            {% endfor %}
-                                        </div>
-
-                                        <!-- Factories -->
-                                        <div class="col-md-4 border-start border-secondary">
-                                            <h5 class="text-center border-bottom pb-2">🏭 Factories</h5>
-                                            {% for factory in planet.factory_summary %}
-                                            <div class="card mb-2 border-0 bg-dark">
-                                                <div class="card-body p-2 d-flex align-items-center justify-content-between">
-                                                    <div class="d-flex align-items-center">
-                                                        <span class="badge bg-secondary me-2 px-2 py-1 fs-6">{{ factory.count }}x</span>
-                                                        {% if factory.type %}
-                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                            src="https://images.evetech.net/types/{{ factory.type.id }}/icon?size=32"
-                                                            alt="{{ factory.type.name }}" title="{{ factory.type.name }}"
-                                                            class="me-2">
-                                                        {% endif %}
-                                                        {% if factory.product_type %}
-                                                        <i class="fas fa-arrow-right mx-1 text-muted"></i>
-                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                            src="https://images.evetech.net/types/{{ factory.product_type.id }}/icon?size=32"
-                                                            alt="{{ factory.product_type.name }}"
-                                                            title="{{ factory.product_type.name }}" class="ms-1">
-                                                        {% endif %}
-                                                    </div>
-                                                    <span class="badge bg-success">Running</span>
-                                                </div>
-                                            </div>
-                                            {% empty %}
-                                            <div class="text-center text-muted small mt-2">No factories</div>
-                                            {% endfor %}
-                                        </div>
-
-                                        <!-- Storage -->
-                                        <div class="col-md-4 border-start border-secondary">
-                                            <h5 class="text-center border-bottom pb-2">📦 Infrastructure</h5>
-                                            <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
-                                                {% for pin in planet.pins.all %}
-                                                {% if pin.is_storage %}
-                                                <div class="text-center" style="width: 64px;">
-                                                    {% if pin.type %}
-                                                    <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                        src="https://images.evetech.net/types/{{ pin.type.id }}/icon?size=64"
-                                                        alt="{{ pin.type.name }}" title="{{ pin.type.name }}"
-                                                        class="img-thumbnail bg-dark border-secondary">
-                                                    <div class="small mt-1 text-truncate" style="font-size: 0.7rem;"
-                                                        title="{{ pin.type.name }}">{{ pin.type.name }}</div>
-                                                    {% endif %}
-                                                </div>
-                                                {% endif %}
+                    <!-- Characters View -->
+                    <div id="pi-view-characters">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-4">
+                            {% for char_group in char_planets %}
+                            <div class="col">
+                                <div class="card h-100 bg-dark text-white border-secondary char-card shadow-sm" role="button" onclick="showPlanets('{{ char_group.grouper.character_id }}')">
+                                    <div class="card-body d-flex align-items-center p-4">
+                                        <img src="https://images.evetech.net/characters/{{ char_group.grouper.character_id }}/portrait?size=64" alt="{{ char_group.grouper.character_name }}" class="rounded-circle border border-secondary me-4">
+                                        <div class="flex-grow-1">
+                                            <h4 class="card-title mb-1 text-primary">{{ char_group.grouper.character_name }}</h4>
+                                            <div class="text-muted"><i class="fas fa-globe text-secondary me-1"></i> {{ char_group.list|length }} Planets</div>
+                                            <div class="mt-2 d-flex flex-wrap gap-1">
+                                                {% for planet in char_group.list %}
+                                                    {% for product in planet.end_products %}
+                                                        <img src="https://images.evetech.net/types/{{ product.id }}/icon?size=32" alt="{{ product.name }}" title="{{ product.name }} (Planet {{ planet.planet_id }})" class="rounded border border-secondary" style="width: 24px; height: 24px;" data-bs-toggle="tooltip">
+                                                    {% endfor %}
                                                 {% endfor %}
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
+                                        {% if char_group.list.0.character_needs_attention %}
+                                        <div class="text-danger ms-2"><i class="fas fa-exclamation-triangle fa-2x" title="Extractors Expired"></i></div>
+                                        {% else %}
+                                        <div class="text-success ms-2"><i class="fas fa-check-circle fa-2x" title="All Good"></i></div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
+
+                    <!-- Planets View Containers (Hidden initially) -->
+                    {% for char_group in char_planets %}
+                    <div id="pi-view-planets-{{ char_group.grouper.character_id }}" class="d-none pi-planets-container">
+                        <div class="d-flex align-items-center mb-4">
+                            <button class="btn btn-outline-secondary me-3 shadow-none" onclick="showCharacters()"><i class="fas fa-arrow-left"></i> Back</button>
+                            <img src="https://images.evetech.net/characters/{{ char_group.grouper.character_id }}/portrait?size=32" class="rounded-circle border border-secondary me-2">
+                            <h4 class="mb-0 text-white">{{ char_group.grouper.character_name }}'s Planets</h4>
+                        </div>
+
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+                            {% for planet in char_group.list %}
+                            <div class="col">
+                                <div class="card h-100 bg-dark text-white border-secondary shadow-sm planet-card" role="button" onclick="openPlanetModal('{{ planet.planet_id }}')">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-4">
+                                            {% if planet.planet_type %}
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=64';"
+                                                src="https://images.evetech.net/types/{{ planet.planet_type.id }}/icon?size=64"
+                                                alt="{{ planet.planet_type.name }}" class="me-3 border border-secondary rounded">
+                                            {% endif %}
+                                            <div>
+                                                <h5 class="card-title mb-1 text-info">{{ planet.planet_type.name|default:"Unknown Planet" }}</h5>
+                                                <div class="small text-muted">Level {{ planet.upgrade_level }} CC &bull; {{ planet.num_pins }} Pins</div>
+                                            </div>
+                                        </div>
+
+                                        {% if planet.extractors %}
+                                            <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Earliest Expiry</div>
+                                            {% if planet.has_expired_extractors %}
+                                                <div class="text-danger fw-bold fs-5"><i class="fas fa-exclamation-triangle me-1"></i> EXPIRED</div>
+                                            {% elif planet.earliest_extractor_expiry %}
+                                                <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.earliest_extractor_expiry|date:'c' }}">
+                                                    Calculating...
+                                                </div>
+                                            {% else %}
+                                                <div class="text-info fw-bold fs-5"><i class="fas fa-check-circle me-1"></i> Idle</div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="text-muted fst-italic mt-4">No active extractors</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hidden Modal Template for this Planet -->
+                            <template id="planet-details-{{ planet.planet_id }}">
+                                <div class="modal-header border-secondary bg-dark">
+                                    <h5 class="modal-title d-flex align-items-center">
+                                        <img src="https://images.evetech.net/types/{{ planet.planet_type.id }}/icon?size=32" class="me-3 rounded">
+                                        {{ char_group.grouper.character_name }} <span class="text-muted mx-2">/</span> <span class="text-info">{{ planet.planet_type.name }}</span>
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body bg-dark text-white p-4">
+                                    <div class="row g-4">
+                                        <!-- Extractors -->
+                                        <div class="col-12 col-xl-6">
+                                            <div class="card bg-transparent border-secondary h-100">
+                                                <div class="card-header border-secondary bg-transparent text-success fw-bold"><i class="fas fa-hammer me-2"></i> Extractors</div>
+                                                <div class="card-body p-0">
+                                                    {% if planet.extractors %}
+                                                    <ul class="list-group list-group-flush">
+                                                        {% for pin in planet.extractors %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 py-3 border-secondary d-flex align-items-center">
+                                                            {% if pin.product_type %}
+                                                            <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-3 rounded border border-secondary" title="{{ pin.product_type.name }}">
+                                                            {% else %}
+                                                            <div class="me-3 border border-secondary rounded" style="width:32px; height:32px;"></div>
+                                                            {% endif %}
+                                                            <div class="flex-grow-1">
+                                                                <div class="fw-bold">{{ pin.product_type.name|default:"Unknown" }}</div>
+                                                                <div class="small mt-1">
+                                                                    {% if pin.is_expired %}
+                                                                    <span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> Expired</span>
+                                                                    {% else %}
+                                                                    <span class="text-success countdown-timer fw-bold" data-expiry="{{ pin.expiry_time|date:'c' }}">Running</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    {% else %}
+                                                    <div class="text-muted small text-center my-4">No extractors installed</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Factories -->
+                                        <div class="col-12 col-xl-6">
+                                            <div class="card bg-transparent border-secondary h-100">
+                                                <div class="card-header border-secondary bg-transparent text-warning fw-bold"><i class="fas fa-industry me-2"></i> Factories</div>
+                                                <div class="card-body p-0">
+                                                    {% if planet.basic_factories or planet.advanced_factories or planet.high_tech_factories %}
+                                                    <ul class="list-group list-group-flush">
+                                                        {% if planet.basic_factories %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 border-secondary text-muted small fw-bold" style="letter-spacing:1px;">BASIC (T1)</li>
+                                                        {% for pin in planet.basic_factories %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 py-2 border-0 d-flex justify-content-between align-items-center">
+                                                            <div class="d-flex align-items-center">
+                                                                {% if pin.product_type %}
+                                                                <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-2 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 24px; height: 24px;">
+                                                                <span class="small">{{ pin.product_type.name }}</span>
+                                                                {% else %}
+                                                                <i class="fas fa-cog text-secondary me-2"></i> <span class="text-muted small">No Schematic</span>
+                                                                {% endif %}
+                                                            </div>
+                                                            <span class="badge {% if pin.status_label == 'Idle' %}bg-secondary{% else %}bg-success{% endif %}">{{ pin.status_label }}</span>
+                                                        </li>
+                                                        {% endfor %}
+                                                        {% endif %}
+
+                                                        {% if planet.advanced_factories %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 border-secondary text-muted small fw-bold mt-2" style="letter-spacing:1px;">ADVANCED (T2/T3)</li>
+                                                        {% for pin in planet.advanced_factories %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 py-2 border-0 d-flex justify-content-between align-items-center">
+                                                            <div class="d-flex align-items-center">
+                                                                {% if pin.product_type %}
+                                                                <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-2 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 24px; height: 24px;">
+                                                                <span class="small">{{ pin.product_type.name }}</span>
+                                                                {% else %}
+                                                                <i class="fas fa-cogs text-secondary me-2"></i> <span class="text-muted small">No Schematic</span>
+                                                                {% endif %}
+                                                            </div>
+                                                            <span class="badge {% if pin.status_label == 'Idle' %}bg-secondary{% else %}bg-success{% endif %}">{{ pin.status_label }}</span>
+                                                        </li>
+                                                        {% endfor %}
+                                                        {% endif %}
+
+                                                        {% if planet.high_tech_factories %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 border-secondary text-muted small fw-bold mt-2" style="letter-spacing:1px;">HIGH TECH (T4)</li>
+                                                        {% for pin in planet.high_tech_factories %}
+                                                        <li class="list-group-item bg-transparent text-white px-3 py-2 border-0 d-flex justify-content-between align-items-center">
+                                                            <div class="d-flex align-items-center">
+                                                                {% if pin.product_type %}
+                                                                <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-2 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 24px; height: 24px;">
+                                                                <span class="small">{{ pin.product_type.name }}</span>
+                                                                {% else %}
+                                                                <i class="fas fa-microchip text-secondary me-2"></i> <span class="text-muted small">No Schematic</span>
+                                                                {% endif %}
+                                                            </div>
+                                                            <span class="badge {% if pin.status_label == 'Idle' %}bg-secondary{% else %}bg-success{% endif %}">{{ pin.status_label }}</span>
+                                                        </li>
+                                                        {% endfor %}
+                                                        {% endif %}
+                                                    </ul>
+                                                    {% else %}
+                                                    <div class="text-muted small text-center my-4">No factories installed</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Infrastructure / Storage -->
+                                        <div class="col-12">
+                                            <div class="card bg-transparent border-secondary">
+                                                <div class="card-header border-secondary bg-transparent text-primary fw-bold"><i class="fas fa-boxes me-2"></i> Storage & Infrastructure</div>
+                                                <div class="card-body p-3 d-flex flex-wrap gap-2">
+                                                    {% for pin in planet.command_centers %}
+                                                    <div class="badge border border-secondary text-white py-2 px-3 bg-dark fw-normal"><i class="fas fa-satellite-dish text-primary me-2"></i> Command Center</div>
+                                                    {% endfor %}
+                                                    {% for pin in planet.storage_pins %}
+                                                    <div class="badge border border-secondary text-white py-2 px-3 bg-dark fw-normal"><i class="fas fa-box text-secondary me-2"></i> {{ pin.type.name|default:"Storage" }}</div>
+                                                    {% endfor %}
+                                                    {% if not planet.command_centers and not planet.storage_pins %}
+                                                    <div class="text-muted small text-center w-100 my-2">No infrastructure found</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
                     {% else %}
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle text-info"></i> No Planetary Interaction data found. Ensure your PI
@@ -338,6 +395,16 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- PI Planet Details Modal -->
+<div class="modal fade" id="piPlanetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-secondary shadow" id="piPlanetModalContent" style="background-color: #1a1e23;">
+            <!-- Content injected by JS -->
         </div>
     </div>
 </div>
@@ -371,6 +438,79 @@
         $('#personal-jobs-history-table').DataTable({
             "order": [[6, "desc"]] // Sort by End Date
         });
+
+        // Initial timer setup for PI Dashboard
+        initCountdownTimers();
     });
+
+    // PI Dashboard View Logic
+    function showPlanets(characterId) {
+        document.getElementById('pi-view-characters').classList.add('d-none');
+        document.querySelectorAll('.pi-planets-container').forEach(el => el.classList.add('d-none'));
+        const container = document.getElementById('pi-view-planets-' + characterId);
+        if(container) {
+            container.classList.remove('d-none');
+        }
+    }
+
+    function showCharacters() {
+        document.querySelectorAll('.pi-planets-container').forEach(el => el.classList.add('d-none'));
+        document.getElementById('pi-view-characters').classList.remove('d-none');
+    }
+
+    function openPlanetModal(planetId) {
+        const template = document.getElementById('planet-details-' + planetId);
+        if (!template) return;
+
+        document.getElementById('piPlanetModalContent').innerHTML = template.innerHTML;
+
+        // Initialize timers inside the new modal content
+        initCountdownTimers(document.getElementById('piPlanetModalContent'));
+
+        const modal = new bootstrap.Modal(document.getElementById('piPlanetModal'));
+        modal.show();
+    }
+
+    function initCountdownTimers(container) {
+        container = container || document;
+        container.querySelectorAll('.countdown-timer:not(.initialized)').forEach(el => {
+            el.classList.add('initialized');
+            const expiryIso = el.getAttribute('data-expiry');
+            if (!expiryIso) return;
+
+            const expiryTime = new Date(expiryIso).getTime();
+
+            function updateTimer() {
+                // Check if element is still in DOM (modal could be closed and rewritten)
+                if(!document.body.contains(el)) return;
+
+                const now = new Date().getTime();
+                const distance = expiryTime - now;
+
+                if (distance < 0) {
+                    el.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> EXPIRED';
+                    el.classList.remove('text-success');
+                    el.classList.add('text-danger');
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                let timeStr = "";
+                if (days > 0) timeStr += days + "d ";
+                timeStr += String(hours).padStart(2, '0') + "h ";
+                timeStr += String(minutes).padStart(2, '0') + "m ";
+                timeStr += String(seconds).padStart(2, '0') + "s";
+
+                el.textContent = timeStr;
+                setTimeout(updateTimer, 1000);
+            }
+
+            updateTimer();
+        });
+    }
 </script>
 {% endblock %}
