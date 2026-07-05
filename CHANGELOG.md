@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.0b14] - 05-07-2026
+
+### Fixed
+
+- **BOM Tree Drilldown**: Fixed an HTML ID collision bug in the recursively generated Bill of Materials tree that caused the "Drilldown" and "Expand All" JavaScript functions to break on complex orders with duplicate sub-components.
+- **PI ESI Sync**: Fixed a crash in the Planetary Interaction synchronization task caused by `django-esi` upgrading to `aiopenapi3`, completely bypassing the OpenAPI client bug with a direct `requests.post` call.
+- **PI Product Badges**: Fixed an edge-case bug where 3 specific PI products ("High-Tech Transmitter", "Ukomi Superconductor", "Transcranial Microcontroller") failed to receive their badges due to an ESI spelling mismatch (singular schematic name vs plural inventory type name).
+
 ## [0.1.0b13] - 04-07-2026
 
 ### Added
