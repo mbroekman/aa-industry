@@ -3,7 +3,6 @@
 [![PyPI version](https://img.shields.io/pypi/v/aa-industry-reforged)](https://pypi.org/project/aa-industry-reforged/)
 [![Python versions](https://img.shields.io/pypi/pyversions/aa-industry-reforged)](https://pypi.org/project/aa-industry-reforged/)
 [![Tests](https://github.com/mbroekman/aa-industry/actions/workflows/automated-checks.yml/badge.svg)](https://github.com/mbroekman/aa-industry/actions/workflows/automated-checks.yml)
-[![Discord](https://img.shields.io/discord/1066236968032768000?color=blue&label=Alliance%20Auth&logo=discord)](https://discord.gg/allianceauth)
 
 
 A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) to help corporation and alliance members track their EVE Online industry operations. This app utilizes the EVE Swagger Interface (ESI) to synchronize industry jobs directly into your Alliance Auth environment.
