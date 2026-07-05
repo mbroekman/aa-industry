@@ -454,14 +454,14 @@
                 btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> {% trans "Collapse All" %}';
                 btn.setAttribute('data-expanded', 'true');
             } else {
+                btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}';
+                btn.setAttribute('data-expanded', 'false');
+            }
 
-        // Update the main toggle button state
-        btn.setAttribute('data-expanded', isExpanding ? 'true' : 'false');
-        if (isExpanding) {
-            btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> {% trans "Collapse All" %}';
-        } else {
-            btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}';
-        }
+            // Hide loading overlay
+            overlay.style.setProperty('display', 'none', 'important');
+            btn.disabled = false;
+        }, 50);
     }
 </script>
 <script>

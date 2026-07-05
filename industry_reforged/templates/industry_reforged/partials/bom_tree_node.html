@@ -24,7 +24,11 @@
         <div class="collapse mt-2" id="collapse-{{ node.type_id }}-{{ prefix }}">
             <div class="card card-body bg-transparent border-0 p-0 ps-3">
                 {% for child in node.sub_materials %}
-                    {% include "industry_reforged/partials/bom_tree_node.html" with node=child prefix=prefix|add:forloop.counter|stringformat:"s" %}
+                    {% with counter_str=forloop.counter|stringformat:"s" %}
+                        {% with new_prefix=prefix|stringformat:"s"|add:"_"|add:counter_str %}
+                            {% include "industry_reforged/partials/bom_tree_node.html" with node=child prefix=new_prefix %}
+                        {% endwith %}
+                    {% endwith %}
                 {% endfor %}
             </div>
         </div>

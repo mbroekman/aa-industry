@@ -566,23 +566,39 @@ def update_character_pi(character_id=None):
                                         t = EveType.objects.filter(
                                             name=schematic_name
                                         ).first()
+
+                                        # Fix plural mismatch between schematic names and item names for certain PI products
+                                        if not t and not schematic_name.endswith("s"):
+                                            t = EveType.objects.filter(
+                                                name=schematic_name + "s"
+                                            ).first()
+
                                         if not t:
                                             # Fallback: resolve ID from ESI if not loaded locally
                                             try:
-                                                id_res = esi.client.Universe.post_universe_ids(
-                                                    names=[schematic_name]
-                                                ).result()
-                                                inv_types = getattr(
-                                                    id_res, "inventory_types", []
+                                                resolve_name = (
+                                                    schematic_name + "s"
+                                                    if schematic_name
+                                                    in [
+                                                        "High-Tech Transmitter",
+                                                        "Ukomi Superconductor",
+                                                        "Transcranial Microcontroller",
+                                                    ]
+                                                    else schematic_name
                                                 )
-                                                if inv_types:
-                                                    first_inv = inv_types[0]
-                                                    resolved_id = getattr(
-                                                        first_inv, "id", None
+                                                id_url = "https://esi.evetech.net/latest/universe/ids/"
+                                                id_res = requests.post(
+                                                    id_url,
+                                                    json=[resolve_name],
+                                                    timeout=10,
+                                                )
+                                                if id_res.status_code == 200:
+                                                    id_data = id_res.json()
+                                                    inv_types = id_data.get(
+                                                        "inventory_types", []
                                                     )
-                                                    if not resolved_id and isinstance(
-                                                        first_inv, dict
-                                                    ):
+                                                    if inv_types:
+                                                        first_inv = inv_types[0]
                                                         resolved_id = first_inv.get(
                                                             "id"
                                                         )
