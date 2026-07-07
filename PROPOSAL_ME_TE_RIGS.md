@@ -31,7 +31,17 @@ When a Director is generating a quote, we will add a new dropdown: **"Target Pro
 - The page will use HTMX/JavaScript: when the Director selects a different structure from the dropdown, the ME and the raw cost price will be **recalculated live** and updated on the screen.
 - To prevent confusion during the recalculation, a small **loading overlay** will be shown while the server processes the new pricing.
 
-### 3. BOM Engine Update (`bom_engine.py`)
+### 3. Order Splitting Flow (Director View)
+
+Orders often contain a mix of items (e.g., ships and modules) that are optimal to build in different structures to maximize ME/TE bonuses.
+
+- During the quoting process, the Director will see checkboxes next to each item in the order.
+- The Director can select specific items and choose **"Split to new Order for Facility X"**.
+- This action will remove the selected items from the current order and create a **Child Order**.
+- **Parent/Child Relationship**: Under the hood, these split orders are linked together. They share the exact same **Payment Reference** so the member only has to make a single ISK transfer.
+- **Visibility**: On the Member's Personal Dashboard and the Director's Control Panel, the order is still displayed as a single logical entity. The Child Orders are visually grouped underneath the Main (Parent) Order as sub-sections, clearly showing which items are being built in which facility and accumulating into one Grand Total cost.
+
+### 4. BOM Engine Update (`bom_engine.py`)
 
 The `calculate_order_bom` function will be expanded to accept the selected *Target Facility* as an optional parameter. The system will apply the official EVE Online mathematics:
 
@@ -43,7 +53,22 @@ The `calculate_order_bom` function will be expanded to accept the selected *Targ
 The calculation will check these values and apply the complex ME Formula:
 `Base * (1 - HullBonus) * (1 - (RigBonus * SecMultiplier))`
 
-### 4. Visibility & Storage
+### 5. Snapshotting & Data Integrity
+
+A critical requirement is that once an order is quoted, the required materials and costs must be "frozen".
+
+- **Historical Accuracy**: Structures can be upgraded (e.g., swapping a T1 rig for a T2 rig) or destroyed. If a structure's stats change, it must **never** retroactively affect an already quoted or paid order.
+- **Database Design**: When the Director finalizes the quote, the system will take a "snapshot" of the active Structure Hull Bonus, the applied Rig Multipliers, and the Security Space Multiplier. These exact numerical values are saved directly into the `MemberOrder` or `OrderItem` database tables.
+- If the BOM needs to be rendered again in the future (e.g., viewing an old order archive), the system will use the snapshotted percentages from the database, rather than re-calculating them dynamically via the current state of the facility.
+
+### 6. Job Market Constraints (Industrialist Dashboard)
+
+Since the raw material requirements (and potentially the builder's payout) are inextricably tied to the specific ME/TE rigs of the quoted structure, builders **must** perform the manufacturing in that exact facility.
+
+- **Visibility**: On the "Job Market" (Industrialist Dashboard), every available task will explicitly display the assigned **Target Facility**.
+- This ensures that when a builder claims a task, they immediately know exactly which structure they must travel to in order to start the job with the correct material efficiency.
+
+### 7. Visibility & Storage
 
 When the quote is sent to the member, the selected Target Facility is stored in the database (linked to the Order or Task).
-On the BOM overviews and in the Quote view for the Director, it will explicitly state: *"Cost price calculated based on: [Structure Name] (x% ME Bonus)"*.
+On the BOM overviews, the Director's Quote view, and the Builder's Job Market, it will explicitly state: *"Facility: [Structure Name]"*.
