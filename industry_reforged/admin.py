@@ -14,6 +14,7 @@ from .models import (
     CorporationWebhookConfig,
     CorpPricingConfig,
     CorpTypeDiscount,
+    IndustryFacility,
     MemberOrder,
     OrderFit,
     OrderItem,
@@ -124,6 +125,12 @@ class TaxConfigAdmin(admin.ModelAdmin):
     list_display = ("corporation", "industry_tax_rate", "broker_fee_rate")
     search_fields = ("corporation__corporation_name",)
     raw_id_fields = ("corporation",)
+
+
+@admin.register(IndustryFacility)
+class IndustryFacilityAdmin(admin.ModelAdmin):
+    list_display = ("facility_id", "name", "solar_system_id", "type_id", "last_updated")
+    search_fields = ("name", "facility_id")
 
 
 @admin.register(CorpItemConfig)

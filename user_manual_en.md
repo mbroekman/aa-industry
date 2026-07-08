@@ -18,7 +18,7 @@ The Personal Dashboard is your primary hub for everything related to your person
 
 Members can use the plugin to order ships, modules, and structures from the corporation.
 
-- **Placing an Order**: Click "New Order", select a character, and paste a complete *EFT/Pyfa fit* into the text box. The plugin will automatically parse and calculate the required Bill of Materials.
+- **Placing an Order**: Click "New Order" and paste a complete *EFT/Pyfa fit* into the text box. Alternatively, you can copy-paste bulk item lists from the EVE Client (Multibuy format like `Drake 20`), or type items using natural language (e.g. `20 drakes`). The plugin will automatically parse the items, correct common plurals, and calculate the required Bill of Materials using your default Main Character.
 - **Quoting Flow**: After submission, your order enters the `REQUESTED` status. A director will review the order and provide a price quote. Once done, the status changes to `QUOTED`.
 - **Acceptance & Payment**: You can review the quote, compare it to estimated Jita prices to see your corporate discount (savings), and click "Accept Quote" to finalize it. The order is then forwarded to the corporate builders. Your order will be assigned a unique **Payment Reference** (e.g., `ORD-ABCD-1234`). You must transfer the ISK to the corporation wallet using this exact reference as the reason. The system will automatically detect your payment and mark the order as "Paid".
 - **Delivery**: Once all builders complete their tasks, your order is ready. A director will contract the goods to you in-game and mark the order as "Delivered" in Auth, which will send you an in-app notification.
@@ -33,7 +33,7 @@ This is the central marketplace for corporate builders.
 
 - **Industry Status (MOTD)**: The top of the dashboard displays a real-time summary of the corporate industry, including the number of active orders, open tasks on the market, active corporate jobs, and the total ISK value in progress. This acts as a dynamic Message of the Day, complementing any manual announcements set by directors.
 - **Job Market (Unclaimed)**: Once a member accepts an order, the system breaks the order down into individual Production Tasks. As a builder, you can "Claim" these tasks here. You can also select parent tasks to automatically claim all their sub-components.
-- **My Active Production**: An overview of the tasks you have claimed and are currently building. Once you finish a job in EVE Online, you can mark the task as "Complete" here. Parent tasks can only be completed once all sub-tasks are done.
+- **My Member Tasks**: A unified overview of the tasks you have claimed. You can dynamically filter this view to show only "Open (Active) Tasks", only "Completed Tasks", or "Show All Tasks". Once you finish a job in EVE Online, you can mark the active tasks as "Complete" here. Parent tasks can only be completed once all sub-tasks are done.
 - **Builder Payouts**: Completed tasks that have an ISK reward are queued up for a payout. Directors will regularly bundle these into "Payout Batches". Once the corporation transfers the ISK to you with the batch's unique `PAY-` reference, the system automatically marks it as Paid.
 
 ### 2.2 Leaderboards & Gamification
@@ -99,6 +99,17 @@ ______________________________________________________________________
 
 The plugin runs largely autonomously in the background via Celery tasks:
 
-- **BOM & Pricing Engine**: The plugin relies entirely on the local `eveuniverse` SDE for calculating Bills of Materials (including Manufacturing and Reactions). To calculate raw ISK prices, it fetches live market data from the Fuzzwork API.
 - **Synchronization**: Every 15 to 30 minutes, the plugin synchronizes Wallets, Corporate Inventory, Personal Jobs, and Planetary Interaction via the EVE Swagger Interface (ESI).
 - **Multilingual Support (i18n)**: The interface supports multiple languages. If users change their preferred language in Alliance Auth (e.g., to Dutch), the plugin will automatically display the translated interface.
+
+### 4.1 Bill of Materials (BOM) Calculation Engine
+
+The plugin calculates the required materials for any job or order completely autonomously without relying on external API calls. This is achieved by utilizing the local EVE Online Static Data Export (SDE) provided by the `eveuniverse` package.
+
+The calculation process follows these steps:
+
+1. **Blueprint Resolution**: When an item is requested, the system queries the local database to find the specific blueprint and the corresponding activity (e.g., Manufacturing or Reactions) required to produce it.
+1. **Yield & Run Calculation**: The system determines the base product yield per production run. It then divides the total requested quantity by this yield (rounding up) to calculate the exact number of production "runs" required.
+1. **Material Efficiency (ME) Application**: Before calculating the total material cost, the system checks if a Director has configured a "Manual ME" discount for that specific item via the `CorpItemConfig` in the Alliance Auth Admin panel.
+1. **Material Requirements**: The system retrieves the raw list of required materials from the SDE and applies the standard EVE Online ME mathematical formula to calculate the exact amount of minerals, PI, or components needed.
+1. **Recursive Drilldown**: When generating a "Full Production Tree" in the user interface, the system recursively repeats this entire process for all intermediate components, allowing users to drill down all the way to the rawest base materials (e.g., Moon Goo or Minerals).

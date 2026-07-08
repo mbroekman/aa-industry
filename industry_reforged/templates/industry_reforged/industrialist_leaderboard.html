@@ -90,7 +90,7 @@
                 </div>
                 <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover m-0">
+                        <table id="history-table" class="table table-striped table-hover m-0">
                             <thead>
                                 <tr>
                                     <th>{% trans "Date Completed" %}</th>
@@ -127,4 +127,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        var baseConfig = {
+            "paging": true,
+            "ordering": true,
+            "info": true,
+            "searching": true,
+            "order": [[0, "desc"]], // Default sort by Date Completed descending
+            "language": {
+                "search": "{% trans 'Search:' %}",
+                "lengthMenu": "{% trans 'Show _MENU_ entries' %}",
+                "info": "{% trans 'Showing _START_ to _END_ of _TOTAL_ entries' %}",
+                "infoEmpty": "{% trans 'No entries available' %}",
+                "emptyTable": "{% trans 'No entries available' %}"
+            }
+        };
+
+        if ($('#history-table').length) {
+            $('#history-table').DataTable(baseConfig);
+        }
+    });
+</script>
 {% endblock %}

@@ -1114,3 +1114,105 @@ def task_process_wallet_payments():
         # Save highest processed ID
         state.last_journal_id = highest_id
         state.save()
+
+
+@shared_task
+@log_task_execution("Update Industry Facilities")
+def update_industry_facilities():
+    """Fetch facility names from ESI to populate IndustryFacility cache."""
+    # Third Party
+    import requests
+
+    # Alliance Auth
+    from allianceauth.eveonline.models import EveToken
+    from allianceauth.services.hooks import get_extension_logger
+
+    from .models import (
+        CharacterIndustryJob,
+        CorpHangarConfig,
+        CorporationIndustryJob,
+        CorporationSyncConfig,
+        IndustryFacility,
+    )
+
+    logger = get_extension_logger(__name__)
+
+    # Collect all unique location/facility IDs
+    facility_ids = set()
+    for model in [CharacterIndustryJob, CorporationIndustryJob]:
+        facility_ids.update(
+            model.objects.exclude(facility_id__isnull=True).values_list(
+                "facility_id", flat=True
+            )
+        )
+        facility_ids.update(
+            model.objects.exclude(location_id__isnull=True).values_list(
+                "location_id", flat=True
+            )
+        )
+    facility_ids.update(CorpHangarConfig.objects.values_list("location_id", flat=True))
+
+    if not facility_ids:
+        return
+
+    # Identify missing ones
+    existing = set(IndustryFacility.objects.values_list("facility_id", flat=True))
+    missing = facility_ids - existing
+
+    if not missing:
+        return
+
+    logger.info(f"Attempting to resolve {len(missing)} unknown facilities...")
+
+    valid_tokens = []
+    configs = CorporationSyncConfig.objects.select_related("sync_character").all()
+    for config in configs:
+        token = EveToken.objects.filter(
+            character_id=config.sync_character.character_id,
+            scopes__name="esi-universe.read_structures.v1",
+        ).first()
+        if token:
+            valid_tokens.append(token)
+
+    for loc_id in missing:
+        try:
+            if loc_id < 100000000:
+                # NPC Station
+                st_resp = requests.get(
+                    f"https://esi.evetech.net/latest/universe/stations/{loc_id}/?datasource=tranquility"
+                )
+                if st_resp.status_code == 200:
+                    data = st_resp.json()
+                    IndustryFacility.objects.create(
+                        facility_id=loc_id,
+                        name=data.get("name", f"Station {loc_id}"),
+                        owner_id=data.get("owner", None),
+                        solar_system_id=data.get("system_id", None),
+                        type_id=data.get("type_id", None),
+                    )
+            else:
+                # Upwell Structure
+
+                for token in valid_tokens:
+                    access_token = token.valid_access_token()
+                    headers = {
+                        "Authorization": f"Bearer {access_token}",
+                        "Accept": "application/json",
+                    }
+                    str_resp = requests.get(
+                        f"https://esi.evetech.net/latest/universe/structures/{loc_id}/?datasource=tranquility",
+                        headers=headers,
+                    )
+                    if str_resp.status_code == 200:
+                        data = str_resp.json()
+                        IndustryFacility.objects.create(
+                            facility_id=loc_id,
+                            name=data.get("name", f"Structure {loc_id}"),
+                            owner_id=data.get("owner_id", None),
+                            solar_system_id=data.get("solar_system_id", None),
+                            type_id=data.get("type_id", None),
+                        )
+
+                        break
+        except Exception as e:
+            logger.error(f"Error resolving facility {loc_id}: {e}")

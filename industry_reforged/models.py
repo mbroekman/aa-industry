@@ -31,6 +31,22 @@ class General(models.Model):
         )
 
 
+class IndustryFacility(models.Model):
+    facility_id = models.BigIntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+    owner_id = models.IntegerField(null=True, blank=True)
+    solar_system_id = models.IntegerField(null=True, blank=True)
+    type_id = models.IntegerField(null=True, blank=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Industry Facility")
+        verbose_name_plural = _("Industry Facilities")
+
+    def __str__(self):
+        return f"{self.name} ({self.facility_id})"
+
+
 class CharacterIndustryJob(models.Model):
     character = models.ForeignKey(
         EveCharacter, on_delete=models.CASCADE, related_name="industry_jobs"
@@ -264,6 +280,12 @@ class CharacterPlanet(models.Model):
         basic = self.basic_factories
         if basic:
             return list({f.product_type for f in basic if f.product_type})
+
+        # Fallback to raw materials from extractors if this is an extraction-only planet
+        extractors = self.extractors
+        if extractors:
+            return list({e.product_type for e in extractors if e.product_type})
+
         return []
 
     @property

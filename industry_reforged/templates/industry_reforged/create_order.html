@@ -21,19 +21,11 @@
                 <form method="post" action="{% url 'industry_reforged:create_order' %}" class="show-loader">
                     {% csrf_token %}
                     <div class="card-body">
+
                         <div class="mb-3">
-                            <label for="character_id" class="form-label">{% trans "Order for Character" %}</label>
-                            <select name="character_id" id="character_id" class="form-select bg-dark text-white border-secondary" required>
-                                <option value="">-- {% trans "Select Character" %} --</option>
-                                {% for char in characters %}
-                                    <option value="{{ char.character_id }}">{{ char.character_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="fit_text" class="form-label">{% trans "EFT / Pyfa Fit" %}</label>
-                            <textarea name="fit_text" id="fit_text" rows="15" class="form-control bg-dark text-white border-secondary" placeholder="[Drake, My Fit]&#10;Heavy Missile Launcher II&#10;...&#10;&#10;Scourge Fury Heavy Missile x1000" required></textarea>
-                            <small class="form-text text-muted">Paste your fit directly from EVE Online or Pyfa. The system will automatically parse the items and quantities to generate a quote.</small>
+                            <label for="fit_text" class="form-label">{% trans "Items to Order" %}</label>
+                            <textarea name="fit_text" id="fit_text" rows="15" class="form-control bg-dark text-white border-secondary" placeholder="[Drake, My Fit]&#10;Heavy Missile Launcher II&#10;...&#10;&#10;-- OR --&#10;20 Drake&#10;1000x Scourge Fury Heavy Missile&#10;&#10;-- OR --&#10;Drake 20" required></textarea>
+                            <small class="form-text text-muted">Paste your fit directly from EVE Online/Pyfa, or simply type your items in bulk (e.g. <code>20 Drake</code> or <code>Scourge Missile x1000</code>). The system will automatically parse the items and quantities to generate a quote.</small>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-0 text-end">
@@ -49,8 +41,7 @@
                 </div>
                 <div class="card-body">
                     <ol>
-                        <li>Select the character requesting the order.</li>
-                        <li>Paste your EFT format fit in the text box.</li>
+                        <li>Paste your EFT format fit or bulk item list in the text box.</li>
                         <li>Click <strong>Generate Quote</strong>.</li>
                         <li>The system will fetch real-time Jita Sell prices via Fuzzwork and apply any corporation discounts.</li>
                         <li>You can review the itemized quote before confirming your order.</li>

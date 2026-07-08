@@ -55,6 +55,22 @@
                     document.getElementById('industry-loading-overlay').style.display = 'flex';
                 });
             });
+
+            // Show overlay when navigating to main dashboards from the sidebar/menu
+            const dashboardLinks = document.querySelectorAll(
+                'a[href$="/industry/industrialist/"], ' +
+                'a[href$="/industry/director/"], ' +
+                'a[href$="/industry/corporate/"], ' +
+                'a[href$="/industry/personal/"], ' +
+                'a[href$="/industry/orders/"]'
+            );
+            dashboardLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.target !== '_blank' && !e.ctrlKey && !e.metaKey) {
+                        document.getElementById('industry-loading-overlay').style.display = 'flex';
+                    }
+                });
+            });
         });
 
         window.addEventListener('pageshow', function (event) {

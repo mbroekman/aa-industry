@@ -366,19 +366,16 @@ def create_order(request: WSGIRequest) -> HttpResponse:
     """Create a new order from EFT fit or single items"""
     if request.method == "POST":
         fit_text = request.POST.get("fit_text", "").strip()
-        character_id = request.POST.get("character_id")
 
-        if not fit_text or not character_id:
-            messages.error(
-                request, _("Please provide an EFT fit and select a character.")
-            )
+        if not fit_text:
+            messages.error(request, _("Please provide an EFT fit."))
             return redirect("industry_reforged:create_order")
 
-        character = EveCharacter.objects.filter(
-            character_id=character_id, character_ownership__user=request.user
-        ).first()
+        character = request.user.profile.main_character
         if not character:
-            messages.error(request, _("Invalid character selected."))
+            messages.error(
+                request, _("You must have a main character set to create orders.")
+            )
             return redirect("industry_reforged:create_order")
 
         parsed_items, unrecognized = parse_fit_text(fit_text)
@@ -598,6 +595,12 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         "color": 3447003,  # Blue
                     }
                     send_discord_webhook(webhook_config.orders_webhook, embed)
+
+            # Send a direct message to the user who placed the order
+            from .tasks import notify_discord_user
+
+            dm_msg = f"**Industry Quote Received**\nYour order `#{order.id}` has been quoted for **{new_total:,.2f} ISK**. Please check the dashboard to accept or reject it."
+            notify_discord_user(order.character, dm_msg)
 
             messages.success(
                 request,
@@ -910,13 +913,11 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.industrialist_access")
 def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
-        character_id = request.POST.get("character_id")
-
-        character = EveCharacter.objects.filter(
-            character_id=character_id, character_ownership__user=request.user
-        ).first()
+        character = request.user.profile.main_character
         if not character:
-            messages.error(request, _("Invalid character selected."))
+            messages.error(
+                request, _("You must have a main character set to claim tasks.")
+            )
             return redirect("industry_reforged:industrialist_dashboard")
 
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
@@ -962,14 +963,13 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 @permission_required("industry_reforged.industrialist_access")
 def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
     if request.method == "POST":
-        character_id = request.POST.get("character_id")
         task_ids = request.POST.getlist("task_ids")
 
-        character = EveCharacter.objects.filter(
-            character_id=character_id, character_ownership__user=request.user
-        ).first()
+        character = request.user.profile.main_character
         if not character:
-            messages.error(request, _("Invalid character selected."))
+            messages.error(
+                request, _("You must have a main character set to claim tasks.")
+            )
             return redirect("industry_reforged:industrialist_dashboard")
 
         tasks = ProductionTask.objects.filter(id__in=task_ids, status="UNCLAIMED")
@@ -1592,17 +1592,30 @@ def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
             except Exception:
                 location_names[loc_id] = f"Unknown Location ({loc_id})"
 
-        # Fallback to corptools EveLocation if available for any still unknown structures
-        try:
-            # Third Party
-            from corptools.models import EveLocation
+        # Check native IndustryFacility cache first
+        from .models import IndustryFacility
 
-            for loc_id, name in location_names.items():
-                if "Unknown" in name:
-                    loc = EveLocation.objects.filter(location_id=loc_id).first()
-                    if loc:
-                        location_names[loc_id] = loc.location_name
-        except ImportError:
+        for loc_id, name in location_names.items():
+            if "Unknown" in name:
+                facility = IndustryFacility.objects.filter(facility_id=loc_id).first()
+                if facility:
+                    location_names[loc_id] = facility.name
+
+        # Fallback to corptools EveLocation if available
+        try:
+            # Django
+            from django.apps import apps
+
+            if apps.is_installed("corptools"):
+                # Third Party
+                from corptools.models import EveLocation
+
+                for loc_id, name in location_names.items():
+                    if "Unknown" in name:
+                        loc = EveLocation.objects.filter(location_id=loc_id).first()
+                        if loc:
+                            location_names[loc_id] = loc.location_name
+        except Exception:
             pass
 
         # Check which ones are already configured

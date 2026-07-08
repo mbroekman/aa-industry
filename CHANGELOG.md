@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Native Structure Tracking**: Replaced external dependencies (`aa-structures`, `corptools`) with an internal `IndustryFacility` model and caching system. It automatically populates unknown structures from ESI using available corporate tokens, drastically speeding up dashboard loading times.
+- **Quote Notifications**: Directors providing a quote for an order will now automatically trigger a Discord Direct Message (DM) to the member who requested the order, alerting them that their quote is ready for review.
+- **Hangar Search Bar**: Added a quick search bar to the "Discover Corporate Hangars" page for easy filtering of locations and flag IDs.
+- **Wait Dialogs**: Added the global "Processing Request" loading overlay to the main dashboard links in the sidebar to prevent confusion during heavy data fetching.
+- **Order Options (Parsing)**: The Order Creation page now supports robust Regex parsing for freeform text (e.g. `20 drakes`) and EVE client Multibuy exports (e.g. `Drake 20`). The system also normalizes common English plurals (like "drakes" -> "drake", "batteries" -> "battery") before verifying with ESI to prevent unrecognized item errors.
+- **Member Tasks Filter**: Added a dropdown filter (Open Tasks Only / Completed Tasks Only / Show All) to dynamically toggle visibility of active and completed tasks on the Industrialist Dashboard.
+- **Leaderboards**: Added DataTables search and sort functionality to the "My Completed Tasks History" table.
+
+### Changed
+
+- **Character Selection**: Removed the manual character selection dropdown from the "Create Order" and "Claim Task" forms. The system now strictly defaults to the user's configured Main Character for all industry requests and job claims.
+- **Dashboard UI Improvements**: Unified the "My Active Production" and "My Completed Tasks" tables into a single card container on the Industrialist Dashboard, managed by client-side Javascript to save screen space.
+
+### Fixed
+
+- **PI Character Cards**: Fixed an issue where extraction-only (P0) planets would display an empty card without product icons. The system now correctly falls back to showing the extracted raw materials if no factories are present on a planet.
+- **Corptools Import Crash**: Hardened the `corptools` fallback check to use Django's `apps.is_installed()` to prevent 500 Server Errors when the package is installed in the python environment but not active in `INSTALLED_APPS`.
+- **Industrialist Dashboard**: Fixed a bug where clicking the "Select All" checkbox in the Job Market would incorrectly select hidden tasks that were filtered out by the search bar. The "Select All" action now correctly applies only to visible tasks.
+- **Industrialist Dashboard HTML**: Fixed an issue where the "Corporate Jobs" tab was inadvertently hidden due to a malformed nested `div` wrapper.
+- **Template Rendering Crash**: Fixed a Django `TemplateSyntaxError` caused by multi-line template tags resulting from automated HTML formatting tools breaking the template parser.
+
 ## [0.1.0b14] - 05-07-2026
 
 ### Fixed
@@ -76,6 +101,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - **Hangar Configuration UI**: Added the missing "Hangar Configurations" tab to the Director Config page so discovered hangars can actually be viewed.
 - **Loader Javascript**: Fixed a bug where the loading overlay (`show-loader`) was broken on the Director Config and Wallet pages due to missing template super blocks.
+
+## [Unreleased]
+
+### Added
+
+- **Order Options (Parsing)**: The Order Creation page now supports robust Regex parsing for freeform text (e.g., `20 drakes` or `Drake 20`) and EVE client Multibuy exports in addition to standard EFT/Pyfa fits.
+- **DataTables Integration**: Added DataTables search and sorting capabilities to the "My Completed Tasks History" on the Leaderboard page, the "Personal Dashboard" jobs tables, and "Orders" tables.
+
+### Changed
+
+- **Character Selection Workflow**: The system now seamlessly relies entirely on the user's primary "Main Character" designated in their Alliance Auth profile. The legacy character selection dropdowns have been removed from the "Create Order" page and the "Claim Task" modals, vastly streamlining the user experience.
+
+### Fixed
+
+- **Template Tags**: Converted multiline Django template tags across multiple templates to single-line tags to resolve `TemplateSyntaxError` exceptions that were throwing 500 errors on the Industrialist dashboard.
+- **Task Filtering**: The "Show only active tasks" toggle on the Industrialist dashboard is now fully functional and properly filters out claimed/completed tasks using client-side JavaScript.
 
 ## [0.1.0b10] - 2026-06-30
 
