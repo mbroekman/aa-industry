@@ -21,6 +21,11 @@ urlpatterns = [
     path("orders/<int:order_id>/", views.view_quote, name="view_quote"),
     path("orders/<int:order_id>/accept/", views.accept_quote, name="accept_quote"),
     path("orders/<int:order_id>/reject/", views.reject_quote, name="reject_quote"),
+    path(
+        "orders/<int:order_id>/htmx-update-facility/",
+        views.htmx_update_quote_facility,
+        name="htmx_update_quote_facility",
+    ),
     path("orders/<int:order_id>/delete/", views.delete_order, name="delete_order"),
     path(
         "orders/<int:order_id>/provide-quote/",
@@ -31,7 +36,15 @@ urlpatterns = [
         "industrialist/", views.industrialist_dashboard, name="industrialist_dashboard"
     ),
     path("industrialist/claim/<int:task_id>/", views.claim_task, name="claim_task"),
+    path(
+        "industrialist/unclaim/<int:task_id>/", views.unclaim_task, name="unclaim_task"
+    ),
     path("industrialist/bulk-claim/", views.bulk_claim_tasks, name="bulk_claim_tasks"),
+    path(
+        "industrialist/bulk-unclaim/",
+        views.bulk_unclaim_tasks,
+        name="bulk_unclaim_tasks",
+    ),
     path(
         "industrialist/complete/<int:task_id>/",
         views.complete_task,
@@ -67,6 +80,17 @@ urlpatterns = [
         "director/payout/batch/<int:batch_id>/paid/",
         views.mark_payout_batch_paid,
         name="mark_payout_batch_paid",
+    ),
+    path("director/facilities/add/", views.add_facility, name="add_facility"),
+    path(
+        "director/facilities/<int:facility_id>/edit/",
+        views.edit_facility,
+        name="edit_facility",
+    ),
+    path(
+        "director/facilities/<int:facility_id>/delete/",
+        views.delete_facility,
+        name="delete_facility",
     ),
     path("director/inventory/", views.director_inventory, name="director_inventory"),
     path("director/config/", views.director_config, name="director_config"),
@@ -111,14 +135,9 @@ urlpatterns = [
         name="director_config_discount_delete",
     ),
     path(
-        "director/config/discover/",
-        views.director_discover_hangars,
-        name="director_discover_hangars",
-    ),
-    path(
-        "director/config/hangar/<int:hangar_id>/toggle/",
-        views.director_config_hangar_toggle,
-        name="director_config_hangar_toggle",
+        "director/config/structure/<int:facility_id>/toggle/",
+        views.director_config_structure_toggle,
+        name="director_config_structure_toggle",
     ),
     path(
         "director/wallets/",

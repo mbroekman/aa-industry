@@ -3,59 +3,120 @@ import logging
 import math
 
 # Third Party
-# Eve Universe
 from eveuniverse.models import EveIndustryActivityMaterial, EveIndustryActivityProduct
-
-# Django
-from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
 
 def get_sde_bom(type_id):
     """
-    Fetch the manufacturing or reaction materials for a specific product/type from local SDE.
-    Returns a tuple: (list of dicts, product_quantity)
+    Returns (materials, yield_qty) for the given type_id.
+    First tries to use Industry Activities (accurate for T2/T3).
+    Falls back to EveType.materials (legacy) if no industry activity found.
     """
-    cache_key = f"industry_reforged_bom_sde_{type_id}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
+    # Third Party
+    from eveuniverse.models import (
+        EveIndustryActivityMaterial,
+        EveIndustryActivityProduct,
+        EveType,
+    )
 
     try:
-        # Find the product entry. Activity 1 = Manufacturing, 11 = Reactions.
-        product_entry = EveIndustryActivityProduct.objects.filter(
+        # Try finding the blueprint that manufactures this item (Activity 1 or 11)
+        bp_prod = EveIndustryActivityProduct.objects.filter(
             product_eve_type_id=type_id, activity_id__in=[1, 11]
         ).first()
 
-        if not product_entry:
-            return ([], 1)
+        if bp_prod:
+            blueprint_id = bp_prod.eve_type_id
+            activity = bp_prod.activity_id
+            yield_qty = bp_prod.quantity
 
-        blueprint_id = product_entry.eve_type_id
-        activity_id = product_entry.activity_id
-        product_quantity = product_entry.quantity
+            mats = EveIndustryActivityMaterial.objects.filter(
+                eve_type_id=blueprint_id, activity_id=activity
+            )
 
-        materials = EveIndustryActivityMaterial.objects.filter(
-            eve_type_id=blueprint_id, activity_id=activity_id
-        ).select_related("material_eve_type")
+            if mats.exists():
+                materials = []
+                for mat in mats:
+                    materials.append(
+                        {
+                            "typeid": mat.material_eve_type_id,
+                            "name": mat.material_eve_type.name,
+                            "quantity": mat.quantity,
+                        }
+                    )
+                return materials, yield_qty
 
-        manufacturing_materials = []
-        for mat in materials:
-            manufacturing_materials.append(
+        # Fallback to legacy EveType.materials
+        eve_type = EveType.objects.get(id=type_id)
+        if not eve_type.materials:
+            return [], 1
+
+        materials = []
+        for mat in eve_type.materials.all():
+            materials.append(
                 {
                     "typeid": mat.material_eve_type_id,
                     "name": mat.material_eve_type.name,
                     "quantity": mat.quantity,
-                    "maketype": activity_id,
                 }
             )
+        return materials, 1
+    except Exception:
+        return [], 1
 
-        result = (manufacturing_materials, product_quantity)
-        cache.set(cache_key, result, 604800)
-        return result
-    except Exception as e:
-        logger.error(f"Failed to fetch SDE BOM for type_id {type_id}: {e}")
-        return ([], 1)
+
+def calculate_facility_me_multiplier(facility, product_type):
+    """
+    Calculates the combined (1 - HullBonus) * (1 - RigBonus * SecMultiplier)
+    for a given IndustryFacility and the product being manufactured.
+    """
+    if not facility:
+        return 1.0
+
+    sec_multiplier = 1.0
+    if facility.security_space == "LOWSEC":
+        sec_multiplier = 1.9
+    elif facility.security_space == "NULLSEC_WH":
+        sec_multiplier = 2.1
+
+    rig_bonus = 0.0
+
+    group_id = str(product_type.eve_group_id) if product_type.eve_group_id else None
+    category_id = None
+    if product_type.eve_group and product_type.eve_group.eve_category_id:
+        category_id = str(product_type.eve_group.eve_category_id)
+
+    for fac_rig in facility.rigs.all():
+        rig = fac_rig.rig
+        if rig.me_bonus > 0:
+            applies = False
+            if (
+                group_id
+                and rig.applies_to_groups
+                and group_id in [x.strip() for x in rig.applies_to_groups.split(",")]
+            ):
+                applies = True
+            if (
+                category_id
+                and rig.applies_to_categories
+                and category_id
+                in [x.strip() for x in rig.applies_to_categories.split(",")]
+            ):
+                applies = True
+
+            if applies:
+                rig_bonus_val = float(rig.me_bonus) / 100.0
+                if rig_bonus_val > rig_bonus:
+                    rig_bonus = rig_bonus_val
+
+    hull_bonus = 0.0
+    # Hardcode 1% for Upwell Engineering Complexes for MVP
+    if facility.type_id in [35825, 35826, 35827]:  # Raitaru, Azbel, Sotiyo
+        hull_bonus = 0.01
+
+    return (1.0 - hull_bonus) * (1.0 - (rig_bonus * sec_multiplier))
 
 
 def calculate_order_bom(order):
@@ -71,39 +132,49 @@ def calculate_order_bom(order):
     }
     """
     bom = {}
+    # Alliance Auth
+    from allianceauth.eveonline.models import EveCorporationInfo
+
     # AA Industry App
     from industry_reforged.models import CorpItemConfig
+
+    config_dict = {}
+    try:
+        corp_info = EveCorporationInfo.objects.get(
+            corporation_id=order.character.corporation_id
+        )
+        for config in CorpItemConfig.objects.filter(corporation=corp_info):
+            config_dict[config.item_type_id] = {
+                "manual_me": config.manual_me,
+                "exclude_from_orders": config.exclude_from_orders,
+            }
+    except Exception:
+        pass
 
     for item in order.items.all():
         type_id = item.item_type.id
         quantity = item.quantity
 
-        # Determine Material Efficiency
-        me_level = 0
-        # Alliance Auth
-        from allianceauth.eveonline.models import EveCorporationInfo
-
-        try:
-            corp_info = EveCorporationInfo.objects.get(
-                corporation_id=order.character.corporation_id
-            )
-            config = CorpItemConfig.objects.filter(
-                item_type_id=type_id, corporation=corp_info
-            ).first()
-            if config:
-                me_level = config.manual_me
-        except Exception:
-            pass
+        target_facility = order.target_facility
+        facility_me_multiplier = calculate_facility_me_multiplier(
+            target_facility, item.item_type
+        )
 
         materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
             mat_type_id = mat.get("typeid")
-            base_qty = mat.get("quantity", 0)
 
-            # Simple BOM math
-            required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
+            # We do NOT skip if excluded from orders, we just treat it as a raw material
+            mat_config = config_dict.get(mat_type_id, {})
+
+            base_qty = mat.get("quantity", 0)
+            me_level = mat_config.get("manual_me", 0)
+
+            # EVE Math: Required = max(runs, ceil(base_qty * runs * (1 - me/100) * facility_me_multiplier))
+            base_runs_me = (base_qty * runs) * (1.0 - (me_level / 100.0))
+            required_qty = max(runs, math.ceil(base_runs_me * facility_me_multiplier))
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
@@ -126,29 +197,47 @@ def calculate_tasks_bom(tasks, corp_info=None):
     # AA Industry App
     from industry_reforged.models import CorpItemConfig
 
+    config_dict = {}
+    if corp_info:
+        try:
+            for config in CorpItemConfig.objects.filter(corporation=corp_info):
+                config_dict[config.item_type_id] = {
+                    "manual_me": config.manual_me,
+                    "exclude_from_orders": config.exclude_from_orders,
+                }
+        except Exception:
+            pass
+
     for task in tasks:
         type_id = task.item_type.id
         quantity = task.quantity
 
-        me_level = 0
-        if corp_info:
-            try:
-                config = CorpItemConfig.objects.filter(
-                    item_type_id=type_id, corporation=corp_info
-                ).first()
-                if config:
-                    me_level = config.manual_me
-            except Exception:
-                pass
+        target_facility = None
+        if (
+            hasattr(task, "created_from_order")
+            and task.created_from_order
+            and task.created_from_order.target_facility
+        ):
+            target_facility = task.created_from_order.target_facility
+
+        facility_me_multiplier = calculate_facility_me_multiplier(
+            target_facility, task.item_type
+        )
 
         materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
             mat_type_id = mat.get("typeid")
-            base_qty = mat.get("quantity", 0)
 
-            required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
+            # We do NOT skip if excluded from orders, we just treat it as a raw material
+            mat_config = config_dict.get(mat_type_id, {})
+
+            base_qty = mat.get("quantity", 0)
+            me_level = mat_config.get("manual_me", 0)
+
+            base_runs_me = (base_qty * runs) * (1.0 - (me_level / 100.0))
+            required_qty = max(runs, math.ceil(base_runs_me * facility_me_multiplier))
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
@@ -162,17 +251,55 @@ def calculate_tasks_bom(tasks, corp_info=None):
     return bom
 
 
-def get_recursive_bom_tree(type_id, name, quantity, me_dict, depth=0):
+def get_recursive_bom_tree(
+    type_id, name, quantity, config_dict, depth=0, target_facility=None, stock_dict=None
+):
     """
     Recursively fetch manufacturing materials to build a hierarchical BOM.
     """
+    provided_from_stock = 0
+    if stock_dict is not None and type_id in stock_dict:
+        available = stock_dict[type_id]
+        if available > 0:
+            if available >= quantity:
+                provided_from_stock = quantity
+                stock_dict[type_id] -= quantity
+                quantity = 0
+            else:
+                provided_from_stock = available
+                quantity -= available
+                stock_dict[type_id] = 0
+
     if depth > 15:  # Safety limit for recursion
         return {
             "type_id": type_id,
             "name": name,
             "quantity": quantity,
+            "provided_from_stock": provided_from_stock,
+            "activity_id": 1,
             "sub_materials": [],
         }
+
+    if quantity == 0:
+        return {
+            "type_id": type_id,
+            "name": name,
+            "quantity": 0,
+            "provided_from_stock": provided_from_stock,
+            "activity_id": 1,
+            "sub_materials": [],
+        }
+
+    # Third Party
+    from eveuniverse.models import EveType
+
+    try:
+        product_type = EveType.objects.get(id=type_id)
+        facility_me_multiplier = calculate_facility_me_multiplier(
+            target_facility, product_type
+        )
+    except EveType.DoesNotExist:
+        facility_me_multiplier = 1.0
 
     materials, yield_qty = get_sde_bom(type_id)
     runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
@@ -180,22 +307,122 @@ def get_recursive_bom_tree(type_id, name, quantity, me_dict, depth=0):
 
     for mat in materials:
         mat_type_id = mat.get("typeid")
+        mat_config = config_dict.get(mat_type_id, {})
         mat_name = mat.get("name")
         base_qty = mat.get("quantity", 0)
 
         # Apply ME discount if configured
-        me_level = me_dict.get(mat_type_id, 0)
-        required_qty = max(1, math.ceil(base_qty * runs * (1 - (me_level / 100.0))))
+        me_level = mat_config.get("manual_me", 0)
+        base_runs_me = (base_qty * runs) * (1.0 - (me_level / 100.0))
+        required_qty = max(runs, math.ceil(base_runs_me * facility_me_multiplier))
 
-        child_node = get_recursive_bom_tree(
-            mat_type_id, mat_name, required_qty, me_dict, depth + 1
-        )
-        sub_materials.append(child_node)
+        # If excluded from orders, we just treat it as a raw material (leaf node)
+        if mat_config.get("exclude_from_orders", False):
+            # Consume from stock if available
+            prov_stock = 0
+            if stock_dict is not None and mat_type_id in stock_dict:
+                avail = stock_dict[mat_type_id]
+                if avail > 0:
+                    if avail >= required_qty:
+                        prov_stock = required_qty
+                        stock_dict[mat_type_id] -= required_qty
+                        required_qty = 0
+                    else:
+                        prov_stock = avail
+                        required_qty -= avail
+                        stock_dict[mat_type_id] = 0
+
+            sub_node = {
+                "type_id": mat_type_id,
+                "name": mat_name,
+                "quantity": required_qty,
+                "provided_from_stock": prov_stock,
+                "activity_id": 1,
+                "sub_materials": [],
+                "is_excluded": True,
+            }
+        else:
+            sub_node = get_recursive_bom_tree(
+                mat_type_id,
+                mat_name,
+                required_qty,
+                config_dict,
+                depth=depth + 1,
+                target_facility=target_facility,
+                stock_dict=stock_dict,
+            )
+        sub_materials.append(sub_node)
+
+    # Fetch blueprints for science jobs (Copying / Invention)
+    try:
+        bp_prod = EveIndustryActivityProduct.objects.filter(
+            product_eve_type_id=type_id, activity_id__in=[1, 11]
+        ).first()
+        if bp_prod:
+            blueprint_type = bp_prod.eve_type
+
+            # Check if this blueprint comes from invention (activity 8)
+            inv_prod = EveIndustryActivityProduct.objects.filter(
+                product_eve_type_id=blueprint_type.id, activity_id=8
+            ).first()
+            if inv_prod:
+                t1_blueprint = inv_prod.eve_type
+
+                inv_sub_materials = []
+                inv_mats = EveIndustryActivityMaterial.objects.filter(
+                    eve_type_id=t1_blueprint.id, activity_id=8
+                )
+                for m in inv_mats:
+                    inv_sub_materials.append(
+                        {
+                            "type_id": m.material_eve_type.id,
+                            "name": m.material_eve_type.name,
+                            "quantity": math.ceil(m.quantity * runs),
+                            "activity_id": 0,
+                            "sub_materials": [],
+                        }
+                    )
+
+                # Copying task for T1 Blueprint
+                inv_sub_materials.append(
+                    {
+                        "type_id": t1_blueprint.id,
+                        "name": t1_blueprint.name,
+                        "quantity": runs,
+                        "activity_id": 5,  # Copying
+                        "sub_materials": [],
+                    }
+                )
+
+                sub_materials.append(
+                    {
+                        "type_id": blueprint_type.id,
+                        "name": blueprint_type.name,
+                        "quantity": runs,
+                        "activity_id": 8,  # Invention
+                        "sub_materials": inv_sub_materials,
+                    }
+                )
+            else:
+                # T1 Blueprint -> Copying
+                sub_materials.append(
+                    {
+                        "type_id": blueprint_type.id,
+                        "name": blueprint_type.name,
+                        "quantity": runs,
+                        "activity_id": 5,  # Copying
+                        "sub_materials": [],
+                    }
+                )
+    except Exception as e:
+        logger.warning(f"Failed to process science jobs for type {type_id}: {e}")
 
     return {
         "type_id": type_id,
         "name": name,
         "quantity": quantity,
+        "provided_from_stock": provided_from_stock,
+        "activity_id": 1,
         "sub_materials": sub_materials,
     }
 
@@ -211,15 +438,29 @@ def calculate_recursive_order_bom(order):
     # AA Industry App
     from industry_reforged.models import CorpItemConfig
 
-    me_dict = {}
+    config_dict = {}
     try:
         corp_info = EveCorporationInfo.objects.get(
             corporation_id=order.character.corporation_id
         )
         for config in CorpItemConfig.objects.filter(corporation=corp_info):
-            me_dict[config.item_type_id] = config.manual_me
+            config_dict[config.item_type_id] = {
+                "manual_me": config.manual_me,
+                "exclude_from_orders": config.exclude_from_orders,
+            }
     except Exception:
         pass
+
+    stock_dict = None
+    if order.target_facility:
+        # AA Industry App
+        from industry_reforged.models import CorpInventory
+
+        invs = CorpInventory.objects.filter(
+            corporation_id=order.character.corporation_id,
+            location_id=order.target_facility.facility_id,
+        )
+        stock_dict = {inv.item_type_id: inv.quantity for inv in invs}
 
     tree = []
     for item in order.items.all():
@@ -227,7 +468,14 @@ def calculate_recursive_order_bom(order):
         quantity = item.quantity
         name = item.item_type.name
 
-        node = get_recursive_bom_tree(type_id, name, quantity, me_dict)
+        node = get_recursive_bom_tree(
+            type_id,
+            name,
+            quantity,
+            config_dict,
+            target_facility=order.target_facility,
+            stock_dict=stock_dict,
+        )
         tree.append(node)
 
     return tree
@@ -241,21 +489,36 @@ def calculate_recursive_tasks_bom(tasks, corp_info=None):
     # AA Industry App
     from industry_reforged.models import CorpItemConfig
 
-    me_dict = {}
+    config_dict = {}
     if corp_info:
         try:
             for config in CorpItemConfig.objects.filter(corporation=corp_info):
-                me_dict[config.item_type_id] = config.manual_me
+                config_dict[config.item_type_id] = {
+                    "manual_me": config.manual_me,
+                    "exclude_from_orders": config.exclude_from_orders,
+                }
         except Exception:
             pass
 
     tree = []
     for task in tasks:
-        type_id = task.item_type_id
+        type_id = task.item_type.id
         quantity = task.quantity
         name = task.item_type.name
 
-        node = get_recursive_bom_tree(type_id, name, quantity, me_dict)
+        target_facility = None
+        if (
+            hasattr(task, "created_from_order")
+            and task.created_from_order
+            and task.created_from_order.target_facility
+        ):
+            target_facility = task.created_from_order.target_facility
+        elif hasattr(task, "facility") and task.facility:
+            target_facility = task.facility
+
+        node = get_recursive_bom_tree(
+            type_id, name, quantity, config_dict, target_facility=target_facility
+        )
         tree.append(node)
 
     return tree

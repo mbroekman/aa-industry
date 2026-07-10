@@ -371,6 +371,15 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmModal = new bootstrap.Modal(document.getElementById('actionModal'));
     }
 
+    var hash = window.location.hash;
+    if (hash) {
+        var triggerEl = document.querySelector('button[data-bs-target="' + hash + '"]');
+        if (triggerEl) {
+            var tab = new bootstrap.Tab(triggerEl);
+            tab.show();
+        }
+    }
+
     document.querySelectorAll('.require-confirmation').forEach(form => {
         form.addEventListener('submit', function(e) {
             e.preventDefault();

@@ -15,7 +15,6 @@
     <div class="row mb-3">
         <div class="col-12 text-end">
             <a href="{% url 'industry_reforged:add_corporate_token' %}" class="btn btn-outline-primary me-2"><i class="fas fa-key"></i> {% trans "Grant Corp Token" %}</a>
-            <a href="{% url 'industry_reforged:director_discover_hangars' %}" class="btn btn-outline-success show-loader"><i class="fas fa-search"></i> {% trans "Discover Hangars" %}</a>
         </div>
     </div>
 
@@ -37,13 +36,13 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="hangars-tab" data-bs-toggle="tab" data-bs-target="#hangars" type="button" role="tab" aria-controls="hangars" aria-selected="false">
-                <i class="fas fa-warehouse"></i> {% trans "Hangar Configurations" %}
+            <button class="nav-link" id="health-tab" data-bs-toggle="tab" data-bs-target="#health" type="button" role="tab" aria-controls="health" aria-selected="false">
+                <i class="fas fa-heartbeat"></i> {% trans "System Health" %}
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="health-tab" data-bs-toggle="tab" data-bs-target="#health" type="button" role="tab" aria-controls="health" aria-selected="false">
-                <i class="fas fa-heartbeat"></i> {% trans "System Health" %}
+            <button class="nav-link" id="facilities-tab" data-bs-toggle="tab" data-bs-target="#facilities" type="button" role="tab" aria-controls="facilities" aria-selected="false">
+                <i class="fas fa-industry"></i> {% trans "Production Facilities" %}
             </button>
         </li>
     </ul>
@@ -60,7 +59,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover m-0 align-middle">
+                        <table class="table table-striped table-hover m-0 align-middle" id="itemConfigTable">
                             <thead class="table-dark">
                                 <tr>
                                     <th>Item</th>
@@ -69,6 +68,7 @@
                                     <th class="text-end">Price Override</th>
                                     <th class="text-end">Threshold</th>
                                     <th class="text-center">Auto Produce</th>
+                                    <th class="text-center">Excluded?</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
@@ -91,13 +91,22 @@
                                     <td class="text-end numeric text-warning fw-bold">{% if config.manual_price %}{{ config.manual_price|eve_isk }}{% else %}<span class="text-muted fw-normal"><em>Auto (Fuzzwork)</em></span>{% endif %}</td>
                                     <td class="text-end numeric">{{ config.target_threshold|intcomma }}</td>
                                     <td class="text-center">{% if config.auto_produce %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
+                                    <td class="text-center">
+                                        {% if config.exclude_from_orders %}
+                                        <span class="badge bg-danger" {% if config.exclude_warning_message %}data-bs-toggle="tooltip" title="{{ config.exclude_warning_message }}"{% endif %}>
+                                            <i class="fas fa-ban"></i> Excluded
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-end">
                                         <a href="{% url 'industry_reforged:director_config_item_edit' config.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_item_delete' config.id %}"><i class="fas fa-trash"></i></button>
                                     </td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="7" class="text-center text-muted p-4">{% trans "No item rules configured. Global defaults apply." %}</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted p-4">{% trans "No item rules configured. Global defaults apply." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -199,63 +208,6 @@
             </div>
         </div>
 
-        <!-- HANGARS TAB -->
-        <div class="tab-pane fade" id="hangars" role="tabpanel" aria-labelledby="hangars-tab">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-warehouse text-info"></i> {% trans "Tracked Hangars" %}</h5>
-                    <a href="{% url 'industry_reforged:director_discover_hangars' %}" class="btn btn-sm btn-info show-loader"><i class="fas fa-search"></i> {% trans "Discover Hangars" %}</a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover m-0">
-                            <thead>
-                                <tr>
-                                    <th>{% trans "Hangar Name/Flag" %}</th>
-                                    <th>{% trans "Location ID" %}</th>
-                                    <th>{% trans "Status" %}</th>
-                                    <th class="text-end">{% trans "Actions" %}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for hangar in hangars %}
-                                <tr>
-                                    <td>{{ hangar.description|default:hangar.flag_id }}</td>
-                                    <td class="numeric">{{ hangar.location_id }}</td>
-                                    <td>
-                                        {% if hangar.is_active %}
-                                        <span class="badge bg-success">{% trans "Active" %}</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">{% trans "Disabled" %}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end">
-                                        <form method="post" action="{% url 'industry_reforged:director_config_hangar_toggle' hangar.id %}" class="d-inline">
-                                            {% csrf_token %}
-                                            {% if hangar.is_active %}
-                                            <button type="submit" class="btn btn-sm btn-outline-warning"><i class="fas fa-power-off"></i> {% trans "Disable" %}</button>
-                                            {% else %}
-                                            <button type="submit" class="btn btn-sm btn-outline-success"><i class="fas fa-power-off"></i> {% trans "Enable" %}</button>
-                                            {% endif %}
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">
-                                        {% trans "No hangars discovered. Click 'Discover Hangars' to scan your corporate assets." %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        <div class="p-3 bg-dark text-muted small">
-                            <i class="fas fa-info-circle"></i> {% trans "Hangars must be active to be included in inventory syncs." %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- SYSTEM HEALTH TAB -->
         <div class="tab-pane fade" id="health" role="tabpanel" aria-labelledby="health-tab">
@@ -292,9 +244,27 @@
                                     <td class="text-end numeric">{{ log.duration_seconds|floatformat:2 }}s</td>
                                     <td>
                                         {% if log.status == 'FAILED' and log.message %}
-                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="popover" title="Error Details" data-bs-content="{{ log.message }}">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#errorModal{{ log.id }}">
                                                 <i class="fas fa-exclamation-triangle"></i> View Error
                                             </button>
+
+                                            <!-- Error Modal -->
+                                            <div class="modal fade text-start" id="errorModal{{ log.id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header bg-danger text-white">
+                                                            <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> {% trans "Error Details" %}: {{ log.task_name }}</h5>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <pre class="bg-dark text-light p-3 rounded" style="white-space: pre-wrap; word-break: break-all; font-size: 0.85rem;">{{ log.message }}</pre>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         {% else %}
                                             <span class="text-muted small">{{ log.message|truncatechars:50 }}</span>
                                         {% endif %}
@@ -302,6 +272,78 @@
                                 </tr>
                                 {% empty %}
                                 <tr><td colspan="5" class="text-center text-muted p-4">{% trans "No tasks have run yet." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FACILITIES TAB -->
+        <div class="tab-pane fade" id="facilities" role="tabpanel" aria-labelledby="facilities-tab">
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-industry text-primary"></i> {% trans "Production Facilities" %}</h5>
+                    <div>
+                        <a href="{% url 'industry_reforged:add_facility' %}" class="btn btn-sm btn-success"><i class="fas fa-plus"></i> {% trans "Add Facility" %}</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{% trans "Facility ID" %}</th>
+                                    <th>{% trans "Name" %}</th>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "System ID" %}</th>
+                                    <th>{% trans "Security Space" %}</th>
+                                    <th class="text-center">{% trans "Sync Inventory" %}</th>
+                                    <th>{% trans "Rigs Installed" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for facility in facilities %}
+                                <tr>
+                                    <td><code>{{ facility.facility_id }}</code></td>
+                                    <td>{{ facility.name }}</td>
+                                    <td>
+                                        {% if facility.type_id %}
+                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/35825/icon?size=32';" src="https://images.evetech.net/types/{{ facility.type_id }}/icon?size=32" alt="Type {{ facility.type_id }}" width="24" height="24" class="me-1 rounded bg-dark">
+                                            {{ facility.type_name }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ facility.solar_system_id|default:"-" }}</td>
+                                    <td><span class="badge bg-secondary">{{ facility.get_security_space_display }}</span></td>
+                                    <td class="text-center">
+                                        <form method="post" action="{% url 'industry_reforged:director_config_structure_toggle' facility.facility_id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm {% if facility.sync_inventory %}btn-success{% else %}btn-outline-secondary{% endif %}" data-bs-toggle="tooltip" title="{% if facility.sync_inventory %}Inventory synced automatically. Click to disable.{% else %}Inventory not synced. Click to enable.{% endif %}">
+                                                <i class="fas fa-boxes"></i> {% if facility.sync_inventory %}Enabled{% else %}Disabled{% endif %}
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        {% for r in facility.rigs.all %}
+                                            <span class="badge bg-info mb-1 text-dark">{{ r.rig.name }}</span><br>
+                                        {% empty %}
+                                            <span class="text-muted small">None</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:edit_facility' facility.facility_id %}" class="btn btn-sm btn-outline-info"><i class="fas fa-edit"></i></a>
+                                        <form method="post" action="{% url 'industry_reforged:delete_facility' facility.facility_id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete {{ facility.name }}?" data-btn-class="btn-danger">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="8" class="text-center text-muted p-4">{% trans "No facilities configured." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -357,6 +399,27 @@
                 tab.show();
             }
         }
+
+        // Initialize DataTables
+        $('#itemConfigTable').DataTable({
+            "order": [[0, "asc"]],
+            "pageLength": 25,
+            "columnDefs": [
+                { "orderable": false, "targets": [7] }
+            ]
+        });
+
+        // Initialize Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Initialize Popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        });
     });
 </script>
 {% endblock %}

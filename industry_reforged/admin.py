@@ -5,7 +5,6 @@ from django.contrib import admin
 
 from .models import (
     CharacterIndustryJob,
-    CorpHangarConfig,
     CorpInventory,
     CorpItemConfig,
     CorpMOTD,
@@ -15,6 +14,7 @@ from .models import (
     CorpPricingConfig,
     CorpTypeDiscount,
     IndustryFacility,
+    IndustryRig,
     MemberOrder,
     OrderFit,
     OrderItem,
@@ -76,11 +76,6 @@ class ProductionTaskAdmin(admin.ModelAdmin):
     search_fields = ("assigned_to__character_name", "item_type__name")
 
 
-@admin.register(CorpHangarConfig)
-class CorpHangarConfigAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "location_id", "flag_id", "description")
-
-
 @admin.register(CorpInventory)
 class CorpInventoryAdmin(admin.ModelAdmin):
     list_display = (
@@ -88,7 +83,6 @@ class CorpInventoryAdmin(admin.ModelAdmin):
         "item_type",
         "quantity",
         "location_id",
-        "flag_id",
         "manual_override",
     )
     list_filter = ("manual_override", "corporation")
@@ -138,3 +132,9 @@ class CorpItemConfigAdmin(admin.ModelAdmin):
     list_display = ("corporation", "item_type", "manual_price")
     search_fields = ("corporation__corporation_name", "item_type__name")
     raw_id_fields = ("corporation", "item_type")
+
+
+@admin.register(IndustryRig)
+class IndustryRigAdmin(admin.ModelAdmin):
+    list_display = ("type_id", "name", "me_bonus", "te_bonus")
+    search_fields = ("name", "type_id")

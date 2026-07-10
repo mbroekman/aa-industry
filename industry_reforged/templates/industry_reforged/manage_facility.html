@@ -1,0 +1,152 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n django_bootstrap5 %}
+
+{% block details %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-secondary bg-dark text-white">
+                <div class="card-header border-secondary">
+                    <h3 class="card-title mb-0"><i class="fas fa-industry text-info"></i> {{ title }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if corp_structures %}
+                        <div class="mb-4 p-3 bg-secondary rounded">
+                            <label for="corp-structure-select" class="form-label text-white"><i class="fas fa-building"></i> {% trans "Select Corporate Structure" %}</label>
+
+                            <input type="text" id="corp-structure-search" class="form-control bg-dark text-white border-dark mb-2" placeholder="{% trans 'Search structures...' %}">
+
+                            <select id="corp-structure-select" class="form-select bg-dark text-white border-dark" size="6">
+                                <option value="">-- {% trans "Choose an existing structure or fill manually below" %} --</option>
+                                {% for st in corp_structures %}
+                                <option value="{{ st.id }}" data-name="{{ st.name }}" data-type="{{ st.type_id }}" data-system="{{ st.system_id|default:'' }}">
+                                    {{ st.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-white-50 mt-1 d-block">{% trans "Only structures capable of manufacturing or reactions are shown." %}</small>
+                        </div>
+                        {% endif %}
+                        {% bootstrap_form form %}
+
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Security Space" %}</label>
+                            <div>
+                                <span id="security-badge" class="badge bg-secondary p-2 px-3 fs-6">
+                                    {% if facility and facility.security_space == 'HIGHSEC' %}
+                                        Highsec (1.0)
+                                    {% elif facility and facility.security_space == 'LOWSEC' %}
+                                        Lowsec (1.9)
+                                    {% elif facility and facility.security_space == 'NULLSEC_WH' %}
+                                        Nullsec/W-Space (2.1)
+                                    {% else %}
+                                        {% trans "Unknown (Determined automatically)" %}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <h4 class="mt-4 border-bottom border-secondary pb-2">{% trans "Installed Rigs" %}</h4>
+                        <div id="rigs-formset">
+                            {{ formset.management_form }}
+                            {% for rig_form in formset %}
+                                <div class="row align-items-center mb-2 formset-row">
+                                    <div class="col-md-9">
+                                        {{ rig_form.id }}
+                                        {% bootstrap_field rig_form.rig layout="horizontal" %}
+                                    </div>
+                                    <div class="col-md-3 mt-4">
+                                        {% if formset.can_delete %}
+                                            {% bootstrap_field rig_form.DELETE %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-between">
+                            <a href="{% url 'industry_reforged:director_config' %}#facilities" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> {% trans "Save Facility" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    function updateSecuritySpace(systemId) {
+        if (!systemId) return;
+        fetch(`https://esi.evetech.net/latest/universe/systems/${systemId}/?datasource=tranquility`)
+            .then(response => response.json())
+            .then(data => {
+                const sec = data.security_status;
+                let badge = document.getElementById("security-badge");
+                if (badge) {
+                    badge.classList.remove('bg-secondary', 'bg-success', 'bg-warning', 'bg-danger');
+                    if (sec >= 0.45) {
+                        badge.innerText = "Highsec (1.0)";
+                        badge.classList.add('bg-success');
+                    } else if (sec > 0.0) {
+                        badge.innerText = "Lowsec (1.9)";
+                        badge.classList.add('bg-warning', 'text-dark');
+                    } else {
+                        badge.innerText = "Nullsec/W-Space (2.1)";
+                        badge.classList.add('bg-danger');
+                    }
+                }
+            })
+            .catch(err => console.error("Error fetching system info:", err));
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const select = document.getElementById("corp-structure-select");
+        if (select) {
+            select.addEventListener("change", function(e) {
+                const opt = e.target.options[e.target.selectedIndex];
+                if (opt.value) {
+                    document.getElementById("id_facility_id").value = opt.value;
+                    document.getElementById("id_name").value = opt.getAttribute("data-name") || "";
+                    document.getElementById("id_type_id").value = opt.getAttribute("data-type") || "";
+
+                    const systemId = opt.getAttribute("data-system") || "";
+                    document.getElementById("id_solar_system_id").value = systemId;
+                    updateSecuritySpace(systemId);
+                }
+            });
+        }
+
+        const systemInput = document.getElementById("id_solar_system_id");
+        if (systemInput) {
+            systemInput.addEventListener("blur", function(e) {
+                updateSecuritySpace(e.target.value);
+            });
+        }
+
+        const searchInput = document.getElementById("corp-structure-search");
+        if (searchInput && select) {
+            const allOptions = Array.from(select.options);
+            searchInput.addEventListener("input", function(e) {
+                const term = e.target.value.toLowerCase();
+
+                // Clear the select
+                select.innerHTML = '';
+
+                // Add back matching options
+                allOptions.forEach(opt => {
+                    if (opt.value === "" || opt.text.toLowerCase().includes(term)) {
+                        select.appendChild(opt);
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

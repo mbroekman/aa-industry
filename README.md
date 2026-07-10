@@ -10,7 +10,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 ## Features
 
 - **Personal Dashboard**: Users can easily track their active, completed, and delivered industry jobs.
-- **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs from a centralized overview.
+- **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs, discover and explicitly configure Production Facilities, and auto-sync installed structure rigs from a centralized overview.
 - **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow (Director approval -> User acceptance).
 - **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD.
 - **Recursive BOM Drilldown & Shopping List Treeview**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components, and view fully interactive Production Trees directly within the Consolidated Shopping Lists.
@@ -18,7 +18,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
 - **Smart ISK Formatting**: Features a built-in abbreviation engine that automatically formats large ISK values and displays precise tooltip translations (e.g., K, M, B, T) when hovered.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
-- **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, and countdown timers for active extraction.
+- **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, storage capacities (utilization tracking for Launchpads/Storage), and countdown timers for active extraction.
 - **Discord Integration**: 
   - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
   - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed, quotes are updated, or orders are fully built and ready for delivery.

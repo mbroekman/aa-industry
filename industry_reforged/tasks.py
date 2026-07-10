@@ -631,6 +631,38 @@ def update_character_pi(character_id=None):
                             extraction_yield = qty_per_cycle
                             ensure_eve_type(product_type_id)
 
+                        contents_raw = getattr(pin, "contents", [])
+                        contents_volume = 0.0
+                        contents_json = {}
+
+                        if contents_raw:
+                            for item in contents_raw:
+                                item_type_id = getattr(item, "type_id")
+                                amount = getattr(item, "amount")
+                                ensure_eve_type(item_type_id)
+                                item_type = EveType.objects.filter(
+                                    id=item_type_id
+                                ).first()
+                                if item_type:
+                                    vol = float(item_type.volume or 0.0) * float(amount)
+                                    contents_volume += vol
+                                    if item_type.name in contents_json:
+                                        contents_json[item_type.name][
+                                            "amount"
+                                        ] += amount
+                                        contents_json[item_type.name]["volume"] += vol
+                                    else:
+                                        contents_json[item_type.name] = {
+                                            "type_id": item_type_id,
+                                            "amount": amount,
+                                            "volume": vol,
+                                        }
+
+                        capacity = 0.0
+                        pin_type = EveType.objects.filter(id=type_id).first()
+                        if pin_type:
+                            capacity = float(getattr(pin_type, "capacity", 0.0) or 0.0)
+
                         pin_obj, created = PlanetPin.objects.update_or_create(
                             planet=char_planet,
                             pin_id=pin_id,
@@ -643,6 +675,9 @@ def update_character_pi(character_id=None):
                                 "product_type_id": product_type_id,
                                 "schematic_id": schematic_id,
                                 "last_cycle_start": last_cycle_start,
+                                "contents_volume": contents_volume,
+                                "capacity": capacity,
+                                "contents": contents_json,
                             },
                         )
 
@@ -685,23 +720,25 @@ def update_character_pi(character_id=None):
 @shared_task
 @log_task_execution("Task Sync Corp Inventory")
 def task_sync_corp_inventory():
-    """Fetch corporate assets from ESI for configured Hangars."""
+    """Fetch corporate assets from ESI for all configured Industry Facilities."""
 
-    from .models import CorpHangarConfig, CorpInventory
+    from .models import CorpInventory, CorporationSyncConfig, IndustryFacility
 
-    hangar_configs = CorpHangarConfig.objects.all()
-    corps = {hc.corporation_id for hc in hangar_configs}
+    # Get all configured industry facilities
+    facility_ids = set(
+        IndustryFacility.objects.filter(sync_inventory=True).values_list(
+            "facility_id", flat=True
+        )
+    )
+    if not facility_ids:
+        return
 
-    for corp_id in corps:
-        configs_for_corp = [hc for hc in hangar_configs if hc.corporation_id == corp_id]
+    # Fetch inventory for all corps that have a sync config
+    sync_configs = CorporationSyncConfig.objects.all()
 
-        # We need a director token for this corp
-        # Assuming CorporationSyncConfig is used for general sync character
-        sync_config = CorporationSyncConfig.objects.filter(
-            corporation_id=corp_id
-        ).first()
-        if not sync_config:
-            continue
+    for sync_config in sync_configs:
+        corp = sync_config.corporation
+        corp_id = corp.corporation_id
 
         token = Token.objects.filter(
             character_id=sync_config.sync_character.character_id,
@@ -713,20 +750,34 @@ def task_sync_corp_inventory():
 
         try:
             assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
-                corporation_id=sync_config.corporation.corporation_id, token=token
-            ).result()
+                corporation_id=corp_id, token=token
+            ).results()
 
-            # Filter assets matching location_id and flag_id
+            # Build a map of item_id -> location_id to resolve nested containers
+            item_locations = {}
+            for asset in assets:
+                # Note: some assets might not have item_id (e.g. blueprints in some endpoints), but corp assets endpoint usually does.
+                item_id = getattr(asset, "item_id", getattr(asset, "id", None))
+                if item_id:
+                    item_locations[item_id] = getattr(asset, "location_id")
+
+            def get_root_location(loc_id):
+                visited = set()
+                while loc_id not in facility_ids and loc_id in item_locations:
+                    if loc_id in visited:
+                        break  # Prevent infinite loop in case of circular references
+                    visited.add(loc_id)
+                    loc_id = item_locations[loc_id]
+                return loc_id
+
+            # Filter assets matching location_id (including nested)
             filtered_assets = []
             for asset in assets:
-                location_id = getattr(asset, "location_id")
-                flag_id = getattr(asset, "location_flag")
+                loc_id = getattr(asset, "location_id")
+                root_loc_id = get_root_location(loc_id)
 
-                # Check if this asset is in a configured hangar
-                if any(
-                    hc.location_id == location_id and hc.flag_id == flag_id
-                    for hc in configs_for_corp
-                ):
+                # Check if this asset is in a configured facility
+                if root_loc_id in facility_ids:
                     type_id = getattr(asset, "type_id")
                     quantity = getattr(
                         asset, "quantity", 1
@@ -736,29 +787,32 @@ def task_sync_corp_inventory():
                         {
                             "type_id": type_id,
                             "quantity": quantity,
-                            "location_id": location_id,
-                            "flag_id": flag_id,
+                            "location_id": root_loc_id,
                         }
                     )
 
             # Update CorpInventory (only for items not manually overridden)
+            # Reset all non-manual overridden quantities for this corp to 0
+            # so that items that are no longer there are properly zeroed out.
+            CorpInventory.objects.filter(
+                corporation=corp, manual_override=False
+            ).update(quantity=0)
+
             if filtered_assets:
-                # Group by type, location, flag
+
+                # Group by type and location
                 # Standard Library
                 from collections import defaultdict
 
                 grouped = defaultdict(int)
                 for fa in filtered_assets:
-                    grouped[(fa["type_id"], fa["location_id"], fa["flag_id"])] += fa[
-                        "quantity"
-                    ]
+                    grouped[(fa["type_id"], fa["location_id"])] += fa["quantity"]
 
-                for (type_id, loc_id, flg_id), qty in grouped.items():
+                for (type_id, loc_id), qty in grouped.items():
                     inv, created = CorpInventory.objects.get_or_create(
-                        corporation_id=corp_id,
+                        corporation=corp,
                         item_type_id=type_id,
                         location_id=loc_id,
-                        flag_id=flg_id,
                         defaults={"quantity": qty},
                     )
                     if not inv.manual_override:
@@ -1116,6 +1170,39 @@ def task_process_wallet_payments():
         state.save()
 
 
+def _get_security_space(system_id):
+    if not system_id:
+        return "HIGHSEC"
+    try:
+        # Alliance Auth
+        from allianceauth.eveonline.models import EveSolarSystem
+
+        system = EveSolarSystem.objects.get(eve_id=system_id)
+        sec = system.security_status
+    except Exception:
+        # Third Party
+        import requests
+
+        try:
+            resp = requests.get(
+                f"https://esi.evetech.net/latest/universe/systems/{system_id}/?datasource=tranquility",
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                sec = resp.json().get("security_status", 1.0)
+            else:
+                return "HIGHSEC"
+        except Exception:
+            return "HIGHSEC"
+
+    if sec >= 0.45:
+        return "HIGHSEC"
+    elif sec > 0.0:
+        return "LOWSEC"
+    else:
+        return "NULLSEC_WH"
+
+
 @shared_task
 @log_task_execution("Update Industry Facilities")
 def update_industry_facilities():
@@ -1124,12 +1211,11 @@ def update_industry_facilities():
     import requests
 
     # Alliance Auth
-    from allianceauth.eveonline.models import EveToken
     from allianceauth.services.hooks import get_extension_logger
+    from esi.models import Token as EveToken
 
     from .models import (
         CharacterIndustryJob,
-        CorpHangarConfig,
         CorporationIndustryJob,
         CorporationSyncConfig,
         IndustryFacility,
@@ -1150,7 +1236,28 @@ def update_industry_facilities():
                 "location_id", flat=True
             )
         )
-    facility_ids.update(CorpHangarConfig.objects.values_list("location_id", flat=True))
+
+    # Also collect location_ids from Corporate Assets
+
+    configs = CorporationSyncConfig.objects.select_related("sync_character").all()
+    for config in configs:
+        token = EveToken.objects.filter(
+            character_id=config.sync_character.character_id,
+            scopes__name="esi-assets.read_corporation_assets.v1",
+        ).first()
+        if token:
+            try:
+                assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
+                    corporation_id=config.corporation.corporation_id, token=token
+                ).results()
+                for asset in assets:
+                    if getattr(asset, "location_type", "") in [
+                        "station",
+                        "other",
+                    ] and getattr(asset, "location_id", None):
+                        facility_ids.add(asset.location_id)
+            except Exception as e:
+                logger.error(f"Failed to fetch assets for facility resolution: {e}")
 
     if not facility_ids:
         return
@@ -1183,12 +1290,15 @@ def update_industry_facilities():
                 )
                 if st_resp.status_code == 200:
                     data = st_resp.json()
+                    sys_id = data.get("system_id", None)
                     IndustryFacility.objects.create(
                         facility_id=loc_id,
                         name=data.get("name", f"Station {loc_id}"),
                         owner_id=data.get("owner", None),
-                        solar_system_id=data.get("system_id", None),
+                        solar_system_id=sys_id,
                         type_id=data.get("type_id", None),
+                        security_space=_get_security_space(sys_id),
+                        is_production_facility=False,
                     )
             else:
                 # Upwell Structure
@@ -1205,14 +1315,120 @@ def update_industry_facilities():
                     )
                     if str_resp.status_code == 200:
                         data = str_resp.json()
+                        sys_id = data.get("solar_system_id", None)
                         IndustryFacility.objects.create(
                             facility_id=loc_id,
                             name=data.get("name", f"Structure {loc_id}"),
                             owner_id=data.get("owner_id", None),
-                            solar_system_id=data.get("solar_system_id", None),
+                            solar_system_id=sys_id,
                             type_id=data.get("type_id", None),
+                            security_space=_get_security_space(sys_id),
+                            is_production_facility=False,
                         )
 
                         break
         except Exception as e:
             logger.error(f"Error resolving facility {loc_id}: {e}")
+
+
+@shared_task
+@log_task_execution("Sync Facility Rigs")
+def sync_facility_rigs():
+    """Fetch corporate assets and automatically determine installed rigs for facilities."""
+    # Alliance Auth
+    from allianceauth.services.hooks import get_extension_logger
+    from esi.models import Token
+
+    from .models import (
+        CorporationSyncConfig,
+        IndustryFacility,
+        IndustryFacilityRig,
+        IndustryRig,
+    )
+
+    logger = get_extension_logger(__name__)
+
+    # Find all corporations that have facilities
+    facility_corps = set(
+        IndustryFacility.objects.exclude(owner_id__isnull=True).values_list(
+            "owner_id", flat=True
+        )
+    )
+    if not facility_corps:
+        return
+
+    facilities_by_corp = {}
+    for f in IndustryFacility.objects.all():
+        if f.owner_id:
+            facilities_by_corp.setdefault(f.owner_id, []).append(f)
+
+    for corp_id in facility_corps:
+        if not corp_id:
+            continue
+
+        sync_config = CorporationSyncConfig.objects.filter(
+            corporation_id=corp_id
+        ).first()
+        if not sync_config:
+            continue
+
+        token = Token.objects.filter(
+            character_id=sync_config.sync_character.character_id,
+            scopes__name="esi-assets.read_corporation_assets.v1",
+        ).first()
+
+        if not token:
+            continue
+
+        try:
+            logger.info(f"Fetching assets for corp {corp_id} to sync facility rigs...")
+            assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
+                corporation_id=corp_id, token=token
+            ).results()
+
+            facilities = facilities_by_corp.get(corp_id, [])
+            facility_ids = {f.facility_id: f for f in facilities}
+
+            # Keep track of found rigs to remove old ones
+            found_rigs = {f.id: [] for f in facilities}
+
+            for asset in assets:
+                location_id = getattr(asset, "location_id")
+                flag_id = getattr(asset, "location_flag")
+
+                # If asset is in one of our known facilities and flag implies a rig slot
+                if (
+                    location_id in facility_ids
+                    and flag_id
+                    and flag_id.startswith("RigSlot")
+                ):
+                    type_id = getattr(asset, "type_id")
+
+                    # Try to map to an IndustryRig
+                    rig = IndustryRig.objects.filter(type_id=type_id).first()
+                    if rig:
+                        facility = facility_ids[location_id]
+                        # Create or get the linkage
+                        fr, created = IndustryFacilityRig.objects.get_or_create(
+                            facility=facility, rig=rig
+                        )
+                        found_rigs[facility.id].append(rig.type_id)
+                        if created:
+                            logger.info(
+                                f"Auto-linked rig {rig.name} to facility {facility.name}"
+                            )
+
+            # Optional: Remove rigs that are no longer installed
+            for f in facilities:
+                current_rigs = found_rigs[f.id]
+                removed = IndustryFacilityRig.objects.filter(facility=f).exclude(
+                    rig__type_id__in=current_rigs
+                )
+                if removed.exists():
+                    logger.info(
+                        f"Removing {removed.count()} old rigs from facility {f.name}"
+                    )
+                    removed.delete()
+
+        except Exception as e:
+            logger.error(f"Failed to sync rigs for corp {corp_id}: {e}")

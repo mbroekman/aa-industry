@@ -195,11 +195,17 @@
                                                 {% endfor %}
                                             </div>
                                         </div>
-                                        {% if char_group.list.0.character_needs_attention %}
-                                        <div class="text-danger ms-2"><i class="fas fa-exclamation-triangle fa-2x" title="Extractors Expired"></i></div>
-                                        {% else %}
-                                        <div class="text-success ms-2"><i class="fas fa-check-circle fa-2x" title="All Good"></i></div>
-                                        {% endif %}
+                                        <div class="ms-2 d-flex gap-2">
+                                            {% if char_group.list.0.character_has_expired_extractors %}
+                                            <div class="text-danger"><i class="fas fa-exclamation-triangle fa-2x" data-bs-toggle="tooltip" title="Extractors Expired"></i></div>
+                                            {% endif %}
+                                            {% if char_group.list.0.character_has_full_storage %}
+                                            <div class="text-warning"><i class="fas fa-database fa-2x" data-bs-toggle="tooltip" title="Storage Almost Full"></i></div>
+                                            {% endif %}
+                                            {% if not char_group.list.0.character_needs_attention %}
+                                            <div class="text-success"><i class="fas fa-check-circle fa-2x" data-bs-toggle="tooltip" title="All Good"></i></div>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -233,20 +239,29 @@
                                             </div>
                                         </div>
 
-                                        {% if planet.extractors %}
-                                            <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Earliest Expiry</div>
-                                            {% if planet.has_expired_extractors %}
-                                                <div class="text-danger fw-bold fs-5"><i class="fas fa-exclamation-triangle me-1"></i> EXPIRED</div>
-                                            {% elif planet.earliest_extractor_expiry %}
-                                                <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.earliest_extractor_expiry|date:'c' }}">
-                                                    Calculating...
-                                                </div>
-                                            {% else %}
-                                                <div class="text-info fw-bold fs-5"><i class="fas fa-check-circle me-1"></i> Idle</div>
+                                        <div class="d-flex justify-content-between align-items-end mt-4">
+                                            <div>
+                                                {% if planet.extractors %}
+                                                    <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Earliest Expiry</div>
+                                                    {% if planet.has_expired_extractors %}
+                                                        <div class="text-danger fw-bold fs-5"><i class="fas fa-exclamation-triangle me-1"></i> EXPIRED</div>
+                                                    {% elif planet.earliest_extractor_expiry %}
+                                                        <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.earliest_extractor_expiry|date:'c' }}">
+                                                            Calculating...
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="text-info fw-bold fs-5"><i class="fas fa-check-circle me-1"></i> Idle</div>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <div class="text-muted fst-italic">No active extractors</div>
+                                                {% endif %}
+                                            </div>
+                                            {% if planet.has_full_storage %}
+                                            <div class="text-warning" data-bs-toggle="tooltip" title="Storage Almost Full">
+                                                <i class="fas fa-database fa-2x"></i>
+                                            </div>
                                             {% endif %}
-                                        {% else %}
-                                            <div class="text-muted fst-italic mt-4">No active extractors</div>
-                                        {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -255,8 +270,12 @@
                             <template id="planet-details-{{ planet.planet_id }}">
                                 <div class="modal-header border-secondary bg-dark">
                                     <h5 class="modal-title d-flex align-items-center">
+                                        {% if planet.planet_type %}
                                         <img src="https://images.evetech.net/types/{{ planet.planet_type.id }}/icon?size=32" class="me-3 rounded">
-                                        {{ char_group.grouper.character_name }} <span class="text-muted mx-2">/</span> <span class="text-info">{{ planet.planet_type.name }}</span>
+                                        {% else %}
+                                        <i class="fas fa-globe text-secondary me-3 fs-3"></i>
+                                        {% endif %}
+                                        {{ char_group.grouper.character_name }} <span class="text-muted mx-2">/</span> <span class="text-info">{{ planet.planet_type.name|default:"Unknown Planet" }}</span>
                                     </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
@@ -370,7 +389,24 @@
                                                     <div class="badge border border-secondary text-white py-2 px-3 bg-dark fw-normal"><i class="fas fa-satellite-dish text-primary me-2"></i> Command Center</div>
                                                     {% endfor %}
                                                     {% for pin in planet.storage_pins %}
-                                                    <div class="badge border border-secondary text-white py-2 px-3 bg-dark fw-normal"><i class="fas fa-box text-secondary me-2"></i> {{ pin.type.name|default:"Storage" }}</div>
+                                                    <div class="card bg-dark border-secondary mb-2" style="min-width: 280px; flex: 1;">
+                                                        <div class="card-body p-2">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <div class="fw-bold small text-white"><i class="fas fa-box text-secondary me-1"></i> {{ pin.type.name|default:"Storage" }}</div>
+                                                                <div class="small text-muted">{{ pin.contents_volume|floatformat:0|intcomma }} / {{ pin.capacity|floatformat:0|intcomma }} m&sup3;</div>
+                                                            </div>
+                                                            <div class="progress" style="height: 6px; background-color: #1a1e23; cursor: help;"
+                                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
+                                                                title="<div class='text-start'>{% if pin.contents %}{% for name, item in pin.contents.items %}<strong>{{ name }}</strong>: {{ item.amount|intcomma }} ({{ item.volume|floatformat:0|intcomma }} m&sup3;)<br>{% endfor %}{% else %}<em>Empty</em>{% endif %}</div>">
+                                                                <div class="progress-bar {% if pin.utilization_pct > 90 %}bg-danger{% elif pin.utilization_pct > 75 %}bg-warning{% else %}bg-info{% endif %}"
+                                                                    role="progressbar"
+                                                                    style="width: {{ pin.utilization_pct|floatformat:0 }}%;"
+                                                                    aria-valuenow="{{ pin.utilization_pct|floatformat:0 }}"
+                                                                    aria-valuemin="0"
+                                                                    aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     {% endfor %}
                                                     {% if not planet.command_centers and not planet.storage_pins %}
                                                     <div class="text-muted small text-center w-100 my-2">No infrastructure found</div>
@@ -441,6 +477,12 @@
 
         // Initial timer setup for PI Dashboard
         initCountdownTimers();
+
+        // Initialize all tooltips globally
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
     });
 
     // PI Dashboard View Logic
@@ -462,10 +504,17 @@
         const template = document.getElementById('planet-details-' + planetId);
         if (!template) return;
 
-        document.getElementById('piPlanetModalContent').innerHTML = template.innerHTML;
+        const modalContent = document.getElementById('piPlanetModalContent');
+        modalContent.innerHTML = template.innerHTML;
 
         // Initialize timers inside the new modal content
-        initCountdownTimers(document.getElementById('piPlanetModalContent'));
+        initCountdownTimers(modalContent);
+
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = [].slice.call(modalContent.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
 
         const modal = new bootstrap.Modal(document.getElementById('piPlanetModal'));
         modal.show();

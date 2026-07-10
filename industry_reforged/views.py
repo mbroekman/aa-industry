@@ -13,7 +13,6 @@ from django.utils.translation import gettext_lazy as _
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 from esi.decorators import token_required
-from esi.models import Token
 
 from .forms import (
     CorpItemConfigForm,
@@ -23,7 +22,6 @@ from .forms import (
 from .models import (
     CharacterIndustryJob,
     CharacterPlanet,
-    CorpHangarConfig,
     CorpInventory,
     CorpItemConfig,
     CorpMOTD,
@@ -124,13 +122,21 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
         .order_by("character__character_name", "planet_id")
     )
 
-    attention_chars = set()
-    for planet in planets:
-        if planet.has_expired_extractors:
-            attention_chars.add(planet.character_id)
+    expired_chars = set()
+    full_storage_chars = set()
 
     for planet in planets:
-        planet.character_needs_attention = planet.character_id in attention_chars
+        if planet.has_expired_extractors:
+            expired_chars.add(planet.character_id)
+        if planet.has_full_storage:
+            full_storage_chars.add(planet.character_id)
+
+    for planet in planets:
+        planet.character_has_expired_extractors = planet.character_id in expired_chars
+        planet.character_has_full_storage = planet.character_id in full_storage_chars
+        planet.character_needs_attention = (
+            planet.character_has_expired_extractors or planet.character_has_full_storage
+        )
 
     context = {
         "active_jobs": active_jobs,
@@ -386,13 +392,36 @@ def create_order(request: WSGIRequest) -> HttpResponse:
                 f"Could not recognize the following items: {', '.join(unrecognized)}",
             )
 
-        if not parsed_items:
-            messages.error(request, _("No valid items found in the fit."))
-            return redirect("industry_reforged:create_order")
-
         # Optional: Apply corp discount if user's main character is in a corp with config
         main_char = request.user.profile.main_character
         corporation = main_char.corporation if main_char else None
+
+        # Filter out excluded items
+        if corporation and parsed_items:
+            excluded_configs = CorpItemConfig.objects.filter(
+                corporation=corporation,
+                exclude_from_orders=True,
+                item_type_id__in=parsed_items.keys(),
+            ).select_related("item_type")
+
+            for config in excluded_configs:
+                # Remove from the parsed dictionary
+                if config.item_type_id in parsed_items:
+                    del parsed_items[config.item_type_id]
+
+                # Show warning message to the user
+                msg = _(
+                    "Item '%(item)s' was automatically removed from your order."
+                ) % {"item": config.item_type.name}
+                if config.exclude_warning_message:
+                    msg += f" {config.exclude_warning_message}"
+                messages.warning(request, msg)
+
+        if not parsed_items:
+            messages.error(
+                request, _("No valid items remaining in the fit after filtering.")
+            )
+            return redirect("industry_reforged:create_order")
 
         total_price, item_details = calculate_quote(parsed_items, corporation)
 
@@ -518,6 +547,10 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     ) or request.user.has_perm("industry_reforged.corp_access"):
         recursive_bom_tree = calculate_recursive_order_bom(order)
 
+    from .models import IndustryFacility
+
+    facilities = IndustryFacility.objects.filter(is_production_facility=True)
+
     context = {
         "title": f"Order #{order.id}",
         "order": order,
@@ -527,6 +560,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "savings": savings,
         "is_owner": order.character_id in user_characters,
         "recursive_bom_tree": recursive_bom_tree,
+        "facilities": facilities,
     }
     return render(request, "industry_reforged/view_quote.html", context)
 
@@ -548,9 +582,22 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             upfront = float(request.POST.get("upfront_payment", 0))
             if upfront < 0 or upfront > new_total:
-                raise ValueError("Upfront payment must be between 0 and total price")
+                raise ValueError("Upfront payment invalid")
 
-            order.total_price = new_total
+            target_facility_id = request.POST.get("target_facility", None)
+            if target_facility_id:
+                from .models import IndustryFacility
+
+                facility = IndustryFacility.objects.filter(
+                    facility_id=target_facility_id
+                ).first()
+                if facility:
+                    order.target_facility = facility
+
+            # Standard Library
+            from decimal import Decimal
+
+            order.total_price = Decimal(str(new_total))
             order.upfront_payment = upfront
 
             # Treat upfront payment as already paid by the user
@@ -613,6 +660,56 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         return redirect("industry_reforged:view_quote", order_id=order.id)
 
     return redirect("industry_reforged:director_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """HTMX endpoint to update the target facility and recalculate BOM live"""
+    order = MemberOrder.objects.filter(id=order_id).first()
+    if not order or order.status != "REQUESTED":
+        return HttpResponse("")
+
+    target_facility_id = request.POST.get("target_facility", None)
+    from .models import IndustryFacility
+
+    facility = None
+    if target_facility_id:
+        facility = IndustryFacility.objects.filter(
+            facility_id=target_facility_id
+        ).first()
+
+    order.target_facility = facility
+    order.save()
+
+    # Recalculate BOM
+    bom_materials = calculate_order_bom(order)
+
+    corp_info = None
+    main_char = request.user.profile.main_character
+    if main_char and main_char.corporation:
+        corp_info = main_char.corporation
+
+    total_bom_price = 0
+    if bom_materials:
+        mat_ids = list(bom_materials.keys())
+        prices = get_prices_with_overrides(mat_ids, corp_info)
+        for mat_id, data in bom_materials.items():
+            price = prices.get(mat_id, 0)
+            data["price_per_unit"] = price
+            data["total_price"] = price * data["quantity"]
+            total_bom_price += data["total_price"]
+
+    recursive_bom_tree = calculate_recursive_order_bom(order)
+
+    context = {
+        "order": order,
+        "bom_materials": bom_materials.values() if bom_materials else [],
+        "total_bom_price": total_bom_price,
+        "recursive_bom_tree": recursive_bom_tree,
+    }
+    # We return just the BOM panes. We need to create a partial template for this.
+    return render(request, "industry_reforged/partials/quote_bom_panes.html", context)
 
 
 @login_required
@@ -684,6 +781,7 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 task = ProductionTask.objects.create(
                     item_type=eve_type,
                     quantity=quantity,
+                    activity_id=node.get("activity_id", 1),
                     status="UNCLAIMED",
                     created_from_order=order,
                     gamification_value=line_total,
@@ -696,6 +794,25 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
         for tree in recursive_bom_tree:
             build_tasks(tree, parent_task=None)
+
+        # Deduct used stock from the database
+        def deduct_db_stock(node):
+            qty = node.get("provided_from_stock", 0)
+            if qty > 0 and order.target_facility:
+                inv = CorpInventory.objects.filter(
+                    corporation_id=order.character.corporation_id,
+                    location_id=order.target_facility.facility_id,
+                    item_type_id=node["type_id"],
+                ).first()
+                if inv:
+                    inv.quantity = max(0, inv.quantity - qty)
+                    inv.save()
+
+            for sub in node.get("sub_materials", []):
+                deduct_db_stock(sub)
+
+        for tree in recursive_bom_tree:
+            deduct_db_stock(tree)
 
         # Discord Webhook Notification
         main_char = request.user.profile.main_character
@@ -862,6 +979,106 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         status="COMPLETED", assigned_to_id__in=user_characters
     ).order_by("-completed_at")[:10]
 
+    # Summary of claimed tasks vs active jobs
+    my_claimed_summary = []
+
+    # Django
+    from django.db.models import Sum
+
+    # Total Claimed (from ProductionTask)
+    claimed_grouped = (
+        ProductionTask.objects.filter(
+            status="IN_PRODUCTION", assigned_to_id__in=user_characters
+        )
+        .values("item_type__id", "item_type__name", "activity_id")
+        .annotate(total_quantity=Sum("quantity"))
+        .order_by("item_type__name")
+    )
+
+    if claimed_grouped:
+        # Third Party
+        from eveuniverse.models import EveIndustryActivityProduct
+
+        # Get active Character/Corp jobs for the user
+        char_jobs = CharacterIndustryJob.objects.filter(
+            character_id__in=user_characters, status__in=["active", "ready"]
+        )
+
+        # Determine all corp IDs for this user
+        corp_ids = request.user.character_ownerships.all().values_list(
+            "character__corporation_id", flat=True
+        )
+
+        corp_jobs = CorporationIndustryJob.objects.filter(
+            installer_id__in=user_characters,
+            status__in=["active", "ready"],
+            corporation__corporation_id__in=corp_ids,
+        )
+
+        # Calculate completed to be accurate
+        completed_grouped = (
+            ProductionTask.objects.filter(
+                status="COMPLETED", assigned_to_id__in=user_characters
+            )
+            .values("item_type__id")
+            .annotate(total_quantity=Sum("quantity"))
+        )
+        completed_dict = {
+            item["item_type__id"]: item["total_quantity"] for item in completed_grouped
+        }
+
+        # Mapping for activity_name
+        activity_name_map = {
+            1: "Manufacturing",
+            3: "Research TE",
+            4: "Research ME",
+            5: "Copying",
+            8: "Invention",
+            11: "Reactions",
+        }
+
+        for item in claimed_grouped:
+            type_id = item["item_type__id"]
+            activity_id = item["activity_id"]
+            activity_name = activity_name_map.get(
+                activity_id, f"Activity {activity_id}"
+            )
+
+            in_progress = 0
+
+            # Fetch portion size
+            portion_size = 1
+            bp_prod = EveIndustryActivityProduct.objects.filter(
+                product_eve_type_id=type_id, activity_id=activity_id
+            ).first()
+            if bp_prod:
+                portion_size = bp_prod.quantity
+
+            # Filter jobs matching the product
+            matching_char_jobs = [j for j in char_jobs if j.product_type_id == type_id]
+            matching_corp_jobs = [j for j in corp_jobs if j.product_type_id == type_id]
+
+            for j in matching_char_jobs:
+                in_progress += j.runs * portion_size
+            for j in matching_corp_jobs:
+                in_progress += j.runs * portion_size
+
+            total_claimed = item["total_quantity"]
+            completed = completed_dict.get(type_id, 0)
+            remaining = max(0, total_claimed - in_progress)
+
+            my_claimed_summary.append(
+                {
+                    "item_type_id": type_id,
+                    "item_type_name": item["item_type__name"],
+                    "activity_name": activity_name,
+                    "total_claimed": total_claimed,
+                    "in_progress": in_progress,
+                    "completed": completed,
+                    "remaining": remaining,
+                }
+            )
+
     # Active corp jobs (from ESI sync)
     user_corps = request.user.character_ownerships.all().values_list(
         "character__corporation_id", flat=True
@@ -905,6 +1122,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "my_tasks": my_tasks,
         "my_completed_tasks": my_completed_tasks,
         "corp_active_jobs": corp_active_jobs,
+        "my_claimed_summary": my_claimed_summary,
     }
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
 
@@ -955,6 +1173,74 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             )
         else:
             messages.error(request, _("Task is no longer available or does not exist."))
+
+    return redirect("industry_reforged:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.industrialist_access")
+def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
+    if request.method == "POST":
+        character = request.user.profile.main_character
+        if not character:
+            messages.error(
+                request, _("You must have a main character set to unclaim tasks.")
+            )
+            return redirect("industry_reforged:industrialist_dashboard")
+
+        task = ProductionTask.objects.filter(id=task_id, status="IN_PRODUCTION").first()
+        if not task:
+            messages.error(request, _("Task is no longer available or does not exist."))
+            return redirect("industry_reforged:industrialist_dashboard")
+
+        if task.assigned_to != character and not request.user.has_perm(
+            "industry_reforged.corp_access"
+        ):
+            messages.error(request, _("You can only unclaim your own tasks."))
+            return redirect("industry_reforged:industrialist_dashboard")
+
+        # AA Industry App
+        from industry_reforged.models import CorpPricingConfig
+
+        corp_info = None
+        if character.corporation:
+            corp_info = character.corporation
+        elif (
+            request.user.has_perm("industry_reforged.corp_access")
+            and request.user.profile.main_character.corporation
+        ):
+            corp_info = request.user.profile.main_character.corporation
+
+        pricing_config = (
+            CorpPricingConfig.objects.filter(corporation=corp_info).first()
+            if corp_info
+            else None
+        )
+        reward_pct = (
+            float(pricing_config.builder_reward_percent) if pricing_config else 0.0
+        )
+
+        def restore_owned_descendants(t, char, pct):
+            for child in t.bom_children.all():
+                if child.assigned_to == char and child.builder_reward == 0:
+                    child.builder_reward = (
+                        float(child.gamification_value) * pct
+                    ) / 100.0
+                    child.save(update_fields=["builder_reward"])
+                restore_owned_descendants(child, char, pct)
+
+        if task.assigned_to:
+            restore_owned_descendants(task, task.assigned_to, reward_pct)
+
+        task.status = "UNCLAIMED"
+        task.assigned_to = None
+        task.assigned_at = None
+        task.builder_reward = (float(task.gamification_value) * reward_pct) / 100.0
+        task.save()
+
+        messages.success(
+            request, f"Successfully unclaimed {task.quantity}x {task.item_type.name}."
+        )
 
     return redirect("industry_reforged:industrialist_dashboard")
 
@@ -1016,6 +1302,76 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
 
 @login_required
 @permission_required("industry_reforged.industrialist_access")
+def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
+    if request.method == "POST":
+        task_ids = request.POST.getlist("task_ids")
+
+        character = request.user.profile.main_character
+        if not character:
+            messages.error(
+                request, _("You must have a main character set to unclaim tasks.")
+            )
+            return redirect("industry_reforged:industrialist_dashboard")
+
+        tasks = ProductionTask.objects.filter(id__in=task_ids, status="IN_PRODUCTION")
+        if not request.user.has_perm("industry_reforged.corp_access"):
+            tasks = tasks.filter(assigned_to=character)
+
+        if tasks.exists():
+            count = 0
+            # AA Industry App
+            from industry_reforged.models import CorpPricingConfig
+
+            corp_info = None
+            if character.corporation:
+                corp_info = character.corporation
+            elif (
+                request.user.has_perm("industry_reforged.corp_access")
+                and request.user.profile.main_character.corporation
+            ):
+                corp_info = request.user.profile.main_character.corporation
+
+            pricing_config = (
+                CorpPricingConfig.objects.filter(corporation=corp_info).first()
+                if corp_info
+                else None
+            )
+            reward_pct = (
+                float(pricing_config.builder_reward_percent) if pricing_config else 0.0
+            )
+
+            def restore_owned_descendants(t, char, pct):
+                for child in t.bom_children.all():
+                    if child.assigned_to == char and child.builder_reward == 0:
+                        child.builder_reward = (
+                            float(child.gamification_value) * pct
+                        ) / 100.0
+                        child.save(update_fields=["builder_reward"])
+                    restore_owned_descendants(child, char, pct)
+
+            for task in tasks:
+                if task.assigned_to:
+                    restore_owned_descendants(task, task.assigned_to, reward_pct)
+                task.status = "UNCLAIMED"
+                task.assigned_to = None
+                task.assigned_at = None
+                task.builder_reward = (
+                    float(task.gamification_value) * reward_pct
+                ) / 100.0
+                task.save()
+                count += 1
+
+            messages.success(request, f"Successfully unclaimed {count} tasks.")
+        else:
+            messages.error(
+                request, _("No valid tasks selected or you do not own them.")
+            )
+
+    return redirect("industry_reforged:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
         user_characters = request.user.character_ownerships.all().values_list(
@@ -1026,18 +1382,16 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             id=task_id, assigned_to_id__in=user_characters, status="IN_PRODUCTION"
         ).first()
         if task:
-            if task.bom_children.exclude(status="COMPLETED").exists():
-                messages.error(
-                    request,
-                    _(
-                        "Cannot complete this task because one or more sub-tasks are not yet completed."
-                    ),
-                )
-                return redirect("industry_reforged:industrialist_dashboard")
 
-            task.status = "COMPLETED"
-            task.completed_at = timezone.now()
-            task.save()
+            def complete_tree(t):
+                if t.status != "COMPLETED":
+                    t.status = "COMPLETED"
+                    t.completed_at = timezone.now()
+                    t.save()
+                    for child in t.bom_children.exclude(status="COMPLETED"):
+                        complete_tree(child)
+
+            complete_tree(task)
 
             # Check if all tasks for the order are completed to update MemberOrder status
             if task.created_from_order:
@@ -1070,22 +1424,21 @@ def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
             id__in=task_ids, assigned_to_id__in=user_characters, status="IN_PRODUCTION"
         )
         if tasks.exists():
-            for task in tasks:
-                # Check if it has any incomplete children that are NOT in this bulk list
-                incomplete_children = task.bom_children.exclude(
-                    status="COMPLETED"
-                ).exclude(id__in=task_ids)
-                if incomplete_children.exists():
-                    messages.error(
-                        request,
-                        _(
-                            "Cannot complete {} because some sub-tasks are not completed and not selected."
-                        ).format(task.item_type.name),
-                    )
-                    return redirect("industry_reforged:industrialist_dashboard")
 
-            # Update all to completed
-            count = tasks.update(status="COMPLETED", completed_at=timezone.now())
+            def complete_tree(t):
+                completed_count = 0
+                if t.status != "COMPLETED":
+                    t.status = "COMPLETED"
+                    t.completed_at = timezone.now()
+                    t.save()
+                    completed_count += 1
+                    for child in t.bom_children.exclude(status="COMPLETED"):
+                        completed_count += complete_tree(child)
+                return completed_count
+
+            total_completed = 0
+            for task in tasks:
+                total_completed += complete_tree(task)
 
             # Check orders for completion
             for task in tasks:
@@ -1100,7 +1453,8 @@ def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
                         notify_order_ready(order)
 
             messages.success(
-                request, f"Successfully marked {count} tasks as completed."
+                request,
+                f"Successfully marked {total_completed} tasks (including sub-tasks) as completed.",
             )
         else:
             messages.error(
@@ -1242,7 +1596,7 @@ def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
                 )
         else:
             messages.error(request, "Order must be in READY state to be delivered.")
-    return redirect("industry_reforged:director_dashboard")
+    return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
 
 
 @login_required
@@ -1269,7 +1623,9 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
                     amount = order.total_price - order.amount_paid
             except (ValueError, TypeError, ArithmeticError):
                 messages.error(request, "Invalid amount provided.")
-                return redirect("industry_reforged:director_dashboard")
+                return redirect(
+                    reverse("industry_reforged:director_dashboard") + "#orders-pane"
+                )
 
             if amount > 0:
                 order.amount_paid += amount
@@ -1297,7 +1653,7 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
             )
         else:
             messages.error(request, "Order is already fully paid.")
-    return redirect("industry_reforged:director_dashboard")
+    return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
 
 
 @login_required
@@ -1327,7 +1683,9 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
             messages.warning(
                 request, f"No pending payouts found for {builder.character_name}."
             )
-            return redirect("industry_reforged:director_dashboard")
+            return redirect(
+                reverse("industry_reforged:director_dashboard") + "#payouts-pane"
+            )
 
         total_amount = tasks.aggregate(total=Sum("builder_reward"))["total"]
 
@@ -1343,7 +1701,9 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
             messages.error(
                 request, "You are not part of a corporation to create payouts."
             )
-            return redirect("industry_reforged:director_dashboard")
+            return redirect(
+                reverse("industry_reforged:director_dashboard") + "#payouts-pane"
+            )
 
         batch = BuilderPayoutBatch.objects.create(
             corporation=corporation,
@@ -1360,7 +1720,7 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
             f"Generated Payout Batch for {builder.character_name} with reference: {ref}",
         )
 
-    return redirect("industry_reforged:director_dashboard")
+    return redirect(reverse("industry_reforged:director_dashboard") + "#payouts-pane")
 
 
 @login_required
@@ -1380,7 +1740,7 @@ def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
             )
         else:
             messages.error(request, "Batch is already paid.")
-    return redirect("industry_reforged:director_dashboard")
+    return redirect(reverse("industry_reforged:director_dashboard") + "#payouts-pane")
 
 
 @login_required
@@ -1390,9 +1750,11 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     # Django
     from django.db.models import Sum
 
-    inventory = CorpInventory.objects.values(
-        "item_type__name", "item_type__id"
-    ).annotate(total_qty=Sum("quantity"))
+    inventory = (
+        CorpInventory.objects.filter(quantity__gt=0)
+        .values("item_type__name", "item_type__id")
+        .annotate(total_qty=Sum("quantity"))
+    )
 
     configs = CorpItemConfig.objects.filter(target_threshold__gt=0)
     low_stock = []
@@ -1411,10 +1773,27 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
                 }
             )
 
+    from .models import IndustryFacility
+
+    facilities = IndustryFacility.objects.filter(is_production_facility=True)
+    facility_inventories = []
+
+    for facility in facilities:
+        invs = (
+            CorpInventory.objects.filter(
+                location_id=facility.facility_id, quantity__gt=0
+            )
+            .values("item_type__name", "item_type__id")
+            .annotate(total_qty=Sum("quantity"))
+        )
+        if invs:
+            facility_inventories.append({"facility": facility, "inventory": invs})
+
     context = {
         "title": "Director Inventory & Analytics",
         "inventory": inventory,
         "low_stock": low_stock,
+        "facility_inventories": facility_inventories,
     }
     return render(request, "industry_reforged/director_inventory.html", context)
 
@@ -1437,8 +1816,11 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     )
     type_discounts = CorpTypeDiscount.objects.filter(config=pricing_config)
     tax_config, created_tax = TaxConfig.objects.get_or_create(corporation=corporation)
-    hangars = CorpHangarConfig.objects.filter(corporation=corporation)
     task_logs = TaskExecutionLog.objects.all().order_by("task_name")
+
+    from .models import IndustryFacility
+
+    facilities = IndustryFacility.objects.filter(is_production_facility=True)
 
     context = {
         "title": "Configurations",
@@ -1446,228 +1828,30 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "pricing_config": pricing_config,
         "type_discounts": type_discounts,
         "tax_config": tax_config,
-        "hangars": hangars,
         "task_logs": task_logs,
+        "facilities": facilities,
     }
     return render(request, "industry_reforged/director_config.html", context)
 
 
 @login_required
 @permission_required("industry_reforged.corp_access")
-def director_discover_hangars(request: WSGIRequest) -> HttpResponse:
-    """Tool to discover corporate hangars by scanning the first few pages of assets."""
+def director_config_structure_toggle(
+    request: WSGIRequest, facility_id: int
+) -> HttpResponse:
+    """Toggle the sync_inventory flag for an Industry Facility."""
+    # Django
+    from django.shortcuts import get_object_or_404
 
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
+    from .models import IndustryFacility
 
-    if not corporation:
-        messages.error(request, _("You are not part of a corporation."))
-        return redirect("industry_reforged:director_config")
+    facility = get_object_or_404(IndustryFacility, facility_id=facility_id)
+    facility.sync_inventory = not facility.sync_inventory
+    facility.save()
 
-    if request.method == "POST":
-        location_id = request.POST.get("location_id")
-        flag_id = request.POST.get("flag_id")
-        description = request.POST.get("description", f"Discovered Hangar {flag_id}")
-
-        if location_id and flag_id:
-            CorpHangarConfig.objects.get_or_create(
-                corporation=corporation,
-                location_id=int(location_id),
-                flag_id=flag_id,
-                defaults={"description": description},
-            )
-            messages.success(
-                request, f"Hangar {flag_id} at {location_id} added successfully."
-            )
-        return redirect("industry_reforged:director_discover_hangars")
-
-    sync_config = CorporationSyncConfig.objects.filter(corporation=corporation).first()
-    if not sync_config:
-        messages.warning(
-            request,
-            _(
-                "No corporate sync configuration found. Please add a corporate token first."
-            ),
-        )
-        return redirect("industry_reforged:director_config")
-
-    token = (
-        Token.objects.filter(
-            character_id=sync_config.sync_character.character_id,
-            scopes__name="esi-assets.read_corporation_assets.v1",
-        )
-        .filter(scopes__name="esi-corporations.read_structures.v1")
-        .order_by("-pk")
-        .first()
-    )
-
-    if not token:
-        messages.warning(
-            request,
-            _(
-                "Corporate sync character does not have the required asset and structure scopes. Please add a new corporate token."
-            ),
-        )
-        return redirect("industry_reforged:director_config")
-
-    # Standard Library
-    from collections import defaultdict
-
-    # Third Party
-    import requests
-
-    discovered_hangars = []
-
-    try:
-        hangar_counts = defaultdict(int)
-
-        # Use direct requests to avoid django-esi HTTPNotModified cache exceptions for dynamic views
-        headers = {
-            "Authorization": f"Bearer {token.valid_access_token()}",
-            "Accept": "application/json",
-        }
-
-        # Fetch first page to get total pages
-        url = f"https://esi.evetech.net/latest/corporations/{corporation.corporation_id}/assets/?datasource=tranquility&page=1"
-        response = requests.get(url, headers=headers)
-
-        if response.status_code == 200:
-            pages = int(response.headers.get("X-Pages", 1))
-            pages = min(pages, 50)  # Cap at 50 pages (50,000 items) to prevent timeouts
-
-            assets = response.json()
-            for asset in assets:
-                loc_id = asset.get("location_id")
-                flag = asset.get("location_flag", "")
-                if "Corp" in flag or "Deliveries" in flag or "Hangar" in flag:
-                    hangar_counts[(loc_id, flag)] += 1
-
-            # Fetch remaining pages
-            for page in range(2, pages + 1):
-                page_url = f"https://esi.evetech.net/latest/corporations/{corporation.corporation_id}/assets/?datasource=tranquility&page={page}"
-                page_resp = requests.get(page_url, headers=headers)
-                if page_resp.status_code == 200:
-                    for asset in page_resp.json():
-                        loc_id = asset.get("location_id")
-                        flag = asset.get("location_flag", "")
-                        if "Corp" in flag or "Deliveries" in flag or "Hangar" in flag:
-                            hangar_counts[(loc_id, flag)] += 1
-
-        # Fetch Corp Structures first for quick mapping
-        corp_str_map = {}
-        corp_str_url = f"https://esi.evetech.net/latest/corporations/{corporation.corporation_id}/structures/?datasource=tranquility"
-        corp_str_resp = requests.get(corp_str_url, headers=headers)
-        if corp_str_resp.status_code == 200:
-            for s in corp_str_resp.json():
-                corp_str_map[s.get("structure_id")] = s.get("name")
-
-        # Resolve names
-        location_names = {}
-        unique_locs = list({loc_id for loc_id, _ in hangar_counts.keys()})
-
-        for loc_id in unique_locs:
-            try:
-                if loc_id < 100000000:
-                    st_resp = requests.get(
-                        f"https://esi.evetech.net/latest/universe/stations/{loc_id}/?datasource=tranquility"
-                    )
-                    if st_resp.status_code == 200:
-                        location_names[loc_id] = st_resp.json().get("name", str(loc_id))
-                    else:
-                        location_names[loc_id] = f"Unknown Station ({loc_id})"
-                else:
-                    if loc_id in corp_str_map:
-                        location_names[loc_id] = corp_str_map[loc_id]
-                    else:
-                        str_resp = requests.get(
-                            f"https://esi.evetech.net/latest/universe/structures/{loc_id}/?datasource=tranquility",
-                            headers=headers,
-                        )
-                        if str_resp.status_code == 200:
-                            location_names[loc_id] = str_resp.json().get(
-                                "name", str(loc_id)
-                            )
-                        else:
-                            location_names[loc_id] = f"Unknown Structure ({loc_id})"
-            except Exception:
-                location_names[loc_id] = f"Unknown Location ({loc_id})"
-
-        # Check native IndustryFacility cache first
-        from .models import IndustryFacility
-
-        for loc_id, name in location_names.items():
-            if "Unknown" in name:
-                facility = IndustryFacility.objects.filter(facility_id=loc_id).first()
-                if facility:
-                    location_names[loc_id] = facility.name
-
-        # Fallback to corptools EveLocation if available
-        try:
-            # Django
-            from django.apps import apps
-
-            if apps.is_installed("corptools"):
-                # Third Party
-                from corptools.models import EveLocation
-
-                for loc_id, name in location_names.items():
-                    if "Unknown" in name:
-                        loc = EveLocation.objects.filter(location_id=loc_id).first()
-                        if loc:
-                            location_names[loc_id] = loc.location_name
-        except Exception:
-            pass
-
-        # Check which ones are already configured
-        configured = CorpHangarConfig.objects.filter(corporation=corporation)
-        configured_keys = {(c.location_id, c.flag_id) for c in configured}
-
-        for (loc_id, flag), count in hangar_counts.items():
-            discovered_hangars.append(
-                {
-                    "location_id": loc_id,
-                    "location_name": location_names.get(loc_id, str(loc_id)),
-                    "flag_id": flag,
-                    "item_count": count,
-                    "is_configured": (loc_id, flag) in configured_keys,
-                }
-            )
-
-        discovered_hangars.sort(key=lambda x: x["item_count"], reverse=True)
-
-    except Exception as e:
-        messages.error(
-            request, _("Failed to fetch assets via ESI: %(error)s") % {"error": e}
-        )
-
-    context = {"discovered_hangars": discovered_hangars}
-    return render(request, "industry_reforged/director_discover_hangars.html", context)
-
-
-@login_required
-@permission_required("industry_reforged.corp_access")
-def director_config_hangar_toggle(request: WSGIRequest, hangar_id: int) -> HttpResponse:
-    """Toggle a hangar's active status."""
-    from .models import CorpHangarConfig
-
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    if not corporation:
-        messages.error(request, _("You are not part of a corporation."))
-        return redirect("industry_reforged:director_config")
-
-    hangar = get_object_or_404(CorpHangarConfig, id=hangar_id, corporation=corporation)
-    hangar.is_active = not hangar.is_active
-    hangar.save()
-
-    status = _("activated") if hangar.is_active else _("disabled")
-    messages.success(
-        request,
-        _("Hangar %(name)s has been %(status)s.")
-        % {"name": hangar.description or hangar.flag_id, "status": status},
-    )
-    return redirect(reverse("industry_reforged:director_config") + "#hangars")
+    status = "enabled" if facility.sync_inventory else "disabled"
+    messages.success(request, f"Inventory sync for {facility.name} has been {status}.")
+    return redirect(reverse("industry_reforged:director_config") + "#facilities")
 
 
 @login_required
@@ -1918,3 +2102,202 @@ def director_config_tax_edit(request: WSGIRequest) -> HttpResponse:
             "back_hash": "#pricing",
         },
     )
+
+
+def get_corporate_structures_for_dropdown(corporation):
+    # Third Party
+    import requests
+
+    # Alliance Auth
+    from esi.models import Token
+
+    from .models import CorporationSyncConfig
+
+    if not corporation:
+        return []
+
+    sync_config = CorporationSyncConfig.objects.filter(corporation=corporation).first()
+    if not sync_config:
+        return []
+
+    token = Token.objects.filter(
+        character_id=sync_config.sync_character.character_id,
+        scopes__name="esi-corporations.read_structures.v1",
+    ).first()
+
+    if not token:
+        return []
+
+    url = f"https://esi.evetech.net/latest/corporations/{corporation.corporation_id}/structures/?datasource=tranquility"
+    headers = {
+        "Authorization": f"Bearer {token.valid_access_token()}",
+        "Accept": "application/json",
+    }
+    from .models import IndustryFacility
+
+    structures = []
+
+    production_facility_ids = set(
+        IndustryFacility.objects.filter(is_production_facility=True).values_list(
+            "facility_id", flat=True
+        )
+    )
+
+    # First, fetch from ESI (which gives us structures the corp actually owns/rents)
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            valid_types = {35825, 35826, 35827, 35832, 35833, 35835, 35836, 35834}
+            for st in resp.json():
+                if (
+                    st.get("type_id") in valid_types
+                    and st["structure_id"] not in production_facility_ids
+                ):
+                    structures.append(
+                        {
+                            "id": st["structure_id"],
+                            "name": st["name"],
+                            "type_id": st["type_id"],
+                            "system_id": st["system_id"],
+                        }
+                    )
+    except Exception:
+        pass
+
+    # Second, include any discovered non-production facilities
+    known_facility_ids = {s["id"] for s in structures}
+    for fac in IndustryFacility.objects.filter(is_production_facility=False):
+        if fac.facility_id not in known_facility_ids:
+            structures.append(
+                {
+                    "id": fac.facility_id,
+                    "name": fac.name,
+                    "type_id": fac.type_id or "",
+                    "system_id": fac.solar_system_id or "",
+                }
+            )
+            known_facility_ids.add(fac.facility_id)
+
+    return structures
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def add_facility(request: WSGIRequest) -> HttpResponse:
+    from .forms import IndustryFacilityForm, IndustryFacilityRigFormSet
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+    corp_structures = get_corporate_structures_for_dropdown(corporation)
+
+    if request.method == "POST":
+        # Check if the facility already exists in the database
+        facility_id = request.POST.get("facility_id")
+        instance = None
+        if facility_id:
+            from .models import IndustryFacility
+
+            try:
+                existing_facility = IndustryFacility.objects.get(pk=facility_id)
+                # Only use the instance if it's NOT already a production facility
+                if not existing_facility.is_production_facility:
+                    instance = existing_facility
+            except IndustryFacility.DoesNotExist:
+                pass
+
+        form = IndustryFacilityForm(request.POST, instance=instance)
+        if form.is_valid():
+            facility = form.save()
+            formset = IndustryFacilityRigFormSet(request.POST, instance=facility)
+            if formset.is_valid():
+                formset.save()
+                messages.success(request, _("Facility added successfully."))
+
+                # Automatically sync rigs in the background
+                from .tasks import sync_facility_rigs
+
+                sync_facility_rigs.delay()
+
+                return redirect(
+                    reverse("industry_reforged:director_config") + "#facilities"
+                )
+            else:
+                # If it was a pre-existing facility that we were updating, revert the flag.
+                # If it was a completely new facility, delete it.
+                if instance:
+                    facility.is_production_facility = False
+                    facility.save()
+                else:
+                    facility.delete()
+        else:
+            formset = IndustryFacilityRigFormSet(request.POST)
+    else:
+        form = IndustryFacilityForm()
+        formset = IndustryFacilityRigFormSet()
+
+    return render(
+        request,
+        "industry_reforged/manage_facility.html",
+        {
+            "form": form,
+            "formset": formset,
+            "corp_structures": corp_structures,
+            "title": _("Add Production Facility"),
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def edit_facility(request: WSGIRequest, facility_id: int) -> HttpResponse:
+    from .forms import IndustryFacilityForm, IndustryFacilityRigFormSet
+    from .models import IndustryFacility
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+    corp_structures = get_corporate_structures_for_dropdown(corporation)
+
+    facility = get_object_or_404(IndustryFacility, pk=facility_id)
+    if request.method == "POST":
+        form = IndustryFacilityForm(request.POST, instance=facility)
+        formset = IndustryFacilityRigFormSet(request.POST, instance=facility)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.success(request, _("Facility updated successfully."))
+
+            # Automatically sync rigs in the background
+            from .tasks import sync_facility_rigs
+
+            sync_facility_rigs.delay()
+
+            return redirect(
+                reverse("industry_reforged:director_config") + "#facilities"
+            )
+    else:
+        form = IndustryFacilityForm(instance=facility)
+        formset = IndustryFacilityRigFormSet(instance=facility)
+
+    return render(
+        request,
+        "industry_reforged/manage_facility.html",
+        {
+            "form": form,
+            "formset": formset,
+            "facility": facility,
+            "corp_structures": corp_structures,
+            "title": _("Edit Production Facility"),
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def delete_facility(request: WSGIRequest, facility_id: int) -> HttpResponse:
+    from .models import IndustryFacility
+
+    if request.method == "POST":
+        facility = get_object_or_404(IndustryFacility, pk=facility_id)
+        facility.delete()
+        messages.success(request, _("Facility deleted successfully."))
+    return redirect(reverse("industry_reforged:director_config") + "#facilities")

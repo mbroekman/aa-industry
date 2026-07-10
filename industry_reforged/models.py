@@ -32,12 +32,28 @@ class General(models.Model):
 
 
 class IndustryFacility(models.Model):
+    SECURITY_SPACE_CHOICES = (
+        ("HIGHSEC", "High Security (1.0 - 0.5)"),
+        ("LOWSEC", "Low Security (0.4 - 0.1)"),
+        ("NULLSEC_WH", "Null Security / Wormhole (0.0 - -1.0)"),
+    )
     facility_id = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=255)
     owner_id = models.IntegerField(null=True, blank=True)
     solar_system_id = models.IntegerField(null=True, blank=True)
     type_id = models.IntegerField(null=True, blank=True)
+    security_space = models.CharField(
+        max_length=15, choices=SECURITY_SPACE_CHOICES, default="HIGHSEC"
+    )
     last_updated = models.DateTimeField(auto_now=True)
+
+    sync_inventory = models.BooleanField(
+        default=False, help_text="Sync corporate inventory from this facility."
+    )
+    is_production_facility = models.BooleanField(
+        default=False,
+        help_text="Whether this facility is configured as a production facility.",
+    )
 
     class Meta:
         verbose_name = _("Industry Facility")
@@ -45,6 +61,64 @@ class IndustryFacility(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.facility_id})"
+
+    @property
+    def type_name(self):
+        names = {
+            35825: "Raitaru",
+            35826: "Azbel",
+            35827: "Sotiyo",
+            35832: "Athanor",
+            35833: "Tatara",
+            35835: "Astrahus",
+            35836: "Fortizar",
+            35834: "Keepstar",
+        }
+        return names.get(self.type_id, str(self.type_id))
+
+
+class IndustryRig(models.Model):
+    type_id = models.IntegerField(primary_key=True, help_text="EveType ID of the Rig")
+    name = models.CharField(max_length=255)
+    me_bonus = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.0,
+        help_text="Bonus as percentage (e.g. 2.0 for 2%)",
+    )
+    te_bonus = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.0,
+        help_text="Bonus as percentage (e.g. 20.0 for 20%)",
+    )
+    applies_to_groups = models.TextField(
+        help_text="Comma-separated list of EveGroup IDs this rig applies to. E.g. '419' for Battlecruisers",
+        blank=True,
+        null=True,
+    )
+    applies_to_categories = models.TextField(
+        help_text="Comma-separated list of EveCategory IDs this rig applies to. E.g. '6' for Ships",
+        blank=True,
+        null=True,
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class IndustryFacilityRig(models.Model):
+    facility = models.ForeignKey(
+        IndustryFacility, on_delete=models.CASCADE, related_name="rigs"
+    )
+    rig = models.ForeignKey(IndustryRig, on_delete=models.CASCADE)
+    installed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (("facility", "rig"),)
+
+    def __str__(self):
+        return f"{self.rig.name} at {self.facility.name}"
 
 
 class CharacterIndustryJob(models.Model):
@@ -254,6 +328,10 @@ class CharacterPlanet(models.Model):
         return any(pin.is_extractor and pin.is_expired for pin in self.pins.all())
 
     @property
+    def has_full_storage(self):
+        return any(pin.utilization_pct > 75 for pin in self.storage_pins)
+
+    @property
     def factory_summary(self):
         factories = [pin for pin in self.pins.all() if pin.is_factory]
         summary = {}
@@ -345,6 +423,11 @@ class PlanetPin(models.Model):
     schematic_id = models.IntegerField(null=True, blank=True)
     last_cycle_start = models.DateTimeField(null=True, blank=True)
 
+    # For storage & infrastructure
+    contents_volume = models.FloatField(default=0.0)
+    capacity = models.FloatField(default=0.0)
+    contents = models.JSONField(default=dict, blank=True)
+
     # Notifications
     notification_sent = models.BooleanField(default=False)
 
@@ -355,6 +438,12 @@ class PlanetPin(models.Model):
 
     def __str__(self):
         return f"Pin {self.pin_id} on {self.planet}"
+
+    @property
+    def utilization_pct(self):
+        if self.capacity and self.capacity > 0:
+            return min(100.0, (self.contents_volume / self.capacity) * 100.0)
+        return 0.0
 
     @property
     def is_extractor(self):
@@ -486,6 +575,14 @@ class MemberOrder(models.Model):
 
     character = models.ForeignKey(
         EveCharacter, on_delete=models.CASCADE, related_name="industry_orders"
+    )
+    target_facility = models.ForeignKey(
+        IndustryFacility,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="targeted_orders",
+        help_text="The facility where this order is planned to be built, used for quote calculation.",
     )
     status = models.CharField(
         max_length=20, choices=ORDER_STATUS_CHOICES, default="REQUESTED"
@@ -634,6 +731,7 @@ class ProductionTask(models.Model):
 
     item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     quantity = models.IntegerField(default=1)
+    activity_id = models.IntegerField(default=1)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="UNCLAIMED"
     )
@@ -699,6 +797,18 @@ class ProductionTask(models.Model):
         verbose_name = _("Production Task")
         verbose_name_plural = _("Production Tasks")
 
+    @property
+    def activity_name(self):
+        mapping = {
+            1: "Manufacturing",
+            3: "Research TE",
+            4: "Research ME",
+            5: "Copying",
+            8: "Invention",
+            11: "Reactions",
+        }
+        return mapping.get(self.activity_id, f"Activity {self.activity_id}")
+
     def __str__(self):
         return f"{self.quantity}x {self.item_type.name} for Job {self.id}"
 
@@ -744,6 +854,16 @@ class CorpItemConfig(models.Model):
         max_length=10, choices=BOM_CHOICES, default="FUZZWORK"
     )
 
+    exclude_from_orders = models.BooleanField(
+        default=False, help_text="Remove this item from member orders automatically."
+    )
+    exclude_warning_message = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Message to display to the user if this item is removed (e.g. 'Please acquire deadspace items yourself').",
+    )
+
     class Meta:
         verbose_name = _("Corp Item Config")
         verbose_name_plural = _("Corp Item Configs")
@@ -751,32 +871,6 @@ class CorpItemConfig(models.Model):
 
     def __str__(self):
         return f"Config for {self.item_type.name}"
-
-
-class CorpHangarConfig(models.Model):
-    corporation = models.ForeignKey(
-        EveCorporationInfo, on_delete=models.CASCADE, related_name="hangar_configs"
-    )
-    location_id = models.BigIntegerField(help_text="The station or structure ID")
-    flag_id = models.CharField(
-        max_length=50, help_text="The hangar flag ID (e.g. CorpSAG1)"
-    )
-    description = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="User friendly name for this hangar",
-    )
-    is_active = models.BooleanField(
-        default=True, help_text="Include this hangar in inventory syncs"
-    )
-
-    class Meta:
-        verbose_name = _("Corp Hangar Config")
-        verbose_name_plural = _("Corp Hangar Configs")
-
-    def __str__(self):
-        return f"{self.corporation.corporation_ticker} Hangar: {self.description or self.flag_id}"
 
 
 class CorpInventory(models.Model):
@@ -787,7 +881,6 @@ class CorpInventory(models.Model):
     quantity = models.BigIntegerField(default=0)
 
     location_id = models.BigIntegerField()
-    flag_id = models.CharField(max_length=50)
 
     manual_override = models.BooleanField(
         default=False, help_text="If true, ESI sync will not overwrite this quantity"
@@ -797,7 +890,7 @@ class CorpInventory(models.Model):
     class Meta:
         verbose_name = _("Corp Inventory")
         verbose_name_plural = _("Corp Inventories")
-        unique_together = (("corporation", "item_type"),)
+        unique_together = (("corporation", "item_type", "location_id"),)
 
     def __str__(self):
         return f"{self.quantity}x {self.item_type.name} in {self.corporation.corporation_ticker}"

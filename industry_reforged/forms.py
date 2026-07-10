@@ -5,9 +5,18 @@ from eveuniverse.models import EveType
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
+from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
-from .models import CorpItemConfig, CorpPricingConfig, CorpTypeDiscount, TaxConfig
+from .models import (
+    CorpItemConfig,
+    CorpPricingConfig,
+    CorpTypeDiscount,
+    IndustryFacility,
+    IndustryFacilityRig,
+    IndustryRig,
+    TaxConfig,
+)
 
 
 def resolve_eve_type(item_name: str) -> EveType:
@@ -64,6 +73,8 @@ class CorpItemConfigForm(forms.ModelForm):
             "auto_produce",
             "build_or_buy",
             "bom_source",
+            "exclude_from_orders",
+            "exclude_warning_message",
         ]
         widgets = {
             "manual_me": forms.NumberInput(attrs={"class": "form-control"}),
@@ -73,6 +84,15 @@ class CorpItemConfigForm(forms.ModelForm):
             "auto_produce": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "build_or_buy": forms.Select(attrs={"class": "form-select"}),
             "bom_source": forms.Select(attrs={"class": "form-select"}),
+            "exclude_from_orders": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "exclude_warning_message": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "E.g. Get deadspace items yourself",
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -169,3 +189,83 @@ class CorpTypeDiscountForm(forms.ModelForm):
 
             self.instance.eve_type = eve_type
         return cleaned_data
+
+
+class IndustryFacilityForm(forms.ModelForm):
+    FACILITY_TYPE_CHOICES = [
+        ("", "Select a facility type..."),
+        (35825, "Raitaru"),
+        (35826, "Azbel"),
+        (35827, "Sotiyo"),
+        (35832, "Athanor"),
+        (35833, "Tatara"),
+        (35835, "Astrahus"),
+        (35836, "Fortizar"),
+        (35834, "Keepstar"),
+    ]
+
+    type_id = forms.ChoiceField(
+        choices=FACILITY_TYPE_CHOICES,
+        required=True,
+        help_text=_("The type of Upwell structure"),
+    )
+
+    class Meta:
+        model = IndustryFacility
+        fields = ["facility_id", "name", "type_id", "solar_system_id"]
+        help_texts = {
+            "facility_id": _("The exact EVE Structure ID. Type manually."),
+            "name": _("A friendly name for this facility."),
+            "solar_system_id": _("Optional: EVE Solar System ID"),
+        }
+
+    def clean_type_id(self):
+        return int(self.cleaned_data["type_id"])
+
+    def clean(self):
+        cleaned_data = super().clean()
+        solar_system_id = cleaned_data.get("solar_system_id")
+        if solar_system_id:
+            # Third Party
+            import requests
+
+            try:
+                resp = requests.get(
+                    f"https://esi.evetech.net/latest/universe/systems/{solar_system_id}/?datasource=tranquility",
+                    timeout=5,
+                )
+                if resp.status_code == 200:
+                    sec = resp.json().get("security_status", 1.0)
+                    if sec >= 0.45:
+                        self.instance.security_space = "HIGHSEC"
+                        cleaned_data["security_space"] = "HIGHSEC"
+                    elif sec > 0.0:
+                        self.instance.security_space = "LOWSEC"
+                        cleaned_data["security_space"] = "LOWSEC"
+                    else:
+                        self.instance.security_space = "NULLSEC_WH"
+                        cleaned_data["security_space"] = "NULLSEC_WH"
+            except Exception:
+                pass
+
+        self.instance.is_production_facility = True
+        return cleaned_data
+
+
+class IndustryFacilityRigForm(forms.ModelForm):
+    class Meta:
+        model = IndustryFacilityRig
+        fields = ["rig"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["rig"].queryset = IndustryRig.objects.all().order_by("name")
+
+
+IndustryFacilityRigFormSet = inlineformset_factory(
+    IndustryFacility,
+    IndustryFacilityRig,
+    form=IndustryFacilityRigForm,
+    extra=1,
+    can_delete=True,
+)

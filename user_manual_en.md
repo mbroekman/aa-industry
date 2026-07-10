@@ -11,7 +11,7 @@ ______________________________________________________________________
 The Personal Dashboard is your primary hub for everything related to your personal EVE Online industry.
 
 - **My Industry Jobs**: View the live status of all your personal manufacturing and research jobs. Real-time countdown timers show exactly when a job will finish.
-- **Planetary Interaction (PI)**: Track the status of your PI planets. See at a glance if your extractor pins are still running or if your storage facilities are nearing maximum capacity.
+- **Planetary Interaction (PI)**: Track the status of your PI planets. See at a glance if your extractor pins are still running or view the real-time capacity and utilization of your Launchpads and Storage Facilities.
 - **Discord Notifications**: If your Discord account is linked in Alliance Auth, the plugin will automatically send you a Direct Message (DM) as soon as an industry job finishes or when a PI extractor expires/storage fills up.
 
 ### 1.2 Orders Dashboard & Ordering
@@ -75,7 +75,9 @@ The command center for the industrial backbone of the corporation.
 
 - **Global Configurations**: Set whether the corporation "Builds" (BUILD) or "Buys" (BUY) specific items.
 - Define manual ME/TE (Material/Time Efficiency) values and the desired threshold for "Low Stock Alerts" per item.
+- **Order Item Exclusion**: Directors can configure specific items (e.g. Deadspace or Faction modules) to be automatically stripped from member orders. When checking the "Exclude from orders" option in the Item Configuration, you can also provide a custom warning message. When a member attempts to order the excluded item via an EFT fit, it is automatically removed from their order and they are shown your warning message (e.g. "Please acquire deadspace items yourself in Jita").
 - **Tracked Hangars (Hangar Configurations)**: Before inventory can be synced, you must use "Discover Hangars" to instruct the plugin to scan your corporate assets. Discovered hangars will appear in the **Hangar Configurations** tab. To activate them for tracking in your Inventory and Low Stock Alerts, you must currently toggle them to *Active* via the Django Admin interface.
+- **Production Facilities**: The plugin automatically discovers registered corporate Upwell structures and private structures based on active jobs and assets. Directors can then explicitly configure these discovered structures as active **Production Facilities** via the "Add Facility" dropdown. The true security space of the facility (Highsec, Lowsec, Nullsec/W-Space) is automatically determined. Installed structure rigs are synchronized automatically in the background using ESI corporate assets, providing a centralized overview of your industrial footprint.
 - **System Health Monitor**: Track the real-time execution status of all Celery background tasks directly from the frontend. This tab provides insights into the success/failure state, execution duration, and full Python error logs for tasks like ESI synchronizations and PI notifications.
 
 ### 3.5 Django Admin Configurations (Pricing & Taxes)

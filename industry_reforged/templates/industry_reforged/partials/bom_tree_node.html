@@ -3,9 +3,19 @@
 <div class="bom-node border-start border-2 border-secondary ps-3 mb-2 mt-2">
     <div class="d-flex align-items-center justify-content-between p-2 rounded bg-dark" style="border: 1px solid rgba(255,255,255,0.05);">
         <div class="d-flex align-items-center">
-            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ node.type_id }}/icon?size=32" alt="{{ node.name }}" width="24" height="24" class="me-2 rounded">
+            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ node.type_id }}/bp?size=32';" src="https://images.evetech.net/types/{{ node.type_id }}/icon?size=32" alt="{{ node.name }}" width="24" height="24" class="me-2 rounded">
             <strong>{{ node.name }}</strong>
             <span class="ms-3 badge bg-secondary">{{ node.quantity|floatformat:0|intcomma }}</span>
+            {% if node.provided_from_stock and node.provided_from_stock > 0 %}
+                <span class="ms-2 badge bg-success" title="{% trans 'Sourced from inventory' %}">
+                    <i class="fas fa-box-open"></i> {{ node.provided_from_stock|floatformat:0|intcomma }} in stock
+                </span>
+            {% endif %}
+            {% if node.is_excluded %}
+                <span class="ms-2 badge bg-danger" title="{% trans 'Excluded from automated build tasks (must be supplied manually or from stock)' %}">
+                    <i class="fas fa-ban"></i> Excluded
+                </span>
+            {% endif %}
         </div>
 
         {% if node.sub_materials %}

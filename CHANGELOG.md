@@ -5,25 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.1.0b15] - 10-07-2026
 
 ### Added
 
-- **Native Structure Tracking**: Replaced external dependencies (`aa-structures`, `corptools`) with an internal `IndustryFacility` model and caching system. It automatically populates unknown structures from ESI using available corporate tokens, drastically speeding up dashboard loading times.
+- **Dynamic Blueprint Icons**: The Recursive BOM Tree and Raw Materials lists now dynamically display the correct blueprint image (`/bp`) for a component when the standard item icon is not available on the ESI image server.
+- **Facility Discovery Workflow**: Overhauled the Corporate Facilities system. The plugin now dynamically discovers corporate Upwell structures and private structures based on jobs and assets, storing them as known locations. Directors can then explicitly configure these discovered structures as active **Production Facilities**, automatically determining their true security space (Highsec, Lowsec, Nullsec).
+- **Planetary Interaction Storage**: Added visual progress bars and tooltips to the PI dashboard to track storage utilization (Launchpads and Storage Facilities) for all PI characters.
+- **Upwell Structure Names**: The Corporate Facilities list now displays the human-readable Upwell structure name (e.g., Athanor, Raitaru) instead of the raw EVE Type ID.
+- **Facility Rigs Auto-Sync**: Added an automated Celery background task (`sync_facility_rigs`) that fetches and syncs installed rigs for registered corporate facilities using ESI assets.
 - **Quote Notifications**: Directors providing a quote for an order will now automatically trigger a Discord Direct Message (DM) to the member who requested the order, alerting them that their quote is ready for review.
 - **Hangar Search Bar**: Added a quick search bar to the "Discover Corporate Hangars" page for easy filtering of locations and flag IDs.
 - **Wait Dialogs**: Added the global "Processing Request" loading overlay to the main dashboard links in the sidebar to prevent confusion during heavy data fetching.
 - **Order Options (Parsing)**: The Order Creation page now supports robust Regex parsing for freeform text (e.g. `20 drakes`) and EVE client Multibuy exports (e.g. `Drake 20`). The system also normalizes common English plurals (like "drakes" -> "drake", "batteries" -> "battery") before verifying with ESI to prevent unrecognized item errors.
 - **Member Tasks Filter**: Added a dropdown filter (Open Tasks Only / Completed Tasks Only / Show All) to dynamically toggle visibility of active and completed tasks on the Industrialist Dashboard.
+- **Order Item Exclusion**: Corp Directors can now configure specific items (e.g. Deadspace/Faction modules) via the Corporate Configuration frontend to be automatically stripped (excluded) from Member Orders. Members receive a customizable warning message explaining why the item was removed from their requested fit. The configuration table has also been upgraded with a search bar and sortable columns.
+- **Claimed Tasks Summary View**: Added a dedicated "Task Summary" tab to the Industrialist Dashboard. This view aggregates all claimed tasks by item type and compares them against live ESI industry jobs, showing exactly how many items are "In Progress" in EVE versus how many are still remaining to be started.
 - **Leaderboards**: Added DataTables search and sort functionality to the "My Completed Tasks History" table.
 
 ### Changed
 
 - **Character Selection**: Removed the manual character selection dropdown from the "Create Order" and "Claim Task" forms. The system now strictly defaults to the user's configured Main Character for all industry requests and job claims.
 - **Dashboard UI Improvements**: Unified the "My Active Production" and "My Completed Tasks" tables into a single card container on the Industrialist Dashboard, managed by client-side Javascript to save screen space.
+- **PI Storage Warning**: Lowered the threshold for the "Storage Almost Full" PI dashboard warning icon from 90% to 75% utilization to better align with the progress bar warning colors.
 
 ### Fixed
 
+- **System Health Logs**: Replaced the small Bootstrap popovers on the System Health tab with centered modals to prevent text clipping of large Python stack traces from failed Celery tasks.
+- **Dashboard State Preservation**: Fixed an issue on the Director Dashboard where actions in the Pending Payouts or Orders tabs would redirect the user back to the default tab. The dashboard now correctly uses URL fragments (e.g., `#payouts-pane`) and JavaScript to remember and reload the active tab state after an action.
+- **PI Storage Volumes**: Fixed an issue where ESI would return multiple duplicate stacks of the same item type inside a Planetary Storage facility. The tooltip now properly aggregates all identical item stacks before calculating the total volume, ensuring the UI values match the in-game volumes perfectly.
+- **ESI Pagination Bug**: Fixed a critical bug in `task_sync_corp_inventory` where only the first 1,000 corporate assets were fetched. It now properly uses pagination to sync all assets.
+- **Production Tree Layout**: Fixed a Bootstrap layout bug where the BOM and Details tabs would take up invisible vertical space, causing a large empty white gap above the Recursive Production Tree.
 - **PI Character Cards**: Fixed an issue where extraction-only (P0) planets would display an empty card without product icons. The system now correctly falls back to showing the extracted raw materials if no factories are present on a planet.
 - **Corptools Import Crash**: Hardened the `corptools` fallback check to use Django's `apps.is_installed()` to prevent 500 Server Errors when the package is installed in the python environment but not active in `INSTALLED_APPS`.
 - **Industrialist Dashboard**: Fixed a bug where clicking the "Select All" checkbox in the Job Market would incorrectly select hidden tasks that were filtered out by the search bar. The "Select All" action now correctly applies only to visible tasks.
