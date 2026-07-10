@@ -2,11 +2,11 @@
 from django.core.management.base import BaseCommand
 
 # AA Industry App
-from industry_reforged.models import MemberOrder, ProductionTask
+from industry_reforged.models import BuilderPayoutBatch, MemberOrder, ProductionTask
 
 
 class Command(BaseCommand):
-    help = "Wipes all industry MemberOrders and ProductionTasks. Use with caution!"
+    help = "Wipes all industry MemberOrders, ProductionTasks, and BuilderPayoutBatches. Use with caution!"
 
     def handle(self, *args, **options):
         self.stdout.write(
@@ -15,8 +15,9 @@ class Command(BaseCommand):
 
         order_count = MemberOrder.objects.count()
         task_count = ProductionTask.objects.count()
+        payout_count = BuilderPayoutBatch.objects.count()
 
-        if order_count == 0 and task_count == 0:
+        if order_count == 0 and task_count == 0 and payout_count == 0:
             self.stdout.write(
                 self.style.SUCCESS("Database is already clean. Nothing to delete.")
             )
@@ -34,6 +35,10 @@ class Command(BaseCommand):
             )
             ProductionTask.objects.all().delete()
 
+        if payout_count > 0:
+            self.stdout.write(f"Deleting {payout_count} BuilderPayoutBatches...")
+            BuilderPayoutBatch.objects.all().delete()
+
         self.stdout.write(
-            self.style.SUCCESS("Successfully wiped all old orders and tasks!")
+            self.style.SUCCESS("Successfully wiped all old orders, tasks, and payouts!")
         )

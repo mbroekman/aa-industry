@@ -1073,7 +1073,11 @@ def task_notify_expired_extractors():
                 pass
 
             if user:
-                planet_name = pin.planet.name
+                planet_name = (
+                    pin.planet.planet_type.name
+                    if pin.planet.planet_type
+                    else f"Planet {pin.planet.planet_id}"
+                )
                 char_name = pin.planet.character.character_name
                 message = f"Your PI Extractor on planet **{planet_name}** ({char_name}) has expired and stopped extracting. It's time to restart your extraction program!"
                 Notification.objects.notify_user(

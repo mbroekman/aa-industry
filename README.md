@@ -76,7 +76,6 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
    Update your database to include the new models.
 
    ```bash
-   python manage.py makemigrations
    python manage.py migrate
    ```
 
