@@ -38,6 +38,16 @@ urlpatterns = [
         name="provide_quote",
     ),
     path(
+        "orders/<int:order_id>/split/",
+        views.split_order,
+        name="split_order",
+    ),
+    path(
+        "orders/<int:order_id>/split-component/",
+        views.split_bom_component,
+        name="split_bom_component",
+    ),
+    path(
         "industrialist/", views.industrialist_dashboard, name="industrialist_dashboard"
     ),
     path("industrialist/claim/<int:task_id>/", views.claim_task, name="claim_task"),
@@ -115,12 +125,22 @@ urlpatterns = [
         name="director_config_item_delete",
     ),
     path(
-        "director/config/pricing/",
+        "director/config/pricing/add/",
+        views.director_config_pricing_edit,
+        name="director_config_pricing_add",
+    ),
+    path(
+        "director/config/pricing/<int:config_id>/edit/",
         views.director_config_pricing_edit,
         name="director_config_pricing_edit",
     ),
     path(
-        "director/config/tax/",
+        "director/config/tax/add/",
+        views.director_config_tax_edit,
+        name="director_config_tax_add",
+    ),
+    path(
+        "director/config/tax/<int:config_id>/edit/",
         views.director_config_tax_edit,
         name="director_config_tax_edit",
     ),

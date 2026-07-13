@@ -604,6 +604,15 @@ class MemberOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, null=True)
 
+    parent_order = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="child_orders",
+        help_text="If this order was split, this is the parent order.",
+    )
+
     payment_reference = models.CharField(
         max_length=50, unique=True, null=True, blank=True
     )
@@ -619,6 +628,14 @@ class MemberOrder(models.Model):
     @property
     def remaining_balance(self):
         return max(0, self.total_price - self.amount_paid)
+
+    @property
+    def grand_total(self):
+        """The sum of this order's total_price and all its child_orders' total_prices."""
+        total = self.total_price
+        for child in self.child_orders.all():
+            total += child.total_price
+        return total
 
     @property
     def progress_percent(self):

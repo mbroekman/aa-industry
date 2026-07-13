@@ -16,6 +16,11 @@
                     <i class="fas fa-box-open"></i> {{ node.provided_from_stock|floatformat:0|intcomma }} in stock
                 </span>
             {% endif %}
+            {% if node.provided_from_child_order and node.provided_from_child_order > 0 %}
+                <span class="ms-2 badge bg-info text-dark border border-info" title="{% trans 'Delegated to a Child Order' %}">
+                    <i class="fas fa-sitemap"></i> {{ node.provided_from_child_order|floatformat:0|intcomma }} from child order
+                </span>
+            {% endif %}
             {% if node.is_excluded %}
                 <span class="ms-2 badge bg-danger" title="{% trans 'Excluded from automated build tasks (must be supplied manually or from stock)' %}">
                     <i class="fas fa-ban"></i> Excluded
@@ -25,6 +30,11 @@
 
         {% if node.sub_materials %}
             <div>
+                {% if order and order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                <button type="button" class="btn btn-sm btn-outline-info me-2" onclick="openSplitComponentModal('{{ node.type_id }}', '{{ node.name|escapejs }}', {{ node.quantity|floatformat:0 }})" title="{% trans 'Split this component to a new Child Order' %}">
+                    <i class="fas fa-code-branch"></i> {% trans "Split" %}
+                </button>
+                {% endif %}
                 <a href="{% url 'industry_reforged:shopping_list' %}?type_id={{ node.type_id }}&quantity={{ node.quantity|floatformat:0 }}&item_name={{ node.name|urlencode }}" class="btn btn-sm btn-outline-warning me-2 show-loader" title="{% trans 'Shopping List for this component' %}">
                     <i class="fas fa-shopping-cart"></i>
                 </a>

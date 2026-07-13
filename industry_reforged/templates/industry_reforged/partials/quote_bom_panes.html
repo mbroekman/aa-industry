@@ -119,6 +119,8 @@
     </div>
     {% endif %}
 
+{% if perms.industry_reforged.corp_access and request.htmx %}
 <span id="quoteTotal-helper" class="text-warning fw-bold ms-2" hx-swap-oob="true">
     <i class="fas fa-coins"></i> {% trans "BOM Cost:" %} {{ total_bom_price|eve_isk_short }}
 </span>
+{% endif %}

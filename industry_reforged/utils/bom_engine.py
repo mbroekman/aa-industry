@@ -294,6 +294,7 @@ def get_recursive_bom_tree(
     stock_dict=None,
     corp_info=None,
     order=None,
+    child_supplied_dict=None,
 ):
     """
     Recursively fetch manufacturing materials to build a hierarchical BOM.
@@ -311,6 +312,19 @@ def get_recursive_bom_tree(
                 quantity -= available
                 stock_dict[type_id] = 0
 
+    provided_from_child_order = 0
+    if child_supplied_dict is not None and type_id in child_supplied_dict:
+        available = child_supplied_dict[type_id]
+        if available > 0:
+            if available >= quantity:
+                provided_from_child_order = quantity
+                child_supplied_dict[type_id] -= quantity
+                quantity = 0
+            else:
+                provided_from_child_order = available
+                quantity -= available
+                child_supplied_dict[type_id] = 0
+
     if depth > 15:  # Safety limit for recursion
         return {
             "type_id": type_id,
@@ -318,6 +332,7 @@ def get_recursive_bom_tree(
             "quantity": quantity,
             "base_quantity": quantity,
             "provided_from_stock": provided_from_stock,
+            "provided_from_child_order": provided_from_child_order,
             "activity_id": 1,
             "sub_materials": [],
         }
@@ -329,6 +344,7 @@ def get_recursive_bom_tree(
             "quantity": 0,
             "base_quantity": 0,
             "provided_from_stock": provided_from_stock,
+            "provided_from_child_order": provided_from_child_order,
             "activity_id": 1,
             "sub_materials": [],
         }
@@ -382,12 +398,26 @@ def get_recursive_bom_tree(
                         required_qty -= avail
                         stock_dict[mat_type_id] = 0
 
+            prov_child = 0
+            if child_supplied_dict is not None and mat_type_id in child_supplied_dict:
+                avail = child_supplied_dict[mat_type_id]
+                if avail > 0:
+                    if avail >= required_qty:
+                        prov_child = required_qty
+                        child_supplied_dict[mat_type_id] -= required_qty
+                        required_qty = 0
+                    else:
+                        prov_child = avail
+                        required_qty -= avail
+                        child_supplied_dict[mat_type_id] = 0
+
             sub_node = {
                 "type_id": mat_type_id,
                 "name": mat_name,
                 "quantity": required_qty,
                 "base_quantity": base_total,
                 "provided_from_stock": prov_stock,
+                "provided_from_child_order": prov_child,
                 "activity_id": 1,
                 "sub_materials": [],
                 "is_excluded": True,
@@ -403,6 +433,7 @@ def get_recursive_bom_tree(
                 stock_dict=stock_dict,
                 corp_info=corp_info,
                 order=order,
+                child_supplied_dict=child_supplied_dict,
             )
         sub_materials.append(sub_node)
 
@@ -479,6 +510,7 @@ def get_recursive_bom_tree(
         "quantity": quantity,
         "base_quantity": quantity,  # The root's quantity is the required quantity
         "provided_from_stock": provided_from_stock,
+        "provided_from_child_order": provided_from_child_order,
         "activity_id": 1,  # Manufacturing
         "sub_materials": sub_materials,
     }
@@ -510,6 +542,13 @@ def calculate_recursive_order_bom(order):
         )
         stock_dict = {inv.item_type_id: inv.quantity for inv in invs}
 
+    child_supplied_dict = {}
+    for child in order.child_orders.all():
+        for item in child.items.all():
+            child_supplied_dict[item.item_type.id] = (
+                child_supplied_dict.get(item.item_type.id, 0) + item.quantity
+            )
+
     tree = []
     for item in order.items.all():
         type_id = item.item_type.id
@@ -525,6 +564,7 @@ def calculate_recursive_order_bom(order):
             stock_dict=stock_dict,
             corp_info=corp_info,
             order=order,
+            child_supplied_dict=child_supplied_dict,
         )
         tree.append(node)
 

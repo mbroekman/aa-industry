@@ -5,13 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [0.1.0b17] - Unreleased
+## [0.1.0b17] - 13-07-2026
 
 ### Added
+
+- **Order Splitting (Sub-orders)**: Directors can now split an order into multiple sub-orders. This includes the ability to select specific ordered items to split off into a separate child order, as well as the ability to click on any sub-component in the BOM tree and spawn a dedicated sub-order for its production (e.g., manufacturing components at a different facility).
 - **Facility Rigs Auto-Seeding**: Added a data migration to automatically seed the database with the most common Upwell Structure rigs (e.g. Standup Ship/Equipment Manufacturing) so they are immediately available for external facility configuration.
+- **Discord Order Deletion Webhook**: When a user explicitly deletes an order, a notification is now sent to the corporation's designated Discord Webhook channel, allowing directors to be instantly informed of canceled orders.
 
 ### Changed
+
 - **Director Order Deletion**: Directors can now delete an order from the Corporate Panel at any stage (even if it has already been accepted). Doing so will now also explicitly delete and clean up all associated `ProductionTask` items generated for that order.
+- **Frontend Configurations**: All corporate business rules (Global Pricing, Type Discounts, Item Configs, System Taxes) have been completely removed from the Django Admin interface. They are now fully manageable directly from the frontend (Director Control Panel).
+- **Multi-Corporation Support**: The Director Control Panel now supports configuring business rules and discounts for *all* allied corporations in the system, not just the Director's own corporation.
+
+### Fixed
+
+- **Order Splitting UI for Normal Users**: Fixed a UI issue where split sub-orders were shown as separate technical blocks for normal end-users. The system now automatically merges all sub-order items back into the original Itemized Invoice table visually, providing a seamless experience for end-users while retaining sub-orders for directors.
+- **Proportional Custom Quote Pricing**: When a Director provides a custom total price for a quote, the system now automatically scales all individual line items' unit prices and line totals proportionally to match the exact custom total.
+- **Quote Validation Corp Scoping**: Fixed multiple bugs where the webhook notification and `calculate_quote` functions were incorrectly scoped to the viewing Director's corporation instead of the ordering Character's corporation.
+- **Leaderboard DataTables Error**: Fixed an `Incorrect column count` DataTables crash on the Industrialist Leaderboard that occurred when a user had no history items.
 
 ## [0.1.0b16] - 13-07-2026
 

@@ -80,13 +80,14 @@ The command center for the industrial backbone of the corporation.
 - **Production Facilities**: The plugin automatically discovers registered corporate Upwell structures and private structures based on active jobs and assets. Directors can then explicitly configure these discovered structures as active **Production Facilities** via the "Add Facility" dropdown. The true security space of the facility (Highsec, Lowsec, Nullsec/W-Space) is automatically determined. Installed structure rigs are synchronized automatically in the background using ESI corporate assets, providing a centralized overview of your industrial footprint.
 - **System Health Monitor**: Track the real-time execution status of all Celery background tasks directly from the frontend. This tab provides insights into the success/failure state, execution duration, and full Python error logs for tasks like ESI synchronizations and PI notifications.
 
-### 3.5 Django Admin Configurations (Pricing & Taxes)
+### 3.5 Corporate Configurations (Pricing & Taxes)
 
-Certain advanced configurations are currently managed strictly via the **Alliance Auth Admin Panel** (under `Industry Reforged`):
+All business and pricing rules are managed strictly via the **Director Control Panel -> Configurations** tab in the frontend. This allows you to set rules for all allied corporations without requiring Django Admin access:
 
-- **Corp Pricing Config**: Configure the default corporate discount percentage and the builder reward percentage for a specific corporation. You can also specify granular discounts per item category (e.g., ships vs. modules) via the "Corp Type Discounts" inline.
-- **Corp Item Config**: Manually override the Jita buy/sell price for specific items (highly useful for unique Faction items with erratic market histories).
-- **Tax Config**: Define the standard Industry Tax and Broker Fee percentages applicable to your corporation.
+- **Global Pricing**: Configure the default corporate discount percentage and the builder reward percentage per corporation.
+- **Type Discounts**: Specify granular discounts per item category (e.g., ships vs. modules) for specific corporations.
+- **Item Configurations**: Manually override the Jita buy/sell price for specific items (highly useful for unique Faction items with erratic market histories).
+- **System Taxes**: Define the standard Industry Tax and Broker Fee percentages applicable to your corporate production calculations.
 
 ### 3.6 Corporate Discord Webhooks
 
@@ -112,6 +113,6 @@ The calculation process follows these steps:
 
 1. **Blueprint Resolution**: When an item is requested, the system queries the local database to find the specific blueprint and the corresponding activity (e.g., Manufacturing or Reactions) required to produce it.
 1. **Yield & Run Calculation**: The system determines the base product yield per production run. It then divides the total requested quantity by this yield (rounding up) to calculate the exact number of production "runs" required.
-1. **Material Efficiency (ME) Application**: Before calculating the total material cost, the system checks if a Director has configured a "Manual ME" discount for that specific item via the `CorpItemConfig` in the Alliance Auth Admin panel.
+1. **Material Efficiency (ME) Application**: Before calculating the total material cost, the system checks if a Director has configured a "Manual ME" discount for that specific item via the **Item Configurations** tab in the Director Dashboard.
 1. **Material Requirements**: The system retrieves the raw list of required materials from the SDE and applies the standard EVE Online ME mathematical formula to calculate the exact amount of minerals, PI, or components needed.
 1. **Recursive Drilldown**: When generating a "Full Production Tree" in the user interface, the system recursively repeats this entire process for all intermediate components, allowing users to drill down all the way to the rawest base materials (e.g., Moon Goo or Minerals).

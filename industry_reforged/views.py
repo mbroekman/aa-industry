@@ -239,9 +239,9 @@ def orders_dashboard(request: WSGIRequest) -> HttpResponse:
         "character_id", flat=True
     )
 
-    orders = MemberOrder.objects.filter(character_id__in=user_characters).order_by(
-        "-created_at"
-    )
+    orders = MemberOrder.objects.filter(
+        character_id__in=user_characters, parent_order__isnull=True
+    ).order_by("-created_at")
 
     context = {"orders": orders, "title": "My Orders"}
     return render(request, "industry_reforged/orders_dashboard.html", context)
@@ -467,25 +467,25 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             )
         OrderItem.objects.bulk_create(order_items)
 
-        # Discord Webhook Notification
-        if corporation:
-            webhook_config = CorporationWebhookConfig.objects.filter(
-                corporation=corporation
-            ).first()
-            if webhook_config and webhook_config.directors_webhook:
-                embed = {
-                    "title": f"New Quote Requested: Order #{order.id}",
-                    "description": f"**{character.character_name}** has requested a quote.",
-                    "color": 3447003,  # Blue
-                    "fields": [
-                        {
-                            "name": "Total Quoted Price",
-                            "value": f"{total_price:,.2f} ISK",
-                            "inline": False,
-                        }
-                    ],
-                }
-                send_discord_webhook(webhook_config.directors_webhook, embed)
+        # Send to all configured webhooks in the system, since orders are global
+        webhook_configs = CorporationWebhookConfig.objects.all()
+        for config in webhook_configs:
+            embed = {
+                "title": f"New Quote Requested: Order #{order.id}",
+                "description": f"**{character.character_name}** has requested a quote.",
+                "color": 3447003,  # Blue
+                "fields": [
+                    {
+                        "name": "Total Estimated Price",
+                        "value": f"{total_price:,.2f} ISK",
+                        "inline": False,
+                    }
+                ],
+            }
+            if config.orders_webhook:
+                send_discord_webhook(config.orders_webhook, embed)
+            elif config.directors_webhook:
+                send_discord_webhook(config.directors_webhook, embed)
 
         messages.success(request, _("Order parsed and quoted successfully!"))
         return redirect("industry_reforged:view_quote", order_id=order.id)
@@ -521,9 +521,8 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     # If the order is still REQUESTED, we recalculate the quote dynamically
     # so that any new Item Configurations or Type Discounts are applied immediately.
     corp_info = None
-    main_char = request.user.profile.main_character
-    if main_char and main_char.corporation:
-        corp_info = main_char.corporation
+    if order.character and order.character.corporation:
+        corp_info = order.character.corporation
 
     if order.status == "REQUESTED":
         parsed_items = {item.item_type: item.quantity for item in order.items.all()}
@@ -607,9 +606,13 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 }
             )
 
+    is_privileged = request.user.has_perm(
+        "industry_reforged.corp_access"
+    ) or request.user.has_perm("industry_reforged.industrialist_access")
     context = {
         "title": f"Order #{order.id}",
         "order": order,
+        "display_child_orders": is_privileged,
         "bom_materials": bom_materials.values() if bom_materials else [],
         "total_bom_price": total_bom_price,
         "original_price": original_price,
@@ -654,8 +657,21 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             # Standard Library
             from decimal import Decimal
 
-            order.total_price = Decimal(str(new_total))
+            new_total_decimal = Decimal(str(new_total))
+
+            # Calculate proportion to scale individual items
+            old_total = sum(item.line_total for item in order.items.all())
+
+            order.total_price = new_total_decimal
             order.upfront_payment = upfront
+
+            if old_total > 0 and old_total != order.total_price:
+                ratio = float(order.total_price) / float(old_total)
+                for item in order.items.all():
+                    item.price_per_unit = Decimal(
+                        str(float(item.price_per_unit) * ratio)
+                    ).quantize(Decimal("0.01"))
+                    item.save(update_fields=["price_per_unit"])
 
             # Save Blueprint ME Overrides
             # Third Party
@@ -707,38 +723,331 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             order.save()
 
-            # Optionally send a Discord webhook notification here to inform the user
-            main_char = request.user.profile.main_character
-            corporation = main_char.corporation if main_char else None
-            if corporation:
-                webhook_config = CorporationWebhookConfig.objects.filter(
-                    corporation=corporation
-                ).first()
-                if webhook_config and webhook_config.orders_webhook:
-                    embed = {
-                        "title": f"Quote Provided: Order #{order.id}",
-                        "description": f"A quote of **{new_total:,.2f} ISK** has been provided for your order. Please review and accept.",
-                        "color": 3447003,  # Blue
-                    }
-                    send_discord_webhook(webhook_config.orders_webhook, embed)
+            # --- Check family quoting status ---
+            parent = order.parent_order if order.parent_order else order
 
-            # Send a direct message to the user who placed the order
-            from .tasks import notify_discord_user
+            family_unquoted = False
+            if parent.status == "REQUESTED":
+                family_unquoted = True
+            elif parent.child_orders.filter(status="REQUESTED").exists():
+                family_unquoted = True
 
-            dm_msg = f"**Industry Quote Received**\nYour order `#{order.id}` has been quoted for **{new_total:,.2f} ISK**. Please check the dashboard to accept or reject it."
-            notify_discord_user(order.character, dm_msg)
+            if not family_unquoted:
+                # Everyone is quoted, send ONE unified notification using the grand total
+                corporation = None
+                if parent.character and parent.character.corporation:
+                    corporation = parent.character.corporation
+
+                grand_total = parent.grand_total
+
+                if corporation:
+                    webhook_config = CorporationWebhookConfig.objects.filter(
+                        corporation=corporation
+                    ).first()
+                    if webhook_config and webhook_config.orders_webhook:
+                        embed = {
+                            "title": f"Quote Provided: Order #{parent.id}",
+                            "description": f"A quote of **{grand_total:,.2f} ISK** has been provided for your order. Please review and accept.",
+                            "color": 3447003,  # Blue
+                        }
+                        send_discord_webhook(webhook_config.orders_webhook, embed)
+
+                # Send a direct message to the user who placed the order
+                from .tasks import notify_discord_user
+
+                dm_msg = f"**Industry Quote Received**\nYour order `#{parent.id}` has been quoted for **{grand_total:,.2f} ISK**. Please check the dashboard to accept or reject it."
+                notify_discord_user(parent.character, dm_msg)
 
             messages.success(
                 request,
                 _("Quote of %(total)s ISK submitted successfully.")
                 % {"total": f"{new_total:,.2f}"},
             )
+            if family_unquoted:
+                messages.info(
+                    request,
+                    _(
+                        "Notification pending: other sub-orders in this group still require a quote."
+                    ),
+                )
         except ValueError:
             messages.error(request, _("Invalid price provided."))
 
-        return redirect("industry_reforged:view_quote", order_id=order.id)
-
+        redirect_id = order.parent_order.id if order.parent_order else order.id
+        return redirect("industry_reforged:view_quote", order_id=redirect_id)
     return redirect("industry_reforged:director_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def split_order(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Director splits specific items from an order into a new child order"""
+    if request.method == "POST":
+        order = MemberOrder.objects.filter(id=order_id, status="REQUESTED").first()
+        if not order:
+            messages.error(request, _("Order not found or is not in REQUESTED status."))
+            return redirect("industry_reforged:director_dashboard")
+
+        item_ids = request.POST.getlist("item_ids")
+        if not item_ids:
+            messages.error(request, _("No items selected for splitting."))
+            return redirect("industry_reforged:view_quote", order_id=order.id)
+
+        items_to_split = order.items.filter(id__in=item_ids)
+        if items_to_split.count() == order.items.count():
+            messages.error(
+                request,
+                _(
+                    "Cannot split all items from the order. Just change the facility instead."
+                ),
+            )
+            return redirect("industry_reforged:view_quote", order_id=order.id)
+
+        target_facility_id = request.POST.get("target_facility")
+        from .models import IndustryFacility
+
+        facility = None
+        if target_facility_id:
+            facility = IndustryFacility.objects.filter(
+                facility_id=target_facility_id
+            ).first()
+
+        # Ensure parent has a payment reference
+        # Django
+        from django.utils.crypto import get_random_string
+
+        if not order.payment_reference:
+            order.payment_reference = (
+                "ORD-"
+                + get_random_string(4).upper()
+                + "-"
+                + get_random_string(4).upper()
+            )
+            order.save(update_fields=["payment_reference"])
+
+        child_ref = (
+            "ORD-" + get_random_string(4).upper() + "-" + get_random_string(4).upper()
+        )
+
+        # Create child order
+        child_order = MemberOrder.objects.create(
+            character=order.character,
+            status="REQUESTED",
+            target_facility=facility,
+            parent_order=order,
+            payment_reference=child_ref,
+            notes=f"Split from Order #{order.id}",
+        )
+
+        # Move items
+        items_to_split.update(order=child_order)
+
+        # Recalculate estimated total price for both parent and child based on line_totals
+        parent_total = sum(item.line_total for item in order.items.all())
+        order.total_price = parent_total
+        order.save(update_fields=["total_price"])
+
+        child_total = sum(item.line_total for item in child_order.items.all())
+        child_order.total_price = child_total
+        child_order.save(update_fields=["total_price"])
+
+        messages.success(
+            request,
+            _("Order split successfully into Child Order #%(child_id)s.")
+            % {"child_id": child_order.id},
+        )
+
+    return redirect("industry_reforged:view_quote", order_id=order.id)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Director splits a specific sub-component from the BOM into a new child order"""
+    if request.method == "POST":
+        order = MemberOrder.objects.filter(id=order_id, status="REQUESTED").first()
+        if not order:
+            messages.error(request, _("Order not found or is not in REQUESTED status."))
+            return redirect("industry_reforged:director_dashboard")
+
+        type_id = request.POST.get("type_id")
+        quantity_str = request.POST.get("quantity")
+        target_facility_id = request.POST.get("target_facility")
+
+        if not type_id or not quantity_str:
+            messages.error(request, _("Invalid component selection."))
+            return redirect("industry_reforged:view_quote", order_id=order.id)
+
+        try:
+            quantity = int(quantity_str)
+        except ValueError:
+            messages.error(request, _("Invalid quantity."))
+            return redirect("industry_reforged:view_quote", order_id=order.id)
+
+        # Third Party
+        from eveuniverse.models import EveType
+
+        product_type = EveType.objects.filter(id=type_id).first()
+        if not product_type:
+            messages.error(request, _("Invalid EveType."))
+            return redirect("industry_reforged:view_quote", order_id=order.id)
+
+        from .models import IndustryFacility
+
+        facility = None
+        if target_facility_id:
+            facility = IndustryFacility.objects.filter(
+                facility_id=target_facility_id
+            ).first()
+
+        # Ensure parent has a payment reference
+        # Django
+        from django.utils.crypto import get_random_string
+
+        if not order.payment_reference:
+            order.payment_reference = (
+                "ORD-"
+                + get_random_string(4).upper()
+                + "-"
+                + get_random_string(4).upper()
+            )
+            order.save(update_fields=["payment_reference"])
+
+        child_ref = (
+            "ORD-" + get_random_string(4).upper() + "-" + get_random_string(4).upper()
+        )
+
+        # Create child order
+        child_order = MemberOrder.objects.create(
+            character=order.character,
+            status="REQUESTED",
+            target_facility=facility,
+            parent_order=order,
+            payment_reference=child_ref,
+            notes=f"Sub-component '{product_type.name}' split from Order #{order.id}",
+        )
+
+        from .models import CorpPricingConfig, CorpTypeDiscount
+
+        corp_id = order.character.corporation_id
+        pricing_config = CorpPricingConfig.objects.filter(
+            corporation__corporation_id=corp_id
+        ).first()
+
+        child_discount = (
+            pricing_config.default_discount_percent if pricing_config else 0.0
+        )
+        if pricing_config:
+            td = CorpTypeDiscount.objects.filter(
+                config=pricing_config, eve_type=product_type
+            ).first()
+            if td:
+                child_discount = td.discount_percent
+
+        # Create OrderItem on the child order
+        from .models import OrderItem
+
+        item = OrderItem.objects.create(
+            order=child_order,
+            item_type=product_type,
+            quantity=quantity,
+            discount_applied=child_discount,
+            price_per_unit=0,  # Will be set below
+            line_total=0,  # Will be calculated next
+        )
+
+        # Recalculate estimated total price for both parent and child
+        # This will now trigger the BOM engine which automatically deducts the child order's items
+        # from the parent's BOM.
+        # Alliance Auth
+        # Alliance Auth corp info
+        from allianceauth.eveonline.models import EveCorporationInfo
+
+        from .utils.bom_engine import calculate_order_bom
+        from .utils.pricing_engine import get_prices_with_overrides
+
+        try:
+            corp_info = EveCorporationInfo.objects.get(corporation_id=corp_id)
+        except Exception:
+            corp_info = None
+
+        # Child Total
+        child_bom = calculate_order_bom(child_order)
+        child_bom_price = 0
+        if child_bom:
+            mat_ids = list(child_bom.keys())
+            prices = get_prices_with_overrides(mat_ids, corp_info)
+            for mat_id, data in child_bom.items():
+                price = prices.get(mat_id, 0)
+                child_bom_price += price * data["quantity"]
+
+        # Apply discount
+        child_discount_multiplier = (100.0 - child_discount) / 100.0
+        child_discounted_price = child_bom_price * child_discount_multiplier
+
+        # Apply facility tax and corp tax to child
+        tax = 0.0
+        if child_order.target_facility:
+            tax = float(child_order.target_facility.tax_rate) / 100.0
+        child_tax_amount = child_discounted_price * tax
+        corp_tax = 0.0
+        child_corp_tax_amount = child_discounted_price * corp_tax
+
+        child_final = child_discounted_price + child_tax_amount + child_corp_tax_amount
+        child_order.total_price = child_final
+        child_order.save(update_fields=["total_price"])
+
+        item.price_per_unit = (child_final / quantity) if quantity > 0 else 0
+        item.line_total = child_final
+        item.save(update_fields=["price_per_unit", "line_total"])
+
+        # Parent Total
+        parent_bom = calculate_order_bom(order)
+        parent_bom_price = 0
+        if parent_bom:
+            mat_ids = list(parent_bom.keys())
+            prices = get_prices_with_overrides(mat_ids, corp_info)
+            for mat_id, data in parent_bom.items():
+                price = prices.get(mat_id, 0)
+                parent_bom_price += price * data["quantity"]
+
+        parent_discount = (
+            order.items.first().discount_applied
+            if order.items.exists()
+            else (pricing_config.default_discount_percent if pricing_config else 0.0)
+        )
+        parent_discount_multiplier = (100.0 - parent_discount) / 100.0
+        parent_discounted_price = parent_bom_price * parent_discount_multiplier
+
+        # Apply facility tax and corp tax to parent
+        tax = 0.0
+        if order.target_facility:
+            tax = float(order.target_facility.tax_rate) / 100.0
+        parent_tax_amount = parent_discounted_price * tax
+        parent_corp_tax_amount = parent_discounted_price * corp_tax
+
+        parent_final = (
+            parent_discounted_price + parent_tax_amount + parent_corp_tax_amount
+        )
+        order.total_price = parent_final
+        order.save(update_fields=["total_price"])
+
+        # Update line totals for parent (we just divide proportionally if multiple items)
+        if order.items.count() == 1:
+            i = order.items.first()
+            i.price_per_unit = (parent_final / i.quantity) if i.quantity > 0 else 0
+            i.line_total = parent_final
+            i.save(update_fields=["price_per_unit", "line_total"])
+
+        messages.success(
+            request,
+            _(
+                "Sub-component %(name)s split successfully into Child Order #%(child_id)s."
+            )
+            % {"name": product_type.name, "child_id": child_order.id},
+        )
+
+    return redirect("industry_reforged:view_quote", order_id=order.id)
 
 
 @login_required
@@ -766,13 +1075,12 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     bom_materials = calculate_order_bom(order)
 
     corp_info = None
-    main_char = request.user.profile.main_character
-    if main_char and main_char.corporation:
-        corp_info = main_char.corporation
+    if order.character and order.character.corporation:
+        corp_info = order.character.corporation
 
     recursive_bom_tree = calculate_recursive_order_bom(order)
 
-    from .pricing import get_prices_with_overrides
+    from .utils.pricing_engine import get_prices_with_overrides
 
     total_bom_price = 0
     if bom_materials:
@@ -856,99 +1164,104 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     ).first()
 
     if order:
-        order.status = "ACCEPTED"
+        orders_to_accept = [order] + list(order.child_orders.filter(status="QUOTED"))
 
-        order.accepted_at = timezone.now()
-        order.save()
+        for o in orders_to_accept:
+            o.status = "ACCEPTED"
+            o.accepted_at = timezone.now()
+            o.save()
 
-        # Get the corp config to calculate the reward value
-        pricing_config = None
-        if order.character.corporation:
-            pricing_config = CorpPricingConfig.objects.filter(
-                corporation=order.character.corporation
-            ).first()
+            # Get the corp config to calculate the reward value
+            pricing_config = None
+            if o.character.corporation:
+                pricing_config = CorpPricingConfig.objects.filter(
+                    corporation=o.character.corporation
+                ).first()
 
-        reward_percent = (
-            pricing_config.builder_reward_percent if pricing_config else 0.0
-        )
+            reward_percent = (
+                pricing_config.builder_reward_percent if pricing_config else 0.0
+            )
 
-        # Calculate full BOM tree
-        recursive_bom_tree = calculate_recursive_order_bom(order)
+            # Calculate full BOM tree
+            recursive_bom_tree = calculate_recursive_order_bom(o)
 
-        # Extract all unique type_ids for pricing
-        all_type_ids = set()
+            # Extract all unique type_ids for pricing
+            all_type_ids = set()
 
-        def extract_types(node):
-            all_type_ids.add(node["type_id"])
-            for sub in node.get("sub_materials", []):
-                extract_types(sub)
+            def extract_types(node):
+                all_type_ids.add(node["type_id"])
+                for sub in node.get("sub_materials", []):
+                    extract_types(sub)
 
-        for tree in recursive_bom_tree:
-            extract_types(tree)
+            for tree in recursive_bom_tree:
+                extract_types(tree)
 
-        # Get prices
-        corp_info = order.character.corporation if order.character else None
-        prices = get_prices_with_overrides(list(all_type_ids), corp_info)
+            # Get prices
+            corp_info = o.character.corporation if o.character else None
+            prices = get_prices_with_overrides(list(all_type_ids), corp_info)
 
-        # Third Party
-        from eveuniverse.models import EveType
+            # Third Party
+            from eveuniverse.models import EveType
 
-        eve_types = {t.id: t for t in EveType.objects.filter(id__in=list(all_type_ids))}
+            eve_types = {
+                t.id: t for t in EveType.objects.filter(id__in=list(all_type_ids))
+            }
 
-        # Recursive task creation
-        def build_tasks(node, parent_task=None):
-            # Only create a task if it has sub_materials (it's built)
-            if node.get("sub_materials"):
-                type_id = node["type_id"]
-                quantity = node["quantity"]
-                eve_type = eve_types.get(type_id)
-                if not eve_type:
-                    eve_type, _ = EveType.objects.get_or_create_esi(id=type_id)
-                    eve_types[type_id] = eve_type
+            # Recursive task creation
+            def build_tasks(node, parent_task=None):
+                # Only create a task if it has sub_materials (it's built)
+                if node.get("sub_materials"):
+                    type_id = node["type_id"]
+                    quantity = node["quantity"]
+                    eve_type = eve_types.get(type_id)
+                    if not eve_type:
+                        eve_type, _ = EveType.objects.get_or_create_esi(id=type_id)
+                        eve_types[type_id] = eve_type
 
-                price_per_unit = prices.get(type_id, 0)
-                line_total = float(price_per_unit) * quantity
-                task_reward_value = line_total * (reward_percent / 100.0)
+                    price_per_unit = prices.get(type_id, 0)
+                    line_total = float(price_per_unit) * quantity
+                    task_reward_value = line_total * (reward_percent / 100.0)
 
-                task = ProductionTask.objects.create(
-                    item_type=eve_type,
-                    quantity=quantity,
-                    activity_id=node.get("activity_id", 1),
-                    status="UNCLAIMED",
-                    created_from_order=order,
-                    gamification_value=line_total,
-                    builder_reward=task_reward_value,
-                    bom_parent=parent_task,
-                )
+                    task = ProductionTask.objects.create(
+                        item_type=eve_type,
+                        quantity=quantity,
+                        activity_id=node.get("activity_id", 1),
+                        status="UNCLAIMED",
+                        created_from_order=o,
+                        gamification_value=line_total,
+                        builder_reward=task_reward_value,
+                        bom_parent=parent_task,
+                    )
+
+                    for sub in node.get("sub_materials", []):
+                        build_tasks(sub, parent_task=task)
+
+            for tree in recursive_bom_tree:
+                build_tasks(tree, parent_task=None)
+
+            # Deduct used stock from the database
+            def deduct_db_stock(node):
+                qty = node.get("provided_from_stock", 0)
+                if qty > 0 and o.target_facility:
+                    inv = CorpInventory.objects.filter(
+                        corporation_id=o.character.corporation_id,
+                        location_id=o.target_facility.facility_id,
+                        item_type_id=node["type_id"],
+                    ).first()
+                    if inv:
+                        inv.quantity = max(0, inv.quantity - qty)
+                        inv.save()
 
                 for sub in node.get("sub_materials", []):
-                    build_tasks(sub, parent_task=task)
+                    deduct_db_stock(sub)
 
-        for tree in recursive_bom_tree:
-            build_tasks(tree, parent_task=None)
-
-        # Deduct used stock from the database
-        def deduct_db_stock(node):
-            qty = node.get("provided_from_stock", 0)
-            if qty > 0 and order.target_facility:
-                inv = CorpInventory.objects.filter(
-                    corporation_id=order.character.corporation_id,
-                    location_id=order.target_facility.facility_id,
-                    item_type_id=node["type_id"],
-                ).first()
-                if inv:
-                    inv.quantity = max(0, inv.quantity - qty)
-                    inv.save()
-
-            for sub in node.get("sub_materials", []):
-                deduct_db_stock(sub)
-
-        for tree in recursive_bom_tree:
-            deduct_db_stock(tree)
+            for tree in recursive_bom_tree:
+                deduct_db_stock(tree)
 
         # Discord Webhook Notification
-        main_char = request.user.profile.main_character
-        corporation = main_char.corporation if main_char else None
+        corporation = None
+        if order.character and order.character.corporation:
+            corporation = order.character.corporation
         if corporation:
             webhook_config = CorporationWebhookConfig.objects.filter(
                 corporation=corporation
@@ -982,12 +1295,15 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     ).first()
 
     if order:
-        order.status = "REJECTED"
-        order.save()
+        orders_to_reject = [order] + list(order.child_orders.filter(status="QUOTED"))
+        for o in orders_to_reject:
+            o.status = "REJECTED"
+            o.save()
 
         # Discord Webhook Notification
-        main_char = request.user.profile.main_character
-        corporation = main_char.corporation if main_char else None
+        corporation = None
+        if order.character and order.character.corporation:
+            corporation = order.character.corporation
         if corporation:
             webhook_config = CorporationWebhookConfig.objects.filter(
                 corporation=corporation
@@ -1024,9 +1340,111 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
         ).first()
 
     if order:
+        parent = order.parent_order
+
+        # Move OrderItems back to parent if this was a standard item split (not a component split)
+        # We can guess it's a component split if the parent's BOM would normally contain the child's items.
+        # But actually, it's safer to let component splits just be deleted (since the parent BOM recalculates them).
+        # Wait, if we just delete the child, the BOM engine naturally absorbs the components back.
+        # So we just need to recalculate the parent order's total price.
+
         # Delete related tasks explicitly since they have on_delete=models.SET_NULL
         ProductionTask.objects.filter(created_from_order=order).delete()
+
+        # Discord Webhook Notification
+        corporation = None
+        if order.character and order.character.corporation:
+            corporation = order.character.corporation
+        if corporation:
+            webhook_config = CorporationWebhookConfig.objects.filter(
+                corporation=corporation
+            ).first()
+            if webhook_config and webhook_config.orders_webhook:
+                main_char = request.user.profile.main_character
+                deleted_by_name = (
+                    main_char.character_name if main_char else request.user.username
+                )
+                embed = {
+                    "title": f"Order Deleted: #{order.id}",
+                    "description": f"**{order.character.character_name}**'s order was deleted by **{deleted_by_name}**.",
+                    "color": 15158332,  # Red
+                }
+                send_discord_webhook(webhook_config.orders_webhook, embed)
+
+        # If this is a child order created via Split Items, we should move the items back to the parent!
+        # How to distinguish? Component splits have a specific note: "Sub-component ... split from Order"
+        if parent and not order.notes.startswith("Sub-component"):
+            order.items.update(order=parent)
+
         order.delete()
+
+        # Recalculate parent if it exists
+        if parent:
+            # Alliance Auth
+            from allianceauth.eveonline.models import EveCorporationInfo
+
+            from .utils.bom_engine import calculate_order_bom
+            from .utils.pricing_engine import get_prices_with_overrides
+
+            try:
+                corp_info = EveCorporationInfo.objects.get(
+                    corporation_id=parent.character.corporation_id
+                )
+            except Exception:
+                corp_info = None
+
+            from .models import CorpPricingConfig
+
+            pricing_config = CorpPricingConfig.objects.filter(
+                corporation__corporation_id=parent.character.corporation_id
+            ).first()
+
+            parent_bom = calculate_order_bom(parent)
+            parent_bom_price = 0
+            if parent_bom:
+                mat_ids = list(parent_bom.keys())
+                prices = get_prices_with_overrides(mat_ids, corp_info)
+                for mat_id, data in parent_bom.items():
+                    price = prices.get(mat_id, 0)
+                    parent_bom_price += price * data["quantity"]
+
+            parent_discount = (
+                parent.items.first().discount_applied
+                if parent.items.exists()
+                else (
+                    pricing_config.default_discount_percent if pricing_config else 0.0
+                )
+            )
+            parent_discount_multiplier = (100.0 - parent_discount) / 100.0
+            parent_discounted_price = parent_bom_price * parent_discount_multiplier
+
+            tax = 0.0
+            if parent.target_facility:
+                tax = float(parent.target_facility.tax_rate) / 100.0
+            parent_tax_amount = parent_discounted_price * tax
+
+            corp_tax = 0.0
+            parent_corp_tax_amount = parent_discounted_price * corp_tax
+
+            parent_final = (
+                parent_discounted_price + parent_tax_amount + parent_corp_tax_amount
+            )
+            parent.total_price = parent_final
+
+            # If the parent was quoted, we might want to drop it back to requested since the scope changed,
+            # but let's just update the price for now so the director can review it.
+            if parent.status == "QUOTED":
+                parent.status = "REQUESTED"
+
+            parent.save(update_fields=["total_price", "status"])
+
+            # Update line totals for parent if only 1 item
+            if parent.items.count() == 1:
+                i = parent.items.first()
+                i.price_per_unit = (parent_final / i.quantity) if i.quantity > 0 else 0
+                i.line_total = parent_final
+                i.save(update_fields=["price_per_unit", "line_total"])
+
         messages.success(request, _("Order successfully deleted."))
     else:
         messages.error(
@@ -1665,7 +2083,9 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
     from .models import BuilderPayoutBatch
 
     # We show orders for characters in the director's corps
-    all_orders = MemberOrder.objects.all().order_by("-created_at")
+    all_orders = MemberOrder.objects.filter(parent_order__isnull=True).order_by(
+        "-created_at"
+    )
     all_tasks = ProductionTask.objects.all().order_by("-created_at")
 
     payout_tasks = (
@@ -1942,12 +2362,14 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         messages.error(request, _("You are not part of a corporation."))
         return redirect("industry_reforged:index")
 
-    item_configs = CorpItemConfig.objects.filter(corporation=corporation)
-    pricing_config, created = CorpPricingConfig.objects.get_or_create(
-        corporation=corporation
+    item_configs = CorpItemConfig.objects.all().select_related(
+        "corporation", "item_type"
     )
-    type_discounts = CorpTypeDiscount.objects.filter(config=pricing_config)
-    tax_config, created_tax = TaxConfig.objects.get_or_create(corporation=corporation)
+    pricing_configs = CorpPricingConfig.objects.all().select_related("corporation")
+    type_discounts = CorpTypeDiscount.objects.all().select_related(
+        "config__corporation", "eve_type"
+    )
+    tax_configs = TaxConfig.objects.all().select_related("corporation")
     task_logs = TaskExecutionLog.objects.all().order_by("task_name")
 
     from .models import IndustryFacility
@@ -1957,9 +2379,9 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     context = {
         "title": "Configurations",
         "configs": item_configs,
-        "pricing_config": pricing_config,
+        "pricing_configs": pricing_configs,
         "type_discounts": type_discounts,
-        "tax_config": tax_config,
+        "tax_configs": tax_configs,
         "task_logs": task_logs,
         "facilities": facilities,
     }
@@ -2053,19 +2475,10 @@ def director_config_item_edit(
 ) -> HttpResponse:
     from .models import CorpItemConfig
 
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    if not corporation:
-        messages.error(request, _("You are not part of a corporation."))
-        return redirect("industry_reforged:director_config")
-
     if config_id:
-        instance = get_object_or_404(
-            CorpItemConfig, id=config_id, corporation=corporation
-        )
+        instance = get_object_or_404(CorpItemConfig, id=config_id)
     else:
-        instance = CorpItemConfig(corporation=corporation)
+        instance = CorpItemConfig()
 
     if request.method == "POST":
         form = CorpItemConfigForm(request.POST, instance=instance)
@@ -2097,10 +2510,7 @@ def director_config_item_edit(
 def director_config_item_delete(request: WSGIRequest, config_id: int) -> HttpResponse:
     from .models import CorpItemConfig
 
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    config = get_object_or_404(CorpItemConfig, id=config_id, corporation=corporation)
+    config = get_object_or_404(CorpItemConfig, id=config_id)
     config.delete()
     messages.success(request, _("Item configuration deleted."))
     return redirect(reverse("industry_reforged:director_config") + "#items")
@@ -2108,15 +2518,13 @@ def director_config_item_delete(request: WSGIRequest, config_id: int) -> HttpRes
 
 @login_required
 @permission_required("industry_reforged.corp_access")
-def director_config_pricing_edit(request: WSGIRequest) -> HttpResponse:
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    if not corporation:
-        messages.error(request, _("You are not part of a corporation."))
-        return redirect("industry_reforged:director_config")
-
-    instance, created = CorpPricingConfig.objects.get_or_create(corporation=corporation)
+def director_config_pricing_edit(
+    request: WSGIRequest, config_id: int = None
+) -> HttpResponse:
+    if config_id:
+        instance = get_object_or_404(CorpPricingConfig, id=config_id)
+    else:
+        instance = CorpPricingConfig()
 
     if request.method == "POST":
         form = CorpPricingConfigForm(request.POST, instance=instance)
@@ -2131,7 +2539,11 @@ def director_config_pricing_edit(request: WSGIRequest) -> HttpResponse:
         request,
         "industry_reforged/director_config_form.html",
         {
-            "title": _("Edit Global Pricing Configuration"),
+            "title": (
+                _("Edit Corporation Pricing")
+                if config_id
+                else _("Add Corporation Pricing")
+            ),
             "form": form,
             "back_url": "industry_reforged:director_config",
             "back_hash": "#pricing",
@@ -2144,23 +2556,10 @@ def director_config_pricing_edit(request: WSGIRequest) -> HttpResponse:
 def director_config_discount_edit(
     request: WSGIRequest, discount_id: int = None
 ) -> HttpResponse:
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    if not corporation:
-        messages.error(request, _("You are not part of a corporation."))
-        return redirect("industry_reforged:director_config")
-
-    pricing_config, created = CorpPricingConfig.objects.get_or_create(
-        corporation=corporation
-    )
-
     if discount_id:
-        instance = get_object_or_404(
-            CorpTypeDiscount, id=discount_id, config=pricing_config
-        )
+        instance = get_object_or_404(CorpTypeDiscount, id=discount_id)
     else:
-        instance = CorpTypeDiscount(config=pricing_config)
+        instance = CorpTypeDiscount()
 
     if request.method == "POST":
         form = CorpTypeDiscountForm(request.POST, instance=instance)
@@ -2188,13 +2587,7 @@ def director_config_discount_edit(
 def director_config_discount_delete(
     request: WSGIRequest, discount_id: int
 ) -> HttpResponse:
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    pricing_config = get_object_or_404(CorpPricingConfig, corporation=corporation)
-    discount = get_object_or_404(
-        CorpTypeDiscount, id=discount_id, config=pricing_config
-    )
+    discount = get_object_or_404(CorpTypeDiscount, id=discount_id)
     discount.delete()
     messages.success(request, _("Type discount deleted."))
     return redirect(reverse("industry_reforged:director_config") + "#discounts")
@@ -2202,18 +2595,16 @@ def director_config_discount_delete(
 
 @login_required
 @permission_required("industry_reforged.corp_access")
-def director_config_tax_edit(request: WSGIRequest) -> HttpResponse:
+def director_config_tax_edit(
+    request: WSGIRequest, config_id: int = None
+) -> HttpResponse:
     from .forms import TaxConfigForm
     from .models import TaxConfig
 
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    if not corporation:
-        messages.error(request, _("You are not part of a corporation."))
-        return redirect("industry_reforged:director_config")
-
-    instance, created = TaxConfig.objects.get_or_create(corporation=corporation)
+    if config_id:
+        instance = get_object_or_404(TaxConfig, id=config_id)
+    else:
+        instance = TaxConfig()
 
     if request.method == "POST":
         form = TaxConfigForm(request.POST, instance=instance)
@@ -2228,7 +2619,7 @@ def director_config_tax_edit(request: WSGIRequest) -> HttpResponse:
         request,
         "industry_reforged/director_config_form.html",
         {
-            "title": _("Edit System Taxes"),
+            "title": _("Edit System Taxes") if config_id else _("Add System Taxes"),
             "form": form,
             "back_url": "industry_reforged:director_config",
             "back_hash": "#pricing",

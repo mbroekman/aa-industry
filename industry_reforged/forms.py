@@ -65,6 +65,7 @@ class CorpItemConfigForm(forms.ModelForm):
     class Meta:
         model = CorpItemConfig
         fields = [
+            "corporation",
             "item_name",
             "manual_me",
             "manual_te",
@@ -76,6 +77,7 @@ class CorpItemConfigForm(forms.ModelForm):
             "exclude_warning_message",
         ]
         widgets = {
+            "corporation": forms.Select(attrs={"class": "form-select"}),
             "manual_me": forms.NumberInput(attrs={"class": "form-control"}),
             "manual_te": forms.NumberInput(attrs={"class": "form-control"}),
             "manual_price": forms.NumberInput(attrs={"class": "form-control"}),
@@ -95,8 +97,10 @@ class CorpItemConfigForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.item_type:
-            self.fields["item_name"].initial = self.instance.item_type.name
+        if self.instance and self.instance.pk:
+            self.fields["corporation"].disabled = True
+            if self.instance.item_type:
+                self.fields["item_name"].initial = self.instance.item_type.name
 
     def clean(self):
         cleaned_data = super().clean()
@@ -122,12 +126,14 @@ class CorpPricingConfigForm(forms.ModelForm):
     class Meta:
         model = CorpPricingConfig
         fields = [
+            "corporation",
             "default_discount_percent",
             "builder_reward_percent",
             "default_t1_me",
             "default_t2_me",
         ]
         widgets = {
+            "corporation": forms.Select(attrs={"class": "form-select"}),
             "default_discount_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
@@ -142,12 +148,18 @@ class CorpPricingConfigForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["corporation"].disabled = True
+
 
 class TaxConfigForm(forms.ModelForm):
     class Meta:
         model = TaxConfig
-        fields = ["industry_tax_rate", "broker_fee_rate"]
+        fields = ["corporation", "industry_tax_rate", "broker_fee_rate"]
         widgets = {
+            "corporation": forms.Select(attrs={"class": "form-select"}),
             "industry_tax_rate": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
@@ -155,6 +167,11 @@ class TaxConfigForm(forms.ModelForm):
                 attrs={"class": "form-control", "step": "0.1"}
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["corporation"].disabled = True
 
 
 class CorpTypeDiscountForm(forms.ModelForm):
@@ -168,8 +185,9 @@ class CorpTypeDiscountForm(forms.ModelForm):
 
     class Meta:
         model = CorpTypeDiscount
-        fields = ["item_name", "discount_percent"]
+        fields = ["config", "item_name", "discount_percent"]
         widgets = {
+            "config": forms.Select(attrs={"class": "form-select"}),
             "discount_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
@@ -177,8 +195,14 @@ class CorpTypeDiscountForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.eve_type:
-            self.fields["item_name"].initial = self.instance.eve_type.name
+        # Display the corporation name for the config instead of "CorpPricingConfig object"
+        self.fields["config"].label_from_instance = (
+            lambda obj: obj.corporation.corporation_name
+        )
+        if self.instance and self.instance.pk:
+            self.fields["config"].disabled = True
+            if self.instance.eve_type:
+                self.fields["item_name"].initial = self.instance.eve_type.name
 
     def clean(self):
         cleaned_data = super().clean()

@@ -68,6 +68,51 @@
                 </div>
                 <div class="card-body">
                     <p class="text-white">{% trans "Review the order details and the estimated BOM cost, then provide a final quote." %}</p>
+
+                    {% if order.child_orders.exists or order.parent_order %}
+                    <div class="alert alert-secondary mb-4 border-secondary text-white" style="background-color: rgba(255,255,255,0.05);">
+                        <h5 class="alert-heading text-info"><i class="fas fa-network-wired"></i> {% trans "Order Family Overview" %}</h5>
+                        <p class="mb-2">{% trans "This order is part of a larger production group. The final unified quote sent to the customer will be the sum of all orders in this group:" %} <strong class="text-warning">{% if order.parent_order %}{{ order.parent_order.grand_total|eve_isk }}{% else %}{{ order.grand_total|eve_isk }}{% endif %}</strong></p>
+
+                        {% with family_parent=order.parent_order|default:order %}
+                        <div class="list-group list-group-flush border border-secondary rounded">
+                            <div class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center {% if order == family_parent %}border-warning border-start border-start-5{% endif %}">
+                                <div>
+                                    <i class="fas fa-box text-muted me-2"></i> <strong>{% trans "Parent Order" %} #{{ family_parent.id }}</strong>
+                                    {% for item in family_parent.items.all %}
+                                        <span class="badge bg-secondary ms-1">{{ item.item_type.name }}</span>
+                                    {% endfor %}
+                                    <span class="ms-2 badge {% if family_parent.status == 'REQUESTED' %}bg-secondary{% else %}bg-primary{% endif %}">{{ family_parent.get_status_display }}</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="text-warning fw-bold me-3">{{ family_parent.total_price|eve_isk }}</span>
+                                    {% if order != family_parent %}
+                                        <a href="{% url 'industry_reforged:view_quote' family_parent.id %}" class="btn btn-sm btn-outline-info show-loader"><i class="fas fa-external-link-alt"></i> {% trans "View" %}</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% for child in family_parent.child_orders.all %}
+                            <div class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center ps-5 {% if order == child %}border-warning border-start border-start-5{% endif %}">
+                                <div>
+                                    <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2"></i> {% trans "Child Order" %} #{{ child.id }}
+                                    {% for item in child.items.all %}
+                                        <span class="badge bg-secondary ms-1">{{ item.item_type.name }}</span>
+                                    {% endfor %}
+                                    <span class="ms-2 badge {% if child.status == 'REQUESTED' %}bg-secondary{% else %}bg-primary{% endif %}">{{ child.get_status_display }}</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="text-warning fw-bold me-3" style="opacity: 0.8;">{{ child.total_price|eve_isk }}</span>
+                                    {% if order != child %}
+                                        <a href="{% url 'industry_reforged:view_quote' child.id %}" class="btn btn-sm btn-outline-info show-loader"><i class="fas fa-external-link-alt"></i> {% trans "View" %}</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+
                     <form id="quoteForm" method="post" action="{% url 'industry_reforged:provide_quote' order.id %}" class="row gx-3 gy-2 align-items-center">
                         {% csrf_token %}
                         <div class="col-sm-3">
@@ -155,9 +200,18 @@
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-responsive">
+                                        {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                        <form method="post" action="{% url 'industry_reforged:split_order' order.id %}">
+                                            {% csrf_token %}
+                                        {% endif %}
                                         <table class="table table-striped m-0">
                                             <thead>
                                                 <tr>
+                                                    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                                    <th width="40" class="text-center">
+                                                        <input class="form-check-input" type="checkbox" id="selectAllSplitItems">
+                                                    </th>
+                                                    {% endif %}
                                                     <th>{% trans "Item" %}</th>
                                                     <th class="text-end">{% trans "Quantity" %}</th>
                                                     <th class="text-end">{% trans "Discount" %}</th>
@@ -168,6 +222,11 @@
                                         <tbody>
                                             {% for item in order.items.all %}
                                             <tr>
+                                                {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                                <td class="text-center align-middle">
+                                                    <input class="form-check-input split-item-checkbox" type="checkbox" name="item_ids" value="{{ item.id }}">
+                                                </td>
+                                                {% endif %}
                                                 <td>
                                                     <div class="d-flex align-items-center">
                                                         <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
@@ -191,7 +250,48 @@
                                                 <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
                                             </tr>
                                             {% empty %}
-                                            <tr><td colspan="5" class="text-center">No items found.</td></tr>
+                                            {% if not order.child_orders.exists %}
+                                                <tr><td colspan="6" class="text-center">No items found in parent.</td></tr>
+                                            {% endif %}
+                                            {% endfor %}
+
+                                            {% for child in order.child_orders.all %}
+                                                {% for item in child.items.all %}
+                                                <tr {% if perms.industry_reforged.corp_access %}style="opacity: 0.85;"{% endif %}>
+                                                    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                                    <td class="text-center align-middle">
+                                                        <!-- Cannot split an item that is already in a suborder -->
+                                                    </td>
+                                                    {% endif %}
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            {% if perms.industry_reforged.corp_access %}
+                                                                <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2 ms-2"></i>
+                                                            {% endif %}
+                                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                            <span>{{ item.item_type.name }}</span>
+                                                            {% if perms.industry_reforged.corp_access %}
+                                                                <span class="badge bg-secondary ms-2 small">Sub-order #{{ child.id }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end numeric">{{ item.quantity }}</td>
+                                                    <td class="text-end numeric">
+                                                        {% if item.discount_applied > 0 %}
+                                                            <span class="text-success">{{ item.discount_applied }}%</span>
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-end numeric">
+                                                        {% if item.discount_applied > 0 %}
+                                                            <del class="text-muted small">{{ item.original_price_per_unit|eve_isk }}</del><br>
+                                                        {% endif %}
+                                                        {{ item.price_per_unit|eve_isk }}
+                                                    </td>
+                                                    <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
+                                                </tr>
+                                                {% endfor %}
                                             {% endfor %}
                                         </tbody>
                                         <tfoot>
@@ -207,13 +307,124 @@
                                             {% endif %}
                                             <tr>
                                                 <th colspan="4" class="text-end fs-4">{% trans "Current Quote Total:" %}</th>
-                                                <th class="text-end fs-4 text-warning numeric">{{ order.total_price|eve_isk }}</th>
+                                                <th class="text-end fs-4 text-warning numeric">{{ order.grand_total|eve_isk }}</th>
                                             </tr>
                                         </tfoot>
+                                        </table>
+                                        {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                        <div class="p-3 bg-dark border-top border-secondary d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                <select name="target_facility" class="form-select bg-secondary text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                                                    <option value="">-- {% trans "Default / No Facility" %} --</option>
+                                                    {% for fac in facilities %}
+                                                    <option value="{{ fac.facility_id }}">{{ fac.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button type="submit" class="btn btn-warning btn-sm" id="splitOrderBtn" disabled><i class="fas fa-cut"></i> {% trans "Split to new Order" %}</button>
+                                            </div>
+                                            <small class="text-muted">{% trans "Select items to split them into a new Child Order." %}</small>
+                                        </div>
+                                        </form>
+
+                                        <script>
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                const selectAll = document.getElementById('selectAllSplitItems');
+                                                const itemCheckboxes = document.querySelectorAll('.split-item-checkbox');
+                                                const splitBtn = document.getElementById('splitOrderBtn');
+
+                                                function updateBtnState() {
+                                                    const anyChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
+                                                    if(splitBtn) splitBtn.disabled = !anyChecked;
+                                                }
+
+                                                if (selectAll) {
+                                                    selectAll.addEventListener('change', function() {
+                                                        itemCheckboxes.forEach(cb => cb.checked = this.checked);
+                                                        updateBtnState();
+                                                    });
+                                                }
+
+                                                itemCheckboxes.forEach(cb => {
+                                                    cb.addEventListener('change', updateBtnState);
+                                                });
+                                            });
+                                        </script>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if display_child_orders and order.child_orders.exists %}
+                            {% for child in order.child_orders.all %}
+                            <div class="card border-0 mt-4">
+                                <div class="card-header bg-secondary">
+                                    <h3 class="card-title text-white"><i class="fas fa-level-up-alt fa-rotate-90"></i> {% trans "Split Order #" %}{{ child.id }}</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>{% trans "Item" %}</th>
+                                                    <th class="text-end">{% trans "Quantity" %}</th>
+                                                    <th class="text-end">{% trans "Discount" %}</th>
+                                                    <th class="text-end">{% trans "Unit Price" %}</th>
+                                                    <th class="text-end">{% trans "Total" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in child.items.all %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                            <span>{{ item.item_type.name }}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end numeric">{{ item.quantity }}</td>
+                                                    <td class="text-end numeric">
+                                                        {% if item.discount_applied > 0 %}
+                                                            <span class="text-success">{{ item.discount_applied }}%</span>
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-end numeric">
+                                                        {% if item.discount_applied > 0 %}
+                                                            <del class="text-muted small">{{ item.original_price_per_unit|eve_isk }}</del><br>
+                                                        {% endif %}
+                                                        {{ item.price_per_unit|eve_isk }}
+                                                    </td>
+                                                    <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr><td colspan="5" class="text-center">No items found.</td></tr>
+                                                {% endfor %}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th colspan="4" class="text-end fs-5">{% trans "Target Facility:" %}</th>
+                                                    <th class="text-end fs-5 text-info">{% if child.target_facility %}{{ child.target_facility.name }}{% else %}{% trans "Default" %}{% endif %}</th>
+                                                </tr>
+                                                <tr>
+                                                    <th colspan="4" class="text-end fs-5">{% trans "Child Order Total:" %}</th>
+                                                    <th class="text-end fs-5 text-warning numeric">{{ child.total_price|eve_isk }}</th>
+                                                </tr>
+                                            </tfoot>
                                         </table>
                                     </div>
                                 </div>
                             </div>
+                            {% endfor %}
+
+                            <div class="card border-0 bg-dark mt-4 border-warning">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <h3 class="mb-0 text-white">{% trans "Grand Total (All Orders):" %}</h3>
+                                    <h3 class="mb-0 text-warning numeric fw-bold">{{ order.grand_total|eve_isk }}</h3>
+                                </div>
+                            </div>
+                            {% endif %}
+
                         </div>
                         <div class="col-md-4 mb-4">
                             <div class="card border-0 bg-dark h-100">
@@ -473,6 +684,59 @@
             overlay.style.setProperty('display', 'none', 'important');
             btn.disabled = false;
         }, 50);
+    }
+</script>
+
+<!-- Split Component Modal -->
+<div class="modal fade" id="splitComponentModal" tabindex="-1" aria-labelledby="splitComponentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="{% url 'industry_reforged:split_bom_component' order.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="type_id" id="split_type_id">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="splitComponentModalLabel">{% trans "Split Sub-Component" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{% trans "You are splitting the following component into its own Child Order. It will be removed from the Parent Order's BOM calculation." %}</p>
+                    <h4 id="split_component_name" class="text-info mb-3"></h4>
+
+                    <div class="mb-3">
+                        <label for="split_quantity" class="form-label">{% trans "Quantity to Split" %}</label>
+                        <input type="number" class="form-control" name="quantity" id="split_quantity" min="1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="split_target_facility" class="form-label">{% trans "Target Facility for Child Order" %}</label>
+                        <select name="target_facility" id="split_target_facility" class="form-select" required>
+                            <option value="">-- {% trans "Select Facility" %} --</option>
+                            {% for fac in facilities %}
+                            <option value="{{ fac.facility_id }}">{{ fac.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-info"><i class="fas fa-code-branch"></i> {% trans "Create Child Order" %}</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openSplitComponentModal(typeId, name, quantity) {
+        document.getElementById('split_type_id').value = typeId;
+        document.getElementById('split_component_name').innerText = name;
+
+        let qtyInput = document.getElementById('split_quantity');
+        qtyInput.value = quantity;
+        qtyInput.max = quantity;
+
+        var splitModal = new bootstrap.Modal(document.getElementById('splitComponentModal'));
+        splitModal.show();
     }
 </script>
 <script>

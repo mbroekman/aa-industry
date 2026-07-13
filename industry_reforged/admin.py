@@ -6,20 +6,14 @@ from django.contrib import admin
 from .models import (
     CharacterIndustryJob,
     CorpInventory,
-    CorpItemConfig,
     CorpMOTD,
     CorporationIndustryJob,
     CorporationSyncConfig,
     CorporationWebhookConfig,
-    CorpPricingConfig,
-    CorpTypeDiscount,
-    IndustryFacility,
-    IndustryRig,
     MemberOrder,
     OrderFit,
     OrderItem,
     ProductionTask,
-    TaxConfig,
 )
 
 
@@ -98,49 +92,3 @@ class CorporationWebhookConfigAdmin(admin.ModelAdmin):
         "wallets_webhook",
         "inventory_webhook",
     )
-
-
-class CorpTypeDiscountInline(admin.TabularInline):
-    model = CorpTypeDiscount
-    extra = 1
-    raw_id_fields = ("eve_type",)
-
-
-@admin.register(CorpPricingConfig)
-class CorpPricingConfigAdmin(admin.ModelAdmin):
-    list_display = (
-        "corporation",
-        "default_discount_percent",
-        "builder_reward_percent",
-        "default_t1_me",
-        "default_t2_me",
-    )
-    search_fields = ("corporation__corporation_name",)
-    raw_id_fields = ("corporation",)
-    inlines = [CorpTypeDiscountInline]
-
-
-@admin.register(TaxConfig)
-class TaxConfigAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "industry_tax_rate", "broker_fee_rate")
-    search_fields = ("corporation__corporation_name",)
-    raw_id_fields = ("corporation",)
-
-
-@admin.register(IndustryFacility)
-class IndustryFacilityAdmin(admin.ModelAdmin):
-    list_display = ("facility_id", "name", "solar_system_id", "type_id", "last_updated")
-    search_fields = ("name", "facility_id")
-
-
-@admin.register(CorpItemConfig)
-class CorpItemConfigAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "item_type", "manual_price")
-    search_fields = ("corporation__corporation_name", "item_type__name")
-    raw_id_fields = ("corporation", "item_type")
-
-
-@admin.register(IndustryRig)
-class IndustryRigAdmin(admin.ModelAdmin):
-    list_display = ("type_id", "name", "me_bonus", "te_bonus")
-    search_fields = ("name", "type_id")

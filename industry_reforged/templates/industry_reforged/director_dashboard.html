@@ -85,11 +85,9 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="progress mt-1"
-                                            >
+                                        <div class="progress mt-1">
                                             <div class="progress-bar bg-success" role="progressbar"
                                                 style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;">
-
                                             </div>
                                         </div>
                                         <small class="numeric">{{ order.progress_percent|floatformat:2 }}%</small>
@@ -125,6 +123,70 @@
                                         </div>
                                     </td>
                                 </tr>
+                                {% for child in order.child_orders.all %}
+                                <tr class="table-active">
+                                    <td class="ps-4 text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> #{{ child.id }}</td>
+                                    <td class="text-muted">{{ child.character.character_name }}</td>
+                                    <td class="numeric text-warning text-end" style="opacity: 0.8;">{{ child.total_price|eve_isk }}</td>
+                                    <td>
+                                        {% if child.payment_reference %}
+                                            <code>{{ child.payment_reference }}</code>
+                                            {% if child.is_paid %}
+                                                <span class="badge bg-success ms-1"><i class="fas fa-check"></i> Paid</span>
+                                            {% else %}
+                                                <span class="badge bg-danger ms-1">Unpaid</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if child.status == 'READY' %}
+                                            <span class="badge bg-success" style="opacity: 0.8;"><i class="fas fa-box-open"></i> {{ child.get_status_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary" style="opacity: 0.8;">{{ child.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress mt-1" style="opacity: 0.8;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                style="width: {{ child.progress_percent }}%; box-shadow: 0 0 8px #28a745;">
+                                            </div>
+                                        </div>
+                                        <small class="numeric text-muted">{{ child.progress_percent|floatformat:2 }}%</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'industry_reforged:view_quote' child.id %}" class="btn btn-sm btn-outline-primary show-loader"><i class="fas fa-eye"></i> View</a>
+                                            {% if not child.is_paid %}
+                                            <button type="button" class="btn btn-sm btn-outline-success payment-modal-btn"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#paymentModal"
+                                                data-order-id="{{ child.id }}"
+                                                data-order-ref="{{ child.payment_reference }}"
+                                                data-order-remaining="{{ child.remaining_balance|stringformat:'f' }}"
+                                                data-action-url="{% url 'industry_reforged:mark_order_paid' child.id %}">
+                                                <i class="fas fa-money-bill-wave"></i> Process Payment
+                                            </button>
+                                            {% endif %}
+                                            {% if child.status == 'READY' %}
+                                            <form method="post" action="{% url 'industry_reforged:mark_order_delivered' child.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to mark this as delivered? Ensure the contract is made in-game." data-btn-class="btn-success">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-truck"></i> Deliver
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            <form method="post" action="{% url 'industry_reforged:delete_order' child.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to permanently delete this order? All associated production tasks will also be cancelled and deleted." data-btn-class="btn-danger">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash-alt"></i> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
                                 {% empty %}
                                 <tr>
                                     <td colspan="6" class="text-center">No orders found.</td>

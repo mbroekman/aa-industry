@@ -114,10 +114,6 @@
                                     <td>{{ task.assigned_to.character_name }}</td>
                                     <td class="text-end numeric text-warning">{{ task.gamification_value|floatformat:0|intcomma }}</td>
                                 </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">You haven't completed any tasks yet.</td>
-                            </tr>
                             {% endfor %}
                             </tbody>
                         </table>
