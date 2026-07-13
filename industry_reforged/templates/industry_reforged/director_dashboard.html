@@ -116,6 +116,12 @@
                                                 </button>
                                             </form>
                                             {% endif %}
+                                            <form method="post" action="{% url 'industry_reforged:delete_order' order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to permanently delete this order? All associated production tasks will also be cancelled and deleted." data-btn-class="btn-danger">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash-alt"></i> Delete
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>

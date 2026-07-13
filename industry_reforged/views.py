@@ -1015,9 +1015,7 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
     is_director = request.user.has_perm("industry_reforged.corp_access")
 
     if is_director:
-        order = MemberOrder.objects.filter(
-            id=order_id, status__in=["REQUESTED", "QUOTED"]
-        ).first()
+        order = MemberOrder.objects.filter(id=order_id).first()
     else:
         order = MemberOrder.objects.filter(
             id=order_id,
@@ -1026,6 +1024,8 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
         ).first()
 
     if order:
+        # Delete related tasks explicitly since they have on_delete=models.SET_NULL
+        ProductionTask.objects.filter(created_from_order=order).delete()
         order.delete()
         messages.success(request, _("Order successfully deleted."))
     else:

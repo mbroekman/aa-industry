@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- **Director Order Deletion**: Directors can now delete an order from the Corporate Panel at any stage (even if it has already been accepted). Doing so will now also explicitly delete and clean up all associated `ProductionTask` items generated for that order.
 - **Inventory Sync Toggle**: Added a "Sync Inventory" toggle to the Production Facilities configuration tab. Facilities will no longer sync their inventory to the Corporate Stock by default unless explicitly enabled.
 
 ### Fixed
