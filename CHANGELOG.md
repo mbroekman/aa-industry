@@ -5,13 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.1.0b16] - 13-07-2026
 
 ### Added
 
+- **Material Efficiency (ME) Overrides & Exact EVE Math**: The Order Quote page now supports dynamic Material Efficiency settings, mirroring EVE Online's exact batch savings math. The system calculates requirements using the formula: `run_cost = round(base_qty * ((100 - ME)/100) * facility_me_multiplier, 2)` followed by `required_qty = max(runs, math.ceil(run_cost * runs))`. Directors can override the default T1/T2 ME on a per-blueprint basis during quoting.
+- **Recursive Task Completion**: Completing a parent production task in the dashboard now offers a confirmation dialog to recursively complete all of its unfinished child sub-tasks automatically.
+- **Excluded Items in BOM**: Excluded modules are no longer completely hidden. They now appear in the Recursive Order Tree as raw material leaf nodes (marked with a red badge), ensuring they are still tracked for corporate inventory deduction but are not tasked to builders.
+
 ### Changed
 
+- **Inventory Sync Toggle**: Added a "Sync Inventory" toggle to the Production Facilities configuration tab. Facilities will no longer sync their inventory to the Corporate Stock by default unless explicitly enabled.
+
 ### Fixed
+
+- **PI Modal Cross-Contamination**: Fixed a critical HTML ID collision in the PI Dashboard where clicking a factory planet could open the detail modal of another character's colony if they shared the same EVE Universe planet ID, incorrectly displaying extractors.
+- **Inventory Cleanup**: Fixed an issue where the Corporate Inventory sync would fail to zero out stale items that were consumed or moved out of a tracked facility.
+- **DataTables Column Count**: Fixed a "Incorrect column count" DataTable crash on the Inventory Analysis dashboard caused by malformed empty table placeholders.
+- **Private Structure Sync**: Fixed an internal API token configuration bug that caused private structure synchronizations to fail.
+- **Rigs Sync Crash**: Resolved a database query exception in the `sync_facility_rigs` background task when evaluating structure ownership.
+- **Structure Security Space**: Fixed an issue where newly discovered structures defaulted to Highsec. The background task now dynamically evaluates the correct security status (High/Low/Null/WH).
+- **Double Submission Prevention**: Added a loading spinner overlay to the "Apply Overrides" button on the quote page to prevent double-submitting.
+- **Template Syntax Error**: Restored a missing block tag on the Quote page that was causing a Django `TemplateSyntaxError`.
 
 ## [0.1.0b15] - 10-07-2026
 

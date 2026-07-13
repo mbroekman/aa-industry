@@ -225,7 +225,7 @@
                         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
                             {% for planet in char_group.list %}
                             <div class="col">
-                                <div class="card h-100 bg-dark text-white border-secondary shadow-sm planet-card" role="button" onclick="openPlanetModal('{{ planet.planet_id }}')">
+                                <div class="card h-100 bg-dark text-white border-secondary shadow-sm planet-card" role="button" onclick="openPlanetModal('{{ planet.id }}')">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center mb-4">
                                             {% if planet.planet_type %}
@@ -241,19 +241,27 @@
 
                                         <div class="d-flex justify-content-between align-items-end mt-4">
                                             <div>
-                                                {% if planet.extractors %}
+                                                {% if planet.has_expired_extractors or planet.earliest_extractor_expiry %}
                                                     <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Earliest Expiry</div>
                                                     {% if planet.has_expired_extractors %}
                                                         <div class="text-danger fw-bold fs-5"><i class="fas fa-exclamation-triangle me-1"></i> EXPIRED</div>
-                                                    {% elif planet.earliest_extractor_expiry %}
+                                                    {% else %}
                                                         <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.earliest_extractor_expiry|date:'c' }}">
                                                             Calculating...
                                                         </div>
-                                                    {% else %}
-                                                        <div class="text-info fw-bold fs-5"><i class="fas fa-check-circle me-1"></i> Idle</div>
                                                     {% endif %}
+                                                {% elif planet.extractors and not planet.basic_factories and not planet.advanced_factories and not planet.high_tech_factories %}
+                                                    <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Status</div>
+                                                    <div class="text-warning fw-bold fs-5"><i class="fas fa-pause-circle me-1"></i> Idle Extractor</div>
                                                 {% else %}
-                                                    <div class="text-muted fst-italic">No active extractors</div>
+                                                    <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Status</div>
+                                                    {% if planet.high_tech_factories %}
+                                                        <div class="text-info fw-bold fs-5"><i class="fas fa-industry me-1"></i> P3/P4 Factory</div>
+                                                    {% elif planet.advanced_factories or planet.basic_factories %}
+                                                        <div class="text-info fw-bold fs-5"><i class="fas fa-industry me-1"></i> Factory Planet</div>
+                                                    {% else %}
+                                                        <div class="text-secondary fw-bold fs-5"><i class="fas fa-boxes me-1"></i> Storage Only</div>
+                                                    {% endif %}
                                                 {% endif %}
                                             </div>
                                             {% if planet.has_full_storage %}
@@ -267,7 +275,7 @@
                             </div>
 
                             <!-- Hidden Modal Template for this Planet -->
-                            <template id="planet-details-{{ planet.planet_id }}">
+                            <template id="planet-details-{{ planet.id }}">
                                 <div class="modal-header border-secondary bg-dark">
                                     <h5 class="modal-title d-flex align-items-center">
                                         {% if planet.planet_type %}

@@ -10,6 +10,24 @@
     .transition-icon {
         transition: transform 0.2s ease-in-out;
     }
+    /* Fix for HTMX wrapper breaking Bootstrap tab-content > tab-pane CSS */
+    #bom-panes-wrapper > .tab-pane {
+        display: none;
+    }
+    #bom-panes-wrapper > .tab-pane.active {
+        display: block;
+    }
+    /* Explicitly define HTMX indicator CSS to avoid CSP/Bootstrap conflicts */
+    .htmx-indicator {
+        opacity: 0 !important;
+        pointer-events: none;
+        transition: opacity 200ms ease-in;
+    }
+    .htmx-request .htmx-indicator,
+    .htmx-request.htmx-indicator {
+        opacity: 1 !important;
+        pointer-events: auto;
+    }
 </style>
 <div class="container-fluid">
     <div class="row mb-3">
@@ -50,7 +68,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-white">{% trans "Review the order details and the estimated BOM cost, then provide a final quote." %}</p>
-                    <form method="post" action="{% url 'industry_reforged:provide_quote' order.id %}" class="row gx-3 gy-2 align-items-center">
+                    <form id="quoteForm" method="post" action="{% url 'industry_reforged:provide_quote' order.id %}" class="row gx-3 gy-2 align-items-center">
                         {% csrf_token %}
                         <div class="col-sm-3">
                             <label class="form-label text-white mb-1 small">Total Price</label>
@@ -64,20 +82,15 @@
                         </div>
                         <div class="col-sm-3">
                             <label class="form-label text-white mb-1 small">Target Production Facility</label>
-                            <select name="target_facility" class="form-select bg-dark text-white border-secondary"
-                                hx-post="{% url 'industry_reforged:htmx_update_quote_facility' order.id %}"
-                                hx-trigger="change"
-                                hx-target="#bom-panes-wrapper"
-                                hx-swap="outerHTML"
-                                hx-indicator="#facility-loading">
+                            <select name="target_facility" id="id_target_facility" class="form-select bg-dark text-white border-secondary">
                                 <option value="">-- {% trans "Default / No Facility" %} --</option>
                                 {% for fac in facilities %}
                                 <option value="{{ fac.facility_id }}" {% if order.target_facility_id == fac.facility_id %}selected{% endif %}>{{ fac.name }} ({{ fac.get_security_space_display }})</option>
                                 {% endfor %}
                             </select>
                             <div class="form-text mt-1 text-muted d-flex align-items-center">
-                                {% trans "Updates ME/TE in BOM" %}
-                                <div id="facility-loading" class="spinner-border spinner-border-sm text-warning ms-2 htmx-indicator" role="status"></div>
+                                {% trans "Page will reload on change" %}
+                                <div id="facility-loading" style="display:none;" class="spinner-border spinner-border-sm text-warning ms-2" role="status"></div>
                             </div>
                         </div>
                         <div class="col-sm-3">
@@ -90,14 +103,15 @@
                                 {% trans "Optional downpayment" %} <span id="quoteUpfront-helper" class="text-warning fw-bold ms-2"></span>
                             </div>
                         </div>
-                        <div class="col-sm-4">
+                        <div class="col-sm-3">
                             <label class="form-label text-white mb-1 small">Note</label>
                             <input type="text" class="form-control bg-dark text-white border-secondary" name="note" placeholder="e.g. 50% upfront required">
                             <div class="form-text mt-1 text-muted">
                                 {% trans "Optional quote note" %}
                             </div>
                         </div>
-                        <div class="col-auto mt-4">
+
+                        <div class="col-12 mt-4 text-end">
                             <button type="submit" class="btn btn-warning"><i class="fas fa-check-circle"></i> {% trans "Submit Quote" %}</button>
                         </div>
                     </form>
@@ -117,10 +131,13 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="bom-tab" data-bs-toggle="tab" data-bs-target="#bom-pane" type="button" role="tab" aria-controls="bom-pane" aria-selected="false">{% trans "Bill of Materials" %}</button>
                 </li>
-                {% endif %}
-                {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-pane" type="button" role="tab" aria-controls="tree-pane" aria-selected="false">{% trans "Full Production Tree" %}</button>
+                </li>
+                {% endif %}
+                {% if perms.industry_reforged.corp_access %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="me-tab" data-bs-toggle="tab" data-bs-target="#me-pane" type="button" role="tab" aria-controls="me-pane" aria-selected="false">{% trans "ME Overrides" %}</button>
                 </li>
                 {% endif %}
             </ul>
@@ -275,7 +292,69 @@
                     </div> <!-- End Row -->
                 </div> <!-- End Tab 1 -->
 
-                {% include "industry_reforged/partials/quote_bom_panes.html" %}
+                {% if perms.industry_reforged.corp_access %}
+                <!-- TAB: ME OVERRIDES -->
+                <div class="tab-pane fade" id="me-pane" role="tabpanel" aria-labelledby="me-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <form id="meFormInner" action="{% url 'industry_reforged:update_quote_me_overrides' order.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="target_facility" id="hidden_target_facility">
+                            <div class="card border-0 h-100 position-relative">
+                                <div class="card-header border-bottom border-secondary bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <h3 class="card-title mb-0"><i class="fas fa-sliders-h text-warning me-2"></i> {% trans "Required Blueprints (ME Override)" %}</h3>
+                                    {% if order.status == 'REQUESTED' %}
+                                    <div class="d-flex align-items-center">
+                                        <button type="submit" class="btn btn-warning btn-sm" onclick="document.getElementById('hidden_target_facility').value = document.querySelector('select[name=\'target_facility\']')?.value || ''; document.getElementById('me-loading').style.display = 'inline-block';">
+                                            <i class="fas fa-sync"></i> {% trans "Apply Overrides & Recalculate BOM" %}
+                                        </button>
+                                        <div id="me-loading" style="display:none;" class="spinner-border spinner-border-sm text-warning ms-2" role="status"></div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-dark m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>{% trans "Blueprint" %}</th>
+                                                    <th width="150">{% trans "Material Efficiency" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for p in products_me %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ p.type_id }}/icon?size=32" alt="{{ p.name }}" width="24" height="24" class="me-2 rounded">
+                                                            <span>{{ p.name }}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        {% if order.status == 'REQUESTED' %}
+                                                        <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" name="bp_me_{{ p.type_id }}" value="{{ p.current_me }}" min="0" max="10">
+                                                        {% else %}
+                                                        <span class="text-white">{{ p.current_me }}%</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr><td colspan="2" class="text-center text-muted p-3">{% trans "No blueprints required for this order." %}</td></tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            </form>
+                        </div>
+                    </div>
+                </div> <!-- End Tab ME -->
+                {% endif %}
+
+                <div id="bom-panes-wrapper">
+                    {% include "industry_reforged/partials/quote_bom_panes.html" %}
+                </div>
 
             </div>
         </div>
@@ -398,6 +477,24 @@
 </script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Activate tab based on URL hash
+        let hash = window.location.hash;
+        if (hash) {
+            let targetTab = document.querySelector(`button[data-bs-target="${hash}"]`);
+            if (targetTab) {
+                let tab = new bootstrap.Tab(targetTab);
+                tab.show();
+            }
+        }
+
+        // Update URL hash when a tab is shown
+        document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function (e) {
+                let target = e.target.getAttribute('data-bs-target');
+                history.replaceState(null, null, target);
+            });
+        });
+
         function formatISK(val) {
             if(!val) return "";
             let num = parseFloat(val);
@@ -418,6 +515,30 @@
             }
             input.addEventListener('input', updateHelper);
             updateHelper(); // trigger on load
+        });
+
+        // Target facility change handler (compatible with Select2 and standard selects)
+        $('#id_target_facility').on('change', function() {
+            $('#facility-loading').show();
+            let facility = $(this).val();
+            let form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'industry_reforged:update_quote_me_overrides' order.id %}";
+
+            let csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrfmiddlewaretoken';
+            csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            form.appendChild(csrf);
+
+            let tf = document.createElement('input');
+            tf.type = 'hidden';
+            tf.name = 'target_facility';
+            tf.value = facility;
+            form.appendChild(tf);
+
+            document.body.appendChild(form);
+            form.submit();
         });
     });
 </script>

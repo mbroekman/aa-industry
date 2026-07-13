@@ -72,7 +72,6 @@ class CorpItemConfigForm(forms.ModelForm):
             "target_threshold",
             "auto_produce",
             "build_or_buy",
-            "bom_source",
             "exclude_from_orders",
             "exclude_warning_message",
         ]
@@ -83,7 +82,6 @@ class CorpItemConfigForm(forms.ModelForm):
             "target_threshold": forms.NumberInput(attrs={"class": "form-control"}),
             "auto_produce": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "build_or_buy": forms.Select(attrs={"class": "form-select"}),
-            "bom_source": forms.Select(attrs={"class": "form-select"}),
             "exclude_from_orders": forms.CheckboxInput(
                 attrs={"class": "form-check-input"}
             ),
@@ -123,13 +121,24 @@ class CorpItemConfigForm(forms.ModelForm):
 class CorpPricingConfigForm(forms.ModelForm):
     class Meta:
         model = CorpPricingConfig
-        fields = ["default_discount_percent", "builder_reward_percent"]
+        fields = [
+            "default_discount_percent",
+            "builder_reward_percent",
+            "default_t1_me",
+            "default_t2_me",
+        ]
         widgets = {
             "default_discount_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
             "builder_reward_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "default_t1_me": forms.NumberInput(
+                attrs={"class": "form-control", "step": "1", "min": "0", "max": "10"}
+            ),
+            "default_t2_me": forms.NumberInput(
+                attrs={"class": "form-control", "step": "1", "min": "0", "max": "10"}
             ),
         }
 

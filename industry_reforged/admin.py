@@ -108,7 +108,13 @@ class CorpTypeDiscountInline(admin.TabularInline):
 
 @admin.register(CorpPricingConfig)
 class CorpPricingConfigAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "default_discount_percent", "builder_reward_percent")
+    list_display = (
+        "corporation",
+        "default_discount_percent",
+        "builder_reward_percent",
+        "default_t1_me",
+        "default_t2_me",
+    )
     search_fields = ("corporation__corporation_name",)
     raw_id_fields = ("corporation",)
     inlines = [CorpTypeDiscountInline]

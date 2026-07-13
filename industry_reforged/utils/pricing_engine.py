@@ -71,6 +71,30 @@ def get_prices_with_overrides(type_ids, corporation=None):
     return prices
 
 
+def get_detailed_prices(type_ids, corporation=None):
+    """
+    Fetch Jita prices and return detailed breakdown with both original and final prices.
+    """
+    prices = get_fuzzwork_prices(type_ids)
+    detailed = {}
+    for tid in type_ids:
+        val = prices.get(tid, 0.0)
+        detailed[tid] = {"original_jita_price": val, "final_price": val}
+
+    if corporation:
+        from ..models import CorpItemConfig
+
+        configs = CorpItemConfig.objects.filter(
+            corporation=corporation,
+            item_type_id__in=type_ids,
+            manual_price__isnull=False,
+        )
+        for config in configs:
+            detailed[config.item_type_id]["final_price"] = float(config.manual_price)
+
+    return detailed
+
+
 def calculate_quote(parsed_items, corporation=None):
     """
     Takes a dict of {EveType: quantity} and an optional EveCorporationInfo.

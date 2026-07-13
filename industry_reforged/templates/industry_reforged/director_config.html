@@ -137,6 +137,12 @@
                                 {{ pricing_config.builder_reward_percent }}%
                             </p>
                             <small class="text-muted">{% trans "Applied automatically to all member orders and tasks unless overridden." %}</small>
+                            <h6 class="text-muted text-uppercase mb-1 mt-3">{% trans "Default Material Efficiency (ME)" %}</h6>
+                            <p class="fs-6 mb-0">
+                                <strong>{% trans "Tech I Default" %}:</strong> <span class="text-info">{{ pricing_config.default_t1_me }}%</span><br>
+                                <strong>{% trans "Tech II Default" %}:</strong> <span class="text-info">{{ pricing_config.default_t2_me }}%</span>
+                            </p>
+                            <small class="text-muted">{% trans "Base blueprint ME if not manually overridden." %}</small>
                             <div class="mt-2">
                                 <a href="{% url 'industry_reforged:director_config_pricing_edit' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> {% trans "Edit Pricing" %}</a>
                             </div>

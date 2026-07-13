@@ -26,6 +26,11 @@ urlpatterns = [
         views.htmx_update_quote_facility,
         name="htmx_update_quote_facility",
     ),
+    path(
+        "orders/<int:order_id>/update-me-overrides/",
+        views.update_quote_me_overrides,
+        name="update_quote_me_overrides",
+    ),
     path("orders/<int:order_id>/delete/", views.delete_order, name="delete_order"),
     path(
         "orders/<int:order_id>/provide-quote/",

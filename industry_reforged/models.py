@@ -535,6 +535,14 @@ class CorpPricingConfig(models.Model):
         default=0.0,
         help_text="Percentage of the item value given as a financial reward to the builder",
     )
+    default_t1_me = models.IntegerField(
+        default=10,
+        help_text="Default Material Efficiency (ME) for Tech I blueprints",
+    )
+    default_t2_me = models.IntegerField(
+        default=2,
+        help_text="Default Material Efficiency (ME) for Tech II blueprints",
+    )
 
     class Meta:
         verbose_name = _("Corp Pricing Config")
@@ -997,3 +1005,19 @@ class TaskExecutionLog(models.Model):
 
     def __str__(self):
         return f"{self.task_name} - {self.status}"
+
+
+class OrderBlueprintOverride(models.Model):
+    order = models.ForeignKey(
+        MemberOrder, on_delete=models.CASCADE, related_name="bp_overrides"
+    )
+    item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    manual_me = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = _("Order BP Override")
+        verbose_name_plural = _("Order BP Overrides")
+        unique_together = (("order", "item_type"),)
+
+    def __str__(self):
+        return f"Override ME {self.manual_me} for {self.item_type.name} on Order #{self.order.id}"

@@ -49,7 +49,11 @@ from .utils.bom_engine import (
 )
 from .utils.discord import send_discord_webhook
 from .utils.fit_parser import parse_fit_text
-from .utils.pricing_engine import calculate_quote, get_prices_with_overrides
+from .utils.pricing_engine import (
+    calculate_quote,
+    get_detailed_prices,
+    get_prices_with_overrides,
+)
 
 
 def notify_order_ready(order: MemberOrder):
@@ -266,20 +270,15 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     tasks = []
     recursive_bom_tree = []
 
-    def extract_leaves(tree_nodes, aggregated_bom):
-        for node in tree_nodes:
-            if not node.get("sub_materials"):
-                mat_type_id = node["type_id"]
-                if mat_type_id in aggregated_bom:
-                    aggregated_bom[mat_type_id]["quantity"] += node["quantity"]
-                else:
-                    aggregated_bom[mat_type_id] = {
-                        "type_id": mat_type_id,
-                        "name": node["name"],
-                        "quantity": node["quantity"],
-                    }
+    def merge_bom(target, source):
+        for mat_id, data in source.items():
+            if mat_id in target:
+                target[mat_id]["quantity"] += data["quantity"]
+                target[mat_id]["base_quantity"] += data.get(
+                    "base_quantity", data["quantity"]
+                )
             else:
-                extract_leaves(node["sub_materials"], aggregated_bom)
+                target[mat_id] = data
 
     if order_ids:
         orders = MemberOrder.objects.filter(
@@ -287,6 +286,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         )
         for order in orders:
             recursive_bom_tree.extend(calculate_recursive_order_bom(order))
+            merge_bom(bom, calculate_order_bom(order))
 
     if task_ids:
         # User can view tasks if they have basic_access (to claim them) or corp_access.
@@ -309,6 +309,9 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         recursive_bom_tree.extend(
             calculate_recursive_tasks_bom(tasks, corp_info=corp_info)
         )
+        from .utils.bom_engine import calculate_tasks_bom
+
+        merge_bom(bom, calculate_tasks_bom(tasks, corp_info=corp_info))
 
     if type_id and quantity:
         quantity = int(quantity)
@@ -332,19 +335,31 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         )
         recursive_bom_tree.append(node)
 
-    extract_leaves(recursive_bom_tree, bom)
+        # Standard Library
+        import math
+
+        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
+        type_bom = {}
+        for mat in materials:
+            mat_type_id = mat.get("typeid")
+            base_qty = mat.get("quantity", 0)
+            req = max(runs, math.ceil(base_qty * runs))
+            type_bom[mat_type_id] = {
+                "type_id": mat_type_id,
+                "name": mat.get("name"),
+                "quantity": req,
+                "base_quantity": req,
+            }
+        merge_bom(bom, type_bom)
 
     total_bom_price = 0
     sorted_bom = []
     if bom:
         mat_ids = list(bom.keys())
 
-        corp_info = None
-        main_char = request.user.profile.main_character
-        if main_char and main_char.corporation:
-            corp_info = main_char.corporation
+        from .utils.pricing_engine import get_fuzzwork_prices
 
-        prices = get_prices_with_overrides(mat_ids, corp_info)
+        prices = get_fuzzwork_prices(mat_ids)
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
@@ -530,11 +545,14 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     if bom_materials:
         mat_ids = list(bom_materials.keys())
 
-        prices = get_prices_with_overrides(mat_ids, corp_info)
+        prices = get_detailed_prices(mat_ids, corp_info)
         for mat_id, data in bom_materials.items():
-            price = prices.get(mat_id, 0)
-            data["price_per_unit"] = price
-            data["total_price"] = price * data["quantity"]
+            price_info = prices.get(
+                mat_id, {"original_jita_price": 0, "final_price": 0}
+            )
+            data["price_per_unit"] = price_info["final_price"]
+            data["original_jita_price"] = price_info["original_jita_price"]
+            data["total_price"] = price_info["final_price"] * data["quantity"]
             total_bom_price += data["total_price"]
 
     # Calculate original price from items before any discounts
@@ -551,6 +569,44 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     facilities = IndustryFacility.objects.filter(is_production_facility=True)
 
+    # Third Party
+    from eveuniverse.models import EveType
+
+    from .utils.bom_engine import get_blueprint_me
+
+    def extract_manufactured_types(nodes, result_dict):
+        for node in nodes:
+            # Anything with sub_materials or explicitly built
+            if node.get("activity_id") == 1 or node.get("sub_materials"):
+                result_dict[node["type_id"]] = node["name"]
+            if node.get("sub_materials"):
+                extract_manufactured_types(node["sub_materials"], result_dict)
+
+    products_me_dict = {}
+    if request.user.has_perm("industry_reforged.corp_access"):
+        # We need the tree to extract everything for the quote form
+        if not recursive_bom_tree:
+            recursive_bom_tree = calculate_recursive_order_bom(order)
+        extract_manufactured_types(recursive_bom_tree, products_me_dict)
+
+    # Fallback if empty
+    if not products_me_dict:
+        for item in order.items.all():
+            products_me_dict[item.item_type.id] = item.item_type.name
+
+    products_me = []
+    for type_id, name in products_me_dict.items():
+        eve_type = EveType.objects.filter(id=type_id).first()
+        if eve_type:
+            me_val = get_blueprint_me(eve_type, corp_info, order)
+            products_me.append(
+                {
+                    "type_id": type_id,
+                    "name": name,
+                    "current_me": me_val,
+                }
+            )
+
     context = {
         "title": f"Order #{order.id}",
         "order": order,
@@ -561,6 +617,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "is_owner": order.character_id in user_characters,
         "recursive_bom_tree": recursive_bom_tree,
         "facilities": facilities,
+        "products_me": products_me,
     }
     return render(request, "industry_reforged/view_quote.html", context)
 
@@ -599,6 +656,28 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             order.total_price = Decimal(str(new_total))
             order.upfront_payment = upfront
+
+            # Save Blueprint ME Overrides
+            # Third Party
+            from eveuniverse.models import EveType
+
+            from .models import OrderBlueprintOverride
+
+            for key, value in request.POST.items():
+                if key.startswith("bp_me_"):
+                    try:
+                        type_id = int(key.replace("bp_me_", ""))
+                        me_val = int(value)
+                        if me_val >= 0:
+                            eve_type = EveType.objects.filter(id=type_id).first()
+                            if eve_type:
+                                OrderBlueprintOverride.objects.update_or_create(
+                                    order=order,
+                                    item_type=eve_type,
+                                    defaults={"manual_me": me_val},
+                                )
+                    except ValueError:
+                        pass
 
             # Treat upfront payment as already paid by the user
             if upfront > 0:
@@ -670,17 +749,18 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     if not order or order.status != "REQUESTED":
         return HttpResponse("")
 
-    target_facility_id = request.POST.get("target_facility", None)
-    from .models import IndustryFacility
+    if "target_facility" in request.POST:
+        target_facility_id = request.POST.get("target_facility")
+        from .models import IndustryFacility
 
-    facility = None
-    if target_facility_id:
-        facility = IndustryFacility.objects.filter(
-            facility_id=target_facility_id
-        ).first()
+        facility = None
+        if target_facility_id:
+            facility = IndustryFacility.objects.filter(
+                facility_id=target_facility_id
+            ).first()
 
-    order.target_facility = facility
-    order.save()
+        order.target_facility = facility
+        order.save()
 
     # Recalculate BOM
     bom_materials = calculate_order_bom(order)
@@ -689,6 +769,10 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     main_char = request.user.profile.main_character
     if main_char and main_char.corporation:
         corp_info = main_char.corporation
+
+    recursive_bom_tree = calculate_recursive_order_bom(order)
+
+    from .pricing import get_prices_with_overrides
 
     total_bom_price = 0
     if bom_materials:
@@ -700,16 +784,64 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
 
-    recursive_bom_tree = calculate_recursive_order_bom(order)
-
     context = {
         "order": order,
         "bom_materials": bom_materials.values() if bom_materials else [],
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": recursive_bom_tree,
     }
-    # We return just the BOM panes. We need to create a partial template for this.
     return render(request, "industry_reforged/partials/quote_bom_panes.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def update_quote_me_overrides(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """HTMX endpoint to update the target facility and recalculate BOM live"""
+    order = MemberOrder.objects.filter(id=order_id).first()
+    if not order or order.status != "REQUESTED":
+        return HttpResponse("")
+
+    if "target_facility" in request.POST:
+        target_facility_id = request.POST.get("target_facility")
+        from .models import IndustryFacility
+
+        facility = None
+        if target_facility_id:
+            facility = IndustryFacility.objects.filter(
+                facility_id=target_facility_id
+            ).first()
+
+        order.target_facility = facility
+        order.save()
+
+    # Save Blueprint ME Overrides
+    # Third Party
+    from eveuniverse.models import EveType
+
+    from .models import OrderBlueprintOverride
+
+    for key, value in request.POST.items():
+        if key.startswith("bp_me_"):
+            try:
+                type_id = int(key.replace("bp_me_", ""))
+                me_val = int(value)
+                if me_val >= 0:
+                    eve_type = EveType.objects.filter(id=type_id).first()
+                    if eve_type:
+                        OrderBlueprintOverride.objects.update_or_create(
+                            order=order,
+                            item_type=eve_type,
+                            defaults={"manual_me": me_val},
+                        )
+            except ValueError:
+                pass
+
+    messages.success(
+        request,
+        _("Material Efficiency overrides have been applied and BOM recalculated."),
+    )
+    url = reverse("industry_reforged:view_quote", kwargs={"order_id": order.id})
+    return redirect(f"{url}#bom-pane")
 
 
 @login_required

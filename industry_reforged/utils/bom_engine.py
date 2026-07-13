@@ -119,6 +119,52 @@ def calculate_facility_me_multiplier(facility, product_type):
     return (1.0 - hull_bonus) * (1.0 - (rig_bonus * sec_multiplier))
 
 
+def get_blueprint_me(product_type, corp_info=None, order=None):
+    """
+    Resolves the ME for a product in the following order:
+    1. OrderBlueprintOverride
+    2. CorpItemConfig
+    3. Global Tech 1/Tech 2 Default
+    """
+    # AA Industry App
+    from industry_reforged.models import CorpItemConfig, OrderBlueprintOverride
+
+    if order:
+        bp_override = OrderBlueprintOverride.objects.filter(
+            order=order, item_type=product_type
+        ).first()
+        if bp_override:
+            return bp_override.manual_me
+
+    if corp_info:
+        corp_config = CorpItemConfig.objects.filter(
+            corporation=corp_info, item_type=product_type
+        ).first()
+        if corp_config and corp_config.manual_me > 0:
+            return corp_config.manual_me
+
+    default_t1 = 10
+    default_t2 = 2
+    if corp_info and hasattr(corp_info, "pricing_config"):
+        default_t1 = corp_info.pricing_config.default_t1_me
+        default_t2 = corp_info.pricing_config.default_t2_me
+
+    # Third Party
+    from eveuniverse.models import EveIndustryActivityProduct
+
+    bp_prod = EveIndustryActivityProduct.objects.filter(
+        product_eve_type_id=product_type.id, activity_id__in=[1, 11]
+    ).first()
+    if bp_prod:
+        is_invented = EveIndustryActivityProduct.objects.filter(
+            product_eve_type_id=bp_prod.eve_type_id, activity_id=8
+        ).exists()
+        if is_invented:
+            return default_t2
+
+    return default_t1
+
+
 def calculate_order_bom(order):
     """
     Calculates the aggregated Bill of Materials for a MemberOrder.
@@ -135,21 +181,12 @@ def calculate_order_bom(order):
     # Alliance Auth
     from allianceauth.eveonline.models import EveCorporationInfo
 
-    # AA Industry App
-    from industry_reforged.models import CorpItemConfig
-
-    config_dict = {}
     try:
         corp_info = EveCorporationInfo.objects.get(
             corporation_id=order.character.corporation_id
         )
-        for config in CorpItemConfig.objects.filter(corporation=corp_info):
-            config_dict[config.item_type_id] = {
-                "manual_me": config.manual_me,
-                "exclude_from_orders": config.exclude_from_orders,
-            }
     except Exception:
-        pass
+        corp_info = None
 
     for item in order.items.all():
         type_id = item.item_type.id
@@ -160,29 +197,36 @@ def calculate_order_bom(order):
             target_facility, item.item_type
         )
 
+        product_me = get_blueprint_me(item.item_type, corp_info, order)
+
         materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
             mat_type_id = mat.get("typeid")
-
-            # We do NOT skip if excluded from orders, we just treat it as a raw material
-            mat_config = config_dict.get(mat_type_id, {})
-
             base_qty = mat.get("quantity", 0)
-            me_level = mat_config.get("manual_me", 0)
 
-            # EVE Math: Required = max(runs, ceil(base_qty * runs * (1 - me/100) * facility_me_multiplier))
-            base_runs_me = (base_qty * runs) * (1.0 - (me_level / 100.0))
-            required_qty = max(runs, math.ceil(base_runs_me * facility_me_multiplier))
+            # EVE Math: run_cost = round(base_qty * ((100 - ME)/100) * facility_me_multiplier, 2)
+            # required_qty = max(runs, math.ceil(run_cost * runs))
+            run_cost = round(
+                base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
+            )
+            required_qty = max(runs, math.ceil(run_cost * runs))
+            base_total = max(runs, base_qty * runs)
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
+                bom[mat_type_id]["base_quantity"] += base_total
+                bom[mat_type_id]["savings"] = bom[mat_type_id].get("savings", 0) + (
+                    base_total - required_qty
+                )
             else:
                 bom[mat_type_id] = {
                     "type_id": mat_type_id,
                     "name": mat.get("name"),
                     "quantity": required_qty,
+                    "base_quantity": base_total,
+                    "savings": base_total - required_qty,
                 }
 
     return bom
@@ -194,65 +238,62 @@ def calculate_tasks_bom(tasks, corp_info=None):
     Optionally pass corp_info (EveCorporationInfo) to apply corporate ME discounts.
     """
     bom = {}
-    # AA Industry App
-    from industry_reforged.models import CorpItemConfig
-
-    config_dict = {}
-    if corp_info:
-        try:
-            for config in CorpItemConfig.objects.filter(corporation=corp_info):
-                config_dict[config.item_type_id] = {
-                    "manual_me": config.manual_me,
-                    "exclude_from_orders": config.exclude_from_orders,
-                }
-        except Exception:
-            pass
-
     for task in tasks:
         type_id = task.item_type.id
         quantity = task.quantity
+        order = task.created_from_order if hasattr(task, "created_from_order") else None
 
         target_facility = None
-        if (
-            hasattr(task, "created_from_order")
-            and task.created_from_order
-            and task.created_from_order.target_facility
-        ):
-            target_facility = task.created_from_order.target_facility
+        if order and order.target_facility:
+            target_facility = order.target_facility
 
         facility_me_multiplier = calculate_facility_me_multiplier(
             target_facility, task.item_type
         )
+
+        product_me = get_blueprint_me(task.item_type, corp_info, order)
 
         materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
             mat_type_id = mat.get("typeid")
-
-            # We do NOT skip if excluded from orders, we just treat it as a raw material
-            mat_config = config_dict.get(mat_type_id, {})
-
             base_qty = mat.get("quantity", 0)
-            me_level = mat_config.get("manual_me", 0)
 
-            base_runs_me = (base_qty * runs) * (1.0 - (me_level / 100.0))
-            required_qty = max(runs, math.ceil(base_runs_me * facility_me_multiplier))
+            run_cost = round(
+                base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
+            )
+            required_qty = max(runs, math.ceil(run_cost * runs))
+            base_total = max(runs, base_qty * runs)
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
+                bom[mat_type_id]["base_quantity"] += base_total
+                bom[mat_type_id]["savings"] = bom[mat_type_id].get("savings", 0) + (
+                    base_total - required_qty
+                )
             else:
                 bom[mat_type_id] = {
                     "type_id": mat_type_id,
                     "name": mat.get("name"),
                     "quantity": required_qty,
+                    "base_quantity": base_total,
+                    "savings": base_total - required_qty,
                 }
 
     return bom
 
 
 def get_recursive_bom_tree(
-    type_id, name, quantity, config_dict, depth=0, target_facility=None, stock_dict=None
+    type_id,
+    name,
+    quantity,
+    config_dict,
+    depth=0,
+    target_facility=None,
+    stock_dict=None,
+    corp_info=None,
+    order=None,
 ):
     """
     Recursively fetch manufacturing materials to build a hierarchical BOM.
@@ -275,6 +316,7 @@ def get_recursive_bom_tree(
             "type_id": type_id,
             "name": name,
             "quantity": quantity,
+            "base_quantity": quantity,
             "provided_from_stock": provided_from_stock,
             "activity_id": 1,
             "sub_materials": [],
@@ -285,6 +327,7 @@ def get_recursive_bom_tree(
             "type_id": type_id,
             "name": name,
             "quantity": 0,
+            "base_quantity": 0,
             "provided_from_stock": provided_from_stock,
             "activity_id": 1,
             "sub_materials": [],
@@ -301,6 +344,12 @@ def get_recursive_bom_tree(
     except EveType.DoesNotExist:
         facility_me_multiplier = 1.0
 
+    product_me = (
+        get_blueprint_me(product_type, corp_info, order)
+        if "product_type" in locals()
+        else 0
+    )
+
     materials, yield_qty = get_sde_bom(type_id)
     runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
     sub_materials = []
@@ -311,10 +360,11 @@ def get_recursive_bom_tree(
         mat_name = mat.get("name")
         base_qty = mat.get("quantity", 0)
 
-        # Apply ME discount if configured
-        me_level = mat_config.get("manual_me", 0)
-        base_runs_me = (base_qty * runs) * (1.0 - (me_level / 100.0))
-        required_qty = max(runs, math.ceil(base_runs_me * facility_me_multiplier))
+        run_cost = round(
+            base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
+        )
+        required_qty = max(runs, math.ceil(run_cost * runs))
+        base_total = max(runs, base_qty * runs)
 
         # If excluded from orders, we just treat it as a raw material (leaf node)
         if mat_config.get("exclude_from_orders", False):
@@ -336,6 +386,7 @@ def get_recursive_bom_tree(
                 "type_id": mat_type_id,
                 "name": mat_name,
                 "quantity": required_qty,
+                "base_quantity": base_total,
                 "provided_from_stock": prov_stock,
                 "activity_id": 1,
                 "sub_materials": [],
@@ -350,6 +401,8 @@ def get_recursive_bom_tree(
                 depth=depth + 1,
                 target_facility=target_facility,
                 stock_dict=stock_dict,
+                corp_info=corp_info,
+                order=order,
             )
         sub_materials.append(sub_node)
 
@@ -378,6 +431,7 @@ def get_recursive_bom_tree(
                             "type_id": m.material_eve_type.id,
                             "name": m.material_eve_type.name,
                             "quantity": math.ceil(m.quantity * runs),
+                            "base_quantity": math.ceil(m.quantity * runs),
                             "activity_id": 0,
                             "sub_materials": [],
                         }
@@ -389,6 +443,7 @@ def get_recursive_bom_tree(
                         "type_id": t1_blueprint.id,
                         "name": t1_blueprint.name,
                         "quantity": runs,
+                        "base_quantity": runs,
                         "activity_id": 5,  # Copying
                         "sub_materials": [],
                     }
@@ -410,6 +465,7 @@ def get_recursive_bom_tree(
                         "type_id": blueprint_type.id,
                         "name": blueprint_type.name,
                         "quantity": runs,
+                        "base_quantity": runs,
                         "activity_id": 5,  # Copying
                         "sub_materials": [],
                     }
@@ -421,8 +477,9 @@ def get_recursive_bom_tree(
         "type_id": type_id,
         "name": name,
         "quantity": quantity,
+        "base_quantity": quantity,  # The root's quantity is the required quantity
         "provided_from_stock": provided_from_stock,
-        "activity_id": 1,
+        "activity_id": 1,  # Manufacturing
         "sub_materials": sub_materials,
     }
 
@@ -435,21 +492,12 @@ def calculate_recursive_order_bom(order):
     # Alliance Auth
     from allianceauth.eveonline.models import EveCorporationInfo
 
-    # AA Industry App
-    from industry_reforged.models import CorpItemConfig
-
-    config_dict = {}
     try:
         corp_info = EveCorporationInfo.objects.get(
             corporation_id=order.character.corporation_id
         )
-        for config in CorpItemConfig.objects.filter(corporation=corp_info):
-            config_dict[config.item_type_id] = {
-                "manual_me": config.manual_me,
-                "exclude_from_orders": config.exclude_from_orders,
-            }
     except Exception:
-        pass
+        corp_info = None
 
     stock_dict = None
     if order.target_facility:
@@ -472,9 +520,11 @@ def calculate_recursive_order_bom(order):
             type_id,
             name,
             quantity,
-            config_dict,
+            {},
             target_facility=order.target_facility,
             stock_dict=stock_dict,
+            corp_info=corp_info,
+            order=order,
         )
         tree.append(node)
 
@@ -486,20 +536,6 @@ def calculate_recursive_tasks_bom(tasks, corp_info=None):
     Calculates the hierarchical Bill of Materials for a list of ProductionTasks.
     Returns a list of trees (one for each task).
     """
-    # AA Industry App
-    from industry_reforged.models import CorpItemConfig
-
-    config_dict = {}
-    if corp_info:
-        try:
-            for config in CorpItemConfig.objects.filter(corporation=corp_info):
-                config_dict[config.item_type_id] = {
-                    "manual_me": config.manual_me,
-                    "exclude_from_orders": config.exclude_from_orders,
-                }
-        except Exception:
-            pass
-
     tree = []
     for task in tasks:
         type_id = task.item_type.id
@@ -515,9 +551,15 @@ def calculate_recursive_tasks_bom(tasks, corp_info=None):
             target_facility = task.created_from_order.target_facility
         elif hasattr(task, "facility") and task.facility:
             target_facility = task.facility
-
+        order = task.created_from_order if hasattr(task, "created_from_order") else None
         node = get_recursive_bom_tree(
-            type_id, name, quantity, config_dict, target_facility=target_facility
+            type_id,
+            name,
+            quantity,
+            {},
+            target_facility=target_facility,
+            corp_info=corp_info,
+            order=order,
         )
         tree.append(node)
 
