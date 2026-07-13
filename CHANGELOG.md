@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.0b17] - Unreleased
+
+### Added
+- **Facility Rigs Auto-Seeding**: Added a data migration to automatically seed the database with the most common Upwell Structure rigs (e.g. Standup Ship/Equipment Manufacturing) so they are immediately available for external facility configuration.
+
+### Changed
+- **Director Order Deletion**: Directors can now delete an order from the Corporate Panel at any stage (even if it has already been accepted). Doing so will now also explicitly delete and clean up all associated `ProductionTask` items generated for that order.
+
 ## [0.1.0b16] - 13-07-2026
 
 ### Added
@@ -15,7 +23,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- **Director Order Deletion**: Directors can now delete an order from the Corporate Panel at any stage (even if it has already been accepted). Doing so will now also explicitly delete and clean up all associated `ProductionTask` items generated for that order.
 - **Inventory Sync Toggle**: Added a "Sync Inventory" toggle to the Production Facilities configuration tab. Facilities will no longer sync their inventory to the Corporate Stock by default unless explicitly enabled.
 
 ### Fixed
