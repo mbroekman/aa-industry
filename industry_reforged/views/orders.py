@@ -579,7 +579,7 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         send_discord_webhook(webhook_config.orders_webhook, embed)
 
                 # Send a direct message to the user who placed the order
-                from ..tasks import notify_discord_user
+                from ..tasks.utils import notify_discord_user
 
                 dm_msg = f"**Industry Quote Received**\nYour order `#{parent.id}` has been quoted for **{grand_total:,.2f} ISK**. Please check the dashboard to accept or reject it."
                 notify_discord_user(parent.character, dm_msg)

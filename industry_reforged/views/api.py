@@ -13,11 +13,9 @@ from allianceauth.eveonline.models import EveCharacter
 from ..models import (
     CorporationSyncConfig,
 )
-from ..tasks import (
-    task_sync_corp_inventory,
-    task_sync_corp_wallets,
-    update_character_pi,
-)
+from ..tasks.inventory import task_sync_corp_inventory
+from ..tasks.pi import update_character_pi
+from ..tasks.wallets import task_sync_corp_wallets
 
 
 def add_personal_token(request: WSGIRequest, token) -> HttpResponse:

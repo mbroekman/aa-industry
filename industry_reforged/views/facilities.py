@@ -117,7 +117,7 @@ def add_facility(request: WSGIRequest) -> HttpResponse:
                 messages.success(request, _("Facility added successfully."))
 
                 # Automatically sync rigs in the background
-                from ..tasks import sync_facility_rigs
+                from ..tasks.facilities import sync_facility_rigs
 
                 sync_facility_rigs.delay()
 
@@ -168,7 +168,7 @@ def edit_facility(request: WSGIRequest, facility_id: int) -> HttpResponse:
             messages.success(request, _("Facility updated successfully."))
 
             # Automatically sync rigs in the background
-            from ..tasks import sync_facility_rigs
+            from ..tasks.facilities import sync_facility_rigs
 
             sync_facility_rigs.delay()
 
