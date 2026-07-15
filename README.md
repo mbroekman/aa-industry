@@ -10,10 +10,10 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 ## Features
 
 - **Personal Dashboard**: Users can easily track their active, completed, and delivered industry jobs.
-- **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs, discover and explicitly configure Production Facilities, and auto-sync installed structure rigs from a centralized overview.
-- **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow (Director approval -> User acceptance).
+- **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs, discover and explicitly configure Production Facilities, set Default Corporate Structures, and auto-sync installed structure rigs from a centralized overview.
+- **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow featuring **Exact EVE Math** for material calculations (Director approval -> User acceptance).
 - **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD.
-- **Recursive BOM Drilldown & Shopping List Treeview**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components, and view fully interactive Production Trees directly within the Consolidated Shopping Lists.
+- **Recursive BOM Drilldown & Shopping List Treeview**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components, and view fully interactive Production Trees with Modifier Badges (ME, Rigs, Structure) directly within the Consolidated Shopping Lists.
 - **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices entirely from the front-end (no Django Admin access required).
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions.
 - **Smart ISK Formatting**: Features a built-in abbreviation engine that automatically formats large ISK values and displays precise tooltip translations (e.g., K, M, B, T) when hovered.

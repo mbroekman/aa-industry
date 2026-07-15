@@ -233,7 +233,12 @@
                                                         <span>{{ item.item_type.name }}</span>
                                                     </div>
                                                 </td>
-                                                <td class="text-end numeric">{{ item.quantity }}</td>
+                                                <td class="text-end numeric">
+                                                    <span id="qty_display_{{ item.id }}">{{ item.quantity }}</span>
+                                                    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                                    <input type="number" class="form-control form-control-sm d-none split-qty-input ms-auto" style="width: 80px;" name="split_qty_{{ item.id }}" id="split_qty_{{ item.id }}" value="{{ item.quantity }}" max="{{ item.quantity }}" min="1">
+                                                    {% endif %}
+                                                </td>
                                                 <td class="text-end numeric">
                                                     {% if item.discount_applied > 0 %}
                                                         <span class="text-success">{{ item.discount_applied }}%</span>
@@ -250,48 +255,7 @@
                                                 <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
                                             </tr>
                                             {% empty %}
-                                            {% if not order.child_orders.exists %}
-                                                <tr><td colspan="6" class="text-center">No items found in parent.</td></tr>
-                                            {% endif %}
-                                            {% endfor %}
-
-                                            {% for child in order.child_orders.all %}
-                                                {% for item in child.items.all %}
-                                                <tr {% if perms.industry_reforged.corp_access %}style="opacity: 0.85;"{% endif %}>
-                                                    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
-                                                    <td class="text-center align-middle">
-                                                        <!-- Cannot split an item that is already in a suborder -->
-                                                    </td>
-                                                    {% endif %}
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
-                                                            {% if perms.industry_reforged.corp_access %}
-                                                                <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2 ms-2"></i>
-                                                            {% endif %}
-                                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                                            <span>{{ item.item_type.name }}</span>
-                                                            {% if perms.industry_reforged.corp_access %}
-                                                                <span class="badge bg-secondary ms-2 small">Sub-order #{{ child.id }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    </td>
-                                                    <td class="text-end numeric">{{ item.quantity }}</td>
-                                                    <td class="text-end numeric">
-                                                        {% if item.discount_applied > 0 %}
-                                                            <span class="text-success">{{ item.discount_applied }}%</span>
-                                                        {% else %}
-                                                            -
-                                                        {% endif %}
-                                                    </td>
-                                                    <td class="text-end numeric">
-                                                        {% if item.discount_applied > 0 %}
-                                                            <del class="text-muted small">{{ item.original_price_per_unit|eve_isk }}</del><br>
-                                                        {% endif %}
-                                                        {{ item.price_per_unit|eve_isk }}
-                                                    </td>
-                                                    <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
-                                                </tr>
-                                                {% endfor %}
+                                                <tr><td colspan="6" class="text-center">No items found.</td></tr>
                                             {% endfor %}
                                         </tbody>
                                         <tfoot>
@@ -317,7 +281,7 @@
                                                 <select name="target_facility" class="form-select bg-secondary text-white border-secondary me-2 form-select-sm" style="width: auto;">
                                                     <option value="">-- {% trans "Default / No Facility" %} --</option>
                                                     {% for fac in facilities %}
-                                                    <option value="{{ fac.facility_id }}">{{ fac.name }}</option>
+                                                    <option value="{{ fac.facility_id }}" {% if fac.is_default %}selected{% endif %}>{{ fac.name }}</option>
                                                     {% endfor %}
                                                 </select>
                                                 <button type="submit" class="btn btn-warning btn-sm" id="splitOrderBtn" disabled><i class="fas fa-cut"></i> {% trans "Split to new Order" %}</button>
@@ -335,6 +299,22 @@
                                                 function updateBtnState() {
                                                     const anyChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
                                                     if(splitBtn) splitBtn.disabled = !anyChecked;
+
+                                                    // Toggle quantity inputs
+                                                    itemCheckboxes.forEach(cb => {
+                                                        const itemId = cb.value;
+                                                        const input = document.getElementById(`split_qty_${itemId}`);
+                                                        const display = document.getElementById(`qty_display_${itemId}`);
+                                                        if (input && display) {
+                                                            if (cb.checked) {
+                                                                input.classList.remove('d-none');
+                                                                display.classList.add('d-none');
+                                                            } else {
+                                                                input.classList.add('d-none');
+                                                                display.classList.remove('d-none');
+                                                            }
+                                                        }
+                                                    });
                                                 }
 
                                                 if (selectAll) {
@@ -530,6 +510,7 @@
                                                 <tr>
                                                     <th>{% trans "Blueprint" %}</th>
                                                     <th width="150">{% trans "Material Efficiency" %}</th>
+                                                    <th width="150">{% trans "Max Runs (BPC)" %}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -543,9 +524,21 @@
                                                     </td>
                                                     <td>
                                                         {% if order.status == 'REQUESTED' %}
-                                                        <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" name="bp_me_{{ p.type_id }}" value="{{ p.current_me }}" min="0" max="10">
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" class="form-control bg-dark text-white border-secondary" name="bp_me_{{ p.type_id }}" value="{{ p.current_me }}" min="0" max="10">
+                                                            <span class="input-group-text bg-secondary text-white border-secondary">%</span>
+                                                        </div>
                                                         {% else %}
                                                         <span class="text-white">{{ p.current_me }}%</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if order.status == 'REQUESTED' %}
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" class="form-control bg-dark text-white border-secondary" name="bp_runs_{{ p.type_id }}" value="{{ p.current_max_runs }}" min="0" placeholder="0 = infinite">
+                                                        </div>
+                                                        {% else %}
+                                                        <span class="text-white">{% if p.current_max_runs == 0 %}Infinite (BPO){% else %}{{ p.current_max_runs }}{% endif %}</span>
                                                         {% endif %}
                                                     </td>
                                                 </tr>
@@ -712,7 +705,7 @@
                         <select name="target_facility" id="split_target_facility" class="form-select" required>
                             <option value="">-- {% trans "Select Facility" %} --</option>
                             {% for fac in facilities %}
-                            <option value="{{ fac.facility_id }}">{{ fac.name }}</option>
+                            <option value="{{ fac.facility_id }}" {% if fac.is_default %}selected{% endif %}>{{ fac.name }}</option>
                             {% endfor %}
                         </select>
                     </div>

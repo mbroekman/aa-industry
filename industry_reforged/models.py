@@ -54,6 +54,10 @@ class IndustryFacility(models.Model):
         default=False,
         help_text="Whether this facility is configured as a production facility.",
     )
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Whether this is the default facility for the corporation.",
+    )
 
     class Meta:
         verbose_name = _("Industry Facility")
@@ -61,6 +65,14 @@ class IndustryFacility(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.facility_id})"
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # Unset default on all other facilities
+            IndustryFacility.objects.filter(is_default=True).exclude(pk=self.pk).update(
+                is_default=False
+            )
+        super().save(*args, **kwargs)
 
     @property
     def type_name(self):
@@ -855,6 +867,9 @@ class CorpItemConfig(models.Model):
     manual_te = models.IntegerField(
         default=0, help_text="Manual Time Efficiency override (0-20)"
     )
+    max_runs = models.IntegerField(
+        default=0, help_text="Max runs per BPC (0 = infinite/BPO)"
+    )
     manual_price = models.DecimalField(
         max_digits=17,
         decimal_places=2,
@@ -1030,6 +1045,7 @@ class OrderBlueprintOverride(models.Model):
     )
     item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     manual_me = models.IntegerField(default=0)
+    max_runs = models.IntegerField(default=0)
 
     class Meta:
         verbose_name = _("Order BP Override")

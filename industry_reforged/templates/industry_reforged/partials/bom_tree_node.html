@@ -11,6 +11,11 @@
                     <del>{{ node.base_quantity|floatformat:0|intcomma }}</del>
                 </span>
             {% endif %}
+            {% if node.sub_materials %}
+                <span class="ms-2 badge border border-secondary text-light bg-dark" title="{% trans 'Modifiers Applied' %}">
+                    <i class="fas fa-industry text-muted"></i> BP ME: <span class="text-info">{{ node.product_me }}%</span> | Rig: <span class="text-info">{{ node.rig_bonus|floatformat:1 }}%</span> | Struct: <span class="text-info">{{ node.hull_bonus|floatformat:1 }}%</span> <span class="text-muted">({{ node.facility_name|default:"None" }})</span>
+                </span>
+            {% endif %}
             {% if node.provided_from_stock and node.provided_from_stock > 0 %}
                 <span class="ms-2 badge bg-success" title="{% trans 'Sourced from inventory' %}">
                     <i class="fas fa-box-open"></i> {{ node.provided_from_stock|floatformat:0|intcomma }} in stock

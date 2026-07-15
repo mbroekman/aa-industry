@@ -45,7 +45,13 @@
                                     <input type="checkbox" name="order_ids" value="{{ order.id }}" class="order-checkbox">
                                 </td>
                                 {% endif %}
-                                <td class="numeric">#{{ order.id }}</td>
+                                <td class="numeric">#{{ order.id }}
+                                    {% if order.child_orders.exists %}
+                                    <span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has sub-orders">
+                                        <i class="fas fa-sitemap"></i> +{{ order.child_orders.count }}
+                                    </span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ order.character.character_name }}</td>
                                 <td>
                                     <div>

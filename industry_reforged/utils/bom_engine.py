@@ -67,12 +67,14 @@ def get_sde_bom(type_id):
         return [], 1
 
 
-def calculate_facility_me_multiplier(facility, product_type):
+def calculate_facility_me_multiplier(facility, product_type, return_breakdown=False):
     """
     Calculates the combined (1 - HullBonus) * (1 - RigBonus * SecMultiplier)
     for a given IndustryFacility and the product being manufactured.
     """
     if not facility:
+        if return_breakdown:
+            return 1.0, 0.0, 0.0
         return 1.0
 
     sec_multiplier = 1.0
@@ -92,19 +94,24 @@ def calculate_facility_me_multiplier(facility, product_type):
         rig = fac_rig.rig
         if rig.me_bonus > 0:
             applies = False
-            if (
-                group_id
-                and rig.applies_to_groups
-                and group_id in [x.strip() for x in rig.applies_to_groups.split(",")]
-            ):
+            if not rig.applies_to_groups and not rig.applies_to_categories:
+                # If no specific group or category restrictions exist, it acts as a global rig
                 applies = True
-            if (
-                category_id
-                and rig.applies_to_categories
-                and category_id
-                in [x.strip() for x in rig.applies_to_categories.split(",")]
-            ):
-                applies = True
+            else:
+                if (
+                    group_id
+                    and rig.applies_to_groups
+                    and group_id
+                    in [x.strip() for x in rig.applies_to_groups.split(",")]
+                ):
+                    applies = True
+                if (
+                    category_id
+                    and rig.applies_to_categories
+                    and category_id
+                    in [x.strip() for x in rig.applies_to_categories.split(",")]
+                ):
+                    applies = True
 
             if applies:
                 rig_bonus_val = float(rig.me_bonus) / 100.0
@@ -116,7 +123,10 @@ def calculate_facility_me_multiplier(facility, product_type):
     if facility.type_id in [35825, 35826, 35827]:  # Raitaru, Azbel, Sotiyo
         hull_bonus = 0.01
 
-    return (1.0 - hull_bonus) * (1.0 - (rig_bonus * sec_multiplier))
+    multiplier = (1.0 - hull_bonus) * (1.0 - (rig_bonus * sec_multiplier))
+    if return_breakdown:
+        return multiplier, hull_bonus, (rig_bonus * sec_multiplier)
+    return multiplier
 
 
 def get_blueprint_me(product_type, corp_info=None, order=None):
@@ -129,19 +139,25 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     # AA Industry App
     from industry_reforged.models import CorpItemConfig, OrderBlueprintOverride
 
+    # Check for order-specific override first
     if order:
         bp_override = OrderBlueprintOverride.objects.filter(
             order=order, item_type=product_type
         ).first()
-        if bp_override:
-            return bp_override.manual_me
+        if bp_override and (bp_override.manual_me > 0 or bp_override.max_runs > 0):
+            # If ME is 0, we still might want to return the override if max_runs is > 0,
+            # but let's fall back to default ME if manual_me is 0.
+            me_val = bp_override.manual_me if bp_override.manual_me > 0 else None
+            return me_val, bp_override.max_runs
 
+    # Then check for global corp config
     if corp_info:
         corp_config = CorpItemConfig.objects.filter(
             corporation=corp_info, item_type=product_type
         ).first()
-        if corp_config and corp_config.manual_me > 0:
-            return corp_config.manual_me
+        if corp_config and (corp_config.manual_me > 0 or corp_config.max_runs > 0):
+            me_val = corp_config.manual_me if corp_config.manual_me > 0 else None
+            return me_val, corp_config.max_runs
 
     default_t1 = 10
     default_t2 = 2
@@ -155,14 +171,16 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     bp_prod = EveIndustryActivityProduct.objects.filter(
         product_eve_type_id=product_type.id, activity_id__in=[1, 11]
     ).first()
+
+    # We still need a default ME if none was provided by overrides
     if bp_prod:
         is_invented = EveIndustryActivityProduct.objects.filter(
             product_eve_type_id=bp_prod.eve_type_id, activity_id=8
         ).exists()
         if is_invented:
-            return default_t2
+            return default_t2, 0
 
-    return default_t1
+    return default_t1, 0
 
 
 def calculate_order_bom(order):
@@ -197,7 +215,14 @@ def calculate_order_bom(order):
             target_facility, item.item_type
         )
 
-        product_me = get_blueprint_me(item.item_type, corp_info, order)
+        me_override, max_runs_override = get_blueprint_me(
+            item.item_type, corp_info, order
+        )
+        product_me = (
+            me_override
+            if me_override is not None
+            else get_blueprint_me(item.item_type, corp_info, None)[0]
+        )
 
         materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
@@ -207,11 +232,27 @@ def calculate_order_bom(order):
             base_qty = mat.get("quantity", 0)
 
             # EVE Math: run_cost = round(base_qty * ((100 - ME)/100) * facility_me_multiplier, 2)
-            # required_qty = max(runs, math.ceil(run_cost * runs))
             run_cost = round(
                 base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
             )
-            required_qty = max(runs, math.ceil(run_cost * runs))
+
+            # Chunking logic for max_runs
+            if max_runs_override > 0 and runs > max_runs_override:
+                full_jobs = runs // max_runs_override
+                remaining_runs = runs % max_runs_override
+
+                required_qty = 0
+                if full_jobs > 0:
+                    required_qty += full_jobs * max(
+                        max_runs_override, math.ceil(run_cost * max_runs_override)
+                    )
+                if remaining_runs > 0:
+                    required_qty += max(
+                        remaining_runs, math.ceil(run_cost * remaining_runs)
+                    )
+            else:
+                required_qty = max(runs, math.ceil(run_cost * runs))
+
             base_total = max(runs, base_qty * runs)
 
             if mat_type_id in bom:
@@ -251,7 +292,14 @@ def calculate_tasks_bom(tasks, corp_info=None):
             target_facility, task.item_type
         )
 
-        product_me = get_blueprint_me(task.item_type, corp_info, order)
+        me_override, max_runs_override = get_blueprint_me(
+            task.item_type, corp_info, order
+        )
+        product_me = (
+            me_override
+            if me_override is not None
+            else get_blueprint_me(task.item_type, corp_info, None)[0]
+        )
 
         materials, yield_qty = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
@@ -263,7 +311,24 @@ def calculate_tasks_bom(tasks, corp_info=None):
             run_cost = round(
                 base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
             )
-            required_qty = max(runs, math.ceil(run_cost * runs))
+
+            # Chunking logic for max_runs
+            if max_runs_override > 0 and runs > max_runs_override:
+                full_jobs = runs // max_runs_override
+                remaining_runs = runs % max_runs_override
+
+                required_qty = 0
+                if full_jobs > 0:
+                    required_qty += full_jobs * max(
+                        max_runs_override, math.ceil(run_cost * max_runs_override)
+                    )
+                if remaining_runs > 0:
+                    required_qty += max(
+                        remaining_runs, math.ceil(run_cost * remaining_runs)
+                    )
+            else:
+                required_qty = max(runs, math.ceil(run_cost * runs))
+
             base_total = max(runs, base_qty * runs)
 
             if mat_type_id in bom:
@@ -335,6 +400,10 @@ def get_recursive_bom_tree(
             "provided_from_child_order": provided_from_child_order,
             "activity_id": 1,
             "sub_materials": [],
+            "product_me": 0,
+            "hull_bonus": 0.0,
+            "rig_bonus": 0.0,
+            "facility_name": target_facility.name if target_facility else "None",
         }
 
     if quantity == 0:
@@ -347,6 +416,10 @@ def get_recursive_bom_tree(
             "provided_from_child_order": provided_from_child_order,
             "activity_id": 1,
             "sub_materials": [],
+            "product_me": 0,
+            "hull_bonus": 0.0,
+            "rig_bonus": 0.0,
+            "facility_name": target_facility.name if target_facility else "None",
         }
 
     # Third Party
@@ -354,11 +427,15 @@ def get_recursive_bom_tree(
 
     try:
         product_type = EveType.objects.get(id=type_id)
-        facility_me_multiplier = calculate_facility_me_multiplier(
-            target_facility, product_type
+        facility_me_multiplier, hull_bonus, total_rig_bonus = (
+            calculate_facility_me_multiplier(
+                target_facility, product_type, return_breakdown=True
+            )
         )
     except EveType.DoesNotExist:
         facility_me_multiplier = 1.0
+        hull_bonus = 0.0
+        total_rig_bonus = 0.0
 
     product_me = (
         get_blueprint_me(product_type, corp_info, order)
@@ -421,6 +498,10 @@ def get_recursive_bom_tree(
                 "activity_id": 1,
                 "sub_materials": [],
                 "is_excluded": True,
+                "product_me": 0,
+                "hull_bonus": 0.0,
+                "rig_bonus": 0.0,
+                "facility_name": target_facility.name if target_facility else "None",
             }
         else:
             sub_node = get_recursive_bom_tree(
@@ -513,6 +594,12 @@ def get_recursive_bom_tree(
         "provided_from_child_order": provided_from_child_order,
         "activity_id": 1,  # Manufacturing
         "sub_materials": sub_materials,
+        "product_me": product_me if "product_me" in locals() else 0,
+        "hull_bonus": (hull_bonus * 100.0) if "hull_bonus" in locals() else 0.0,
+        "rig_bonus": (
+            (total_rig_bonus * 100.0) if "total_rig_bonus" in locals() else 0.0
+        ),
+        "facility_name": target_facility.name if target_facility else "None",
     }
 
 

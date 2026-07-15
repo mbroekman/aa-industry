@@ -67,6 +67,23 @@
                             {% endfor %}
                         </div>
 
+                        <div id="empty-form-template" class="d-none">
+                            <div class="row align-items-center mb-2 formset-row">
+                                <div class="col-md-9">
+                                    {% bootstrap_field formset.empty_form.rig layout="horizontal" %}
+                                </div>
+                                <div class="col-md-3 mt-4">
+                                    {% if formset.can_delete %}
+                                        {% bootstrap_field formset.empty_form.DELETE %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-info btn-sm mt-2" id="add-rig-btn">
+                            <i class="fas fa-plus"></i> {% trans "Add Rig" %}
+                        </button>
+
                         <div class="mt-4 d-flex justify-content-between">
                             <a href="{% url 'industry_reforged:director_config' %}#facilities" class="btn btn-secondary">{% trans "Cancel" %}</a>
                             <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> {% trans "Save Facility" %}</button>
@@ -145,6 +162,22 @@
                         select.appendChild(opt);
                     }
                 });
+            });
+        }
+
+        // Formset Add Logic
+        const addRigBtn = document.getElementById('add-rig-btn');
+        if (addRigBtn) {
+            addRigBtn.addEventListener('click', function() {
+                const formsetContainer = document.getElementById('rigs-formset');
+                const totalForms = document.getElementById('id_rigs-TOTAL_FORMS');
+                const formCount = parseInt(totalForms.value);
+
+                const template = document.getElementById('empty-form-template').innerHTML;
+                const compiled = template.replace(/__prefix__/g, formCount);
+
+                formsetContainer.insertAdjacentHTML('beforeend', compiled);
+                totalForms.value = formCount + 1;
             });
         }
     });

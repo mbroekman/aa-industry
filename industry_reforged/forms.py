@@ -69,6 +69,7 @@ class CorpItemConfigForm(forms.ModelForm):
             "item_name",
             "manual_me",
             "manual_te",
+            "max_runs",
             "manual_price",
             "target_threshold",
             "auto_produce",
@@ -80,6 +81,7 @@ class CorpItemConfigForm(forms.ModelForm):
             "corporation": forms.Select(attrs={"class": "form-select"}),
             "manual_me": forms.NumberInput(attrs={"class": "form-control"}),
             "manual_te": forms.NumberInput(attrs={"class": "form-control"}),
+            "max_runs": forms.NumberInput(attrs={"class": "form-control"}),
             "manual_price": forms.NumberInput(attrs={"class": "form-control"}),
             "target_threshold": forms.NumberInput(attrs={"class": "form-control"}),
             "auto_produce": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -245,7 +247,7 @@ class IndustryFacilityForm(forms.ModelForm):
 
     class Meta:
         model = IndustryFacility
-        fields = ["facility_id", "name", "type_id", "solar_system_id"]
+        fields = ["facility_id", "name", "type_id", "solar_system_id", "is_default"]
         help_texts = {
             "facility_id": _("The exact EVE Structure ID. Type manually."),
             "name": _("A friendly name for this facility."),

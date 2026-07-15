@@ -62,7 +62,13 @@
                             <tbody>
                                 {% for order in all_orders %}
                                 <tr>
-                                    <td>#{{ order.id }}</td>
+                                    <td>#{{ order.id }}
+                                        {% if order.child_orders.exists %}
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has sub-orders">
+                                            <i class="fas fa-sitemap"></i> +{{ order.child_orders.count }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ order.character.character_name }}</td>
                                     <td class="numeric text-warning text-end">{{order.total_price|eve_isk }}</td>
                                     <td>
@@ -125,7 +131,13 @@
                                 </tr>
                                 {% for child in order.child_orders.all %}
                                 <tr class="table-active">
-                                    <td class="ps-4 text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> #{{ child.id }}</td>
+                                    <td class="ps-4 text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> #{{ child.id }}
+                                        {% if child.child_orders.exists %}
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has nested sub-orders">
+                                            <i class="fas fa-sitemap"></i> +{{ child.child_orders.count }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-muted">{{ child.character.character_name }}</td>
                                     <td class="numeric text-warning text-end" style="opacity: 0.8;">{{ child.total_price|eve_isk }}</td>
                                     <td>

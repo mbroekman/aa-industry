@@ -89,7 +89,7 @@
                                         </span>
                                         <small class="d-block text-muted mt-1">{{ config.get_bom_source_display }}</small>
                                     </td>
-                                    <td class="text-end numeric">ME: {{ config.manual_me }}%<br>TE: {{ config.manual_te }}%</td>
+                                    <td class="text-end numeric">ME: {{ config.manual_me }}%<br>TE: {{ config.manual_te }}%<br>Runs: {% if config.max_runs == 0 %}BPO{% else %}{{ config.max_runs }}{% endif %}</td>
                                     <td class="text-end numeric text-warning fw-bold">{% if config.manual_price %}{{ config.manual_price|eve_isk }}{% else %}<span class="text-muted fw-normal"><em>Auto (Fuzzwork)</em></span>{% endif %}</td>
                                     <td class="text-end numeric">{{ config.target_threshold|intcomma }}</td>
                                     <td class="text-center">{% if config.auto_produce %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
@@ -345,7 +345,12 @@
                                 {% for facility in facilities %}
                                 <tr>
                                     <td><code>{{ facility.facility_id }}</code></td>
-                                    <td>{{ facility.name }}</td>
+                                    <td>
+                                        {{ facility.name }}
+                                        {% if facility.is_default %}
+                                            <span class="badge bg-warning text-dark ms-2" title="{% trans 'Default Facility' %}"><i class="fas fa-star"></i> Default</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if facility.type_id %}
                                             <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/35825/icon?size=32';" src="https://images.evetech.net/types/{{ facility.type_id }}/icon?size=32" alt="Type {{ facility.type_id }}" width="24" height="24" class="me-1 rounded bg-dark">
