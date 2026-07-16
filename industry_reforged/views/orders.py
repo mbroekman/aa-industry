@@ -2,6 +2,7 @@
 
 # Django
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
@@ -72,6 +73,8 @@ def notify_order_ready(order: MemberOrder):
         send_discord_webhook(webhook_config.directors_webhook, embed)
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def shopping_list(request: WSGIRequest) -> HttpResponse:
     """Generate a consolidated Shopping List for selected orders."""
     order_ids = request.GET.getlist("order_ids")
@@ -204,6 +207,8 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/shopping_list.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def create_order(request: WSGIRequest) -> HttpResponse:
     """Create a new order from EFT fit or single items"""
     if request.method == "POST":
@@ -321,6 +326,8 @@ def create_order(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/create_order.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     """View details of a quote/order"""
     user_characters = request.user.character_ownerships.all().values_list(
@@ -453,6 +460,8 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     return render(request, "industry_reforged/view_quote.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Director provides a final quote for a requested order"""
     if request.method == "POST":
@@ -604,6 +613,8 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect("industry_reforged:director_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def split_order(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Director splits specific items from an order into a new child order"""
     if request.method == "POST":
@@ -723,6 +734,8 @@ def split_order(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect("industry_reforged:view_quote", order_id=order.id)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Director splits a specific sub-component from the BOM into a new child order"""
     if request.method == "POST":
@@ -873,6 +886,8 @@ def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect("industry_reforged:view_quote", order_id=order.id)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpResponse:
     """HTMX endpoint to update the target facility and recalculate BOM live"""
     order = MemberOrder.objects.filter(id=order_id).first()
@@ -922,6 +937,8 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     return render(request, "industry_reforged/partials/quote_bom_panes.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def update_quote_me_overrides(request: WSGIRequest, order_id: int) -> HttpResponse:
     """HTMX endpoint to update the target facility and recalculate BOM live"""
     order = MemberOrder.objects.filter(id=order_id).first()
@@ -974,6 +991,8 @@ def update_quote_me_overrides(request: WSGIRequest, order_id: int) -> HttpRespon
     return redirect(f"{url}#bom-pane")
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
@@ -1103,6 +1122,8 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect("industry_reforged:orders_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
@@ -1138,6 +1159,8 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect("industry_reforged:orders_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True

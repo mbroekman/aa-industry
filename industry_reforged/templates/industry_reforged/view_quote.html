@@ -182,7 +182,7 @@
                 {% endif %}
                 {% if perms.industry_reforged.corp_access %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="me-tab" data-bs-toggle="tab" data-bs-target="#me-pane" type="button" role="tab" aria-controls="me-pane" aria-selected="false">{% trans "ME Overrides" %}</button>
+                    <button class="nav-link" id="me-tab" data-bs-toggle="tab" data-bs-target="#me-pane" type="button" role="tab" aria-controls="me-pane" aria-selected="false">{% trans "ME & BPC Overrides" %}</button>
                 </li>
                 {% endif %}
             </ul>
@@ -493,7 +493,7 @@
                             <input type="hidden" name="target_facility" id="hidden_target_facility">
                             <div class="card border-0 h-100 position-relative">
                                 <div class="card-header border-bottom border-secondary bg-dark text-white d-flex justify-content-between align-items-center">
-                                    <h3 class="card-title mb-0"><i class="fas fa-sliders-h text-warning me-2"></i> {% trans "Required Blueprints (ME Override)" %}</h3>
+                                    <h3 class="card-title mb-0"><i class="fas fa-sliders-h text-warning me-2"></i> {% trans "Required Blueprints (ME & BPC Overrides)" %}</h3>
                                     {% if order.status == 'REQUESTED' %}
                                     <div class="d-flex align-items-center">
                                         <button type="submit" class="btn btn-warning btn-sm" onclick="document.getElementById('hidden_target_facility').value = document.querySelector('select[name=\'target_facility\']')?.value || ''; document.getElementById('me-loading').style.display = 'inline-block';">

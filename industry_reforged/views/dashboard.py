@@ -1,6 +1,7 @@
 """App Views"""
 
 # Django
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -13,6 +14,8 @@ from ..models import (
 )
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def index(request: WSGIRequest) -> HttpResponse:
     """
     Index view
@@ -20,6 +23,8 @@ def index(request: WSGIRequest) -> HttpResponse:
     return personal_dashboard(request)
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     """Personal Dashboard View"""
     user_characters = request.user.character_ownerships.all().values_list(
@@ -67,6 +72,8 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/personal_dashboard.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def corporate_dashboard(request: WSGIRequest) -> HttpResponse:
     """Corporate Dashboard View"""
     user_corps = request.user.character_ownerships.all().values_list(
@@ -92,6 +99,8 @@ def corporate_dashboard(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/corporate_dashboard.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def orders_dashboard(request: WSGIRequest) -> HttpResponse:
     """Member Orders Dashboard"""
     user_characters = request.user.character_ownerships.all().values_list(

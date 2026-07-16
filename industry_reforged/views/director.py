@@ -2,6 +2,7 @@
 
 # Django
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -28,6 +29,8 @@ from ..models import (
 )
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main dashboard for Directors to manage orders and jobs."""
     # Django
@@ -71,6 +74,8 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/director_dashboard.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Mark an order as DELIVERED and notify the buyer."""
     if request.method == "POST":
@@ -102,6 +107,8 @@ def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Manually process payment (partial or full) and optional notes."""
     if request.method == "POST":
@@ -157,6 +164,8 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
     return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
     """Generate a BuilderPayoutBatch for a specific builder."""
     if request.method == "POST":
@@ -222,6 +231,8 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
     return redirect(reverse("industry_reforged:director_dashboard") + "#payouts-pane")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
     """Manually mark a BuilderPayoutBatch as paid."""
     from ..models import BuilderPayoutBatch
@@ -240,6 +251,8 @@ def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
     return redirect(reverse("industry_reforged:director_dashboard") + "#payouts-pane")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_inventory(request: WSGIRequest) -> HttpResponse:
     """Inventory and Analytics for Directors."""
     # Django
@@ -293,6 +306,8 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/director_inventory.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config(request: WSGIRequest) -> HttpResponse:
     """Mass edit form for Item Configurations."""
 
@@ -329,6 +344,8 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/director_config.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_structure_toggle(
     request: WSGIRequest, facility_id: int
 ) -> HttpResponse:
@@ -347,6 +364,8 @@ def director_config_structure_toggle(
     return redirect(reverse("industry_reforged:director_config") + "#facilities")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_wallets(request: WSGIRequest) -> HttpResponse:
     """Corporate Wallets and Transactions"""
 
@@ -387,6 +406,8 @@ def director_wallets(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/director_wallets.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_item_edit(
     request: WSGIRequest, config_id: int = None
 ) -> HttpResponse:
@@ -422,6 +443,8 @@ def director_config_item_edit(
     )
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_item_delete(request: WSGIRequest, config_id: int) -> HttpResponse:
     from ..models import CorpItemConfig
 
@@ -431,6 +454,8 @@ def director_config_item_delete(request: WSGIRequest, config_id: int) -> HttpRes
     return redirect(reverse("industry_reforged:director_config") + "#items")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_pricing_edit(
     request: WSGIRequest, config_id: int = None
 ) -> HttpResponse:
@@ -464,6 +489,8 @@ def director_config_pricing_edit(
     )
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_discount_edit(
     request: WSGIRequest, discount_id: int = None
 ) -> HttpResponse:
@@ -493,6 +520,8 @@ def director_config_discount_edit(
     )
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_discount_delete(
     request: WSGIRequest, discount_id: int
 ) -> HttpResponse:
@@ -502,6 +531,8 @@ def director_config_discount_delete(
     return redirect(reverse("industry_reforged:director_config") + "#discounts")
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_tax_edit(
     request: WSGIRequest, config_id: int = None
 ) -> HttpResponse:

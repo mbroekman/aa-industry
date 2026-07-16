@@ -437,11 +437,10 @@ def get_recursive_bom_tree(
         hull_bonus = 0.0
         total_rig_bonus = 0.0
 
-    product_me = (
-        get_blueprint_me(product_type, corp_info, order)
-        if "product_type" in locals()
-        else 0
-    )
+    if "product_type" in locals():
+        product_me, max_runs = get_blueprint_me(product_type, corp_info, order)
+    else:
+        product_me, max_runs = 0, 0
 
     materials, yield_qty = get_sde_bom(type_id)
     runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
@@ -456,7 +455,19 @@ def get_recursive_bom_tree(
         run_cost = round(
             base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
         )
-        required_qty = max(runs, math.ceil(run_cost * runs))
+
+        # Chunking logic for max_runs
+        if max_runs > 0 and runs > max_runs:
+            full_jobs = runs // max_runs
+            remaining_runs = runs % max_runs
+
+            chunked_qty = full_jobs * max(max_runs, math.ceil(run_cost * max_runs))
+            if remaining_runs > 0:
+                chunked_qty += max(remaining_runs, math.ceil(run_cost * remaining_runs))
+            required_qty = chunked_qty
+        else:
+            required_qty = max(runs, math.ceil(run_cost * runs))
+
         base_total = max(runs, base_qty * runs)
 
         # If excluded from orders, we just treat it as a raw material (leaf node)

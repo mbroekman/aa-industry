@@ -56,10 +56,10 @@
                                     <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
                                     <td>
                                         {% if job.product_type %}
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" title="{{ job.product_type.name }}" width="24" height="24" class="me-2">
+                                            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.product_type.id }}/bp?size=32';" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" title="{{ job.product_type.name }}" width="24" height="24" class="me-2">
                                             {{ job.product_type.name }}
                                         {% elif job.blueprint_type %}
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32" alt="{{ job.blueprint_type.name }}" title="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2">
+                                            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32';" src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32" alt="{{ job.blueprint_type.name }}" title="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2">
                                             {{ job.blueprint_type.name }}
                                         {% else %}
                                             <span class="text-muted">Unknown Item</span>
@@ -115,10 +115,10 @@
                                     <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
                                     <td>
                                         {% if job.product_type %}
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" title="{{ job.product_type.name }}" width="24" height="24" class="me-2">
+                                            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.product_type.id }}/bp?size=32';" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" title="{{ job.product_type.name }}" width="24" height="24" class="me-2">
                                             {{ job.product_type.name }}
                                         {% elif job.blueprint_type %}
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32" alt="{{ job.blueprint_type.name }}" title="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2">
+                                            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32';" src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32" alt="{{ job.blueprint_type.name }}" title="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2">
                                             {{ job.blueprint_type.name }}
                                         {% else %}
                                             <span class="text-muted">Unknown Item</span>

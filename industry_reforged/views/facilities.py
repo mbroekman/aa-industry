@@ -2,6 +2,7 @@
 
 # Django
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -86,6 +87,8 @@ def get_corporate_structures_for_dropdown(corporation):
     return structures
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def add_facility(request: WSGIRequest) -> HttpResponse:
     from ..forms import IndustryFacilityForm, IndustryFacilityRigFormSet
 
@@ -150,6 +153,8 @@ def add_facility(request: WSGIRequest) -> HttpResponse:
     )
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def edit_facility(request: WSGIRequest, facility_id: int) -> HttpResponse:
     from ..forms import IndustryFacilityForm, IndustryFacilityRigFormSet
     from ..models import IndustryFacility
@@ -192,6 +197,8 @@ def edit_facility(request: WSGIRequest, facility_id: int) -> HttpResponse:
     )
 
 
+@login_required
+@permission_required("industry_reforged.corp_access")
 def delete_facility(request: WSGIRequest, facility_id: int) -> HttpResponse:
     from ..models import IndustryFacility
 

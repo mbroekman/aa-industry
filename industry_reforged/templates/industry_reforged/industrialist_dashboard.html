@@ -133,7 +133,7 @@
                                                             <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2"
                                                                 style="font-size: 0.8rem;"></i>
                                                             {% endif %}
-                                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
+                                                            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ task.item_type.id }}/bp?size=32';"
                                                                 src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
                                                                 class="me-2 rounded">
@@ -242,7 +242,7 @@
                                                                 <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2"
                                                                     style="font-size: 0.8rem;"></i>
                                                                 {% endif %}
-                                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
+                                                                <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ task.item_type.id }}/bp?size=32';"
                                                                     src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                     alt="{{ task.item_type.name }}" width="24"
                                                                     height="24" class="me-2 rounded">
@@ -307,7 +307,7 @@
                                                         <tr>
                                                             <td>
                                                                 <div class="d-flex align-items-center">
-                                                                    <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
+                                                                    <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ task.item_type.id }}/bp?size=32';"
                                                                         src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                         alt="{{ task.item_type.name }}" width="24"
                                                                         height="24" class="me-2 rounded opacity-50">
@@ -365,7 +365,7 @@
                                                 <tr>
                                                     <td>
                                                         <div class="d-flex align-items-center">
-                                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
+                                                            <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ sum_item.item_type_id }}/bp?size=32';"
                                                                 src="https://images.evetech.net/types/{{ sum_item.item_type_id }}/icon?size=32"
                                                                 alt="{{ sum_item.item_type_name }}" width="24"
                                                                 height="24" class="me-2 rounded">
@@ -421,7 +421,7 @@
                                                         <td>
                                                             {% if job.product_type %}
                                                             <div class="d-flex align-items-center">
-                                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
+                                                                <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.product_type.id }}/bp?size=32';"
                                                                     src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32"
                                                                     alt="{{ job.product_type.name }}" width="24"
                                                                     height="24" class="me-2 rounded">
@@ -429,8 +429,8 @@
                                                             </div>
                                                             {% elif job.blueprint_type %}
                                                             <div class="d-flex align-items-center">
-                                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';"
-                                                                    src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32"
+                                                                <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32';"
+                                                                    src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32"
                                                                     alt="{{ job.blueprint_type.name }}" width="24"
                                                                     height="24" class="me-2 rounded">
                                                                 <span><span class="badge bg-secondary me-1">{{ job.activity_name }}</span> {{ job.blueprint_type.name }}</span>

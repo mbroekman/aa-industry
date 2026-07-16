@@ -2,6 +2,7 @@
 
 # Django
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
@@ -18,6 +19,8 @@ from ..models import (
 from .orders import notify_order_ready
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main execution dashboard for industrialists"""
 
@@ -238,6 +241,8 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
         character = request.user.profile.main_character
@@ -286,6 +291,8 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     return redirect("industry_reforged:industrialist_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
         character = request.user.profile.main_character
@@ -352,6 +359,8 @@ def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     return redirect("industry_reforged:industrialist_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
     if request.method == "POST":
         task_ids = request.POST.getlist("task_ids")
@@ -405,6 +414,8 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
     return redirect("industry_reforged:industrialist_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
     if request.method == "POST":
         task_ids = request.POST.getlist("task_ids")
@@ -473,6 +484,8 @@ def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
     return redirect("industry_reforged:industrialist_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     if request.method == "POST":
         user_characters = request.user.character_ownerships.all().values_list(
@@ -512,6 +525,8 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     return redirect("industry_reforged:industrialist_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.industrialist_access")
 def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
     if request.method == "POST":
         task_ids = request.POST.getlist("task_ids")
@@ -563,6 +578,8 @@ def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
     return redirect("industry_reforged:industrialist_dashboard")
 
 
+@login_required
+@permission_required("industry_reforged.basic_access")
 def industrialist_leaderboard(request: WSGIRequest) -> HttpResponse:
     """Leaderboard and History view"""
     # Django

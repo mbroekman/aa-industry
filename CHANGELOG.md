@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.0b18.1] - 16-07-2026
+
+### Changed
+
+- **ME Overrides Tab**: Renamed the "ME Overrides" tab to "ME & BPC Overrides" to clarify that users can also adjust BPC `max_runs` there for job chunking.
+
+### Fixed
+
+- **BOM Tree Chunking Crash**: Fixed a `TypeError: unsupported operand type(s) for -: 'float' and 'tuple'` crash caused by the new BPC `max_runs` tuple return value not being unpacked when viewing the Production Tree UI.
+- **BOM Tree UI Accuracy**: Added the missing `max_runs` Job Chunking calculation directly into the visual Production Tree so that the required quantities displayed in the UI perfectly match the quantities calculated by the background job calculator.
+- **Missing Blueprint Icons**: Fixed an issue where the EVE Image Server would return broken/generic fallback icons for Invention, Copying, and Research jobs because blueprints do not have standard `/icon` images. The dashboards now dynamically fallback to the correct `/bp` endpoint.
+
 ## [0.1.0b18] - 15-07-2026
 
 ### Added
