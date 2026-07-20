@@ -618,7 +618,7 @@ class MemberOrder(models.Model):
 
     parent_order = models.ForeignKey(
         "self",
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="child_orders",
@@ -636,6 +636,24 @@ class MemberOrder(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} by {self.character.character_name} - {self.status}"
+
+    def save(self, *args, **kwargs):
+        # Force suborders to mirror parent status before saving
+        if self.parent_order:
+            self.status = self.parent_order.status
+
+        super().save(*args, **kwargs)
+
+        # Propagate status to children if this is a parent order
+        if not self.parent_order:
+            self.child_orders.update(status=self.status)
+
+    @property
+    def root_order(self):
+        root = self
+        while root.parent_order:
+            root = root.parent_order
+        return root
 
     @property
     def remaining_balance(self):
@@ -979,6 +997,10 @@ class CorpWalletDivision(models.Model):
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
     last_updated = models.DateTimeField(auto_now=True)
     last_warning = models.DateTimeField(null=True, blank=True)
+    warning_threshold = models.BigIntegerField(
+        default=500000000,
+        help_text="Balance below which a warning is sent (default: 500 million ISK).",
+    )
 
     class Meta:
         verbose_name = _("Corp Wallet Division")
@@ -1054,3 +1076,26 @@ class OrderBlueprintOverride(models.Model):
 
     def __str__(self):
         return f"Override ME {self.manual_me} for {self.item_type.name} on Order #{self.order.id}"
+
+
+class CorpBuyOrder(models.Model):
+    STATUS_CHOICES = (
+        ("OPEN", "Open"),
+        ("IN_PROGRESS", "In Progress"),
+        ("FULFILLED", "Fulfilled"),
+    )
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="buy_orders"
+    )
+    item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    quantity = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="OPEN")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Corporate Buy Order")
+        verbose_name_plural = _("Corporate Buy Orders")
+
+    def __str__(self):
+        return f"Buy Order #{self.id} - {self.quantity}x {self.item_type.name} ({self.status})"

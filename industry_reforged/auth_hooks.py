@@ -75,7 +75,6 @@ class MemberOrdersMenuItem(MenuItemHook):
             navactive=[
                 "industry_reforged:orders_dashboard",
                 "industry_reforged:create_order",
-                "industry_reforged:view_quote",
             ],
         )
 

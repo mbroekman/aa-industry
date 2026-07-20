@@ -29,6 +29,12 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-pane"
+                        type="button" role="tab" aria-controls="summary-pane" aria-selected="false">
+                        <i class="fas fa-chart-pie"></i> Production Summary
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks-pane"
                         type="button" role="tab" aria-controls="tasks-pane" aria-selected="false">
                         <i class="fas fa-hammer"></i> Production Tasks
@@ -40,14 +46,44 @@
                         <i class="fas fa-money-bill-wave"></i> Pending Payouts
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="buy-orders-tab" data-bs-toggle="tab" data-bs-target="#buy-orders-pane"
+                        type="button" role="tab" aria-controls="buy-orders-pane" aria-selected="false">
+                        <i class="fas fa-shopping-basket"></i> Procurement Buy Orders
+                    </button>
+                </li>
             </ul>
         </div>
         <div class="card-body">
             <div class="tab-content" id="director-tabContent">
                 <!-- Orders Tab -->
                 <div class="tab-pane fade show active" id="orders-pane" role="tabpanel" aria-labelledby="orders-tab" tabindex="0">
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-striped table-hover m-0">
+                    <form method="get" action="#orders-pane" class="d-flex align-items-center mb-3">
+                        <select name="status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                            <option value="">{% trans "All Statuses" %}</option>
+                            <option value="REQUESTED" {% if request.GET.status == 'REQUESTED' %}selected{% endif %}>{% trans "Requested" %}</option>
+                            <option value="QUOTED" {% if request.GET.status == 'QUOTED' %}selected{% endif %}>{% trans "Quoted" %}</option>
+                            <option value="ACCEPTED" {% if request.GET.status == 'ACCEPTED' %}selected{% endif %}>{% trans "Accepted" %}</option>
+                            <option value="IN_PRODUCTION" {% if request.GET.status == 'IN_PRODUCTION' %}selected{% endif %}>{% trans "In Production" %}</option>
+                            <option value="READY" {% if request.GET.status == 'READY' %}selected{% endif %}>{% trans "Ready" %}</option>
+                            <option value="DELIVERED" {% if request.GET.status == 'DELIVERED' %}selected{% endif %}>{% trans "Delivered" %}</option>
+                            <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>{% trans "Rejected" %}</option>
+                            <option disabled>───────</option>
+                            <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>{% trans "Payment: Paid" %}</option>
+                            <option value="UNPAID" {% if request.GET.status == 'UNPAID' %}selected{% endif %}>{% trans "Payment: Unpaid" %}</option>
+                        </select>
+                        <select name="sort" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                            <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>{% trans "Newest First" %}</option>
+                            <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>{% trans "Oldest First" %}</option>
+                            <option value="-total_price" {% if request.GET.sort == '-total_price' %}selected{% endif %}>{% trans "Highest Price" %}</option>
+                            <option value="total_price" {% if request.GET.sort == 'total_price' %}selected{% endif %}>{% trans "Lowest Price" %}</option>
+                            <option value="id" {% if request.GET.sort == 'id' %}selected{% endif %}>{% trans "Order ID (Low-High)" %}</option>
+                            <option value="-id" {% if request.GET.sort == '-id' %}selected{% endif %}>{% trans "Order ID (High-Low)" %}</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 w-100 dataTable" id="order-management-table">
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
@@ -141,23 +177,12 @@
                                     <td class="text-muted">{{ child.character.character_name }}</td>
                                     <td class="numeric text-warning text-end" style="opacity: 0.8;">{{ child.total_price|eve_isk }}</td>
                                     <td>
-                                        {% if child.payment_reference %}
-                                            <code>{{ child.payment_reference }}</code>
-                                            {% if child.is_paid %}
-                                                <span class="badge bg-success ms-1"><i class="fas fa-check"></i> Paid</span>
-                                            {% else %}
-                                                <span class="badge bg-danger ms-1">Unpaid</span>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
+                                        <span class="text-muted"><i class="fas fa-ban"></i> {% trans "Managed via Parent" %}</span>
                                     </td>
                                     <td>
-                                        {% if child.status == 'READY' %}
-                                            <span class="badge bg-success" style="opacity: 0.8;"><i class="fas fa-box-open"></i> {{ child.get_status_display }}</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary" style="opacity: 0.8;">{{ child.get_status_display }}</span>
-                                        {% endif %}
+                                        <span class="badge bg-secondary" style="opacity: 0.8;" data-bs-toggle="tooltip" title="Inherited from Parent Order">
+                                            <i class="fas fa-link"></i> {% trans "Linked" %}
+                                        </span>
                                     </td>
                                     <td>
                                         <div class="progress mt-1" style="opacity: 0.8;">
@@ -168,41 +193,13 @@
                                         <small class="numeric text-muted">{{ child.progress_percent|floatformat:2 }}%</small>
                                     </td>
                                     <td>
-                                        <div class="btn-group">
-                                            <a href="{% url 'industry_reforged:view_quote' child.id %}" class="btn btn-sm btn-outline-primary show-loader"><i class="fas fa-eye"></i> View</a>
-                                            {% if not child.is_paid %}
-                                            <button type="button" class="btn btn-sm btn-outline-success payment-modal-btn"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#paymentModal"
-                                                data-order-id="{{ child.id }}"
-                                                data-order-ref="{{ child.payment_reference }}"
-                                                data-order-remaining="{{ child.remaining_balance|stringformat:'f' }}"
-                                                data-action-url="{% url 'industry_reforged:mark_order_paid' child.id %}">
-                                                <i class="fas fa-money-bill-wave"></i> Process Payment
-                                            </button>
-                                            {% endif %}
-                                            {% if child.status == 'READY' %}
-                                            <form method="post" action="{% url 'industry_reforged:mark_order_delivered' child.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to mark this as delivered? Ensure the contract is made in-game." data-btn-class="btn-success">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-success">
-                                                    <i class="fas fa-truck"></i> Deliver
-                                                </button>
-                                            </form>
-                                            {% endif %}
-                                            <form method="post" action="{% url 'industry_reforged:delete_order' child.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to permanently delete this order? All associated production tasks will also be cancelled and deleted." data-btn-class="btn-danger">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                    <i class="fas fa-trash-alt"></i> Delete
-                                                </button>
-                                            </form>
+                                        <div class="d-flex align-items-center">
+                                            <a href="{% url 'industry_reforged:view_quote' child.id %}" class="btn btn-sm btn-outline-primary show-loader me-2"><i class="fas fa-eye"></i> {% trans "View" %}</a>
+                                            <span class="text-muted small"><i class="fas fa-ban"></i> {% trans "Managed via Parent" %}</span>
                                         </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="text-center">No orders found.</td>
-                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -210,9 +207,78 @@
                 </div>
 
                 <!-- Tasks Tab -->
+                <!-- Production Summary Tab -->
+                <div class="tab-pane fade" id="summary-pane" role="tabpanel" aria-labelledby="summary-tab" tabindex="0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 w-100 dataTable" id="production-summary-table">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Item" %}</th>
+                                    <th class="text-end">{% trans "Total Required" %}</th>
+                                    <th class="text-end">{% trans "Unclaimed" %}</th>
+                                    <th class="text-end">{% trans "In Production" %}</th>
+                                    <th class="text-end">{% trans "Completed" %}</th>
+                                    <th class="text-center" style="width: 200px;">{% trans "Progress" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in production_summary %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img onerror="handleImageFallback(this, {{ row.item_type_id }})" src="https://images.evetech.net/types/{{ row.item_type_id }}/icon?size=32" alt="{{ row.item_type__name }}" width="24" height="24" class="me-2 rounded">
+                                            {{ row.item_type__name }}
+                                        </div>
+                                    </td>
+                                    <td class="text-end numeric">{{ row.total_qty|intcomma }}</td>
+                                    <td class="text-end numeric text-danger">{{ row.unclaimed_qty|default:0|intcomma }}</td>
+                                    <td class="text-end numeric text-info">{{ row.in_production_qty|default:0|intcomma }}</td>
+                                    <td class="text-end numeric text-success">{{ row.completed_qty|default:0|intcomma }}</td>
+                                    <td class="align-middle">
+                                        {% widthratio row.completed_qty row.total_qty 100 as prog_completed %}
+                                        {% widthratio row.in_production_qty row.total_qty 100 as prog_in_prod %}
+                                        <div class="progress mt-1" style="opacity: 0.8; height: 1.2rem;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ prog_completed }}%; box-shadow: inset 0 0 5px rgba(0,0,0,0.2);" title="{% trans 'Completed' %}: {{ prog_completed }}%">
+                                                <small class="fw-bold px-1 text-white" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">{% if prog_completed != '0' %}{{ prog_completed }}%{% endif %}</small>
+                                            </div>
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ prog_in_prod }}%; box-shadow: inset 0 0 5px rgba(0,0,0,0.2);" title="{% trans 'In Production' %}: {{ prog_in_prod }}%">
+                                                <small class="fw-bold px-1 text-dark" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">{% if prog_in_prod != '0' %}{{ prog_in_prod }}%{% endif %}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="tab-pane fade" id="tasks-pane" role="tabpanel" aria-labelledby="tasks-tab" tabindex="0">
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-striped table-hover m-0">
+                    <form method="get" action="#tasks-pane" class="d-flex align-items-center mb-3">
+                        <select name="task_status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                            <option value="">{% trans "All Statuses" %}</option>
+                            <option value="UNCLAIMED" {% if request.GET.task_status == 'UNCLAIMED' %}selected{% endif %}>{% trans "Unclaimed" %}</option>
+                            <option value="IN_PRODUCTION" {% if request.GET.task_status == 'IN_PRODUCTION' %}selected{% endif %}>{% trans "In Production" %}</option>
+                            <option value="COMPLETED" {% if request.GET.task_status == 'COMPLETED' %}selected{% endif %}>{% trans "Completed" %}</option>
+                        </select>
+                        <select name="task_assignee" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                            <option value="">{% trans "All Assignees" %}</option>
+                            {% for assignee_id, assignee_name in task_assignees %}
+                            <option value="{{ assignee_id }}" {% if request.GET.task_assignee == assignee_id|stringformat:"s" %}selected{% endif %}>{{ assignee_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="task_sort" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                            <option value="-created_at" {% if request.GET.task_sort == '-created_at' %}selected{% endif %}>{% trans "Newest First" %}</option>
+                            <option value="created_at" {% if request.GET.task_sort == 'created_at' %}selected{% endif %}>{% trans "Oldest First" %}</option>
+                            <option value="-builder_reward" {% if request.GET.task_sort == '-builder_reward' %}selected{% endif %}>{% trans "Highest Reward" %}</option>
+                            <option value="builder_reward" {% if request.GET.task_sort == 'builder_reward' %}selected{% endif %}>{% trans "Lowest Reward" %}</option>
+                            <option value="id" {% if request.GET.task_sort == 'id' %}selected{% endif %}>{% trans "Task ID (Low-High)" %}</option>
+                            <option value="-id" {% if request.GET.task_sort == '-id' %}selected{% endif %}>{% trans "Task ID (High-Low)" %}</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 w-100 dataTable" id="production-tasks-table">
                             <thead>
                                 <tr>
                                     <th>Item</th>
@@ -221,7 +287,7 @@
                                     <th>Priority</th>
                                     <th>Assigned To</th>
                                     <th class="text-end">Reward</th>
-                                    <th>Hidden</th>
+                                    <th class="text-end">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -238,12 +304,14 @@
                                     </td>
                                     <td>{{ task.assigned_to.character_name|default:"-" }}</td>
                                     <td class="text-end numeric text-warning">{% if task.builder_reward %}{{ task.builder_reward|eve_isk }}{% else %}-{% endif %}</td>
-                                    <td>{% if task.hidden %}<i class="fas fa-eye-slash text-danger"></i>{% else %}<i
-                                            class="fas fa-eye text-success"></i>{% endif %}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="7" class="text-center">No tasks found.</td>
+                                    <td class="text-end">
+                                        <form method="post" action="{% url 'industry_reforged:delete_production_task' task.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete this Production Task?" data-btn-class="btn-danger">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -253,14 +321,14 @@
 
                 <!-- Payouts Tab -->
                 <div class="tab-pane fade" id="payouts-pane" role="tabpanel" aria-labelledby="payouts-tab" tabindex="0">
-                    <div class="row">
-                        <div class="col-md-5 mb-4">
+                    <div class="row m-0">
+                        <div class="col-md-5 mb-4 px-1">
                             <div class="card border-0 h-100">
                                 <div class="card-header">
                                     <h5 class="card-title mb-0"><i class="fas fa-users"></i> {% trans "Payout Summary by Builder" %}</h5>
                                 </div>
                                 <div class="card-body p-0">
-                                    <table class="table table-striped table-hover m-0">
+                                    <table class="table table-striped table-hover m-0 w-100 dataTable" id="payouts-table">
                                         <thead>
                                             <tr>
                                                 <th>{% trans "Builder" %}</th>
@@ -285,10 +353,6 @@
                                                     </form>
                                                 </td>
                                             </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted py-4">{% trans "No pending payouts!" %}</td>
-                                            </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -302,8 +366,8 @@
                                     <h5 class="card-title mb-0"><i class="fas fa-list"></i> {% trans "Recent Completed Tasks with Rewards" %}</h5>
                                     <small class="text-muted">{% trans "Showing up to 200 tasks" %}</small>
                                 </div>
-                                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
-                                    <table class="table table-striped table-hover m-0">
+                                <div class="card-body p-0">
+                                    <table class="table table-striped table-hover m-0 w-100 dataTable" id="recent-completed-tasks-table">
                                         <thead>
                                             <tr>
                                                 <th>{% trans "Item" %}</th>
@@ -318,7 +382,7 @@
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32" alt="{{ task.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                        <img onerror="handleImageFallback(this, {{ task.item_type.id }})" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32" alt="{{ task.item_type.name }}" width="24" height="24" class="me-2 rounded">
                                                         <span>{{ task.item_type.name }}</span>
                                                     </div>
                                                 </td>
@@ -327,10 +391,6 @@
                                                 <td class="text-end numeric text-warning">{{ task.builder_reward|eve_isk }}</td>
                                                 <td class="text-end numeric text-muted small">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
                                             </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted py-4">{% trans "No completed tasks with rewards." %}</td>
-                                            </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -338,14 +398,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row mt-4">
-                        <div class="col-12">
+                    <div class="row m-0 mt-4">
+                        <div class="col-12 px-1">
                             <div class="card border-0">
                                 <div class="card-header">
                                     <h5 class="card-title mb-0"><i class="fas fa-file-invoice"></i> {% trans "Active Payout Batches" %}</h5>
                                 </div>
-                                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
-                                    <table class="table table-striped table-hover m-0">
+                                <div class="card-body p-0">
+                                    <table class="table table-striped table-hover m-0 w-100 dataTable" id="activity-recent-tasks-table">
                                         <thead>
                                             <tr>
                                                 <th>{% trans "Reference" %}</th>
@@ -375,10 +435,6 @@
                                                 </td>
                                             </tr>
                                             {% endif %}
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="6" class="text-center text-muted py-4">{% trans "No active payout batches." %}</td>
-                                            </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -387,6 +443,68 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Buy Orders Tab -->
+                <div class="tab-pane fade" id="buy-orders-pane" role="tabpanel" aria-labelledby="buy-orders-tab" tabindex="0">
+                    <div class="alert alert-info shadow-sm mb-4">
+                        <i class="fas fa-info-circle"></i> Procurement Buy Orders are generated from Low Stock deficits when the item is marked as <strong>"Buy"</strong> in the Item Configuration.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 w-100 dataTable" id="buy-orders-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Item</th>
+                                    <th class="text-end">Quantity Needed</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for buy_order in buy_orders %}
+                                <tr>
+                                    <td>#{{ buy_order.id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img onerror="handleImageFallback(this, {{ buy_order.item_type.id }})" src="https://images.evetech.net/types/{{ buy_order.item_type.id }}/icon?size=32" alt="{{ buy_order.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                            {{ buy_order.item_type.name }}
+                                        </div>
+                                    </td>
+                                    <td class="text-end numeric">{{ buy_order.quantity|intcomma }}</td>
+                                    <td>
+                                        {% if buy_order.status == 'OPEN' %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-box-open"></i> {{ buy_order.get_status_display }}</span>
+                                        {% elif buy_order.status == 'IN_PROGRESS' %}
+                                        <span class="badge bg-primary"><i class="fas fa-truck-loading"></i> {{ buy_order.get_status_display }}</span>
+                                        {% elif buy_order.status == 'FULFILLED' %}
+                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> {{ buy_order.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ buy_order.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td class="text-end">
+                                        <form method="post" action="{% url 'industry_reforged:update_buy_order_status' buy_order.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <select name="status" class="form-select form-select-sm d-inline w-auto me-1" onchange="this.form.submit()">
+                                                <option value="OPEN" {% if buy_order.status == 'OPEN' %}selected{% endif %}>Open</option>
+                                                <option value="IN_PROGRESS" {% if buy_order.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                                                <option value="FULFILLED" {% if buy_order.status == 'FULFILLED' %}selected{% endif %}>Fulfilled</option>
+                                            </select>
+                                        </form>
+                                        <form method="post" action="{% url 'industry_reforged:delete_buy_order' buy_order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete this Buy Order?" data-btn-class="btn-danger">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -523,6 +641,60 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         input.addEventListener('input', updateHelper);
+    });
+
+    // Initialize DataTables
+    if ($('#order-management-table').length) {
+        $('#order-management-table').DataTable({
+            "autoWidth": false,
+            "order": [[ 0, "desc" ]],
+            "columnDefs": [
+                { "orderable": false, "targets": [6] }
+            ]
+        });
+    }
+    if ($('#production-summary-table').length) {
+        $('#production-summary-table').DataTable({
+            "autoWidth": false,
+            "order": [[ 1, "desc" ]],
+            "columnDefs": [
+                { "orderable": false, "targets": [5] }
+            ]
+        });
+    }
+    if ($('#production-tasks-table').length) {
+        $('#production-tasks-table').DataTable({
+            "autoWidth": false,
+            "order": [] // Let backend sorting apply
+        });
+    }
+    if ($('#payouts-table').length) {
+        $('#payouts-table').DataTable({
+            "autoWidth": false,
+            "order": [[ 2, "desc" ]],
+            "columnDefs": [
+                { "orderable": false, "targets": [3] }
+            ]
+        });
+    }
+    if ($('#recent-completed-tasks-table').length) {
+        $('#recent-completed-tasks-table').DataTable({
+            "autoWidth": false,
+            "order": [[ 4, "desc" ]]
+        });
+    }
+    if ($('#activity-recent-tasks-table').length) {
+        $('#activity-recent-tasks-table').DataTable({
+            "autoWidth": false,
+            "order": [[ 4, "desc" ]],
+            "columnDefs": [
+                { "orderable": false, "targets": [5] }
+            ]
+        });
+    }
+
+    $('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+        $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
     });
 });
 </script>

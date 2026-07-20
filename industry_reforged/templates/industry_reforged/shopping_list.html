@@ -52,7 +52,7 @@
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-dark m-0">
+                <table class="table table-striped table-dark m-0 w-100">
                     <thead>
                         <tr>
                             <th>{% trans "Material" %}</th>
@@ -101,7 +101,7 @@
                         <button class="btn btn-sm btn-outline-light text-nowrap" onclick="toggleAllDrilldowns(this)" data-expanded="false"><i class="fas fa-expand-arrows-alt"></i> {% trans "Expand All" %}</button>
                     </div>
                 </div>
-                <div class="card-body p-4 position-relative" style="max-height: 800px; overflow-y: auto;">
+                <div class="card-body p-4 position-relative">
                     <div id="treeLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center bg-dark" style="z-index: 10; opacity: 0.9; display: none !important;">
                         <div class="spinner-border text-light mb-2" role="status" style="width: 3rem; height: 3rem;"></div>
                         <h5 class="text-light">{% trans "Processing Tree..." %}</h5>

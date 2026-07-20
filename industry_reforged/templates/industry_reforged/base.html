@@ -10,6 +10,23 @@
     {{ block.super }}
     {% include 'bundles/datatables-css-bs5.html' %}
     <link rel="stylesheet" href="{% static 'industry_reforged/css/industry.css' %}?v=2">
+    <script>
+        function handleImageFallback(img, typeId) {
+            // If the icon fails, try bp
+            if (img.src.includes('/icon')) {
+                img.src = `https://images.evetech.net/types/${typeId}/bp?size=32`;
+            }
+            // If bp fails, try bpc
+            else if (img.src.includes('/bp?')) {
+                img.src = `https://images.evetech.net/types/${typeId}/bpc?size=32`;
+            }
+            // If bpc fails, use default placeholder (Item type 3514 is an empty crate/box)
+            else if (img.src.includes('/bpc?')) {
+                img.src = `https://images.evetech.net/types/3514/icon?size=32`;
+                img.onerror = null; // Prevent infinite loops
+            }
+        }
+    </script>
 {% endblock %}
 
 {% block header_nav_brand %}
@@ -35,6 +52,35 @@
 {% block extra_javascript %}
     {{ block.super }}
     {% include 'bundles/datatables-js-bs5.html' %}
+    <script>
+        if (typeof $ !== 'undefined' && $.fn && $.fn.dataTable) {
+            $.extend( true, $.fn.dataTable.defaults, {
+                "paging": true,
+                "ordering": true,
+                "info": true,
+                "searching": true,
+                "autoWidth": false,
+                "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>><'row mb-2 dt-pagination-row'<'col-sm-12 col-md-5 pt-2'i><'col-sm-12 col-md-7'p>><'row'<'col-sm-12'tr>>",
+                "drawCallback": function(settings) {
+                    var api = this.api();
+                    var wrapper = $(this).closest('.dataTables_wrapper');
+                    if (api.page.info().pages <= 1) {
+                        wrapper.find('.dt-pagination-row').hide();
+                    } else {
+                        wrapper.find('.dt-pagination-row').show();
+                    }
+                },
+                "language": {
+                    "search": "{% trans 'Search:' %}",
+                    "lengthMenu": "{% trans 'Show _MENU_ entries' %}",
+                    "info": "{% trans 'Showing _START_ to _END_ of _TOTAL_ entries' %}",
+                    "infoEmpty": "{% trans 'No entries available' %}",
+                    "emptyTable": "{% trans 'No entries available' %}"
+                }
+            });
+        }
+    </script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Show overlay on clicking links with show-loader class

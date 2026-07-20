@@ -1,8 +1,8 @@
 {% load i18n humanize %}
 
 <div class="bom-node border-start border-2 border-secondary ps-3 mb-2 mt-2">
-    <div class="d-flex align-items-center justify-content-between p-2 rounded bg-dark" style="border: 1px solid rgba(255,255,255,0.05);">
-        <div class="d-flex align-items-center">
+    <div class="d-flex flex-wrap align-items-center justify-content-between p-2 rounded bg-dark gap-2" style="border: 1px solid rgba(255,255,255,0.05);">
+        <div class="d-flex flex-wrap align-items-center gap-2">
             <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ node.type_id }}/bp?size=32';" src="https://images.evetech.net/types/{{ node.type_id }}/icon?size=32" alt="{{ node.name }}" width="24" height="24" class="me-2 rounded">
             <strong>{{ node.name }}</strong>
             <span class="ms-3 badge bg-secondary" title="{% trans 'Required Quantity' %}">{{ node.quantity|floatformat:0|intcomma }}</span>
@@ -34,7 +34,7 @@
         </div>
 
         {% if node.sub_materials %}
-            <div>
+            <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
                 {% if order and order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
                 <button type="button" class="btn btn-sm btn-outline-info me-2" onclick="openSplitComponentModal('{{ node.type_id }}', '{{ node.name|escapejs }}', {{ node.quantity|floatformat:0 }})" title="{% trans 'Split this component to a new Child Order' %}">
                     <i class="fas fa-code-branch"></i> {% trans "Split" %}

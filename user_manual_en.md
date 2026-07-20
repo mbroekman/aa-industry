@@ -55,20 +55,26 @@ ______________________________________________________________________
 
 The command center for the industrial backbone of the corporation.
 
-- **Active Member Orders**: A comprehensive overview of all incoming member orders, showing their progress and automated payment status. Once an order's tasks are fully built, it shifts to `READY`. You can then contract the items in-game and click **"Deliver"** to notify the buyer.
+- **Active Member Orders**: A comprehensive overview of all incoming member orders. You can use the quick filters to sort and view orders by their specific status (`Requested`, `Quoted`, `Accepted`, `In Production`, `Ready`, `Delivered`, etc.), showing their progress and automated payment status. Once an order's tasks are fully built, it shifts to `READY`. You can then contract the items in-game and click **"Deliver"** to notify the buyer.
 - **Quoting Flow**: Click on any `REQUESTED` order to view its Bill of Materials and provide a custom, manual Quote. You will immediately see the estimated raw material costs while setting the price.
+- **Order Splitting & Suborders**: While an order is still in the `REQUESTED` state (before a quote is provided), you can split specific items or BOM components into separate "Child Orders". This is highly useful for routing different items or components to different production facilities.
+  - **Suborder Management**: Child orders are managed entirely via their parent order. They do not have their own independent quotes or states; their status is strictly synchronized with the parent order.
+  - **Important**: Once the parent order is quoted (status `QUOTED` or higher), the splitting options disappear. Additionally, if you split all items out of a main order into suborders, the main order will no longer show an itemized invoice, as it acts purely as a structural umbrella for the suborders.
 - **Production Tasks**: Manage the individual building tasks. See who claimed which task and manually complete or revoke tasks if necessary.
 - **Pending Payouts & Batches**: View a summary of unpaid rewards per builder. You can click **"Generate Batch"** to bundle a builder's pending tasks into a single payout with a unique `PAY-` reference. When you transfer the ISK from the corp wallet to the builder using this reference, the system will automatically mark the batch as Paid.
+- **Procurement Buy Orders**: A dedicated tab for tracking purchases of items configured as "Buy" (e.g. Tritanium, PI). These are generated automatically or manually via the Inventory Analytics system. Directors can update the status of these orders (`Open`, `In Progress`, `Fulfilled`) to coordinate purchasing efforts.
 
 ### 3.2 Inventory & Analytics
 
 - Full insight into the corporation's assets based on linked ESI Hangars.
-- **Low Stock Alerts**: Define target thresholds for specific items. If the stock drops below this threshold, a red "Action Required" badge will appear, ensuring you never run out of essential ships or modules.
+- **Low Stock Alerts & Restocking**: Define target thresholds for specific items directly from the frontend interface. If the stock drops below this threshold, it appears in the "Restock Needed" alerts tab.
+- **Auto-Produce / Procurement**: When setting a threshold, you can enable `Auto-Produce`. The background system will intelligently generate either a `ProductionTask` (if the item is marked as "Build") or a `CorpBuyOrder` (if marked as "Buy") whenever the stock falls short. You can also manually trigger this via the **"Spawn Job"** button.
+- **Master Shopping List**: Generate a single, consolidated "Multibuy" shopping list containing all currently identified deficits across all items in a single click.
 
 ### 3.3 Corporate Wallets
 
-- Monitor the ISK balance across all 7 corporate wallet divisions.
-- View and filter the detailed **Journal** to analyze corporate income and expenses (e.g., order payments or tax incomes).
+- **View Balances**: Monitor the ISK balance across all 7 corporate wallet divisions.
+- **Set Thresholds**: Directors can click the "Set Threshold" button inside any wallet division card to configure a specific **Warning Threshold** directly from the frontend using formatted ISK inputs. If the ISK balance drops below this amount, an automatic alert is sent to the configured Discord channel.
 - **Automated Wallet Processing**: The background task that synchronizes wallets will automatically read journal entries. If it spots incoming ISK matching an `ORD-` payment reference, it marks the order as paid. If it spots outgoing ISK matching a `PAY-` reference, it marks the builder's payout batch as paid.
 
 ### 3.4 Configuration & Rules (Director Config)

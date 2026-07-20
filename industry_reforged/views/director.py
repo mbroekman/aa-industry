@@ -34,15 +34,71 @@ from ..models import (
 def director_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main dashboard for Directors to manage orders and jobs."""
     # Django
-    from django.db.models import Count, Sum
+    from django.db.models import Count, Q, Sum
+    from django.db.models.functions import Coalesce
 
-    from ..models import BuilderPayoutBatch
+    from ..models import BuilderPayoutBatch, CorpBuyOrder
 
     # We show orders for characters in the director's corps
-    all_orders = MemberOrder.objects.filter(parent_order__isnull=True).order_by(
-        "-created_at"
-    )
-    all_tasks = ProductionTask.objects.all().order_by("-created_at")
+    all_orders = MemberOrder.objects.filter(parent_order__isnull=True)
+
+    status_filter = request.GET.get("status", "")
+    if status_filter in [
+        "REQUESTED",
+        "QUOTED",
+        "ACCEPTED",
+        "REJECTED",
+        "IN_PRODUCTION",
+        "READY",
+        "DELIVERED",
+    ]:
+        all_orders = all_orders.filter(status=status_filter)
+    elif status_filter == "PAID":
+        all_orders = all_orders.filter(is_paid=True)
+    elif status_filter == "UNPAID":
+        all_orders = all_orders.filter(is_paid=False)
+
+    sort_by = request.GET.get("sort", "-created_at")
+    valid_sorts = [
+        "-created_at",
+        "created_at",
+        "-total_price",
+        "total_price",
+        "-id",
+        "id",
+    ]
+    if sort_by in valid_sorts:
+        all_orders = all_orders.order_by(sort_by)
+    else:
+        all_orders = all_orders.order_by("-created_at")
+
+    all_tasks = ProductionTask.objects.all()
+
+    task_status_filter = request.GET.get("task_status", "")
+    if task_status_filter in ["UNCLAIMED", "IN_PRODUCTION", "COMPLETED"]:
+        all_tasks = all_tasks.filter(status=task_status_filter)
+
+    task_assignee_filter = request.GET.get("task_assignee", "")
+    if task_assignee_filter:
+        try:
+            assignee_id = int(task_assignee_filter)
+            all_tasks = all_tasks.filter(assigned_to_id=assignee_id)
+        except ValueError:
+            pass
+
+    task_sort = request.GET.get("task_sort", "-created_at")
+    valid_task_sorts = [
+        "-created_at",
+        "created_at",
+        "-builder_reward",
+        "builder_reward",
+        "-id",
+        "id",
+    ]
+    if task_sort in valid_task_sorts:
+        all_tasks = all_tasks.order_by(task_sort)
+    else:
+        all_tasks = all_tasks.order_by("-created_at")
 
     payout_tasks = (
         ProductionTask.objects.filter(
@@ -63,6 +119,38 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
 
     payout_batches = BuilderPayoutBatch.objects.all().order_by("-created_at")
 
+    task_assignees = (
+        ProductionTask.objects.filter(assigned_to__isnull=False)
+        .values_list("assigned_to_id", "assigned_to__character_name")
+        .distinct()
+        .order_by("assigned_to__character_name")
+    )
+
+    summary_query = Q(
+        created_from_order__status__in=[
+            "REQUESTED",
+            "QUOTED",
+            "ACCEPTED",
+            "IN_PRODUCTION",
+        ]
+    ) | Q(created_from_order__isnull=True, status__in=["UNCLAIMED", "IN_PRODUCTION"])
+
+    production_summary = (
+        ProductionTask.objects.filter(summary_query)
+        .values("item_type_id", "item_type__name")
+        .annotate(
+            total_qty=Coalesce(Sum("quantity"), 0),
+            unclaimed_qty=Coalesce(Sum("quantity", filter=Q(status="UNCLAIMED")), 0),
+            in_production_qty=Coalesce(
+                Sum("quantity", filter=Q(status="IN_PRODUCTION")), 0
+            ),
+            completed_qty=Coalesce(Sum("quantity", filter=Q(status="COMPLETED")), 0),
+        )
+        .order_by("-total_qty")
+    )
+
+    buy_orders = CorpBuyOrder.objects.all().order_by("-created_at")
+
     context = {
         "title": "Director Control Panel",
         "all_orders": all_orders,
@@ -70,6 +158,9 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
         "payout_tasks": payout_tasks,
         "payout_summary": payout_summary,
         "payout_batches": payout_batches,
+        "task_assignees": task_assignees,
+        "production_summary": production_summary,
+        "buy_orders": buy_orders,
     }
     return render(request, "industry_reforged/director_dashboard.html", context)
 
@@ -105,6 +196,63 @@ def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
         else:
             messages.error(request, "Order must be in READY state to be delivered.")
     return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def update_buy_order_status(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Update the status of a corporate buy order."""
+    if request.method == "POST":
+        from ..models import CorpBuyOrder
+
+        order = get_object_or_404(CorpBuyOrder, id=order_id)
+        new_status = request.POST.get("status")
+
+        if new_status in dict(CorpBuyOrder.STATUS_CHOICES):
+            order.status = new_status
+            order.save()
+            messages.success(
+                request,
+                f"Buy Order #{order.id} status updated to {order.get_status_display()}.",
+            )
+        else:
+            messages.error(request, "Invalid status.")
+
+    return redirect(
+        reverse("industry_reforged:director_dashboard") + "#buy-orders-pane"
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def delete_buy_order(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Delete a corporate buy order."""
+    if request.method == "POST":
+        from ..models import CorpBuyOrder
+
+        order = get_object_or_404(CorpBuyOrder, id=order_id)
+        item_name = order.item_type.name
+        order.delete()
+        messages.success(request, f"Buy Order for {item_name} deleted.")
+
+    return redirect(
+        reverse("industry_reforged:director_dashboard") + "#buy-orders-pane"
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def delete_production_task(request: WSGIRequest, task_id: int) -> HttpResponse:
+    """Delete a ProductionTask. Used by directors to clean up spawned restock jobs."""
+    if request.method == "POST":
+        from ..models import ProductionTask
+
+        task = get_object_or_404(ProductionTask, id=task_id)
+        item_name = task.item_type.name
+        task.delete()
+        messages.success(request, f"Production Task for {item_name} deleted.")
+
+    return redirect(reverse("industry_reforged:director_dashboard") + "#tasks-pane")
 
 
 @login_required
@@ -308,6 +456,197 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
 
 @login_required
 @permission_required("industry_reforged.corp_access")
+def update_inventory_target(request: WSGIRequest, type_id: int) -> HttpResponse:
+    """Quickly set the target_threshold for an item from the inventory screen."""
+    if request.method == "POST":
+        target = int(request.POST.get("target_threshold", 0))
+        auto_produce = request.POST.get("auto_produce") == "on"
+
+        main_char = request.user.profile.main_character
+        corporation = main_char.corporation if main_char else None
+
+        if not corporation:
+            messages.error(request, _("You are not part of a corporation."))
+            return redirect("industry_reforged:director_inventory")
+
+        # Third Party
+        from eveuniverse.models import EveType
+
+        # Django
+        from django.shortcuts import get_object_or_404
+
+        from ..models import CorpItemConfig
+
+        eve_type = get_object_or_404(EveType, id=type_id)
+
+        config, created = CorpItemConfig.objects.get_or_create(
+            corporation=corporation,
+            item_type=eve_type,
+            defaults={"target_threshold": target, "auto_produce": auto_produce},
+        )
+        if not created:
+            config.target_threshold = target
+            config.auto_produce = auto_produce
+            config.save()
+
+        messages.success(
+            request, f"Target threshold for {eve_type.name} updated to {target}."
+        )
+
+    return redirect("industry_reforged:director_inventory")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def spawn_restock_job(request: WSGIRequest, type_id: int) -> HttpResponse:
+    """Manually spawn an UNCLAIMED ProductionTask to fulfill a low stock deficit."""
+    if request.method == "POST":
+        quantity = int(request.POST.get("quantity", 0))
+
+        # Third Party
+        from eveuniverse.models import EveType
+
+        # Django
+        from django.shortcuts import get_object_or_404
+
+        from ..models import CorpBuyOrder, CorpItemConfig, ProductionTask
+
+        eve_type = get_object_or_404(EveType, id=type_id)
+
+        main_char = request.user.profile.main_character
+        corporation = main_char.corporation if main_char else None
+
+        if quantity > 0 and corporation:
+            config = CorpItemConfig.objects.filter(
+                corporation=corporation, item_type=eve_type
+            ).first()
+            build_or_buy = config.build_or_buy if config else "BUILD"
+
+            if build_or_buy == "BUILD":
+                from ..models import CorpPricingConfig
+                from ..utils.pricing_engine import get_prices_with_overrides
+
+                pricing_config = CorpPricingConfig.objects.filter(
+                    corporation=corporation
+                ).first()
+                reward_percent = (
+                    pricing_config.builder_reward_percent if pricing_config else 0.0
+                )
+
+                prices = get_prices_with_overrides([eve_type.id], corporation)
+                price_per_unit = prices.get(eve_type.id, 0)
+                line_total = float(price_per_unit) * quantity
+                task_reward = line_total * (reward_percent / 100.0)
+
+                ProductionTask.objects.create(
+                    item_type=eve_type,
+                    quantity=quantity,
+                    status="UNCLAIMED",
+                    gamification_value=line_total,
+                    builder_reward=task_reward,
+                )
+                messages.success(
+                    request, f"Spawned Production Task for {quantity}x {eve_type.name}."
+                )
+            else:
+                CorpBuyOrder.objects.create(
+                    corporation=corporation,
+                    item_type=eve_type,
+                    quantity=quantity,
+                    status="OPEN",
+                )
+                messages.success(
+                    request,
+                    f"Generated Procurement Buy Order for {quantity}x {eve_type.name}.",
+                )
+
+    return redirect(reverse("industry_reforged:director_inventory") + "#alerts-pane")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
+    """Generates a Master Shopping List for all items with a deficit."""
+    # Django
+    from django.db.models import Sum
+
+    from ..models import CorpInventory, CorpItemConfig
+    from ..utils.bom_engine import get_sde_bom
+
+    inventory = (
+        CorpInventory.objects.filter(quantity__gt=0)
+        .values("item_type__name", "item_type__id")
+        .annotate(total_qty=Sum("quantity"))
+    )
+    inv_dict = {item["item_type__id"]: item["total_qty"] for item in inventory}
+
+    configs = CorpItemConfig.objects.filter(target_threshold__gt=0)
+
+    bom = {}
+
+    def merge_bom(target_bom, new_bom):
+        for t_id, data in new_bom.items():
+            if t_id in target_bom:
+                target_bom[t_id]["quantity"] += data["quantity"]
+            else:
+                target_bom[t_id] = data
+
+    for config in configs:
+        current_qty = inv_dict.get(config.item_type.id, 0)
+        if current_qty < config.target_threshold:
+            deficit = config.target_threshold - current_qty
+
+            materials, yield_qty = get_sde_bom(config.item_type.id)
+            if materials:
+                # Standard Library
+                import math
+
+                runs = math.ceil(deficit / yield_qty) if yield_qty > 0 else deficit
+
+                type_bom = {}
+                for mat in materials:
+                    mat_type_id = mat.get("typeid")
+                    base_qty = mat.get("quantity", 0)
+
+                    me = config.manual_me / 100.0
+                    adjusted_qty = base_qty * (1 - me)
+
+                    req = max(runs, math.ceil(adjusted_qty * runs))
+                    type_bom[mat_type_id] = {
+                        "type_id": mat_type_id,
+                        "name": mat.get("name"),
+                        "quantity": req,
+                        "base_quantity": req,
+                    }
+                merge_bom(bom, type_bom)
+
+    total_bom_price = 0
+    sorted_bom = []
+    if bom:
+        from ..utils.pricing_engine import get_fuzzwork_prices
+
+        mat_ids = list(bom.keys())
+        prices = get_fuzzwork_prices(mat_ids)
+        for mat_id, data in bom.items():
+            price = prices.get(mat_id, 0)
+            data["price_per_unit"] = price
+            data["total_price"] = price * data["quantity"]
+            total_bom_price += data["total_price"]
+
+        sorted_bom = sorted(bom.values(), key=lambda x: x["name"])
+
+    context = {
+        "title": _("Master Deficit Shopping List"),
+        "bom_materials": sorted_bom,
+        "total_bom_price": total_bom_price,
+        "recursive_bom_tree": [],
+        "hide_tree": True,
+    }
+    return render(request, "industry_reforged/shopping_list.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config(request: WSGIRequest) -> HttpResponse:
     """Mass edit form for Item Configurations."""
 
@@ -404,6 +743,41 @@ def director_wallets(request: WSGIRequest) -> HttpResponse:
         ),
     }
     return render(request, "industry_reforged/director_wallets.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def update_wallet_threshold(request: WSGIRequest, division_id: int) -> HttpResponse:
+    """Updates the warning threshold for a specific wallet division"""
+    if request.method == "POST":
+        division = get_object_or_404(CorpWalletDivision, id=division_id)
+
+        # Verify the user has access to this corporation's wallets
+        user_corps = request.user.character_ownerships.all().values_list(
+            "character__corporation_id", flat=True
+        )
+        if division.corporation.corporation_id not in user_corps:
+            messages.error(
+                request, _("You do not have permission to modify this wallet.")
+            )
+            return redirect("industry_reforged:director_wallets")
+
+        try:
+            new_threshold = int(request.POST.get("warning_threshold", 500000000))
+            if new_threshold < 0:
+                raise ValueError("Threshold cannot be negative")
+            division.warning_threshold = new_threshold
+            division.save()
+            messages.success(
+                request,
+                _(f"Threshold for {division.name} updated to {new_threshold:,} ISK."),
+            )
+        except ValueError:
+            messages.error(request, _("Invalid threshold value provided."))
+
+    return redirect(
+        reverse("industry_reforged:director_wallets") + f"?division={division_id}"
+    )
 
 
 @login_required

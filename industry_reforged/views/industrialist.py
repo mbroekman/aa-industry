@@ -61,7 +61,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     # Unclaimed tasks
     unclaimed_tasks_qs = (
-        ProductionTask.objects.filter(status="UNCLAIMED")
+        ProductionTask.objects.filter(status="UNCLAIMED", bom_parent__isnull=True)
         .select_related("item_type", "bom_parent", "created_from_order")
         .order_by("-created_from_order__created_at", "id")
     )
@@ -76,7 +76,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     )
     my_tasks_qs = (
         ProductionTask.objects.filter(
-            status="IN_PRODUCTION", assigned_to_id__in=user_characters
+            status="IN_PRODUCTION",
+            assigned_to_id__in=user_characters,
+            bom_parent__isnull=True,
         )
         .select_related("item_type", "bom_parent")
         .annotate(
@@ -90,7 +92,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     # My completed tasks (limit to recent 10 to avoid clutter)
     my_completed_tasks = ProductionTask.objects.filter(
-        status="COMPLETED", assigned_to_id__in=user_characters
+        status="COMPLETED", assigned_to_id__in=user_characters, bom_parent__isnull=True
     ).order_by("-completed_at")[:10]
 
     # Summary of claimed tasks vs active jobs
@@ -220,7 +222,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     orders_qs = MemberOrder.objects.filter(status__in=["ACCEPTED", "IN_PRODUCTION"])
     dynamic_motd_stats = {
-        "orders_in_production": orders_qs.count(),
+        "orders_in_production": orders_qs.filter(parent_order__isnull=True).count(),
         "open_tasks": len(unclaimed_tasks),
         "active_jobs": corp_active_jobs.count(),
         "value_in_progress": orders_qs.aggregate(total=Sum("total_price"))["total"]
@@ -254,11 +256,7 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
         if task:
-            task.status = "IN_PRODUCTION"
-            task.assigned_to = character
-            task.assigned_at = timezone.now()
 
-            # Prevent double-dipping: If character owns any ancestor task, this task's reward is 0
             def has_owned_ancestor(t, char):
                 current = t.bom_parent
                 while current:
@@ -267,20 +265,18 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     current = current.bom_parent
                 return False
 
-            if has_owned_ancestor(task, character):
-                task.builder_reward = 0
-
-            task.save()
-
-            # Prevent double-dipping: If character already owned sub-components, nullify their rewards
-            def zero_owned_descendants(t, char):
+            def claim_recursive(t, char):
+                if t.status == "UNCLAIMED":
+                    t.status = "IN_PRODUCTION"
+                    t.assigned_to = char
+                    t.assigned_at = timezone.now()
+                    if has_owned_ancestor(t, char):
+                        t.builder_reward = 0
+                    t.save()
                 for child in t.bom_children.all():
-                    if child.assigned_to == char and child.builder_reward > 0:
-                        child.builder_reward = 0
-                        child.save(update_fields=["builder_reward"])
-                    zero_owned_descendants(child, char)
+                    claim_recursive(child, char)
 
-            zero_owned_descendants(task, character)
+            claim_recursive(task, character)
 
             messages.success(
                 request, f"Successfully claimed {task.quantity}x {task.item_type.name}."
@@ -334,23 +330,18 @@ def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             float(pricing_config.builder_reward_percent) if pricing_config else 0.0
         )
 
-        def restore_owned_descendants(t, char, pct):
+        def unclaim_recursive(t, char, pct):
+            if t.status == "IN_PRODUCTION" and t.assigned_to == char:
+                t.status = "UNCLAIMED"
+                t.assigned_to = None
+                t.assigned_at = None
+                t.builder_reward = (float(t.gamification_value) * pct) / 100.0
+                t.save()
             for child in t.bom_children.all():
-                if child.assigned_to == char and child.builder_reward == 0:
-                    child.builder_reward = (
-                        float(child.gamification_value) * pct
-                    ) / 100.0
-                    child.save(update_fields=["builder_reward"])
-                restore_owned_descendants(child, char, pct)
+                unclaim_recursive(child, char, pct)
 
         if task.assigned_to:
-            restore_owned_descendants(task, task.assigned_to, reward_pct)
-
-        task.status = "UNCLAIMED"
-        task.assigned_to = None
-        task.assigned_at = None
-        task.builder_reward = (float(task.gamification_value) * reward_pct) / 100.0
-        task.save()
+            unclaim_recursive(task, task.assigned_to, reward_pct)
 
         messages.success(
             request, f"Successfully unclaimed {task.quantity}x {task.item_type.name}."
@@ -375,35 +366,30 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
         tasks = ProductionTask.objects.filter(id__in=task_ids, status="UNCLAIMED")
         if tasks.exists():
             count = 0
+
+            def has_owned_ancestor(t, char):
+                current = t.bom_parent
+                while current:
+                    if current.assigned_to == char:
+                        return True
+                    current = current.bom_parent
+                return False
+
+            def claim_recursive(t, char):
+                nonlocal count
+                if t.status == "UNCLAIMED":
+                    t.status = "IN_PRODUCTION"
+                    t.assigned_to = char
+                    t.assigned_at = timezone.now()
+                    if has_owned_ancestor(t, char):
+                        t.builder_reward = 0
+                    t.save()
+                    count += 1
+                for child in t.bom_children.all():
+                    claim_recursive(child, char)
+
             for task in tasks:
-                task.status = "IN_PRODUCTION"
-                task.assigned_to = character
-                task.assigned_at = timezone.now()
-
-                # Prevent double-dipping: If character owns any ancestor task, this task's reward is 0
-                def has_owned_ancestor(t, char):
-                    current = t.bom_parent
-                    while current:
-                        if current.assigned_to == char:
-                            return True
-                        current = current.bom_parent
-                    return False
-
-                if has_owned_ancestor(task, character):
-                    task.builder_reward = 0
-
-                task.save()
-
-                # Prevent double-dipping: If character already owned sub-components, nullify their rewards
-                def zero_owned_descendants(t, char):
-                    for child in t.bom_children.all():
-                        if child.assigned_to == char and child.builder_reward > 0:
-                            child.builder_reward = 0
-                            child.save(update_fields=["builder_reward"])
-                        zero_owned_descendants(child, char)
-
-                zero_owned_descendants(task, character)
-                count += 1
+                claim_recursive(task, character)
 
             messages.success(request, f"Successfully claimed {count} tasks.")
         else:
@@ -454,26 +440,21 @@ def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
                 float(pricing_config.builder_reward_percent) if pricing_config else 0.0
             )
 
-            def restore_owned_descendants(t, char, pct):
+            def unclaim_recursive(t, char, pct):
+                nonlocal count
+                if t.status == "IN_PRODUCTION" and t.assigned_to == char:
+                    t.status = "UNCLAIMED"
+                    t.assigned_to = None
+                    t.assigned_at = None
+                    t.builder_reward = (float(t.gamification_value) * pct) / 100.0
+                    t.save()
+                    count += 1
                 for child in t.bom_children.all():
-                    if child.assigned_to == char and child.builder_reward == 0:
-                        child.builder_reward = (
-                            float(child.gamification_value) * pct
-                        ) / 100.0
-                        child.save(update_fields=["builder_reward"])
-                    restore_owned_descendants(child, char, pct)
+                    unclaim_recursive(child, char, pct)
 
             for task in tasks:
                 if task.assigned_to:
-                    restore_owned_descendants(task, task.assigned_to, reward_pct)
-                task.status = "UNCLAIMED"
-                task.assigned_to = None
-                task.assigned_at = None
-                task.builder_reward = (
-                    float(task.gamification_value) * reward_pct
-                ) / 100.0
-                task.save()
-                count += 1
+                    unclaim_recursive(task, task.assigned_to, reward_pct)
 
             messages.success(request, f"Successfully unclaimed {count} tasks.")
         else:
@@ -507,14 +488,27 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
             complete_tree(task)
 
-            # Check if all tasks for the order are completed to update MemberOrder status
+            # Check if all tasks for the order family are completed
             if task.created_from_order:
                 order = task.created_from_order
-                remaining = order.production_tasks.exclude(status="COMPLETED").exists()
-                if not remaining:
-                    order.status = "READY"
-                    order.save()
-                    notify_order_ready(order)
+                parent = order.parent_order if order.parent_order else order
+
+                # Django
+                from django.db.models import Q
+
+                remaining = (
+                    ProductionTask.objects.filter(
+                        Q(created_from_order=parent)
+                        | Q(created_from_order__parent_order=parent)
+                    )
+                    .exclude(status="COMPLETED")
+                    .exists()
+                )
+
+                if not remaining and parent.status != "READY":
+                    parent.status = "READY"
+                    parent.save()
+                    notify_order_ready(parent)
 
             messages.success(
                 request, f"Marked {task.quantity}x {task.item_type.name} as completed!"
@@ -555,16 +549,30 @@ def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
                 total_completed += complete_tree(task)
 
             # Check orders for completion
+            checked_parents = set()
             for task in tasks:
                 if task.created_from_order:
                     order = task.created_from_order
-                    if (
-                        not order.production_tasks.exclude(status="COMPLETED").exists()
-                        and order.status != "READY"
-                    ):
-                        order.status = "READY"
-                        order.save()
-                        notify_order_ready(order)
+                    parent = order.parent_order if order.parent_order else order
+
+                    if parent.id not in checked_parents:
+                        checked_parents.add(parent.id)
+                        # Django
+                        from django.db.models import Q
+
+                        remaining = (
+                            ProductionTask.objects.filter(
+                                Q(created_from_order=parent)
+                                | Q(created_from_order__parent_order=parent)
+                            )
+                            .exclude(status="COMPLETED")
+                            .exists()
+                        )
+
+                        if not remaining and parent.status != "READY":
+                            parent.status = "READY"
+                            parent.save()
+                            notify_order_ready(parent)
 
             messages.success(
                 request,

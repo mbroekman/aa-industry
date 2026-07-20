@@ -58,8 +58,27 @@
         </div>
     </div>
 
+    <!-- Suborder Notice -->
+    {% if order.parent_order %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-info text-white" style="background-color: rgba(13, 202, 240, 0.1);">
+                <h5 class="alert-heading"><i class="fas fa-sitemap"></i> {% trans "Suborder Notice" %}</h5>
+                <p class="mb-3">{% trans "This is a suborder. It is managed entirely through its parent order." %}</p>
+                <div class="d-flex align-items-center">
+                    {% if order.root_order and order.root_order != order.parent_order %}
+                    <a href="{% url 'industry_reforged:view_quote' order.root_order.id %}" class="btn btn-sm btn-outline-info me-2"><i class="fas fa-arrow-up"></i> {% trans "Main Order" %} #{{ order.root_order.id }}</a>
+                    <span class="text-muted me-2"><i class="fas fa-chevron-right"></i></span>
+                    {% endif %}
+                    <a href="{% url 'industry_reforged:view_quote' order.parent_order.id %}" class="btn btn-sm btn-outline-info"><i class="fas fa-level-up-alt"></i> {% trans "Parent Order" %} #{{ order.parent_order.id }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Quote Submission Form for Directors -->
-    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access and not order.parent_order %}
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-warning bg-dark">
@@ -192,9 +211,10 @@
 
                 <!-- TAB 1: ORDER DETAILS -->
                 <div class="tab-pane fade show active" id="details-pane" role="tabpanel" aria-labelledby="details-tab" tabindex="0">
-                    <div class="row">
-                        <div class="col-md-8 mb-4">
-                            <div class="card border-0 h-100">
+                    <div class="row m-0">
+                        <div class="col-md-8 mb-4 px-1">
+                            {% if order.items.exists %}
+                            <div class="card border-0">
                                 <div class="card-header">
                                     <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> {% trans "Itemized Invoice" %}</h3>
                                 </div>
@@ -271,7 +291,7 @@
                                             {% endif %}
                                             <tr>
                                                 <th colspan="4" class="text-end fs-4">{% trans "Current Quote Total:" %}</th>
-                                                <th class="text-end fs-4 text-warning numeric">{{ order.grand_total|eve_isk }}</th>
+                                                <th class="text-end fs-4 text-warning numeric">{{ order.total_price|eve_isk }}</th>
                                             </tr>
                                         </tfoot>
                                         </table>
@@ -333,6 +353,7 @@
                                     </div>
                                 </div>
                             </div>
+                            {% endif %}
 
                             {% if display_child_orders and order.child_orders.exists %}
                             {% for child in order.child_orders.all %}
@@ -486,8 +507,8 @@
                 {% if perms.industry_reforged.corp_access %}
                 <!-- TAB: ME OVERRIDES -->
                 <div class="tab-pane fade" id="me-pane" role="tabpanel" aria-labelledby="me-tab" tabindex="0">
-                    <div class="row">
-                        <div class="col-12 mb-4">
+                    <div class="row m-0">
+                        <div class="col-12 mb-4 px-1">
                             <form id="meFormInner" action="{% url 'industry_reforged:update_quote_me_overrides' order.id %}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="target_facility" id="hidden_target_facility">
@@ -734,8 +755,11 @@
 </script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Activate tab based on URL hash
+        // Activate tab based on URL hash or sessionStorage
         let hash = window.location.hash;
+        if (!hash) {
+            hash = sessionStorage.getItem('activeTab_' + window.location.pathname);
+        }
         if (hash) {
             let targetTab = document.querySelector(`button[data-bs-target="${hash}"]`);
             if (targetTab) {
@@ -744,11 +768,12 @@
             }
         }
 
-        // Update URL hash when a tab is shown
+        // Update URL hash and sessionStorage when a tab is shown
         document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
             btn.addEventListener('shown.bs.tab', function (e) {
                 let target = e.target.getAttribute('data-bs-target');
                 history.replaceState(null, null, target);
+                sessionStorage.setItem('activeTab_' + window.location.pathname, target);
             });
         });
 

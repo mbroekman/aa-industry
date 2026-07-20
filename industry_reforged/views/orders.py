@@ -148,16 +148,11 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         if main_char and main_char.corporation:
             corp_info = main_char.corporation
 
-        me_level = 0
-        if corp_info:
-            config = CorpItemConfig.objects.filter(
-                item_type_id=type_id, corporation=corp_info
-            ).first()
-            if config:
-                me_level = config.manual_me
-
         node = get_recursive_bom_tree(
-            type_id, item_name or str(type_id), quantity, {type_id: me_level}
+            type_id,
+            item_name or str(type_id),
+            quantity,
+            {type_id: {"exclude_from_orders": False}},
         )
         recursive_bom_tree.append(node)
 
@@ -247,8 +242,8 @@ def create_order(request: WSGIRequest) -> HttpResponse:
 
             for config in excluded_configs:
                 # Remove from the parsed dictionary
-                if config.item_type_id in parsed_items:
-                    del parsed_items[config.item_type_id]
+                if config.item_type in parsed_items:
+                    del parsed_items[config.item_type]
 
                 # Show warning message to the user
                 msg = _(

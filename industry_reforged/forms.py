@@ -110,9 +110,11 @@ class CorpItemConfigForm(forms.ModelForm):
         if item_name:
             eve_type = resolve_eve_type(item_name)
 
-            qs = CorpItemConfig.objects.filter(
-                corporation=self.instance.corporation, item_type=eve_type
-            )
+            corp = cleaned_data.get("corporation")
+            if not corp:
+                return cleaned_data
+
+            qs = CorpItemConfig.objects.filter(corporation=corp, item_type=eve_type)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():

@@ -96,9 +96,24 @@ urlpatterns = [
     ),
     path("director/", director.director_dashboard, name="director_dashboard"),
     path(
-        "director/order/<int:order_id>/deliver/",
+        "director/order/<int:order_id>/delivered/",
         director.mark_order_delivered,
         name="mark_order_delivered",
+    ),
+    path(
+        "director/buy-order/<int:order_id>/update-status/",
+        director.update_buy_order_status,
+        name="update_buy_order_status",
+    ),
+    path(
+        "director/buy-order/<int:order_id>/delete/",
+        director.delete_buy_order,
+        name="delete_buy_order",
+    ),
+    path(
+        "director/task/<int:task_id>/delete/",
+        director.delete_production_task,
+        name="delete_production_task",
     ),
     path(
         "director/order/<int:order_id>/paid/",
@@ -127,6 +142,21 @@ urlpatterns = [
         name="delete_facility",
     ),
     path("director/inventory/", director.director_inventory, name="director_inventory"),
+    path(
+        "director/inventory/target/<int:type_id>/",
+        director.update_inventory_target,
+        name="update_inventory_target",
+    ),
+    path(
+        "director/inventory/spawn/<int:type_id>/",
+        director.spawn_restock_job,
+        name="spawn_restock_job",
+    ),
+    path(
+        "director/inventory/shopping-list/",
+        director.inventory_shopping_list,
+        name="inventory_shopping_list",
+    ),
     path("director/config/", director.director_config, name="director_config"),
     path(
         "director/config/item/add/",
@@ -197,5 +227,10 @@ urlpatterns = [
         "director/sync-inventory/",
         api.trigger_inventory_sync,
         name="trigger_inventory_sync",
+    ),
+    path(
+        "director/wallets/update-threshold/<int:division_id>/",
+        director.update_wallet_threshold,
+        name="update_wallet_threshold",
     ),
 ]

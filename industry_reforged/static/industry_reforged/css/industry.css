@@ -71,3 +71,15 @@
         transform: rotate(360deg);
     }
 }
+
+/* Sticky headers for manually scrolling tables */
+.sticky-table-header th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--bs-body-bg); /* Use body background */
+}
+/* For dark theme compatibility */
+[data-bs-theme="dark"] .sticky-table-header th {
+    background-color: var(--bs-dark);
+}

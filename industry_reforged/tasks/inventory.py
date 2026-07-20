@@ -158,6 +158,53 @@ def task_sync_corp_inventory():
                             send_discord_webhook(
                                 webhook_config.inventory_webhook, embed
                             )
+
+                        if config.auto_produce:
+                            # Auto-create the job or buy order
+                            deficit = config.target_threshold - total_qty
+                            if deficit > 0:
+                                if config.build_or_buy == "BUILD":
+                                    from ..models import (
+                                        CorpPricingConfig,
+                                        ProductionTask,
+                                    )
+                                    from ..utils.pricing_engine import (
+                                        get_prices_with_overrides,
+                                    )
+
+                                    pricing_config = CorpPricingConfig.objects.filter(
+                                        corporation=corp
+                                    ).first()
+                                    reward_percent = (
+                                        pricing_config.builder_reward_percent
+                                        if pricing_config
+                                        else 0.0
+                                    )
+
+                                    prices = get_prices_with_overrides(
+                                        [config.item_type.id], corp
+                                    )
+                                    price_per_unit = prices.get(config.item_type.id, 0)
+                                    line_total = float(price_per_unit) * deficit
+                                    task_reward = line_total * (reward_percent / 100.0)
+
+                                    ProductionTask.objects.create(
+                                        item_type=config.item_type,
+                                        quantity=deficit,
+                                        status="UNCLAIMED",
+                                        gamification_value=line_total,
+                                        builder_reward=task_reward,
+                                    )
+                                else:
+                                    from ..models import CorpBuyOrder
+
+                                    CorpBuyOrder.objects.create(
+                                        corporation=corp,
+                                        item_type=config.item_type,
+                                        quantity=deficit,
+                                        status="OPEN",
+                                    )
+
                         config.last_low_stock_warning = now
                         config.save()
 

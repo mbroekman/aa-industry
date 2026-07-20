@@ -5,11 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [0.1.0b18.post1] - 16-07-2026
+## [Unreleased]
+
+### Added
+
+- **Production Summary**: Added a new tab to the Director Control Panel that aggregates all active production (unclaimed, in production, completed) per item type, featuring a stacked visual progress bar.
+- **Facility Default Status**: Directors can now mark a specific Production Facility as the "Default" structure. The system automatically ensures only one facility can be default at a time.
+- **Auto-select Default Facility**: When a user creates a new order, the system now automatically pre-selects the corporation's default facility for accurate price and BOM quoting out of the box.
+- **Dynamic Rig Formsets**: Added an "Add Rig" button to the Facility Edit page, allowing Directors to add multiple rigs dynamically without reloading the page.
+- **Procurement Buy Orders**: The automated restocking system now intelligently differentiates between items marked as "Build" and "Buy". "Buy" items automatically generate a `CorpBuyOrder` (instead of a `ProductionTask`), which appears in a new dedicated "Procurement Buy Orders" tab for directors to track purchases (Open, In Progress, Fulfilled).
+- **Master Shopping List**: Added a "Master Shopping List" button to the Restock Needed page, allowing directors to instantly generate a consolidated Jita buy-list for all current stock deficits.
+- **Wallet Threshold UI**: The warning threshold configuration for corporate wallets has been moved from the admin panel to the frontend Director Wallets page for easier access, complete with ISK-formatted inputs.
+- **EVE Truth Mathematical Accuracy**: The BOM Engine now fully integrates the EVE Online exact material equation: `run_cost = round(base_qty * ((100 - ME)/100) * facility_me_multiplier, 2)` followed by `math.ceil()`.
+- **Modifier UI Badges**: The "Production Tree" (sitemap) view now explicitly displays a badge per node showing the Blueprint ME, Rig bonus, Structure bonus, and Facility Name used to calculate that component's requirements.
+- **EVE Industry Documentation**: Added a comprehensive `calculating_material.md` reference document explaining the EVE Truth formulas and how the engine replicates them.
 
 ### Changed
 
+- **UI/UX DataTables**: Removed double horizontal and vertical scrollbars across the app by standardizing `w-100` and `autoWidth: false` on all DataTables, removing artificial height constraints on the Production Tree, and moving pagination controls to the top of the tables.
 - **ME Overrides Tab**: Renamed the "ME Overrides" tab to "ME & BPC Overrides" to clarify that users can also adjust BPC `max_runs` there for job chunking.
+- **Global Rigs**: Rigs that have no specific EveGroup or EveCategory restrictions in the database are now treated as "Global" rigs and correctly apply their bonus to all items produced in that facility.
+
+### Fixed
+
+- **Corporate Jobs ESI Sync**: Fixed a critical bug where the Celery task for syncing corporate jobs would crash due to "Task not found" or `aiopenapi3` formatting issues. The tasks now correctly parse the ESI paginated `.results()`.
+- **Corporate Facilities ESI Sync**: Overhauled the structure discovery logic. Previously, empty corporate structures or those without active jobs were invisible. The system now directly queries the `esi-corporations.read_structures.v1` endpoint to automatically sync and list ALL Upwell structures belonging to registered corporations.
+- **Facility NoneTypeError**: Fixed a `TypeError: cannot unpack non-iterable float object` crash that occurred when opening a shopping list without a specific target facility selected.
+- **Rig Application Math**: Rigs correctly stack and pick the highest applicable bonus per facility, preventing issues where empty rig configurations nullified bonuses.
+
+## [0.1.0b18.post1] - 16-07-2026
+
+### Added
+
+- **Access Controls**: Implemented strict `permission_required("industry_reforged.corp_access")` and `login_required` decorators across all view endpoints.
+- **BPC Max Runs (Job Chunking)**: Added the ability to specify the maximum number of runs per blueprint copy. The BOM engine now chunks massive orders into smaller "jobs" before applying the EVE Online rounding formula (`math.ceil`) per job, ensuring 100% accurate raw material quotes when building from limited-run BPCs.
 
 ### Fixed
 
@@ -19,27 +48,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.1.0b18] - 15-07-2026
 
-### Added
-
-- **Facility Default Status**: Directors can now mark a specific Production Facility as the "Default" structure. The system automatically ensures only one facility can be default at a time.
-- **Auto-select Default Facility**: When a user creates a new order, the system now automatically pre-selects the corporation's default facility for accurate price and BOM quoting out of the box.
-- **Dynamic Rig Formsets**: Added an "Add Rig" button to the Facility Edit page, allowing Directors to add multiple rigs dynamically without reloading the page.
-- **EVE Truth Mathematical Accuracy**: The BOM Engine now fully integrates the EVE Online exact material equation: `run_cost = round(base_qty * ((100 - ME)/100) * facility_me_multiplier, 2)` followed by `math.ceil()`.
-- **Modifier UI Badges**: The "Production Tree" (sitemap) view now explicitly displays a badge per node showing the Blueprint ME, Rig bonus, Structure bonus, and Facility Name used to calculate that component's requirements.
-- **EVE Industry Documentation**: Added a comprehensive `calculating_material.md` reference document explaining the EVE Truth formulas and how the engine replicates them.
-- **BPC Max Runs (Job Chunking)**: Added the ability to specify the maximum number of runs per blueprint copy. The BOM engine now chunks massive orders into smaller "jobs" before applying the EVE Online rounding formula (`math.ceil`) per job, ensuring 100% accurate raw material quotes when building from limited-run BPCs.
-
 ### Changed
 
 - **Code Architecture**: Completely refactored `views.py` and `tasks.py` into their respective modular packages (`views/` and `tasks/`) for better maintainability and organization.
-- **Global Rigs**: Rigs that have no specific EveGroup or EveCategory restrictions in the database are now treated as "Global" rigs and correctly apply their bonus to all items produced in that facility.
-
-### Fixed
-
-- **Corporate Jobs ESI Sync**: Fixed a critical bug where the Celery task for syncing corporate jobs would crash due to "Task not found" or `aiopenapi3` formatting issues. The tasks now correctly parse the ESI paginated `.results()`.
-- **Corporate Facilities ESI Sync**: Overhauled the structure discovery logic. Previously, empty corporate structures or those without active jobs were invisible. The system now directly queries the `esi-corporations.read_structures.v1` endpoint to automatically sync and list ALL Upwell structures belonging to registered corporations.
-- **Facility NoneTypeError**: Fixed a `TypeError: cannot unpack non-iterable float object` crash that occurred when opening a shopping list without a specific target facility selected.
-- **Rig Application Math**: Rigs correctly stack and pick the highest applicable bonus per facility, preventing issues where empty rig configurations nullified bonuses.
+- **Task Imports**: Resolved broken celery task imports resulting from the modularization of the tasks module.
 
 ## [0.1.0b17] - 13-07-2026
 

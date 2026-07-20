@@ -206,9 +206,20 @@ def calculate_order_bom(order):
     except Exception:
         corp_info = None
 
+    bom_splits = {}
+    for child in order.child_orders.all():
+        if child.notes and child.notes.startswith("Sub-component"):
+            for child_item in child.items.all():
+                bom_splits[child_item.item_type.id] = (
+                    bom_splits.get(child_item.item_type.id, 0) + child_item.quantity
+                )
+
     for item in order.items.all():
         type_id = item.item_type.id
         quantity = item.quantity
+
+        if quantity <= 0:
+            continue
 
         target_facility = order.target_facility
         facility_me_multiplier = calculate_facility_me_multiplier(
@@ -254,6 +265,18 @@ def calculate_order_bom(order):
                 required_qty = max(runs, math.ceil(run_cost * runs))
 
             base_total = max(runs, base_qty * runs)
+
+            available = bom_splits.get(mat_type_id, 0)
+            if available > 0:
+                if available >= required_qty:
+                    bom_splits[mat_type_id] -= required_qty
+                    required_qty = 0
+                else:
+                    required_qty -= available
+                    bom_splits[mat_type_id] = 0
+
+            if required_qty <= 0:
+                continue
 
             if mat_type_id in bom:
                 bom[mat_type_id]["quantity"] += required_qty
@@ -359,11 +382,13 @@ def get_recursive_bom_tree(
     stock_dict=None,
     corp_info=None,
     order=None,
-    child_supplied_dict=None,
+    bom_splits=None,
+    top_level_splits=None,
 ):
     """
     Recursively fetch manufacturing materials to build a hierarchical BOM.
     """
+    original_quantity = quantity
     provided_from_stock = 0
     if stock_dict is not None and type_id in stock_dict:
         available = stock_dict[type_id]
@@ -378,24 +403,35 @@ def get_recursive_bom_tree(
                 stock_dict[type_id] = 0
 
     provided_from_child_order = 0
-    if child_supplied_dict is not None and type_id in child_supplied_dict:
-        available = child_supplied_dict[type_id]
+
+    # For top-level items, we do NOT offset quantity because it's already reduced in the DB.
+    # We only reconstruct the original quantity and display it was split.
+    if depth == 0 and top_level_splits is not None and type_id in top_level_splits:
+        available = top_level_splits[type_id]
+        if available > 0:
+            provided_from_child_order = available
+            original_quantity += available
+            top_level_splits[type_id] -= available
+
+    # For sub-materials (and BOM-split top-level items), we DO offset the requirements.
+    elif bom_splits is not None and type_id in bom_splits:
+        available = bom_splits[type_id]
         if available > 0:
             if available >= quantity:
                 provided_from_child_order = quantity
-                child_supplied_dict[type_id] -= quantity
+                bom_splits[type_id] -= quantity
                 quantity = 0
             else:
                 provided_from_child_order = available
                 quantity -= available
-                child_supplied_dict[type_id] = 0
+                bom_splits[type_id] = 0
 
     if depth > 15:  # Safety limit for recursion
         return {
             "type_id": type_id,
             "name": name,
             "quantity": quantity,
-            "base_quantity": quantity,
+            "base_quantity": original_quantity,
             "provided_from_stock": provided_from_stock,
             "provided_from_child_order": provided_from_child_order,
             "activity_id": 1,
@@ -411,7 +447,24 @@ def get_recursive_bom_tree(
             "type_id": type_id,
             "name": name,
             "quantity": 0,
-            "base_quantity": 0,
+            "base_quantity": original_quantity,
+            "provided_from_stock": provided_from_stock,
+            "provided_from_child_order": provided_from_child_order,
+            "activity_id": 1,
+            "sub_materials": [],
+            "product_me": 0,
+            "hull_bonus": 0.0,
+            "rig_bonus": 0.0,
+            "facility_name": target_facility.name if target_facility else "None",
+        }
+
+    # If the root item itself is excluded, treat it as a raw material (leaf node)
+    if config_dict.get(type_id, {}).get("exclude_from_orders", False):
+        return {
+            "type_id": type_id,
+            "name": name,
+            "quantity": quantity,
+            "base_quantity": original_quantity,
             "provided_from_stock": provided_from_stock,
             "provided_from_child_order": provided_from_child_order,
             "activity_id": 1,
@@ -470,50 +523,9 @@ def get_recursive_bom_tree(
 
         base_total = max(runs, base_qty * runs)
 
-        # If excluded from orders, we just treat it as a raw material (leaf node)
+        # If excluded from orders, skip adding it to the visual tree
         if mat_config.get("exclude_from_orders", False):
-            # Consume from stock if available
-            prov_stock = 0
-            if stock_dict is not None and mat_type_id in stock_dict:
-                avail = stock_dict[mat_type_id]
-                if avail > 0:
-                    if avail >= required_qty:
-                        prov_stock = required_qty
-                        stock_dict[mat_type_id] -= required_qty
-                        required_qty = 0
-                    else:
-                        prov_stock = avail
-                        required_qty -= avail
-                        stock_dict[mat_type_id] = 0
-
-            prov_child = 0
-            if child_supplied_dict is not None and mat_type_id in child_supplied_dict:
-                avail = child_supplied_dict[mat_type_id]
-                if avail > 0:
-                    if avail >= required_qty:
-                        prov_child = required_qty
-                        child_supplied_dict[mat_type_id] -= required_qty
-                        required_qty = 0
-                    else:
-                        prov_child = avail
-                        required_qty -= avail
-                        child_supplied_dict[mat_type_id] = 0
-
-            sub_node = {
-                "type_id": mat_type_id,
-                "name": mat_name,
-                "quantity": required_qty,
-                "base_quantity": base_total,
-                "provided_from_stock": prov_stock,
-                "provided_from_child_order": prov_child,
-                "activity_id": 1,
-                "sub_materials": [],
-                "is_excluded": True,
-                "product_me": 0,
-                "hull_bonus": 0.0,
-                "rig_bonus": 0.0,
-                "facility_name": target_facility.name if target_facility else "None",
-            }
+            continue
         else:
             sub_node = get_recursive_bom_tree(
                 mat_type_id,
@@ -525,7 +537,8 @@ def get_recursive_bom_tree(
                 stock_dict=stock_dict,
                 corp_info=corp_info,
                 order=order,
-                child_supplied_dict=child_supplied_dict,
+                bom_splits=bom_splits,
+                top_level_splits=top_level_splits,
             )
         sub_materials.append(sub_node)
 
@@ -549,6 +562,9 @@ def get_recursive_bom_tree(
                     eve_type_id=t1_blueprint.id, activity_id=8
                 )
                 for m in inv_mats:
+                    mat_id = m.material_eve_type.id
+                    if config_dict.get(mat_id, {}).get("exclude_from_orders", False):
+                        continue
                     inv_sub_materials.append(
                         {
                             "type_id": m.material_eve_type.id,
@@ -561,38 +577,47 @@ def get_recursive_bom_tree(
                     )
 
                 # Copying task for T1 Blueprint
-                inv_sub_materials.append(
-                    {
-                        "type_id": t1_blueprint.id,
-                        "name": t1_blueprint.name,
-                        "quantity": runs,
-                        "base_quantity": runs,
-                        "activity_id": 5,  # Copying
-                        "sub_materials": [],
-                    }
-                )
+                if not config_dict.get(t1_blueprint.id, {}).get(
+                    "exclude_from_orders", False
+                ):
+                    inv_sub_materials.append(
+                        {
+                            "type_id": t1_blueprint.id,
+                            "name": t1_blueprint.name,
+                            "quantity": runs,
+                            "base_quantity": runs,
+                            "activity_id": 5,  # Copying
+                            "sub_materials": [],
+                        }
+                    )
 
-                sub_materials.append(
-                    {
-                        "type_id": blueprint_type.id,
-                        "name": blueprint_type.name,
-                        "quantity": runs,
-                        "activity_id": 8,  # Invention
-                        "sub_materials": inv_sub_materials,
-                    }
-                )
+                if not config_dict.get(blueprint_type.id, {}).get(
+                    "exclude_from_orders", False
+                ):
+                    sub_materials.append(
+                        {
+                            "type_id": blueprint_type.id,
+                            "name": blueprint_type.name,
+                            "quantity": runs,
+                            "activity_id": 8,  # Invention
+                            "sub_materials": inv_sub_materials,
+                        }
+                    )
             else:
                 # T1 Blueprint -> Copying
-                sub_materials.append(
-                    {
-                        "type_id": blueprint_type.id,
-                        "name": blueprint_type.name,
-                        "quantity": runs,
-                        "base_quantity": runs,
-                        "activity_id": 5,  # Copying
-                        "sub_materials": [],
-                    }
-                )
+                if not config_dict.get(blueprint_type.id, {}).get(
+                    "exclude_from_orders", False
+                ):
+                    sub_materials.append(
+                        {
+                            "type_id": blueprint_type.id,
+                            "name": blueprint_type.name,
+                            "quantity": runs,
+                            "base_quantity": runs,
+                            "activity_id": 5,  # Copying
+                            "sub_materials": [],
+                        }
+                    )
     except Exception as e:
         logger.warning(f"Failed to process science jobs for type {type_id}: {e}")
 
@@ -600,7 +625,7 @@ def get_recursive_bom_tree(
         "type_id": type_id,
         "name": name,
         "quantity": quantity,
-        "base_quantity": quantity,  # The root's quantity is the required quantity
+        "base_quantity": original_quantity,  # The root's quantity is the requested quantity
         "provided_from_stock": provided_from_stock,
         "provided_from_child_order": provided_from_child_order,
         "activity_id": 1,  # Manufacturing
@@ -640,12 +665,30 @@ def calculate_recursive_order_bom(order):
         )
         stock_dict = {inv.item_type_id: inv.quantity for inv in invs}
 
-    child_supplied_dict = {}
+    bom_splits = {}
+    top_level_splits = {}
     for child in order.child_orders.all():
-        for item in child.items.all():
-            child_supplied_dict[item.item_type.id] = (
-                child_supplied_dict.get(item.item_type.id, 0) + item.quantity
-            )
+        if child.notes and child.notes.startswith("Sub-component"):
+            for item in child.items.all():
+                bom_splits[item.item_type.id] = (
+                    bom_splits.get(item.item_type.id, 0) + item.quantity
+                )
+        else:
+            for item in child.items.all():
+                top_level_splits[item.item_type.id] = (
+                    top_level_splits.get(item.item_type.id, 0) + item.quantity
+                )
+
+    config_dict = {}
+    if corp_info:
+        # AA Industry App
+        from industry_reforged.models import CorpItemConfig
+
+        configs = CorpItemConfig.objects.filter(corporation=corp_info)
+        for c in configs:
+            config_dict[c.item_type_id] = {
+                "exclude_from_orders": c.exclude_from_orders,
+            }
 
     tree = []
     for item in order.items.all():
@@ -657,12 +700,13 @@ def calculate_recursive_order_bom(order):
             type_id,
             name,
             quantity,
-            {},
+            config_dict,
             target_facility=order.target_facility,
             stock_dict=stock_dict,
             corp_info=corp_info,
             order=order,
-            child_supplied_dict=child_supplied_dict,
+            bom_splits=bom_splits,
+            top_level_splits=top_level_splits,
         )
         tree.append(node)
 
@@ -674,6 +718,17 @@ def calculate_recursive_tasks_bom(tasks, corp_info=None):
     Calculates the hierarchical Bill of Materials for a list of ProductionTasks.
     Returns a list of trees (one for each task).
     """
+    config_dict = {}
+    if corp_info:
+        # AA Industry App
+        from industry_reforged.models import CorpItemConfig
+
+        configs = CorpItemConfig.objects.filter(corporation=corp_info)
+        for c in configs:
+            config_dict[c.item_type_id] = {
+                "exclude_from_orders": c.exclude_from_orders,
+            }
+
     tree = []
     for task in tasks:
         type_id = task.item_type.id
@@ -694,7 +749,7 @@ def calculate_recursive_tasks_bom(tasks, corp_info=None):
             type_id,
             name,
             quantity,
-            {},
+            config_dict,
             target_facility=target_facility,
             corp_info=corp_info,
             order=order,

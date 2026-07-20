@@ -70,11 +70,7 @@ def task_sync_corp_wallets():
                     webhook_config = CorporationWebhookConfig.objects.filter(
                         corporation=config.corporation
                     ).first()
-                    threshold = (
-                        webhook_config.wallet_warning_threshold
-                        if webhook_config
-                        else 500000000
-                    )
+                    threshold = div.warning_threshold
 
                     if balance < threshold:
                         if not div.last_warning or (
