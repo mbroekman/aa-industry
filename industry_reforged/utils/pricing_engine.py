@@ -21,19 +21,34 @@ def get_fuzzwork_prices(type_ids):
     if not type_ids:
         return {}
 
-    prices = {}
+    # Django
+    from django.core.cache import cache
 
-    # Fuzzwork allows multiple types separated by comma
-    # It's better to chunk if there are too many, but for fits 50-100 is usually fine
+    prices = {}
+    missing_ids = []
+
+    # Check cache first
+    for tid in type_ids:
+        cached_price = cache.get(f"fw_price_{tid}")
+        if cached_price is not None:
+            prices[int(tid)] = cached_price
+        else:
+            missing_ids.append(tid)
+
+    if not missing_ids:
+        return prices
+
+    # Fetch missing from Fuzzwork
     chunk_size = 50
-    for i in range(0, len(type_ids), chunk_size):
-        chunk = type_ids[i : i + chunk_size]
+    for i in range(0, len(missing_ids), chunk_size):
+        chunk = missing_ids[i : i + chunk_size]
         str_ids = ",".join(map(str, chunk))
 
         try:
+            # Shorten timeout to 5 seconds so the UI doesn't hang forever
             res = requests.get(
                 f"{FUZZWORK_API_URL}?station={JITA_STATION_ID}&types={str_ids}",
-                timeout=10,
+                timeout=5,
             )
             res.raise_for_status()
             data = res.json()
@@ -44,8 +59,14 @@ def get_fuzzwork_prices(type_ids):
                         type_data["sell"]["percentile"]
                     )  # 5% percentile sell is usually more stable than min
                     prices[int(type_id_str)] = val
+                    # Cache for 1 hour
+                    cache.set(f"fw_price_{type_id_str}", val, 3600)
         except Exception as e:
             logger.error(f"Failed to fetch Fuzzwork prices for {chunk}: {e}")
+            # Cache failure for a short time to prevent spamming failing API
+            for tid in chunk:
+                cache.set(f"fw_price_{tid}", 0.0, 60)
+                prices[int(tid)] = 0.0
 
     return prices
 

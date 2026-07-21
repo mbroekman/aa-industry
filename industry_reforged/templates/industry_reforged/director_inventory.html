@@ -51,6 +51,7 @@
                                 <tr>
                                     <th>Item</th>
                                     <th class="text-end">Total Quantity</th>
+                                    <th class="text-end">Target</th>
                                     <th class="text-center" style="width: 100px;">Actions</th>
                                 </tr>
                             </thead>
@@ -66,6 +67,7 @@
                                         </div>
                                     </td>
                                     <td class="text-end numeric">{{ inv.total_qty|intcomma }}</td>
+                                    <td class="text-end numeric">{% if inv.target > 0 %}{{ inv.target|intcomma }}{% else %}-{% endif %}</td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-xs btn-outline-info" data-bs-toggle="modal" data-bs-target="#setTargetModal-{{ inv.item_type__id }}" title="Set Low Stock Target">
                                             <i class="fas fa-bullseye"></i> Set Target
@@ -84,12 +86,19 @@
                                                         <div class="modal-body">
                                                             <div class="mb-3">
                                                                 <label class="form-label">Minimum Target Threshold</label>
-                                                                <input type="number" class="form-control" name="target_threshold" min="0" value="0" required>
+                                                                <input type="number" class="form-control" name="target_threshold" min="0" value="{{ inv.target|default:0 }}" required>
                                                                 <div class="form-text">If stock falls below this amount, it will appear in the Restock Needed tab.</div>
                                                             </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Restock Action</label>
+                                                                <select class="form-select" name="build_or_buy">
+                                                                    <option value="BUILD" {% if inv.build_or_buy == "BUILD" %}selected{% endif %}>Build internally (Production Task)</option>
+                                                                    <option value="BUY" {% if inv.build_or_buy == "BUY" %}selected{% endif %}>Buy externally (Procurement Order)</option>
+                                                                </select>
+                                                            </div>
                                                             <div class="mb-3 form-check">
-                                                                <input type="checkbox" class="form-check-input" id="autoProduce-{{ inv.item_type__id }}" name="auto_produce">
-                                                                <label class="form-check-label" for="autoProduce-{{ inv.item_type__id }}">Auto-Produce when low (requires Cronjob)</label>
+                                                                <input type="checkbox" class="form-check-input" id="autoProduce-{{ inv.item_type__id }}" name="auto_produce" {% if inv.auto_produce %}checked{% endif %}>
+                                                                <label class="form-check-label" for="autoProduce-{{ inv.item_type__id }}">Auto-Restock when low (requires Cronjob)</label>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
@@ -123,6 +132,7 @@
                             <tr class="text-danger">
                                 <th>Item</th>
                                 <th class="text-end">Current Stock</th>
+                                <th class="text-end">In Progress</th>
                                 <th class="text-end">Target Threshold</th>
                                 <th class="text-end">Deficit</th>
                                 <th class="text-end" style="width: 150px;">Action</th>
@@ -133,15 +143,22 @@
                             <tr>
                                 <td><strong class="text-white">{{ item.item_type.name }}</strong></td>
                                 <td class="text-end numeric text-muted">{{ item.current_qty|intcomma }}</td>
+                                <td class="text-end numeric text-info">{% if item.in_progress > 0 %}{{ item.in_progress|intcomma }}{% else %}-{% endif %}</td>
                                 <td class="text-end numeric text-muted">{{ item.target|intcomma }}</td>
                                 <td class="text-end numeric"><strong class="text-danger">{{ item.deficit|intcomma }}</strong></td>
                                 <td class="text-end">
                                     <form method="post" action="{% url 'industry_reforged:spawn_restock_job' item.item_type.id %}" class="d-inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="quantity" value="{{ item.deficit }}">
+                                        {% if item.build_or_buy == "BUILD" %}
                                         <button type="submit" class="btn btn-xs btn-outline-warning" title="Spawn UNCLAIMED task">
                                             <i class="fas fa-industry"></i> Spawn Job
                                         </button>
+                                        {% else %}
+                                        <button type="submit" class="btn btn-xs btn-outline-success" title="Generate Procurement Order">
+                                            <i class="fas fa-shopping-cart"></i> Procure
+                                        </button>
+                                        {% endif %}
                                     </form>
                                 </td>
                             </tr>

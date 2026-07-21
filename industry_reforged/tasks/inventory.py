@@ -168,42 +168,64 @@ def task_sync_corp_inventory():
                                         CorpPricingConfig,
                                         ProductionTask,
                                     )
-                                    from ..utils.pricing_engine import (
-                                        get_prices_with_overrides,
-                                    )
 
-                                    pricing_config = CorpPricingConfig.objects.filter(
-                                        corporation=corp
-                                    ).first()
-                                    reward_percent = (
-                                        pricing_config.builder_reward_percent
-                                        if pricing_config
-                                        else 0.0
-                                    )
-
-                                    prices = get_prices_with_overrides(
-                                        [config.item_type.id], corp
-                                    )
-                                    price_per_unit = prices.get(config.item_type.id, 0)
-                                    line_total = float(price_per_unit) * deficit
-                                    task_reward = line_total * (reward_percent / 100.0)
-
-                                    ProductionTask.objects.create(
+                                    existing_task = ProductionTask.objects.filter(
                                         item_type=config.item_type,
-                                        quantity=deficit,
-                                        status="UNCLAIMED",
-                                        gamification_value=line_total,
-                                        builder_reward=task_reward,
-                                    )
+                                        created_from_order__isnull=True,
+                                        bom_parent__isnull=True,
+                                        status__in=["UNCLAIMED", "IN_PRODUCTION"],
+                                    ).exists()
+
+                                    if not existing_task:
+                                        from ..utils.pricing_engine import (
+                                            get_prices_with_overrides,
+                                        )
+
+                                        pricing_config = (
+                                            CorpPricingConfig.objects.filter(
+                                                corporation=corp
+                                            ).first()
+                                        )
+                                        reward_percent = (
+                                            pricing_config.builder_reward_percent
+                                            if pricing_config
+                                            else 0.0
+                                        )
+
+                                        prices = get_prices_with_overrides(
+                                            [config.item_type.id], corp
+                                        )
+                                        price_per_unit = prices.get(
+                                            config.item_type.id, 0
+                                        )
+                                        line_total = float(price_per_unit) * deficit
+                                        task_reward = line_total * (
+                                            reward_percent / 100.0
+                                        )
+
+                                        ProductionTask.objects.create(
+                                            item_type=config.item_type,
+                                            quantity=deficit,
+                                            status="UNCLAIMED",
+                                            gamification_value=line_total,
+                                            builder_reward=task_reward,
+                                        )
                                 else:
                                     from ..models import CorpBuyOrder
 
-                                    CorpBuyOrder.objects.create(
+                                    existing_buy = CorpBuyOrder.objects.filter(
                                         corporation=corp,
                                         item_type=config.item_type,
-                                        quantity=deficit,
-                                        status="OPEN",
-                                    )
+                                        status__in=["OPEN", "IN_PROGRESS"],
+                                    ).exists()
+
+                                    if not existing_buy:
+                                        CorpBuyOrder.objects.create(
+                                            corporation=corp,
+                                            item_type=config.item_type,
+                                            quantity=deficit,
+                                            status="OPEN",
+                                        )
 
                         config.last_low_stock_warning = now
                         config.save()

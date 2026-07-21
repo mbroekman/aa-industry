@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 21-07-2026
+
 ### Added
 
 - **Production Summary**: Added a new tab to the Director Control Panel that aggregates all active production (unclaimed, in production, completed) per item type, featuring a stacked visual progress bar.
@@ -28,6 +30,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- **Fuzzwork API Caching**: Added aggressive Django caching to the Fuzzwork pricing engine to prevent 30s+ UI hanging (infinite loading) when spawning jobs while the external API is slow or unresponsive.
+- **Infinite Loading Fix**: Resolved a logic loop where the "Restock Needed" alerts list did not account for jobs already in progress. The UI now subtracts active jobs/orders from the deficit and instantly removes the item from the alerts list once fully procured.
 - **Corporate Jobs ESI Sync**: Fixed a critical bug where the Celery task for syncing corporate jobs would crash due to "Task not found" or `aiopenapi3` formatting issues. The tasks now correctly parse the ESI paginated `.results()`.
 - **Corporate Facilities ESI Sync**: Overhauled the structure discovery logic. Previously, empty corporate structures or those without active jobs were invisible. The system now directly queries the `esi-corporations.read_structures.v1` endpoint to automatically sync and list ALL Upwell structures belonging to registered corporations.
 - **Facility NoneTypeError**: Fixed a `TypeError: cannot unpack non-iterable float object` crash that occurred when opening a shopping list without a specific target facility selected.

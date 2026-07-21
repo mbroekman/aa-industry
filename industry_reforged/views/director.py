@@ -413,19 +413,81 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     )
 
     configs = CorpItemConfig.objects.filter(target_threshold__gt=0)
+    config_dict = {
+        c.item_type_id: {
+            "target": c.target_threshold,
+            "auto_produce": c.auto_produce,
+            "build_or_buy": c.build_or_buy,
+        }
+        for c in configs
+    }
+
+    inventory_list = []
+    for item in inventory:
+        config_data = config_dict.get(
+            item["item_type__id"],
+            {"target": 0, "auto_produce": False, "build_or_buy": "BUILD"},
+        )
+        inventory_list.append(
+            {
+                "item_type__name": item["item_type__name"],
+                "item_type__id": item["item_type__id"],
+                "total_qty": item["total_qty"],
+                "target": config_data["target"],
+                "auto_produce": config_data["auto_produce"],
+                "build_or_buy": config_data["build_or_buy"],
+            }
+        )
+
     low_stock = []
 
     inv_dict = {item["item_type__id"]: item["total_qty"] for item in inventory}
 
+    from ..models import CorpBuyOrder, ProductionTask
+
+    open_tasks = (
+        ProductionTask.objects.filter(
+            created_from_order__isnull=True,
+            bom_parent__isnull=True,
+            status__in=["UNCLAIMED", "IN_PRODUCTION"],
+        )
+        .values("item_type_id")
+        .annotate(total=Sum("quantity"))
+    )
+    open_tasks_dict = {t["item_type_id"]: t["total"] for t in open_tasks}
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if corporation:
+        open_buys = (
+            CorpBuyOrder.objects.filter(
+                corporation=corporation, status__in=["OPEN", "IN_PROGRESS"]
+            )
+            .values("item_type_id")
+            .annotate(total=Sum("quantity"))
+        )
+        open_buys_dict = {b["item_type_id"]: b["total"] for b in open_buys}
+    else:
+        open_buys_dict = {}
+
     for config in configs:
         current_qty = inv_dict.get(config.item_type.id, 0)
-        if current_qty < config.target_threshold:
+        in_progress = open_tasks_dict.get(config.item_type.id, 0) + open_buys_dict.get(
+            config.item_type.id, 0
+        )
+
+        effective_qty = current_qty + in_progress
+
+        if effective_qty < config.target_threshold:
             low_stock.append(
                 {
                     "item_type": config.item_type,
                     "current_qty": current_qty,
+                    "in_progress": in_progress,
                     "target": config.target_threshold,
-                    "deficit": config.target_threshold - current_qty,
+                    "deficit": config.target_threshold - effective_qty,
+                    "build_or_buy": config.build_or_buy,
                 }
             )
 
@@ -447,7 +509,7 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
 
     context = {
         "title": "Director Inventory & Analytics",
-        "inventory": inventory,
+        "inventory": inventory_list,
         "low_stock": low_stock,
         "facility_inventories": facility_inventories,
     }
@@ -477,16 +539,23 @@ def update_inventory_target(request: WSGIRequest, type_id: int) -> HttpResponse:
 
         from ..models import CorpItemConfig
 
+        build_or_buy = request.POST.get("build_or_buy", "BUILD")
+
         eve_type = get_object_or_404(EveType, id=type_id)
 
         config, created = CorpItemConfig.objects.get_or_create(
             corporation=corporation,
             item_type=eve_type,
-            defaults={"target_threshold": target, "auto_produce": auto_produce},
+            defaults={
+                "target_threshold": target,
+                "auto_produce": auto_produce,
+                "build_or_buy": build_or_buy,
+            },
         )
         if not created:
             config.target_threshold = target
             config.auto_produce = auto_produce
+            config.build_or_buy = build_or_buy
             config.save()
 
         messages.success(
@@ -523,6 +592,23 @@ def spawn_restock_job(request: WSGIRequest, type_id: int) -> HttpResponse:
             build_or_buy = config.build_or_buy if config else "BUILD"
 
             if build_or_buy == "BUILD":
+                # Check if a restock job already exists
+                existing_task = ProductionTask.objects.filter(
+                    item_type=eve_type,
+                    created_from_order__isnull=True,
+                    bom_parent__isnull=True,
+                    status__in=["UNCLAIMED", "IN_PRODUCTION"],
+                ).exists()
+
+                if existing_task:
+                    messages.warning(
+                        request,
+                        f"A restock Production Task for {eve_type.name} is already in progress.",
+                    )
+                    return redirect(
+                        reverse("industry_reforged:director_inventory") + "#alerts-pane"
+                    )
+
                 from ..models import CorpPricingConfig
                 from ..utils.pricing_engine import get_prices_with_overrides
 
@@ -549,6 +635,21 @@ def spawn_restock_job(request: WSGIRequest, type_id: int) -> HttpResponse:
                     request, f"Spawned Production Task for {quantity}x {eve_type.name}."
                 )
             else:
+                existing_buy = CorpBuyOrder.objects.filter(
+                    corporation=corporation,
+                    item_type=eve_type,
+                    status__in=["OPEN", "IN_PROGRESS"],
+                ).exists()
+
+                if existing_buy:
+                    messages.warning(
+                        request,
+                        f"A Procurement Buy Order for {eve_type.name} is already open.",
+                    )
+                    return redirect(
+                        reverse("industry_reforged:director_inventory") + "#alerts-pane"
+                    )
+
                 CorpBuyOrder.objects.create(
                     corporation=corporation,
                     item_type=eve_type,
