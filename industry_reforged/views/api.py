@@ -36,6 +36,7 @@ def add_personal_token(request: WSGIRequest, token) -> HttpResponse:
         "esi-assets.read_corporation_assets.v1",
         "esi-universe.read_structures.v1",
         "esi-corporations.read_structures.v1",
+        "esi-corporations.read_divisions.v1",
         "esi-wallet.read_corporation_wallets.v1",
     ]
 )

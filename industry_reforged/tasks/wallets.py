@@ -41,6 +41,39 @@ def task_sync_corp_wallets():
             )
             continue
 
+        # Try to fetch actual division names
+        div_token = Token.objects.filter(
+            character_id=config.sync_character.character_id,
+            scopes__name="esi-corporations.read_divisions.v1",
+        ).first()
+
+        division_names = {}
+        if div_token:
+            try:
+                divisions = (
+                    esi.client.Corporation.GetCorporationsCorporationIdDivisions(
+                        corporation_id=config.corporation.corporation_id,
+                        token=div_token,
+                    ).result()
+                )
+                if hasattr(divisions, "wallet") and divisions.wallet:
+                    for d in divisions.wallet:
+                        div_name = d.name
+                        if not div_name:
+                            div_name = (
+                                "Master Wallet"
+                                if d.division == 1
+                                else f"Division {d.division}"
+                            )
+                        division_names[d.division] = div_name
+                        logger.info(
+                            f"Fetched division {div_name} ({d.division}) for {config.corporation}"
+                        )
+            except Exception as e:
+                logger.warning(
+                    f"Could not fetch division names for {config.corporation}: {e}"
+                )
+
         try:
             # 1. Fetch division balances
             wallets = esi.client.Wallet.GetCorporationsCorporationIdWallets(
@@ -57,10 +90,16 @@ def task_sync_corp_wallets():
                         division=division_id,
                         defaults={"balance": balance},
                     )
-                    # We might not know the name initially, default to Division X
-                    if not div.name:
+
+                    if division_names and division_id in division_names:
+                        div.name = division_names[division_id]
+                        div.save(update_fields=["name"])
+                    elif not div.name:
                         div.name = f"Division {division_id}"
-                        div.save()
+                        if division_id == 1:
+                            div.name = "Master Wallet"
+                        div.save(update_fields=["name"])
+
                     divisions_map[division_id] = div
 
                     from ..models import CorporationWebhookConfig

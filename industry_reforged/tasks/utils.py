@@ -74,6 +74,7 @@ class IndustryESIProvider(ESIClientProvider):
                 "GetCorporationsCorporationIdWallets",
                 "GetCorporationsCorporationIdWalletsDivisionJournal",
                 "GetCorporationsCorporationIdStructures",
+                "GetCorporationsCorporationIdDivisions",
             ],
         )
 
