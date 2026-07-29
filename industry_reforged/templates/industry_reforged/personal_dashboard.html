@@ -159,8 +159,34 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h3 class="card-title"><i class="fas fa-globe"></i> Planetary Interaction</h3>
                         <div>
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#piSettingsModal">
+                                <i class="fas fa-cog"></i> Settings
+                            </button>
                             <a href="{% url 'industry_reforged:trigger_pi_sync' %}" class="btn btn-primary btn-sm show-loader"><i
                                     class="fas fa-sync"></i> Refresh PI Data</a>
+                        </div>
+                    </div>
+
+                    <!-- PI Settings Modal -->
+                    <div class="modal fade" id="piSettingsModal" tabindex="-1" aria-labelledby="piSettingsModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="post" action="{% url 'industry_reforged:personal_dashboard' %}">
+                                    {% csrf_token %}
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="piSettingsModalLabel">Planetary Interaction Settings</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Configure when you want to receive a notification for full storage facilities or launchpads.</p>
+                                        {{ pi_config_form.as_p }}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button type="submit" name="update_pi_config" class="btn btn-primary">Save changes</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
 
@@ -234,7 +260,10 @@
                                                 alt="{{ planet.planet_type.name }}" class="me-3 border border-secondary rounded">
                                             {% endif %}
                                             <div>
-                                                <h5 class="card-title mb-1 text-info">{{ planet.planet_type.name|default:"Unknown Planet" }}</h5>
+                                                <h5 class="card-title mb-1 text-info">
+                                                    {{ planet.eve_planet.name|default:"Unknown Planet" }}
+                                                    <span class="fs-6 text-muted">({{ planet.planet_type.name|default:"Unknown" }})</span>
+                                                </h5>
                                                 <div class="small text-muted">Level {{ planet.upgrade_level }} CC &bull; {{ planet.num_pins }} Pins</div>
                                             </div>
                                         </div>
@@ -283,7 +312,9 @@
                                         {% else %}
                                         <i class="fas fa-globe text-secondary me-3 fs-3"></i>
                                         {% endif %}
-                                        {{ char_group.grouper.character_name }} <span class="text-muted mx-2">/</span> <span class="text-info">{{ planet.planet_type.name|default:"Unknown Planet" }}</span>
+                                        {{ char_group.grouper.character_name }} <span class="text-muted mx-2">/</span>
+                                        <span class="text-info">{{ planet.eve_system.name|default:"Unknown System" }} &raquo; {{ planet.eve_planet.name|default:"Unknown Planet" }}</span>
+                                        <span class="fs-6 text-muted ms-1">({{ planet.planet_type.name|default:"Unknown" }})</span>
                                     </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>

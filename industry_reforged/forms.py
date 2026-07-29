@@ -16,6 +16,7 @@ from .models import (
     IndustryFacilityRig,
     IndustryRig,
     TaxConfig,
+    UserPIConfig,
 )
 
 
@@ -306,3 +307,22 @@ IndustryFacilityRigFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+
+class UserPIConfigForm(forms.ModelForm):
+    class Meta:
+        model = UserPIConfig
+        fields = ["storage_warning_threshold"]
+        widgets = {
+            "storage_warning_threshold": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "1",
+                    "min": "1",
+                    "max": "100",
+                }
+            )
+        }
+        labels = {
+            "storage_warning_threshold": _("Storage Warning Threshold (%)"),
+        }

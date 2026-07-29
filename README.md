@@ -18,7 +18,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions. Directors can set custom **Warning Thresholds** per wallet division to trigger Discord alerts when balances drop too low.
 - **Smart ISK Formatting**: Features a built-in abbreviation engine that automatically formats large ISK values and displays precise tooltip translations (e.g., K, M, B, T) when hovered.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
-- **Planetary Interaction (PI)**: Monitor PI planets, extractor pins, production facilities, storage capacities (utilization tracking for Launchpads/Storage), and countdown timers for active extraction.
+- **Planetary Interaction (PI)**: Monitor PI planets (including exact System and Planet names), extractor pins, production facilities, storage capacities (utilization tracking for Launchpads/Storage), and countdown timers for active extraction. Includes automatic Alliance Auth and Discord DM notifications for expired extractors and full storage facilities (with a personal configurable warning threshold).
 - **Discord Integration**: 
   - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
   - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed, quotes are updated, or orders are fully built and ready for delivery.

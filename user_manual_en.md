@@ -11,7 +11,7 @@ ______________________________________________________________________
 The Personal Dashboard is your primary hub for everything related to your personal EVE Online industry.
 
 - **My Industry Jobs**: View the live status of all your personal manufacturing and research jobs. Real-time countdown timers show exactly when a job will finish.
-- **Planetary Interaction (PI)**: Track the status of your PI planets. See at a glance if your extractor pins are still running or view the real-time capacity and utilization of your Launchpads and Storage Facilities.
+- **Planetary Interaction (PI)**: Track the status of your PI planets, including their exact System and Planet names. See at a glance if your extractor pins are still running or view the real-time capacity and utilization of your Launchpads and Storage Facilities. You will automatically receive a Discord DM and an Alliance Auth notification if an extractor expires. Additionally, you can configure your own personal threshold (default 75%) to be warned when your storage facilities become full.
 - **Discord Notifications**: If your Discord account is linked in Alliance Auth, the plugin will automatically send you a Direct Message (DM) as soon as an industry job finishes or when a PI extractor expires/storage fills up.
 
 ### 1.2 Orders Dashboard & Ordering

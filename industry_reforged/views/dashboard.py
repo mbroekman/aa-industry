@@ -1,16 +1,20 @@
 """App Views"""
 
 # Django
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 
+from ..forms import UserPIConfigForm
 from ..models import (
     CharacterIndustryJob,
     CharacterPlanet,
     CorporationIndustryJob,
     MemberOrder,
+    UserPIConfig,
 )
 
 
@@ -42,7 +46,7 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
 
     planets = list(
         CharacterPlanet.objects.filter(character_id__in=user_characters)
-        .select_related("character", "planet_type")
+        .select_related("character", "planet_type", "eve_system", "eve_planet")
         .prefetch_related("pins", "pins__type", "pins__product_type")
         .order_by("character__character_name", "planet_id")
     )
@@ -63,10 +67,24 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
             planet.character_has_expired_extractors or planet.character_has_full_storage
         )
 
+    pi_config, _ = UserPIConfig.objects.get_or_create(user=request.user)
+
+    if request.method == "POST" and "update_pi_config" in request.POST:
+        pi_config_form = UserPIConfigForm(request.POST, instance=pi_config)
+        if pi_config_form.is_valid():
+            pi_config_form.save()
+            messages.success(request, "PI configuration updated.")
+            return redirect(
+                reverse("industry_reforged:personal_dashboard") + "#pi-pane"
+            )
+    else:
+        pi_config_form = UserPIConfigForm(instance=pi_config)
+
     context = {
         "active_jobs": active_jobs,
         "history_jobs": history_jobs,
         "planets": planets,
+        "pi_config_form": pi_config_form,
         "title": "Personal Industry Dashboard",
     }
     return render(request, "industry_reforged/personal_dashboard.html", context)

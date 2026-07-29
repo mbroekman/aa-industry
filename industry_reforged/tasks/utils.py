@@ -84,24 +84,49 @@ esi = IndustryESIProvider()
 
 def notify_discord_user(character, message):
     try:
-        # Alliance Auth
-        from allianceauth.services.modules.discord.models import DiscordUser
-
         user = character.character_ownership.user
-        discord_user = DiscordUser.objects.get(user=user)
+        try:
+            # Third Party
+            from aadiscordbot.tasks import send_direct_message_by_user_id
 
-        # We need the discord client to send DM
+            send_direct_message_by_user_id.delay(user.id, message)
+            return
+        except ImportError:
+            pass  # Fallback to standard AA discord module
+
+        # Alliance Auth standard fallback
         # Alliance Auth
         from allianceauth.services.modules.discord.discord_client import DiscordClient
+        from allianceauth.services.modules.discord.models import DiscordUser
 
+        discord_user = DiscordUser.objects.get(user=user)
         client = DiscordClient()
-
-        # create_dm creates a dm channel
         dm_channel = client.create_dm(discord_user.uid)
         if dm_channel and "id" in dm_channel:
             client.create_message(channel_id=dm_channel["id"], content=message)
     except Exception as e:
         logger.error(f"Failed to send discord DM to {character.character_name}: {e}")
+
+
+def send_pi_notification(character, title, message):
+    try:
+        user = character.character_ownership.user
+
+        # 1. Send Alliance Auth Notification
+        # Alliance Auth
+        from allianceauth.notifications.models import Notification
+
+        Notification.objects.notify_user(
+            user=user, title=title, message=message, level="warning"
+        )
+
+        # 2. Send Discord DM
+        notify_discord_user(character, message)
+
+    except Exception as e:
+        logger.error(
+            f"Failed to send PI notification to {character.character_name}: {e}"
+        )
 
 
 def ensure_eve_type(type_id):

@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - Unreleased
+
+### Added
+
+- **PI Location Tracking**: Planetary Interaction dashboards now explicitly display the Solar System and specific Planet Name (e.g., `Jita » Jita IV`) instead of just the generic planet type.
+- **PI Notifications**: Added unified Alliance Auth and direct Discord DM notifications for PI events. Users are automatically notified when an extractor stops.
+- **Configurable PI Storage Thresholds**: Users can now configure the percentage at which they receive full storage/launchpad warnings directly from their Personal Dashboard settings (defaults to 75%).
 
 ## [0.2.0] - 21-07-2026
 

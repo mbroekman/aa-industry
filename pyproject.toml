@@ -50,3 +50,51 @@ version.path = "industry_reforged/__init__.py"
 build.include = [
     "/industry_reforged",
 ]
+
+[tool.pylint]
+master.ignore-paths = [
+    "^industry_reforged/migrations/.*$",
+    "^testauth/.*$",
+]
+messages_control.disable = [
+    "C0103", # invalid-name
+    "C0114", # missing-module-docstring
+    "C0115", # missing-class-docstring
+    "C0116", # missing-function-docstring
+    "C0301", # line-too-long (handled by black mostly)
+    "C0302", # too-many-lines
+    "C0413", # wrong-import-position
+    "C0415", # import-outside-toplevel (common in Django apps)
+    "E0401", # import-error (due to pre-commit isolation)
+    "E0402", # relative-beyond-top-level
+    "E0602", # undefined-variable
+    "E0606", # possibly-used-before-assignment
+    "E0611", # no-name-in-module
+    "E1101", # no-member (common in Django)
+    "R0801", # duplicate-code
+    "R0903", # too-few-public-methods
+    "R0911", # too-many-return-statements
+    "R0912", # too-many-branches
+    "R0913", # too-many-arguments
+    "R0914", # too-many-locals
+    "R0915", # too-many-statements
+    "R1702", # too-many-nested-blocks
+    "R1705", # no-else-return
+    "R1710", # inconsistent-return-statements
+    "R1716", # chained-comparison
+    "R1724", # no-else-continue
+    "R1731", # consider-using-max-builtin
+    "W0105", # String statement has no effect
+    "W0107", # unnecessary-pass
+    "W0212", # protected-access
+    "W0401", # wildcard-import
+    "W0404", # reimported
+    "W0611", # unused-import
+    "W0612", # unused-variable
+    "W0613", # unused-argument
+    "W0621", # redefined-outer-name
+    "W0640", # cell-var-from-loop
+    "W0641", # possibly-unused-variable
+    "W0718", # broad-exception-caught
+    "W1203", # logging-fstring-interpolation
+]

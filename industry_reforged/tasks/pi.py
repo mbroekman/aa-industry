@@ -15,7 +15,7 @@ from ..models import (
     CharacterPlanet,
     PlanetPin,
 )
-from .utils import ensure_eve_type, esi, log_task_execution, notify_discord_user
+from .utils import ensure_eve_type, esi, log_task_execution, send_pi_notification
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,16 @@ def update_character_pi(character_id=None):
 
                         ensure_eve_type(planet_type_id)
 
+                        # Third Party
+                        from eveuniverse.models import EvePlanet, EveSolarSystem
+
+                        eve_system, _ = EveSolarSystem.objects.get_or_create_esi(
+                            id=system_id
+                        )
+                        eve_planet, _ = EvePlanet.objects.get_or_create_esi(
+                            id=planet_id
+                        )
+
                         CharacterPlanet.objects.update_or_create(
                             character=character,
                             planet_id=planet_id,
@@ -81,6 +91,8 @@ def update_character_pi(character_id=None):
                                 "planet_type_id": planet_type_id,
                                 "upgrade_level": upgrade_level,
                                 "num_pins": num_pins,
+                                "eve_system": eve_system,
+                                "eve_planet": eve_planet,
                             },
                         )
             except HTTPNotModified:
@@ -350,21 +362,55 @@ def update_character_pi(character_id=None):
                             },
                         )
 
+                        planet_label = (
+                            f"{char_planet.eve_system.name} » {char_planet.eve_planet.name}"
+                            if char_planet.eve_planet and char_planet.eve_system
+                            else (
+                                char_planet.planet_type.name
+                                if char_planet.planet_type
+                                else f"Planeet {char_planet.planet_id}"
+                            )
+                        )
+
                         # Notification Logic for Extractor Expiry
                         if pin_obj.is_extractor and pin_obj.expiry_time:
                             if now >= pin_obj.expiry_time:
                                 if not pin_obj.notification_sent:
-                                    planet_name = (
-                                        char_planet.planet_type.name
-                                        if char_planet.planet_type
-                                        else f"Planeet {char_planet.planet_id}"
+                                    message = f"Je extractor op je **{planet_label}** is zojuist gestopt. Tijd om deze opnieuw aan te zetten!"
+                                    send_pi_notification(
+                                        character, "PI Extractor Expired", message
                                     )
-                                    message = f"Je extractor op je **{planet_name}** is zojuist gestopt. Tijd om deze opnieuw aan te zetten!"
-                                    notify_discord_user(character, message)
                                     pin_obj.notification_sent = True
                                     pin_obj.save()
                             else:
                                 # Extractor has future expiry, meaning it was restarted
+                                if pin_obj.notification_sent:
+                                    pin_obj.notification_sent = False
+                                    pin_obj.save()
+
+                        # Notification Logic for Full Storage
+                        elif pin_obj.is_storage:
+                            threshold = 75
+                            try:
+                                if hasattr(
+                                    character.character_ownership.user,
+                                    "industry_pi_config",
+                                ):
+                                    threshold = (
+                                        character.character_ownership.user.industry_pi_config.storage_warning_threshold
+                                    )
+                            except Exception:
+                                pass
+
+                            if pin_obj.utilization_pct >= threshold:
+                                if not pin_obj.notification_sent:
+                                    message = f"De opslag (of launchpad) op je **{planet_label}** is (bijna) vol! Tijd om spullen op te halen."
+                                    send_pi_notification(
+                                        character, "PI Storage Full", message
+                                    )
+                                    pin_obj.notification_sent = True
+                                    pin_obj.save()
+                            else:
                                 if pin_obj.notification_sent:
                                     pin_obj.notification_sent = False
                                     pin_obj.save()
@@ -390,43 +436,6 @@ def update_character_pi(character_id=None):
 @log_task_execution("Task Notify Expired Extractors")
 def task_notify_expired_extractors():
     """Check for expired PI extractors and send notifications via Alliance Auth notify."""
-    # Django
-    from django.utils import timezone
-
-    # Alliance Auth
-    from allianceauth.notifications.models import Notification
-
-    from ..models import PlanetPin
-
-    now = timezone.now()
-
-    expired_pins = PlanetPin.objects.filter(
-        expiry_time__lte=now, notification_sent=False
-    ).select_related("planet__character__character_ownership__user")
-
-    for pin in expired_pins:
-        if pin.is_extractor:
-            user = None
-            try:
-                user = pin.planet.character.character_ownership.user
-            except Exception:
-                pass
-
-            if user:
-                planet_name = (
-                    pin.planet.planet_type.name
-                    if pin.planet.planet_type
-                    else f"Planet {pin.planet.planet_id}"
-                )
-                char_name = pin.planet.character.character_name
-                message = f"Your PI Extractor on planet **{planet_name}** ({char_name}) has expired and stopped extracting. It's time to restart your extraction program!"
-                Notification.objects.notify_user(
-                    user=user,
-                    title="PI Extractor Expired",
-                    message=message,
-                    level="warning",
-                )
-
-            # Mark as notified even if user doesn't exist, so we don't keep trying
-            pin.notification_sent = True
-            pin.save(update_fields=["notification_sent"])
+    # Deprecated: Notification logic has been moved into the main update_pi_planets task
+    # to guarantee atomicity and combine Auth and Discord notifications reliably.
+    pass
