@@ -1,6 +1,14 @@
-______________________________________________________________________
-
-## id: TASK-8 title: 'Task summary overzicht: Toon ook afgeronde taken' status: Done assignee: [] created_date: '2026-08-02 10:50' labels: [] dependencies: [] type: feature ordinal: 9000
+---
+id: TASK-8
+title: 'Task summary overzicht: Toon ook afgeronde taken'
+status: Done
+assignee: []
+created_date: '2026-08-02 10:50'
+labels: []
+dependencies: []
+type: feature
+ordinal: 9000
+---
 
 ## Description
 

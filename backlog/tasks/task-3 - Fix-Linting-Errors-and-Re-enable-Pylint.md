@@ -1,6 +1,14 @@
-______________________________________________________________________
-
-## id: TASK-3 title: Fix Linting Errors and Re-enable Pylint status: Done assignee: [] created_date: '2026-07-29 16:32' labels: [] dependencies: [] type: chore ordinal: 3000
+---
+id: TASK-3
+title: Fix Linting Errors and Re-enable Pylint
+status: Done
+assignee: []
+created_date: '2026-07-29 16:32'
+labels: []
+dependencies: []
+type: chore
+ordinal: 3000
+---
 
 ## Description
 

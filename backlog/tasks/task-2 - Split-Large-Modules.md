@@ -1,6 +1,14 @@
-______________________________________________________________________
-
-## id: TASK-2 title: Split Large Modules status: Done assignee: [] created_date: '2026-07-29 16:32' labels: [] dependencies: [] type: task ordinal: 2000
+---
+id: TASK-2
+title: Split Large Modules
+status: Done
+assignee: []
+created_date: '2026-07-29 16:32'
+labels: []
+dependencies: []
+type: task
+ordinal: 2000
+---
 
 ## Description
 

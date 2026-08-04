@@ -137,10 +137,7 @@ jobs:
                   && github.ref == 'refs/heads/master'
                 )
               )
-              && (
-                matrix.python-version == env.COVERAGE_PYTHON_VERSION
-                && matrix.database == env.COVERAGE_DATABASE_VERSION
-              )
+              && matrix.python-version == env.COVERAGE_PYTHON_VERSION
             }}
         uses: codecov/codecov-action@v5
         with:

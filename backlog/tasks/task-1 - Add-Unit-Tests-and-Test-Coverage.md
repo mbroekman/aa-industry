@@ -1,6 +1,14 @@
-______________________________________________________________________
-
-## id: TASK-1 title: Add Unit Tests and Test Coverage status: Done assignee: [] created_date: '2026-07-29 16:32' labels: [] dependencies: [] type: task ordinal: 5000
+---
+id: TASK-1
+title: Add Unit Tests and Test Coverage
+status: Done
+assignee: []
+created_date: '2026-07-29 16:32'
+labels: []
+dependencies: []
+type: task
+ordinal: 5000
+---
 
 ## Description
 

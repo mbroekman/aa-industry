@@ -1,6 +1,14 @@
-______________________________________________________________________
-
-## id: TASK-16 title: Vertaal ontbrekende Nederlandse teksten status: Done assignee: [] created_date: '2026-08-04 20:10' updated_date: '2026-08-04 20:15' labels: [] dependencies: [] ordinal: 17000
+---
+id: TASK-16
+title: Vertaal ontbrekende Nederlandse teksten
+status: Done
+assignee: []
+created_date: '2026-08-04 20:10'
+updated_date: '2026-08-04 20:15'
+labels: []
+dependencies: []
+ordinal: 17000
+---
 
 ## Description
 

@@ -1,6 +1,14 @@
-______________________________________________________________________
-
-## id: TASK-10 title: 'Hernoem "Assigned To" naar "Claimed By" in productie tabellen' status: Done assignee: [] created_date: '2026-08-03 19:00' labels: [] dependencies: [] type: chore ordinal: 11000
+---
+id: TASK-10
+title: 'Hernoem "Assigned To" naar "Claimed By" in productie tabellen'
+status: Done
+assignee: []
+created_date: '2026-08-03 19:00'
+labels: []
+dependencies: []
+type: chore
+ordinal: 11000
+---
 
 ## Description
 

@@ -1,6 +1,13 @@
-______________________________________________________________________
-
-## id: TASK-12 title: Koppel geclaimde taken aan EVE ESI Industry Jobs status: To Do assignee: [] created_date: '2026-08-03 18:08' labels: [] dependencies: [] ordinal: 13000
+---
+id: TASK-12
+title: Koppel geclaimde taken aan EVE ESI Industry Jobs
+status: To Do
+assignee: []
+created_date: '2026-08-03 18:08'
+labels: []
+dependencies: []
+ordinal: 13000
+---
 
 ## Description
 

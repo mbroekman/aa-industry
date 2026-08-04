@@ -1,6 +1,15 @@
-______________________________________________________________________
-
-## id: TASK-13 title: Fix TypeError max_runs in get_blueprint_me status: Done assignee: [] created_date: '2026-08-03 19:11' updated_date: '2026-08-03 19:13' labels: [] dependencies: [] type: bug ordinal: 14000
+---
+id: TASK-13
+title: Fix TypeError max_runs in get_blueprint_me
+status: Done
+assignee: []
+created_date: '2026-08-03 19:11'
+updated_date: '2026-08-03 19:13'
+labels: []
+dependencies: []
+type: bug
+ordinal: 14000
+---
 
 ## Description
 
