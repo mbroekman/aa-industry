@@ -20,7 +20,7 @@ class CorpPricingConfig(models.Model):
     default_discount_percent = models.FloatField(
         default=0.0,
         help_text=_(
-            "Default discount % applied to Jita prices (e.g. 10.0 for 10% off)"
+            "Default discount percentage applied to Jita prices (e.g. 10.0 for 10 percent off)"
         ),
     )
     builder_reward_percent = models.FloatField(
@@ -52,7 +52,7 @@ class CorpTypeDiscount(models.Model):
     )
     eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     discount_percent = models.FloatField(
-        help_text=_("Discount % for this specific item type")
+        help_text=_("Discount percentage for this specific item type")
     )
 
     class Meta:

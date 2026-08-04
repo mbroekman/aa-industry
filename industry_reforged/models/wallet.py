@@ -34,9 +34,11 @@ class TaxConfig(models.Model):
         EveCorporationInfo, on_delete=models.CASCADE, related_name="tax_config"
     )
     industry_tax_rate = models.FloatField(
-        default=0.0, help_text=_("Tax % applied to industry jobs")
+        default=0.0, help_text=_("Tax percentage applied to industry jobs")
     )
-    broker_fee_rate = models.FloatField(default=0.0, help_text=_("Broker fee %"))
+    broker_fee_rate = models.FloatField(
+        default=0.0, help_text=_("Broker fee percentage")
+    )
 
     class Meta:
         verbose_name = _("Tax Config")

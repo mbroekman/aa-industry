@@ -237,9 +237,9 @@ msgid "Corporation Industry Jobs"
 msgstr "Bedrijfsindustrie Taken"
 
 #: industry_reforged/models/orders.py:23
-msgid "Default discount % applied to Jita prices (e.g. 10.0 for 10% off)"
+msgid "Default discount percentage applied to Jita prices (e.g. 10.0 for 10 percent off)"
 msgstr ""
-"Standaard korting % toegepast op Jita prijzen (bijv. 10.0 voor 10% korting)"
+"Standaard korting percentage toegepast op Jita prijzen (bijv. 10.0 voor 10 percent korting)"
 
 #: industry_reforged/models/orders.py:29
 msgid ""
@@ -264,9 +264,8 @@ msgid "Corp Pricing Configs"
 msgstr "Bedrijfsprijzen Configuraties"
 
 #: industry_reforged/models/orders.py:55
-#, python-format
-msgid "Discount % for this specific item type"
-msgstr "Korting % voor dit specifieke item type"
+msgid "Discount percentage for this specific item type"
+msgstr "Korting percentage voor dit specifieke item type"
 
 #: industry_reforged/models/orders.py:59
 msgid "Corp Type Discount"
@@ -435,12 +434,12 @@ msgid "Wallet Journal Sync States"
 msgstr "Portemonnee Journaal Synchronisatiestatussen"
 
 #: industry_reforged/models/wallet.py:37
-msgid "Tax % applied to industry jobs"
-msgstr "Belasting % toegepast op industrietaken"
+msgid "Tax percentage applied to industry jobs"
+msgstr "Belasting percentage toegepast op industrietaken"
 
 #: industry_reforged/models/wallet.py:39
-msgid "Broker fee %"
-msgstr "Makelaarskosten %"
+msgid "Broker fee percentage"
+msgstr "Makelaarskosten percentage"
 
 #: industry_reforged/models/wallet.py:42
 msgid "Tax Config"

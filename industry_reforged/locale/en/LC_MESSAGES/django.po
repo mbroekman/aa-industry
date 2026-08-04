@@ -226,7 +226,7 @@ msgid "Corporation Industry Jobs"
 msgstr ""
 
 #: industry_reforged/models/orders.py:23
-msgid "Default discount % applied to Jita prices (e.g. 10.0 for 10% off)"
+msgid "Default discount percentage applied to Jita prices (e.g. 10.0 for 10 percent off)"
 msgstr ""
 
 #: industry_reforged/models/orders.py:29
@@ -250,8 +250,7 @@ msgid "Corp Pricing Configs"
 msgstr ""
 
 #: industry_reforged/models/orders.py:55
-#, python-format
-msgid "Discount % for this specific item type"
+msgid "Discount percentage for this specific item type"
 msgstr ""
 
 #: industry_reforged/models/orders.py:59
@@ -415,11 +414,11 @@ msgid "Wallet Journal Sync States"
 msgstr ""
 
 #: industry_reforged/models/wallet.py:37
-msgid "Tax % applied to industry jobs"
+msgid "Tax percentage applied to industry jobs"
 msgstr ""
 
 #: industry_reforged/models/wallet.py:39
-msgid "Broker fee %"
+msgid "Broker fee percentage"
 msgstr ""
 
 #: industry_reforged/models/wallet.py:42
