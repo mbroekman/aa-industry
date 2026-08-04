@@ -19,19 +19,23 @@ class CorpPricingConfig(models.Model):
     )
     default_discount_percent = models.FloatField(
         default=0.0,
-        help_text="Default discount % applied to Jita prices (e.g. 10.0 for 10% off)",
+        help_text=_(
+            "Default discount % applied to Jita prices (e.g. 10.0 for 10% off)"
+        ),
     )
     builder_reward_percent = models.FloatField(
         default=0.0,
-        help_text="Percentage of the item value given as a financial reward to the builder",
+        help_text=_(
+            "Percentage of the item value given as a financial reward to the builder"
+        ),
     )
     default_t1_me = models.IntegerField(
         default=10,
-        help_text="Default Material Efficiency (ME) for Tech I blueprints",
+        help_text=_("Default Material Efficiency (ME) for Tech I blueprints"),
     )
     default_t2_me = models.IntegerField(
         default=2,
-        help_text="Default Material Efficiency (ME) for Tech II blueprints",
+        help_text=_("Default Material Efficiency (ME) for Tech II blueprints"),
     )
 
     class Meta:
@@ -48,7 +52,7 @@ class CorpTypeDiscount(models.Model):
     )
     eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     discount_percent = models.FloatField(
-        help_text="Discount % for this specific item type"
+        help_text=_("Discount % for this specific item type")
     )
 
     class Meta:
@@ -80,7 +84,9 @@ class MemberOrder(models.Model):
         null=True,
         blank=True,
         related_name="targeted_orders",
-        help_text="The facility where this order is planned to be built, used for quote calculation.",
+        help_text=_(
+            "The facility where this order is planned to be built, used for quote calculation."
+        ),
     )
     status = models.CharField(
         max_length=20, choices=ORDER_STATUS_CHOICES, default="REQUESTED"
@@ -100,7 +106,7 @@ class MemberOrder(models.Model):
         null=True,
         blank=True,
         related_name="child_orders",
-        help_text="If this order was split, this is the parent order.",
+        help_text=_("If this order was split, this is the parent order."),
     )
 
     payment_reference = models.CharField(
@@ -183,7 +189,11 @@ class OrderItem(models.Model):
         if self.discount_applied >= 100:
             return self.price_per_unit
 
-        return float(self.price_per_unit) / (1.0 - (self.discount_applied / 100.0))
+        # Standard Library
+        from decimal import Decimal
+
+        discount_factor = Decimal(str(self.discount_applied)) / Decimal("100.0")
+        return self.price_per_unit / (Decimal("1.0") - discount_factor)
 
     @property
     def original_line_total(self):
@@ -254,7 +264,7 @@ class ProductionTask(models.Model):
         max_length=10, choices=PRIORITY_CHOICES, default="NORMAL"
     )
     hidden = models.BooleanField(
-        default=False, help_text="Hide from standard Industrialist Job Market"
+        default=False, help_text=_("Hide from standard Industrialist Job Market")
     )
 
     # Relationships
@@ -278,7 +288,7 @@ class ProductionTask(models.Model):
         null=True,
         blank=True,
         related_name="bom_children",
-        help_text="The parent task that requires this sub-component",
+        help_text=_("The parent task that requires this sub-component"),
     )
 
     # Gamification
@@ -286,13 +296,13 @@ class ProductionTask(models.Model):
         max_digits=17,
         decimal_places=2,
         default=0.00,
-        help_text="Calculated ISK value of the task for leaderboards",
+        help_text=_("Calculated ISK value of the task for leaderboards"),
     )
     builder_reward = models.DecimalField(
         max_digits=17,
         decimal_places=2,
         default=0.00,
-        help_text="Actual calculated ISK payout reward for completing this task",
+        help_text=_("Actual calculated ISK payout reward for completing this task"),
     )
 
     # Timestamps
@@ -340,29 +350,29 @@ class CorpItemConfig(models.Model):
     item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
 
     manual_me = models.IntegerField(
-        default=0, help_text="Manual Material Efficiency override (0-10)"
+        default=0, help_text=_("Manual Material Efficiency override (0-10)")
     )
     manual_te = models.IntegerField(
-        default=0, help_text="Manual Time Efficiency override (0-20)"
+        default=0, help_text=_("Manual Time Efficiency override (0-20)")
     )
     max_runs = models.IntegerField(
-        default=0, help_text="Max runs per BPC (0 = infinite/BPO)"
+        default=0, help_text=_("Max runs per BPC (0 = infinite/BPO)")
     )
     manual_price = models.DecimalField(
         max_digits=17,
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Override price, especially useful for Faction items",
+        help_text=_("Override price, especially useful for Faction items"),
     )
 
     target_threshold = models.IntegerField(
-        default=0, help_text="Minimum stock level required in Hangars"
+        default=0, help_text=_("Minimum stock level required in Hangars")
     )
     last_low_stock_warning = models.DateTimeField(null=True, blank=True)
     auto_produce = models.BooleanField(
         default=False,
-        help_text="Automatically create ProductionTask if stock < threshold",
+        help_text=_("Automatically create ProductionTask if stock < threshold"),
     )
 
     build_or_buy = models.CharField(
@@ -373,13 +383,15 @@ class CorpItemConfig(models.Model):
     )
 
     exclude_from_orders = models.BooleanField(
-        default=False, help_text="Remove this item from member orders automatically."
+        default=False, help_text=_("Remove this item from member orders automatically.")
     )
     exclude_warning_message = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        help_text="Message to display to the user if this item is removed (e.g. 'Please acquire deadspace items yourself').",
+        help_text=_(
+            "Message to display to the user if this item is removed (e.g. 'Please acquire deadspace items yourself')."
+        ),
     )
 
     class Meta:
@@ -389,6 +401,15 @@ class CorpItemConfig(models.Model):
 
     def __str__(self):
         return f"Config for {self.item_type.name}"
+
+    @property
+    def has_blueprint(self):
+        # Third Party
+        from eveuniverse.models import EveIndustryActivityProduct
+
+        return EveIndustryActivityProduct.objects.filter(
+            product_eve_type=self.item_type, activity_id=1
+        ).exists()
 
 
 class OrderBlueprintOverride(models.Model):
@@ -406,6 +427,15 @@ class OrderBlueprintOverride(models.Model):
 
     def __str__(self):
         return f"Override ME {self.manual_me} for {self.item_type.name} on Order #{self.order.id}"
+
+    @property
+    def has_blueprint(self):
+        # Third Party
+        from eveuniverse.models import EveIndustryActivityProduct
+
+        return EveIndustryActivityProduct.objects.filter(
+            product_eve_type=self.item_type, activity_id=1
+        ).exists()
 
 
 class CorpBuyOrder(models.Model):

@@ -5,13 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [0.3.0] - Unreleased
+## [0.3.0] - 04-08-2026
 
 ### Added
 
 - **PI Location Tracking**: Planetary Interaction dashboards now explicitly display the Solar System and specific Planet Name (e.g., `Jita » Jita IV`) instead of just the generic planet type.
 - **PI Notifications**: Added unified Alliance Auth and direct Discord DM notifications for PI events. Users are automatically notified when an extractor stops.
 - **Configurable PI Storage Thresholds**: Users can now configure the percentage at which they receive full storage/launchpad warnings directly from their Personal Dashboard settings (defaults to 75%).
+- **Completed Tasks Summary (TASK-8)**: Added functionality to view a summary of completed production tasks directly from the Industrialist dashboard, with filtering options for Active, Completed, or All tasks.
+- **Wallet Division Names**: The system now retrieves and updates dynamic corporation wallet division names directly from EVE ESI instead of using static defaults.
+- **Extensive Test Coverage (TASK-1)**: Added extensive unit tests and test coverage across the application to prevent regressions.
+
+### Changed
+
+- **UI Dashboard Enhancements (TASK-15)**: The Build Steps are now intuitively grouped by Activity Type (Manufacturing, Reactions, etc.) with empty groups automatically hidden when filtering.
+- **Terminology Update (TASK-10)**: Globally renamed "Assigned To" to "Claimed By" and "Member Tasks" to "Claimed Jobs" for clarity across all tables and views. "Task Summary" is now "Build Steps".
+- **Codebase Refactoring (TASK-2, TASK-3)**: Major codebase cleanup including splitting large modules (`views.py`, `urls.py`, `tasks.py`, `models.py`) into smaller domain-specific files, fixing linting errors, and re-enabling Pylint checks.
+- **Translation Review (TASK-4)**: Reviewed and updated localization/translation strings across the application.
+- **Dutch Translations (TASK-16)**: Translated 474 missing text strings in `django.po` to Dutch and compiled it to `django.mo` for full localization.
+
+### Fixed
+
+- **Reactions In Progress Quantity (TASK-14)**: Fixed a bug where the "In Progress" column on the dashboard showed the number of runs instead of the actual produced quantity for Reactions. The system now dynamically fetches the correct `activity_id` from the SDE.
+- **ME Application Logic (TASK-6)**: Fixed a bug where Blueprint Material Efficiency (ME) reduction was incorrectly applied to items that are not built from blueprints (like reactions).
+- **TypeError in BOM Engine (TASK-13)**: Resolved `TypeError: '>' not supported between instances of 'NoneType' and 'int'` occurring during BOM recursive tree generation when `max_runs` was missing (e.g. for Command Centers).
+- **AttributeError in Orders (TASK-9)**: Fixed `AttributeError: 'MemberOrder' object has no attribute 'corporation'`.
+- **Structure Type Recognition (TASK-5)**: Fixed a bug where a Fortizar was incorrectly identified as a Tatara type structure.
+- **UI Cleanups (TASK-7)**: Removed unnecessary strikethrough text from completed member tasks in the UI to improve readability.
 
 ## [0.2.0] - 21-07-2026
 

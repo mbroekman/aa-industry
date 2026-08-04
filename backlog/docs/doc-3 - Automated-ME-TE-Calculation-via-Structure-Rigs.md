@@ -1,3 +1,7 @@
+______________________________________________________________________
+
+## id: doc-3 title: Automated ME/TE Calculation via Structure Rigs type: guide created_date: '2026-08-03 18:12'
+
 # Implementation Plan: Automated ME/TE Calculation via Structure Rigs
 
 Currently, the Material Efficiency (ME) and Time Efficiency (TE) per item must be manually configured by a Director in the Admin panel. The goal is to automate this by reading the actual installation (Upwell Structure) and its installed Rigs.

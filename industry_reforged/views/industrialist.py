@@ -16,7 +16,7 @@ from ..models import (
     MemberOrder,
     ProductionTask,
 )
-from .orders import notify_order_ready
+from .orders.notifications import notify_order_ready
 
 
 @login_required
@@ -99,19 +99,23 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     my_claimed_summary = []
 
     # Django
-    from django.db.models import Sum
+    from django.db.models import Q, Sum
 
     # Total Claimed (from ProductionTask)
-    claimed_grouped = (
+    all_tasks_grouped = (
         ProductionTask.objects.filter(
-            status="IN_PRODUCTION", assigned_to_id__in=user_characters
+            status__in=["IN_PRODUCTION", "COMPLETED"],
+            assigned_to_id__in=user_characters,
         )
         .values("item_type__id", "item_type__name", "activity_id")
-        .annotate(total_quantity=Sum("quantity"))
-        .order_by("item_type__name")
+        .annotate(
+            total_claimed=Sum("quantity", filter=Q(status="IN_PRODUCTION")),
+            total_completed=Sum("quantity", filter=Q(status="COMPLETED")),
+        )
+        .order_by("activity_id", "item_type__name")
     )
 
-    if claimed_grouped:
+    if all_tasks_grouped:
         # Third Party
         from eveuniverse.models import EveIndustryActivityProduct
 
@@ -131,18 +135,6 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             corporation__corporation_id__in=corp_ids,
         )
 
-        # Calculate completed to be accurate
-        completed_grouped = (
-            ProductionTask.objects.filter(
-                status="COMPLETED", assigned_to_id__in=user_characters
-            )
-            .values("item_type__id")
-            .annotate(total_quantity=Sum("quantity"))
-        )
-        completed_dict = {
-            item["item_type__id"]: item["total_quantity"] for item in completed_grouped
-        }
-
         # Mapping for activity_name
         activity_name_map = {
             1: "Manufacturing",
@@ -153,7 +145,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             11: "Reactions",
         }
 
-        for item in claimed_grouped:
+        for item in all_tasks_grouped:
             type_id = item["item_type__id"]
             activity_id = item["activity_id"]
             activity_name = activity_name_map.get(
@@ -179,8 +171,10 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             for j in matching_corp_jobs:
                 in_progress += j.runs * portion_size
 
-            total_claimed = item["total_quantity"]
-            completed = completed_dict.get(type_id, 0)
+            total_claimed = item["total_claimed"] or 0
+            completed = item["total_completed"] or 0
+
+            # Since total_claimed is IN_PRODUCTION tasks, the remaining is based on total_claimed - in_progress
             remaining = max(0, total_claimed - in_progress)
 
             my_claimed_summary.append(

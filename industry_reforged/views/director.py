@@ -194,7 +194,7 @@ def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
                     level="success",
                 )
         else:
-            messages.error(request, "Order must be in READY state to be delivered.")
+            messages.error(request, _("Order must be in READY state to be delivered."))
     return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
 
 
@@ -216,7 +216,7 @@ def update_buy_order_status(request: WSGIRequest, order_id: int) -> HttpResponse
                 f"Buy Order #{order.id} status updated to {order.get_status_display()}.",
             )
         else:
-            messages.error(request, "Invalid status.")
+            messages.error(request, _("Invalid status."))
 
     return redirect(
         reverse("industry_reforged:director_dashboard") + "#buy-orders-pane"
@@ -278,7 +278,7 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
                     # Default to remaining if not provided
                     amount = order.total_price - order.amount_paid
             except (ValueError, TypeError, ArithmeticError):
-                messages.error(request, "Invalid amount provided.")
+                messages.error(request, _("Invalid amount provided."))
                 return redirect(
                     reverse("industry_reforged:director_dashboard") + "#orders-pane"
                 )
@@ -308,7 +308,7 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
                 f"Order #{order.id} ({order.payment_reference}) payment updated.",
             )
         else:
-            messages.error(request, "Order is already fully paid.")
+            messages.error(request, _("Order is already fully paid."))
     return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
 
 
@@ -355,7 +355,7 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
 
         if not corporation:
             messages.error(
-                request, "You are not part of a corporation to create payouts."
+                request, _("You are not part of a corporation to create payouts.")
             )
             return redirect(
                 reverse("industry_reforged:director_dashboard") + "#payouts-pane"
@@ -395,7 +395,7 @@ def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
                 request, f"Payout Batch {batch.payment_reference} marked as PAID."
             )
         else:
-            messages.error(request, "Batch is already paid.")
+            messages.error(request, _("Batch is already paid."))
     return redirect(reverse("industry_reforged:director_dashboard") + "#payouts-pane")
 
 
@@ -697,7 +697,7 @@ def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
         if current_qty < config.target_threshold:
             deficit = config.target_threshold - current_qty
 
-            materials, yield_qty = get_sde_bom(config.item_type.id)
+            materials, yield_qty, _activity = get_sde_bom(config.item_type.id)
             if materials:
                 # Standard Library
                 import math

@@ -9,19 +9,19 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from ..models import (
+from ...models import (
     CorpInventory,
     CorporationWebhookConfig,
     CorpPricingConfig,
     MemberOrder,
     ProductionTask,
 )
-from ..utils.bom_engine import (
+from ...utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
 )
-from ..utils.discord import send_discord_webhook
-from ..utils.pricing_engine import (
+from ...utils.discord import send_discord_webhook
+from ...utils.pricing_engine import (
     calculate_quote,
     get_detailed_prices,
     get_prices_with_overrides,
@@ -95,14 +95,14 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     ) or request.user.has_perm("industry_reforged.corp_access"):
         recursive_bom_tree = calculate_recursive_order_bom(order)
 
-    from ..models import IndustryFacility
+    from ...models import IndustryFacility
 
     facilities = IndustryFacility.objects.filter(is_production_facility=True)
 
     # Third Party
     from eveuniverse.models import EveType
 
-    from ..utils.bom_engine import get_blueprint_me
+    from ...utils.bom_engine import get_blueprint_me
 
     def extract_manufactured_types(nodes, result_dict):
         for node in nodes:
@@ -124,6 +124,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         for item in order.items.all():
             products_me_dict[item.item_type.id] = item.item_type.name
 
+    # Third Party
+    from eveuniverse.models import EveIndustryActivityProduct
+
     products_me = []
     for type_id, name in products_me_dict.items():
         eve_type = EveType.objects.filter(id=type_id).first()
@@ -132,12 +135,17 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             if me_val is None:
                 me_val = get_blueprint_me(eve_type, corp_info, None)[0]
 
+            has_bp = EveIndustryActivityProduct.objects.filter(
+                product_eve_type=eve_type, activity_id=1
+            ).exists()
+
             products_me.append(
                 {
                     "type_id": type_id,
                     "name": name,
                     "current_me": me_val,
                     "current_max_runs": max_runs,
+                    "has_blueprint": has_bp,
                 }
             )
 
@@ -179,7 +187,7 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             target_facility_id = request.POST.get("target_facility", None)
             if target_facility_id:
-                from ..models import IndustryFacility
+                from ...models import IndustryFacility
 
                 facility = IndustryFacility.objects.filter(
                     facility_id=target_facility_id
@@ -210,7 +218,7 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             # Third Party
             from eveuniverse.models import EveType
 
-            from ..models import OrderBlueprintOverride
+            from ...models import OrderBlueprintOverride
 
             for key, value in request.POST.items():
                 if key.startswith("bp_me_"):
@@ -286,7 +294,8 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         send_discord_webhook(webhook_config.orders_webhook, embed)
 
                 # Send a direct message to the user who placed the order
-                from ..tasks.utils import notify_discord_user
+                # AA Industry App
+                from industry_reforged.tasks.utils import notify_discord_user
 
                 dm_msg = f"**Industry Quote Received**\nYour order `#{parent.id}` has been quoted for **{grand_total:,.2f} ISK**. Please check the dashboard to accept or reject it."
                 notify_discord_user(parent.character, dm_msg)
@@ -319,7 +328,7 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
 
     if "target_facility" in request.POST:
         target_facility_id = request.POST.get("target_facility")
-        from ..models import IndustryFacility
+        from ...models import IndustryFacility
 
         facility = None
         if target_facility_id:
@@ -339,7 +348,7 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
 
     recursive_bom_tree = calculate_recursive_order_bom(order)
 
-    from ..utils.pricing_engine import get_prices_with_overrides
+    from ...utils.pricing_engine import get_prices_with_overrides
 
     total_bom_price = 0
     if bom_materials:
@@ -368,7 +377,7 @@ def update_quote_me_overrides(request: WSGIRequest, order_id: int) -> HttpRespon
 
     if "target_facility" in request.POST:
         target_facility_id = request.POST.get("target_facility")
-        from ..models import IndustryFacility
+        from ...models import IndustryFacility
 
         facility = None
         if target_facility_id:
@@ -383,7 +392,7 @@ def update_quote_me_overrides(request: WSGIRequest, order_id: int) -> HttpRespon
     # Third Party
     from eveuniverse.models import EveType
 
-    from ..models import OrderBlueprintOverride
+    from ...models import OrderBlueprintOverride
 
     for key, value in request.POST.items():
         if key.startswith("bp_me_"):

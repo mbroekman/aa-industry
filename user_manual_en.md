@@ -33,7 +33,8 @@ This is the central marketplace for corporate builders.
 
 - **Industry Status (MOTD)**: The top of the dashboard displays a real-time summary of the corporate industry, including the number of active orders, open tasks on the market, active corporate jobs, and the total ISK value in progress. This acts as a dynamic Message of the Day, complementing any manual announcements set by directors.
 - **Job Market (Unclaimed)**: Once a member accepts an order, the system breaks the order down into individual Production Tasks. As a builder, you can "Claim" these tasks here. You can also select parent tasks to automatically claim all their sub-components.
-- **My Member Tasks**: A unified overview of the tasks you have claimed. You can dynamically filter this view to show only "Open (Active) Tasks", only "Completed Tasks", or "Show All Tasks". Once you finish a job in EVE Online, you can mark the active tasks as "Complete" here. Parent tasks can only be completed once all sub-tasks are done.
+- **Claimed Jobs**: A unified overview of the tasks you have claimed. You can dynamically filter this view to show only "Open (Active) Tasks", only "Completed Tasks", or "Show All Tasks". Once you finish a job in EVE Online, you can mark the active tasks as "Complete" here. Parent tasks can only be completed once all sub-tasks are done.
+- **Build Steps**: A summarized, aggregated list of all items you need to build across all your claimed jobs. This view is logically grouped by Activity Type (such as Reactions, Manufacturing) to streamline your production process.
 - **Builder Payouts**: Completed tasks that have an ISK reward are queued up for a payout. Directors will regularly bundle these into "Payout Batches". Once the corporation transfers the ISK to you with the batch's unique `PAY-` reference, the system automatically marks it as Paid.
 
 ### 2.2 Leaderboards & Gamification

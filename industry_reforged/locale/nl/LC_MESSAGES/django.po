@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-26 19:05+0200\n"
+"POT-Creation-Date: 2026-08-04 21:55+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,661 +18,2199 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: auth_hooks.py:21
+#: industry_reforged/auth_hooks.py:21
 msgid "Personal Industry"
-msgstr ""
+msgstr "Persoonlijke Industrie"
 
-#: auth_hooks.py:42
+#: industry_reforged/auth_hooks.py:42
 msgid "Corporate Industry"
-msgstr ""
+msgstr "Bedrijfsindustrie"
 
-#: auth_hooks.py:72 models.py:394
+#: industry_reforged/auth_hooks.py:72 industry_reforged/models/orders.py:119
 msgid "Member Orders"
-msgstr ""
+msgstr "Ledenbestellingen"
 
-#: auth_hooks.py:100
+#: industry_reforged/auth_hooks.py:99
 msgid "Industrialist Dash"
-msgstr ""
+msgstr "Industrieel Dashboard"
 
-#: auth_hooks.py:127
+#: industry_reforged/auth_hooks.py:125
 msgid "Director CP"
-msgstr ""
+msgstr "Directeur CP"
 
-#: models.py:58
-msgid "Character Industry Job"
-msgstr ""
+#: industry_reforged/auth_hooks.py:153
+#, fuzzy
+#| msgid "Industry Reforged"
+msgid "Industry Leaderboard"
+msgstr "Industry Reforged"
 
-#: models.py:59
-msgid "Character Industry Jobs"
-msgstr ""
+#: industry_reforged/forms.py:26
+msgid "Item name cannot be empty."
+msgstr "Itemnaam mag niet leeg zijn."
 
-#: models.py:123
-msgid "Corporation Industry Job"
-msgstr ""
+#: industry_reforged/forms.py:52
+#, python-format
+msgid "Could not resolve '%(name)s' to a valid EVE item."
+msgstr "Kon '%(name)s' niet herleiden tot een geldig EVE item."
 
-#: models.py:124
-msgid "Corporation Industry Jobs"
-msgstr ""
+#: industry_reforged/forms.py:60
+msgid "Exact name of the item (e.g. Aeon)"
+msgstr "Exacte naam van het item (bijv. Aeon)"
 
-#: models.py:170
+#: industry_reforged/forms.py:123
+msgid "A configuration for this item already exists."
+msgstr "Er bestaat al een configuratie voor dit item."
+
+#: industry_reforged/forms.py:185
+msgid "Exact name of the item to discount (e.g. Paladin)"
+msgstr "Exacte naam van het item voor korting (bijv. Paladin)"
+
+#: industry_reforged/forms.py:225
+msgid "A discount rule for this item already exists."
+msgstr "Er bestaat al een kortingsregel voor dit item."
+
+#: industry_reforged/forms.py:248
+msgid "The type of Upwell structure"
+msgstr "Het type Upwell structuur"
+
+#: industry_reforged/forms.py:255
+msgid "The exact EVE Structure ID. Type manually."
+msgstr "De exacte EVE Structuur ID. Handmatig invoeren."
+
+#: industry_reforged/forms.py:256
+msgid "A friendly name for this facility."
+msgstr "Een gebruiksvriendelijke naam voor deze faciliteit."
+
+#: industry_reforged/forms.py:257
+msgid "Optional: EVE Solar System ID"
+msgstr "Optioneel: EVE Zonnestelsel ID"
+
+#: industry_reforged/forms.py:327
+msgid "Storage Warning Threshold (%)"
+msgstr "Opslag Waarschuwingsdrempel (%)"
+
+#: industry_reforged/models/config.py:24
+msgid "Character with Director roles used for syncing."
+msgstr "Karakter met Director rollen gebruikt voor synchronisatie."
+
+#: industry_reforged/models/config.py:28
 msgid "Corporation Sync Configuration"
-msgstr ""
+msgstr "Bedrijfssynchronisatie Configuratie"
 
-#: models.py:171
+#: industry_reforged/models/config.py:29
 msgid "Corporation Sync Configurations"
-msgstr ""
+msgstr "Bedrijfssynchronisatie Configuraties"
 
-#: models.py:203
+#: industry_reforged/models/config.py:42
+msgid "Webhook URL for new Orders and Quotes."
+msgstr "Webhook URL voor nieuwe Bestellingen en Offertes."
+
+#: industry_reforged/models/config.py:48
+msgid ""
+"Webhook URL for Director-specific action alerts (e.g. New Quotes Requested, "
+"Orders Ready for Delivery)."
+msgstr ""
+"Webhook URL voor Directeur-specifieke actiemeldingen (bijv. Nieuwe Offertes "
+"Aangevraagd, Bestellingen Klaar voor Levering)."
+
+#: industry_reforged/models/config.py:54
+msgid "Webhook URL for Corporate Industry Jobs completion."
+msgstr "Webhook URL voor voltooiing van Bedrijfsindustrie Taken."
+
+#: industry_reforged/models/config.py:59
+msgid "Webhook URL for low wallet balance warnings."
+msgstr "Webhook URL voor waarschuwingen voor laag portemonneesaldo."
+
+#: industry_reforged/models/config.py:64 industry_reforged/models/wallet.py:61
+msgid "Balance below which a warning is sent (default: 500 million ISK)."
+msgstr ""
+"Saldo waaronder een waarschuwing wordt verzonden (standaard: 500 miljoen "
+"ISK)."
+
+#: industry_reforged/models/config.py:68
+msgid "Webhook URL for low inventory warnings."
+msgstr "Webhook URL voor waarschuwingen voor lage voorraad."
+
+#: industry_reforged/models/config.py:72
 msgid "Discord Webhook Configuration"
-msgstr ""
+msgstr "Discord Webhook Configuratie"
 
-#: models.py:204
+#: industry_reforged/models/config.py:73
 msgid "Discord Webhook Configurations"
-msgstr ""
+msgstr "Discord Webhook Configuraties"
 
-#: models.py:224
-msgid "Character Planet"
-msgstr ""
+#: industry_reforged/models/config.py:83
+msgid "Message of the day for industrialists"
+msgstr "Bericht van de dag voor industriëlen"
 
-#: models.py:225
-msgid "Character Planets"
-msgstr ""
-
-#: models.py:277
-msgid "Planet Pin"
-msgstr ""
-
-#: models.py:278
-msgid "Planet Pins"
-msgstr ""
-
-#: models.py:343
-msgid "Corp Pricing Config"
-msgstr ""
-
-#: models.py:344
-msgid "Corp Pricing Configs"
-msgstr ""
-
-#: models.py:360
-msgid "Corp Type Discount"
-msgstr ""
-
-#: models.py:361
-msgid "Corp Type Discounts"
-msgstr ""
-
-#: models.py:393
-msgid "Member Order"
-msgstr ""
-
-#: models.py:418
-msgid "Order Item"
-msgstr ""
-
-#: models.py:419
-msgid "Order Items"
-msgstr ""
-
-#: models.py:436
-msgid "Order Fit"
-msgstr ""
-
-#: models.py:437
-msgid "Order Fits"
-msgstr ""
-
-#: models.py:454
+#: industry_reforged/models/config.py:90
 msgid "Corp MOTD"
-msgstr ""
+msgstr "Bedrijfs MOTD"
 
-#: models.py:455
+#: industry_reforged/models/config.py:91
 msgid "Corp MOTDs"
-msgstr ""
+msgstr "Bedrijfs MOTDs"
 
-#: models.py:524
-msgid "Production Task"
-msgstr ""
+#: industry_reforged/models/core.py:43
+msgid "Task Execution Log"
+msgstr "Taakuitvoeringslogboek"
 
-#: models.py:525
-msgid "Production Tasks"
-msgstr ""
+#: industry_reforged/models/core.py:44
+msgid "Task Execution Logs"
+msgstr "Taakuitvoeringslogboeken"
 
-#: models.py:573
-msgid "Corp Item Config"
-msgstr ""
+#: industry_reforged/models/facilities.py:29
+msgid "Sync corporate inventory from this facility."
+msgstr "Synchroniseer bedrijfsvoorraad van deze faciliteit."
 
-#: models.py:574
-msgid "Corp Item Configs"
-msgstr ""
+#: industry_reforged/models/facilities.py:33
+msgid "Whether this facility is configured as a production facility."
+msgstr "Of deze faciliteit is geconfigureerd als een productiefaciliteit."
 
-#: models.py:597
-msgid "Corp Hangar Config"
-msgstr ""
+#: industry_reforged/models/facilities.py:37
+msgid "Whether this is the default facility for the corporation."
+msgstr "Of dit de standaard faciliteit voor het bedrijf is."
 
-#: models.py:598
-msgid "Corp Hangar Configs"
-msgstr ""
+#: industry_reforged/models/facilities.py:41
+msgid "Industry Facility"
+msgstr "Industriefaciliteit"
 
-#: models.py:620
+#: industry_reforged/models/facilities.py:42
+msgid "Industry Facilities"
+msgstr "Industriefaciliteiten"
+
+#: industry_reforged/models/facilities.py:72
+msgid "EveType ID of the Rig"
+msgstr "EveType ID van de Rig"
+
+#: industry_reforged/models/facilities.py:79
+msgid "Bonus as percentage (e.g. 2.0 for 2%)"
+msgstr "Bonus als percentage (bijv. 2.0 voor 2%)"
+
+#: industry_reforged/models/facilities.py:85
+msgid "Bonus as percentage (e.g. 20.0 for 20%)"
+msgstr "Bonus als percentage (bijv. 20.0 voor 20%)"
+
+#: industry_reforged/models/facilities.py:89
+msgid ""
+"Comma-separated list of EveGroup IDs this rig applies to. E.g. '419' for "
+"Battlecruisers"
+msgstr ""
+"Kommagescheiden lijst van EveGroup ID's waar deze rig op van toepassing is. "
+"Bijv. '419' voor Battlecruisers"
+
+#: industry_reforged/models/facilities.py:96
+msgid ""
+"Comma-separated list of EveCategory IDs this rig applies to. E.g. '6' for "
+"Ships"
+msgstr ""
+"Kommagescheiden lijst van EveCategory ID's waar deze rig op van toepassing "
+"is. Bijv. '6' voor Schepen"
+
+#: industry_reforged/models/inventory.py:26
+msgid "If true, ESI sync will not overwrite this quantity"
+msgstr ""
+"Indien waar, zal ESI synchronisatie deze hoeveelheid niet overschrijven"
+
+#: industry_reforged/models/inventory.py:31
 msgid "Corp Inventory"
-msgstr ""
+msgstr "Bedrijfsvoorraad"
 
-#: models.py:621
+#: industry_reforged/models/inventory.py:32
 msgid "Corp Inventories"
-msgstr ""
+msgstr "Bedrijfsvoorraden"
 
-#: models.py:638
+#: industry_reforged/models/jobs.py:40
+msgid "Character Industry Job"
+msgstr "Karakter Industrie Taak"
+
+#: industry_reforged/models/jobs.py:41
+msgid "Character Industry Jobs"
+msgstr "Karakter Industrie Taken"
+
+#: industry_reforged/models/jobs.py:105
+msgid "Corporation Industry Job"
+msgstr "Bedrijfsindustrie Taak"
+
+#: industry_reforged/models/jobs.py:106
+msgid "Corporation Industry Jobs"
+msgstr "Bedrijfsindustrie Taken"
+
+#: industry_reforged/models/orders.py:23
+msgid "Default discount % applied to Jita prices (e.g. 10.0 for 10% off)"
+msgstr ""
+"Standaard korting % toegepast op Jita prijzen (bijv. 10.0 voor 10% korting)"
+
+#: industry_reforged/models/orders.py:29
+msgid ""
+"Percentage of the item value given as a financial reward to the builder"
+msgstr ""
+"Percentage van de itemwaarde gegeven als financiële beloning aan de bouwer"
+
+#: industry_reforged/models/orders.py:34
+msgid "Default Material Efficiency (ME) for Tech I blueprints"
+msgstr "Standaard Material Efficiency (ME) voor Tech I blueprints"
+
+#: industry_reforged/models/orders.py:38
+msgid "Default Material Efficiency (ME) for Tech II blueprints"
+msgstr "Standaard Material Efficiency (ME) voor Tech II blueprints"
+
+#: industry_reforged/models/orders.py:42
+msgid "Corp Pricing Config"
+msgstr "Bedrijfsprijzen Configuratie"
+
+#: industry_reforged/models/orders.py:43
+msgid "Corp Pricing Configs"
+msgstr "Bedrijfsprijzen Configuraties"
+
+#: industry_reforged/models/orders.py:55
+#, python-format
+msgid "Discount % for this specific item type"
+msgstr "Korting % voor dit specifieke item type"
+
+#: industry_reforged/models/orders.py:59
+msgid "Corp Type Discount"
+msgstr "Bedrijfstype Korting"
+
+#: industry_reforged/models/orders.py:60
+msgid "Corp Type Discounts"
+msgstr "Bedrijfstype Kortingen"
+
+#: industry_reforged/models/orders.py:88
+msgid ""
+"The facility where this order is planned to be built, used for quote "
+"calculation."
+msgstr ""
+"De faciliteit waar deze bestelling gepland is om gebouwd te worden, gebruikt"
+" voor offerteberekening."
+
+#: industry_reforged/models/orders.py:109
+msgid "If this order was split, this is the parent order."
+msgstr "Als deze bestelling was opgesplitst, is dit de hoofdorder."
+
+#: industry_reforged/models/orders.py:118
+msgid "Member Order"
+msgstr "Ledenbestelling"
+
+#: industry_reforged/models/orders.py:173
+msgid "Order Item"
+msgstr "Bestellingsitem"
+
+#: industry_reforged/models/orders.py:174
+msgid "Order Items"
+msgstr "Bestellingsitems"
+
+#: industry_reforged/models/orders.py:208
+msgid "Order Fit"
+msgstr "Bestellingsuitrusting"
+
+#: industry_reforged/models/orders.py:209
+msgid "Order Fits"
+msgstr "Bestellingsuitrustingen"
+
+#: industry_reforged/models/orders.py:233
+msgid "Builder Payout Batch"
+msgstr "Bouwer Uitbetalingsbatch"
+
+#: industry_reforged/models/orders.py:234
+msgid "Builder Payout Batches"
+msgstr "Bouwer Uitbetalingsbatches"
+
+#: industry_reforged/models/orders.py:265
+msgid "Hide from standard Industrialist Job Market"
+msgstr "Verberg van standaard Industrieel Banenmarkt"
+
+#: industry_reforged/models/orders.py:289
+msgid "The parent task that requires this sub-component"
+msgstr "De hoofdtaak die dit sub-component vereist"
+
+#: industry_reforged/models/orders.py:297
+msgid "Calculated ISK value of the task for leaderboards"
+msgstr "Berekende ISK waarde van de taak voor klassementen"
+
+#: industry_reforged/models/orders.py:303
+msgid "Actual calculated ISK payout reward for completing this task"
+msgstr ""
+"Daadwerkelijk berekende ISK uitbetalingsbeloning voor het voltooien van deze"
+" taak"
+
+#: industry_reforged/models/orders.py:320
+msgid "Production Task"
+msgstr "Productietaak"
+
+#: industry_reforged/models/orders.py:321
+msgid "Production Tasks"
+msgstr "Productietaken"
+
+#: industry_reforged/models/orders.py:351
+msgid "Manual Material Efficiency override (0-10)"
+msgstr "Handmatige Material Efficiency overschrijving (0-10)"
+
+#: industry_reforged/models/orders.py:354
+msgid "Manual Time Efficiency override (0-20)"
+msgstr "Handmatige Time Efficiency overschrijving (0-20)"
+
+#: industry_reforged/models/orders.py:357
+msgid "Max runs per BPC (0 = infinite/BPO)"
+msgstr "Max runs per BPC (0 = oneindig/BPO)"
+
+#: industry_reforged/models/orders.py:364
+msgid "Override price, especially useful for Faction items"
+msgstr "Overschrijf prijs, vooral nuttig voor Faction items"
+
+#: industry_reforged/models/orders.py:368
+msgid "Minimum stock level required in Hangars"
+msgstr "Minimum voorraadniveau vereist in Hangars"
+
+#: industry_reforged/models/orders.py:373
+msgid "Automatically create ProductionTask if stock < threshold"
+msgstr "Maak automatisch ProductionTask aan als voorraad < drempel"
+
+#: industry_reforged/models/orders.py:384
+msgid "Remove this item from member orders automatically."
+msgstr "Verwijder dit item automatisch uit ledenbestellingen."
+
+#: industry_reforged/models/orders.py:391
+msgid ""
+"Message to display to the user if this item is removed (e.g. 'Please acquire"
+" deadspace items yourself')."
+msgstr ""
+"Bericht om aan de gebruiker weer te geven als dit item is verwijderd (bijv. "
+"'Zorg zelf voor deadspace items')."
+
+#: industry_reforged/models/orders.py:396
+msgid "Corp Item Config"
+msgstr "Bedrijfsitem Configuratie"
+
+#: industry_reforged/models/orders.py:397
+msgid "Corp Item Configs"
+msgstr "Bedrijfsitem Configuraties"
+
+#: industry_reforged/models/orders.py:421
+msgid "Order BP Override"
+msgstr "Bestelling BP Overschrijving"
+
+#: industry_reforged/models/orders.py:422
+msgid "Order BP Overrides"
+msgstr "Bestelling BP Overschrijvingen"
+
+#: industry_reforged/models/orders.py:453
+msgid "Corporate Buy Order"
+msgstr "Bedrijfsaankooporder"
+
+#: industry_reforged/models/orders.py:454
+msgid "Corporate Buy Orders"
+msgstr "Bedrijfsaankooporders"
+
+#: industry_reforged/models/pi.py:24
+msgid "User PI Config"
+msgstr "Gebruiker PI Configuratie"
+
+#: industry_reforged/models/pi.py:25
+msgid "User PI Configs"
+msgstr "Gebruiker PI Configuraties"
+
+#: industry_reforged/models/pi.py:59
+msgid "Character Planet"
+msgstr "Karakter Planeet"
+
+#: industry_reforged/models/pi.py:60
+msgid "Character Planets"
+msgstr "Karakter Planeten"
+
+#: industry_reforged/models/pi.py:183
+msgid "Planet Pin"
+msgstr "Planeet Pin"
+
+#: industry_reforged/models/pi.py:184
+msgid "Planet Pins"
+msgstr "Planeet Pins"
+
+#: industry_reforged/models/wallet.py:23
+msgid "Wallet Journal Sync State"
+msgstr "Portemonnee Journaal Synchronisatiestatus"
+
+#: industry_reforged/models/wallet.py:24
+msgid "Wallet Journal Sync States"
+msgstr "Portemonnee Journaal Synchronisatiestatussen"
+
+#: industry_reforged/models/wallet.py:37
+msgid "Tax % applied to industry jobs"
+msgstr "Belasting % toegepast op industrietaken"
+
+#: industry_reforged/models/wallet.py:39
+msgid "Broker fee %"
+msgstr "Makelaarskosten %"
+
+#: industry_reforged/models/wallet.py:42
 msgid "Tax Config"
-msgstr ""
+msgstr "Belastingconfiguratie"
 
-#: models.py:639
+#: industry_reforged/models/wallet.py:43
 msgid "Tax Configs"
-msgstr ""
+msgstr "Belastingconfiguraties"
 
-#: models.py:656
+#: industry_reforged/models/wallet.py:66
 msgid "Corp Wallet Division"
-msgstr ""
+msgstr "Bedrijfsportemonnee Divisie"
 
-#: models.py:657
+#: industry_reforged/models/wallet.py:67
 msgid "Corp Wallet Divisions"
-msgstr ""
+msgstr "Bedrijfsportemonnee Divisies"
 
-#: models.py:685
+#: industry_reforged/models/wallet.py:95
 msgid "Corp Wallet Journal"
-msgstr ""
+msgstr "Bedrijfsportemonnee Journaal"
 
-#: models.py:686
+#: industry_reforged/models/wallet.py:96
 msgid "Corp Wallet Journals"
-msgstr ""
+msgstr "Bedrijfsportemonnee Journalen"
 
-#: templates/industry_reforged/base.html:6
-#: templates/industry_reforged/base.html:16
+#: industry_reforged/templates/industry_reforged/base.html:6
+#: industry_reforged/templates/industry_reforged/base.html:33
 msgid "Industry Reforged"
 msgstr "Industry Reforged"
 
-#: templates/industry_reforged/create_order.html:8
-msgid "Create New Order"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/base.html:45
+msgid "Processing Request..."
+msgstr "Verzoek verwerken..."
 
-#: templates/industry_reforged/create_order.html:9
-msgid "Back to Orders"
+#: industry_reforged/templates/industry_reforged/base.html:46
+msgid "Communicating with EVE Online servers.<br>This may take a few moments."
 msgstr ""
+"Communiceren met EVE Online servers.<br>Dit kan enkele momenten duren."
 
-#: templates/industry_reforged/create_order.html:19
-msgid "Paste EFT Fit"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/base.html:74
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:848
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:139
+msgid "Search:"
+msgstr "Zoeken:"
 
-#: templates/industry_reforged/create_order.html:25
-msgid "Order for Character"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/base.html:75
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:849
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:140
+msgid "Show _MENU_ entries"
+msgstr "Toon _MENU_ regels"
 
-#: templates/industry_reforged/create_order.html:27
-msgid "Select Character"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/base.html:76
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:850
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:141
+msgid "Showing _START_ to _END_ of _TOTAL_ entries"
+msgstr "Toont _START_ tot _END_ van _TOTAL_ regels"
 
-#: templates/industry_reforged/create_order.html:34
-msgid "EFT / Pyfa Fit"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/base.html:77
+#: industry_reforged/templates/industry_reforged/base.html:78
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:851
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:852
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:142
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:143
+msgid "No entries available"
+msgstr "Geen regels beschikbaar"
 
-#: templates/industry_reforged/create_order.html:40
-msgid "Generate Quote"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:21
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:45
+msgid "History"
+msgstr "Geschiedenis"
 
-#: templates/industry_reforged/create_order.html:48
-msgid "How it works"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:33
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:92
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:55
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:107
+msgid "Activity"
+msgstr "Activiteit"
 
-#: templates/industry_reforged/director_config.html:8
-msgid "Director Item Configurations"
-msgstr ""
-
-#: templates/industry_reforged/director_config.html:22
-msgid "Global Configurations"
-msgstr ""
-
-#: templates/industry_reforged/director_dashboard.html:8
-msgid "Director Control Panel"
-msgstr ""
-
-#: templates/industry_reforged/director_discover_hangars.html:8
-msgid "Discover Corporate Hangars"
-msgstr ""
-
-#: templates/industry_reforged/director_discover_hangars.html:19
-msgid "Found Hangar Locations"
-msgstr ""
-
-#: templates/industry_reforged/director_inventory.html:8
-msgid "Inventory & Analytics"
-msgstr ""
-
-#: templates/industry_reforged/director_wallets.html:8
-msgid "Corporate Wallets"
-msgstr ""
-
-#: templates/industry_reforged/director_wallets.html:49
-msgid "Journal Entries"
-msgstr ""
-
-#: templates/industry_reforged/index.html:9
-msgid "Headline"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:8
-msgid "Industrialist Dashboard"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:10
-msgid "Leaderboards & History"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:47
-msgid "Job Market (Unclaimed)"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:56
-#: templates/industry_reforged/industrialist_dashboard.html:126
-#: templates/industry_reforged/industrialist_dashboard.html:181
-#: templates/industry_reforged/industrialist_leaderboard.html:96
-#: templates/industry_reforged/view_quote.html:84
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:34
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:93
+#: industry_reforged/templates/industry_reforged/director_config.html:66
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:216
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:284
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:373
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:457
+#: industry_reforged/templates/industry_reforged/director_inventory.html:52
+#: industry_reforged/templates/industry_reforged/director_inventory.html:133
+#: industry_reforged/templates/industry_reforged/director_inventory.html:183
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:123
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:231
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:307
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:368
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:97
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:56
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:108
+#: industry_reforged/templates/industry_reforged/view_quote.html:235
+#: industry_reforged/templates/industry_reforged/view_quote.html:369
 msgid "Item"
-msgstr ""
+msgstr "Item"
 
-#: templates/industry_reforged/industrialist_dashboard.html:57
-#: templates/industry_reforged/industrialist_dashboard.html:127
-#: templates/industry_reforged/industrialist_dashboard.html:182
-msgid "Qty"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:58
-msgid "Reward Value"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:59
-#: templates/industry_reforged/industrialist_dashboard.html:129
-msgid "Action"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:117
-msgid "My Active Production"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:128
-#: templates/industry_reforged/industrialist_dashboard.html:183
-msgid "Assigned To"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:174
-msgid "My Completed Tasks"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:184
-msgid "Completed At"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:222
-msgid "Corp Active Jobs Overview"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:230
-msgid "Product"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:231
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:35
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:94
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:454
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:57
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:109
 msgid "Runs"
-msgstr ""
+msgstr "Runs"
 
-#: templates/industry_reforged/industrialist_dashboard.html:232
-msgid "Installer"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:233
-msgid "End Date"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_dashboard.html:298
-msgid "Please select at least one task."
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:8
-msgid "Industrialist Leaderboards & History"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:9
-msgid "Back to Dashboard"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:18
-msgid "Top Builders (by Tasks Completed)"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:26
-#: templates/industry_reforged/industrialist_leaderboard.html:59
-msgid "Industrialist"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:27
-msgid "Tasks Completed"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:51
-msgid "Top Builders (by ISK Value)"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:60
-msgid "Total ISK Value Produced"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:88
-msgid "My Completed Tasks History"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:95
-msgid "Date Completed"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:97
-#: templates/industry_reforged/view_quote.html:85
-msgid "Quantity"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:98
-msgid "Builder"
-msgstr ""
-
-#: templates/industry_reforged/industrialist_leaderboard.html:99
-msgid "Points (ISK Value)"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:8
-msgid "Member Orders Dashboard"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:9
-msgid "New Order"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:17
-msgid "My Active Orders"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:18
-msgid "Generate Shopping List"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:27
-msgid "Order ID"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:28
-#: templates/industry_reforged/view_quote.html:163
-msgid "Character"
-msgstr ""
-
-#: templates/industry_reforged/orders_dashboard.html:29
-#: templates/industry_reforged/view_quote.html:143
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:39
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:98
+#: industry_reforged/templates/industry_reforged/director_config.html:267
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:93
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:286
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:414
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:459
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:34
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:60
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:112
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:283
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:286
+#: industry_reforged/templates/industry_reforged/view_quote.html:437
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
-#: templates/industry_reforged/orders_dashboard.html:30
-msgid "Total Price"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/create_order.html:8
+msgid "Create New Order"
+msgstr "Nieuwe Bestelling Aanmaken"
 
-#: templates/industry_reforged/orders_dashboard.html:31
-#: templates/industry_reforged/view_quote.html:166
-msgid "Created"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/create_order.html:9
+msgid "Back to Orders"
+msgstr "Terug naar Bestellingen"
 
-#: templates/industry_reforged/orders_dashboard.html:32
-msgid "Actions"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/create_order.html:19
+msgid "Paste EFT Fit"
+msgstr "Plak EFT Fit"
 
-#: templates/industry_reforged/orders_dashboard.html:63
-msgid "View"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/create_order.html:26
+msgid "Items to Order"
+msgstr "Items om te Bestellen"
 
-#: templates/industry_reforged/orders_dashboard.html:68
-msgid "You have no orders yet."
-msgstr ""
+#: industry_reforged/templates/industry_reforged/create_order.html:32
+msgid "Generate Quote"
+msgstr "Offerte Genereren"
 
-#: templates/industry_reforged/personal_dashboard.html:32
-msgid "My Industry Jobs"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/create_order.html:40
+msgid "How it works"
+msgstr "Hoe het werkt"
 
-#: templates/industry_reforged/shopping_list.html:8
-msgid "Consolidated Shopping List"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/director_config.html:9
+msgid "Director Configurations"
+msgstr "Directeur Configuraties"
 
-#: templates/industry_reforged/shopping_list.html:10
-msgid "Copy for EVE Multibuy"
-msgstr ""
-
-#: templates/industry_reforged/shopping_list.html:11
-#: templates/industry_reforged/view_quote.html:24
+#: industry_reforged/templates/industry_reforged/director_config.html:10
+#: industry_reforged/templates/industry_reforged/director_config_form.html:9
+#: industry_reforged/templates/industry_reforged/shopping_list.html:25
+#: industry_reforged/templates/industry_reforged/view_quote.html:56
 msgid "Back"
-msgstr ""
+msgstr "Terug"
 
-#: templates/industry_reforged/shopping_list.html:20
-msgid "Bill of Materials Overview"
+#: industry_reforged/templates/industry_reforged/director_config.html:12
+msgid ""
+"Set corporate rules for production, material efficiency, and pricing "
+"overrides."
 msgstr ""
+"Stel bedrijfsregels in voor productie, materiaalefficiëntie en "
+"prijsoverschrijvingen."
 
-#: templates/industry_reforged/shopping_list.html:28
-#: templates/industry_reforged/view_quote.html:204
+#: industry_reforged/templates/industry_reforged/director_config.html:17
+msgid "Grant Corp Token"
+msgstr "Verleen Corp Token"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:25
+msgid "Item Configurations"
+msgstr "Item Configuraties"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:30
+msgid "Global Pricing"
+msgstr "Globale Prijzen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:35
+#: industry_reforged/templates/industry_reforged/director_config.html:206
+msgid "Type Discounts"
+msgstr "Type Kortingen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:40
+msgid "System Health"
+msgstr "Systeemgezondheid"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:45
+#: industry_reforged/templates/industry_reforged/director_config.html:330
+msgid "Production Facilities"
+msgstr "Productiefaciliteiten"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:57
+msgid "Specific Item Rules"
+msgstr "Specifieke Itemregels"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:58
+msgid "Add Item Rule"
+msgstr "Itemregel Toevoegen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:73
+#: industry_reforged/templates/industry_reforged/director_config.html:143
+#: industry_reforged/templates/industry_reforged/director_config.html:179
+#: industry_reforged/templates/industry_reforged/director_config.html:218
+#: industry_reforged/templates/industry_reforged/director_config.html:347
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:461
+#: industry_reforged/templates/industry_reforged/director_inventory.html:55
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:37
+msgid "Actions"
+msgstr "Acties"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:117
+msgid "No item rules configured. Global defaults apply."
+msgstr ""
+"Geen itemregels geconfigureerd. Globale standaarden zijn van toepassing."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:131
+msgid "Corporate Pricing Configurations"
+msgstr "Bedrijfsprijzen Configuraties"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:132
+msgid "Add Pricing Config"
+msgstr "Prijsconfiguratie Toevoegen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:139
+#: industry_reforged/templates/industry_reforged/director_config.html:176
+#: industry_reforged/templates/industry_reforged/director_config.html:214
+msgid "Corporation"
+msgstr "Bedrijf"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:140
+msgid "Default Discount"
+msgstr "Standaard Korting"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:141
+msgid "Builder Reward"
+msgstr "Bouwer Beloning"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:142
+msgid "ME (T1 / T2)"
+msgstr "ME (T1 / T2)"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:158
+msgid "No pricing configurations found."
+msgstr "Geen prijsconfiguraties gevonden."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:168
+msgid "System Taxes & Fees"
+msgstr "Systeembelastingen & Toeslagen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:169
+msgid "Add Tax Config"
+msgstr "Belastingconfiguratie Toevoegen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:177
+#, fuzzy
+#| msgid "Industry Reforged"
+msgid "Industry Tax Rate"
+msgstr "Industry Reforged"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:178
+msgid "Broker Fee Rate"
+msgstr "Makelaarskosten Tarief"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:193
+msgid "No tax configurations found."
+msgstr "Geen belastingconfiguraties gevonden."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:207
+msgid "Add Discount"
+msgstr "Korting Toevoegen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:215
+msgid "Type / Group"
+msgstr "Type / Groep"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:216
+msgid "Rule Type"
+msgstr "Regeltype"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:217
+#, python-format
+msgid "Discount %%"
+msgstr "Korting %%"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:244
+msgid ""
+"No specific discounts configured. Everyone pays full price (or markup)."
+msgstr ""
+"Geen specifieke kortingen geconfigureerd. Iedereen betaalt de volledige "
+"prijs (of opslag)."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:259
+msgid "Background Task Logs"
+msgstr "Achtergrondtaak Logboeken"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:266
+msgid "Task Name"
+msgstr "Taaknaam"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:268
+msgid "Last Run"
+msgstr "Laatste Uitvoering"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:269
+msgid "Duration"
+msgstr "Duur"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:270
+msgid "Message"
+msgstr "Bericht"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:283
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:343
+msgid "Running"
+msgstr "Draait"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:299
+msgid "Error Details"
+msgstr "Foutdetails"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:300
+#: industry_reforged/templates/industry_reforged/director_config.html:306
+#: industry_reforged/templates/industry_reforged/director_config.html:412
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:185
+msgid "Close"
+msgstr "Sluiten"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:317
+msgid "No tasks have run yet."
+msgstr "Er zijn nog geen taken uitgevoerd."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:332
+msgid "Add Facility"
+msgstr "Faciliteit Toevoegen"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:340
+msgid "Facility ID"
+msgstr "Faciliteit ID"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:341
+msgid "Name"
+msgstr "Naam"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:342
+msgid "Type"
+msgstr "Type"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:343
+msgid "System ID"
+msgstr "Systeem ID"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:344
+#: industry_reforged/templates/industry_reforged/manage_facility.html:36
+msgid "Security Space"
+msgstr "Beveiligingsruimte"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:345
+msgid "Sync Inventory"
+msgstr "Synchroniseer Voorraad"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:346
+msgid "Rigs Installed"
+msgstr "Geïnstalleerde Rigs"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:357
+msgid "Default Facility"
+msgstr "Standaard Faciliteit"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:394
+msgid "No facilities configured."
+msgstr "Geen faciliteiten geconfigureerd."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:411
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:99
+#: industry_reforged/templates/industry_reforged/view_quote.html:601
+msgid "Confirm Deletion"
+msgstr "Bevestig Verwijdering"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:415
+msgid ""
+"Are you sure you want to delete this rule? This action cannot be undone."
+msgstr ""
+"Weet je zeker dat je deze regel wilt verwijderen? Deze actie kan niet "
+"ongedaan worden gemaakt."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:418
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:525
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:555
+#: industry_reforged/templates/industry_reforged/director_inventory.html:105
+#: industry_reforged/templates/industry_reforged/director_wallets.html:61
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:532
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:551
+#: industry_reforged/templates/industry_reforged/manage_facility.html:88
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:106
+#: industry_reforged/templates/industry_reforged/view_quote.html:608
+#: industry_reforged/templates/industry_reforged/view_quote.html:743
+msgid "Cancel"
+msgstr "Annuleren"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:419
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: industry_reforged/templates/industry_reforged/director_config_form.html:23
+msgid "Save Configuration"
+msgstr "Configuratie Opslaan"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:9
+msgid "Director Control Panel"
+msgstr "Directeur Controlepaneel"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:63
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:259
+msgid "All Statuses"
+msgstr "Alle Statussen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:64
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:58
+#: industry_reforged/templates/industry_reforged/view_quote.html:440
+msgid "Requested"
+msgstr "Aangevraagd"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:65
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:59
+#: industry_reforged/templates/industry_reforged/view_quote.html:441
+#: industry_reforged/templates/industry_reforged/view_quote.html:464
+msgid "Quoted"
+msgstr "Geadviseerd"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:66
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:60
+#: industry_reforged/templates/industry_reforged/view_quote.html:442
+#: industry_reforged/templates/industry_reforged/view_quote.html:469
+msgid "Accepted"
+msgstr "Geaccepteerd"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:67
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:219
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:244
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:261
+msgid "In Production"
+msgstr "In Productie"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:68
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:62
+#: industry_reforged/templates/industry_reforged/view_quote.html:444
+msgid "Ready"
+msgstr "Klaar"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:69
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:63
+#: industry_reforged/templates/industry_reforged/view_quote.html:445
+msgid "Delivered"
+msgstr "Geleverd"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:70
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:64
+#: industry_reforged/templates/industry_reforged/view_quote.html:446
+msgid "Rejected"
+msgstr "Afgewezen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:72
+msgid "Payment: Paid"
+msgstr "Betaling: Betaald"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:73
+msgid "Payment: Unpaid"
+msgstr "Betaling: Onbetaald"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:76
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:271
+msgid "Newest First"
+msgstr "Nieuwste Eerst"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:77
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:272
+msgid "Oldest First"
+msgstr "Oudste Eerst"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:78
+msgid "Highest Price"
+msgstr "Hoogste Prijs"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:79
+msgid "Lowest Price"
+msgstr "Laagste Prijs"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:80
+msgid "Order ID (Low-High)"
+msgstr "Bestelling ID (Laag-Hoog)"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:81
+msgid "Order ID (High-Low)"
+msgstr "Bestelling ID (Hoog-Laag)"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:83
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:278
+msgid "Apply Filter"
+msgstr "Filter Toepassen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:95
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:290
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:337
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:416
+#: industry_reforged/templates/industry_reforged/director_inventory.html:138
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:126
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:235
+msgid "Action"
+msgstr "Actie"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:180
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:198
+msgid "Managed via Parent"
+msgstr "Beheerd via Hoofdorder"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:184
+msgid "Linked"
+msgstr "Gekoppeld"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:197
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:76
+#: industry_reforged/templates/industry_reforged/view_quote.html:109
+#: industry_reforged/templates/industry_reforged/view_quote.html:125
+msgid "View"
+msgstr "Bekijk"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:217
+msgid "Total Required"
+msgstr "Totaal Vereist"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:218
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:260
+msgid "Unclaimed"
+msgstr "Niet Geclaimd"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:220
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:241
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:262
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:377
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:358
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:371
+msgid "Completed"
+msgstr "Voltooid"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:221
+msgid "Progress"
+msgstr "Voortgang"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:265
+msgid "All Assignees"
+msgstr "Alle Toegewezenen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:273
+msgid "Highest Reward"
+msgstr "Hoogste Beloning"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:274
+msgid "Lowest Reward"
+msgstr "Laagste Beloning"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:275
+msgid "Task ID (Low-High)"
+msgstr "Taak ID (Laag-Hoog)"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:276
+msgid "Task ID (High-Low)"
+msgstr "Taak ID (Hoog-Laag)"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:285
+#: industry_reforged/templates/industry_reforged/director_inventory.html:184
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:98
+#: industry_reforged/templates/industry_reforged/view_quote.html:236
+#: industry_reforged/templates/industry_reforged/view_quote.html:370
+msgid "Quantity"
+msgstr "Hoeveelheid"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:288
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:375
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:233
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:309
+msgid "Claimed By"
+msgstr "Geclaimd Door"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:328
+msgid "Payout Summary by Builder"
+msgstr "Uitbetalingsoverzicht per Bouwer"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:334
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:412
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:99
+msgid "Builder"
+msgstr "Bouwer"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:335
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:300
+msgid "Completed Tasks"
+msgstr "Voltooide Taken"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:336
+msgid "Total Pending Payout"
+msgstr "Totaal Openstaande Uitbetaling"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:366
+msgid "Recent Completed Tasks with Rewards"
+msgstr "Recente Voltooide Taken met Beloningen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:367
+msgid "Showing up to 200 tasks"
+msgstr "Toont tot 200 taken"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:374
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:124
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:232
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:308
+msgid "Qty"
+msgstr "Aantal"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:376
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:234
+msgid "Reward"
+msgstr "Beloning"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:405
+msgid "Active Payout Batches"
+msgstr "Actieve Uitbetalingsbatches"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:411
+msgid "Reference"
+msgstr "Referentie"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:413
+msgid "Total Amount"
+msgstr "Totaalbedrag"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:415
+msgid "Generated On"
+msgstr "Gegenereerd Op"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:518
+msgid "Confirm Action"
+msgstr "Bevestig Actie"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:526
+msgid "Confirm"
+msgstr "Bevestig"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:537
+msgid "Process Payment"
+msgstr "Verwerk Betaling"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:556
+msgid "Save Payment"
+msgstr "Betaling Opslaan"
+
+#: industry_reforged/templates/industry_reforged/director_inventory.html:8
+msgid "Inventory & Analytics"
+msgstr "Voorraad & Analyse"
+
+#: industry_reforged/templates/industry_reforged/director_inventory.html:54
+msgid "Target"
+msgstr "Doel"
+
+#: industry_reforged/templates/industry_reforged/director_inventory.html:137
+msgid "Deficit"
+msgstr "Tekort"
+
+#: industry_reforged/templates/industry_reforged/director_wallets.html:9
+msgid "Corporate Wallets"
+msgstr "Bedrijfsportemonnees"
+
+#: industry_reforged/templates/industry_reforged/director_wallets.html:84
+msgid "Journal Entries"
+msgstr "Journaalboekingen"
+
+#: industry_reforged/templates/industry_reforged/index.html:9
+msgid "Headline"
+msgstr "Kop"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:9
+msgid "Industrialist Dashboard"
+msgstr "Industrieel Dashboard"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:11
+msgid "Leaderboards & History"
+msgstr "Klassementen & Geschiedenis"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:52
+msgid "Message of the Day & Industry Status"
+msgstr "Bericht van de Dag & Industriestatus"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:57
+msgid "Last updated:"
+msgstr "Laatst bijgewerkt:"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:72
+msgid "Orders in Production"
+msgstr "Bestellingen in Productie"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:76
+msgid "Open Job Market"
+msgstr "Open Banenmarkt"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:80
+msgid "Active Corp Jobs"
+msgstr "Actieve Bedrijfstaken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:84
+msgid "Value in Progress"
+msgstr "Waarde in Voortgang"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:98
+msgid "Job Market (Unclaimed)"
+msgstr "Banenmarkt (Niet Geclaimd)"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:112
+msgid "Claim Selected"
+msgstr "Claim Geselecteerde"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:125
+msgid "Reward Value"
+msgstr "Beloningswaarde"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:166
+msgid "Claim"
+msgstr "Claimen"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:184
+msgid "Claimed Jobs"
+msgstr "Geclaimde Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:193
+msgid "Open (Active) Tasks Only"
+msgstr "Alleen Open (Actieve) Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:194
+msgid "Completed Tasks Only"
+msgstr "Alleen Voltooide Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:195
+msgid "Show All Tasks"
+msgstr "Toon Alle Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:208
+msgid "Complete Selected"
+msgstr "Voltooi Geselecteerde"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:215
+msgid "Unclaim Selected"
+msgstr "De-claim Geselecteerde"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:273
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:552
+msgid "Unclaim"
+msgstr "De-claimen"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:310
+msgid "Reward Earned"
+msgstr "Beloning Verdiend"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:311
+msgid "Completed At"
+msgstr "Voltooid Op"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:329
+msgid "Sub-component of"
+msgstr "Sub-component van"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:354
+msgid "Build Steps"
+msgstr "Bouwstappen"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:357
+msgid "Active"
+msgstr "Actief"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:359
+msgid "All"
+msgstr "Alles"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:369
+msgid "Total Claimed"
+msgstr "Totaal Geclaimd"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:370
+msgid "In Progress (EVE)"
+msgstr "In Voortgang (EVE)"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:372
+#: industry_reforged/templates/industry_reforged/view_quote.html:480
+msgid "Remaining"
+msgstr "Resterend"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:404
+msgid "You have not claimed any production tasks."
+msgstr "Je hebt geen productietaken geclaimd."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:444
+msgid "Corp Active Jobs Overview"
+msgstr "Overzicht Actieve Bedrijfstaken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:453
+msgid "Product"
+msgstr "Product"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:455
+msgid "Installer"
+msgstr "Installateur"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:456
+msgid "End Date"
+msgstr "Einddatum"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:506
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:720
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:763
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:802
+msgid "Selection Required"
+msgstr "Selectie Vereist"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:510
+msgid "Please select at least one task to generate a Shopping List."
+msgstr "Selecteer ten minste één taak om een Boodschappenlijst te genereren."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:513
+msgid "OK"
+msgstr "OK"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:525
+msgid "Confirm Completion"
+msgstr "Bevestig Voltooiing"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:529
+msgid ""
+"You are about to complete tasks. If any of these have incomplete sub-tasks, "
+"doing so will recursively mark all sub-tasks as completed as well. Are you "
+"sure you want to proceed?"
+msgstr ""
+"Je staat op het punt taken te voltooien. Als een van deze onvoltooide sub-"
+"taken heeft, zal dit recursief ook alle sub-taken als voltooid markeren. "
+"Weet je zeker dat je wilt doorgaan?"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:533
+msgid "Proceed"
+msgstr "Doorgaan"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:544
+msgid "Confirm Unclaim"
+msgstr "Bevestig De-claim"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:548
+msgid ""
+"Are you sure you want to unclaim the selected task(s)? This will return them"
+" to the open market."
+msgstr ""
+"Weet je zeker dat je de geselecteerde ta(a)k(en) wilt de-claimen? Dit zal ze"
+" terugzetten naar de open markt."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:565
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:119
+msgid "Calculating Shopping List..."
+msgstr "Boodschappenlijst Berekenen..."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:566
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:120
+msgid "This may take a few seconds for large production trees."
+msgstr "Dit kan enkele seconden duren voor grote productiebomen."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:721
+msgid "Please select at least one task to claim."
+msgstr "Selecteer ten minste één taak om te claimen."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:764
+msgid "Please select at least one task to complete."
+msgstr "Selecteer ten minste één taak om te voltooien."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:803
+msgid "Please select at least one task to unclaim."
+msgstr "Selecteer ten minste één taak om te de-claimen."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:967
+msgid "Fold Sub-tiers"
+msgstr "Vouw Sub-niveaus in"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:980
+msgid "Unfold Sub-tiers"
+msgstr "Vouw Sub-niveaus uit"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:9
+msgid "Industrialist Leaderboards & History"
+msgstr "Industrieel Klassementen & Geschiedenis"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:18
+msgid "Top Builders (by Tasks Completed)"
+msgstr "Top Bouwers (op basis van Voltooide Taken)"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:26
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:60
+msgid "Industrialist"
+msgstr "Industrieel"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:27
+msgid "Tasks Completed"
+msgstr "Voltooide Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:52
+msgid "Top Builders (by ISK Value)"
+msgstr "Top Bouwers (op basis van ISK Waarde)"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:61
+msgid "Total ISK Value Produced"
+msgstr "Totale ISK Waarde Geproduceerd"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:89
+msgid "My Completed Tasks History"
+msgstr "Mijn Geschiedenis van Voltooide Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:96
+msgid "Date Completed"
+msgstr "Datum Voltooid"
+
+#: industry_reforged/templates/industry_reforged/industrialist_leaderboard.html:100
+msgid "Points (ISK Value)"
+msgstr "Punten (ISK Waarde)"
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:18
+msgid "Select Corporate Structure"
+msgstr "Selecteer Bedrijfsstructuur"
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:20
+msgid "Search structures..."
+msgstr "Zoek structuren..."
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:23
+msgid "Choose an existing structure or fill manually below"
+msgstr "Kies een bestaande structuur of vul hieronder handmatig in"
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:30
+msgid "Only structures capable of manufacturing or reactions are shown."
+msgstr ""
+"Alleen structuren die geschikt zijn voor fabricage of reacties worden "
+"getoond."
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:46
+msgid "Unknown (Determined automatically)"
+msgstr "Onbekend (Automatisch bepaald)"
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:52
+msgid "Installed Rigs"
+msgstr "Geïnstalleerde Rigs"
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:84
+msgid "Add Rig"
+msgstr "Rig Toevoegen"
+
+#: industry_reforged/templates/industry_reforged/manage_facility.html:89
+msgid "Save Facility"
+msgstr "Faciliteit Opslaan"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:9
+msgid "Member Orders Dashboard"
+msgstr "Ledenbestellingen Dashboard"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:10
+msgid "New Order"
+msgstr "Nieuwe Bestelling"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:18
+msgid "My Active Orders"
+msgstr "Mijn Actieve Bestellingen"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:20
+msgid "Generate Shopping List"
+msgstr "Genereer Boodschappenlijst"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:32
+msgid "Order ID"
+msgstr "Bestelling ID"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:33
+#: industry_reforged/templates/industry_reforged/view_quote.html:457
+msgid "Character"
+msgstr "Karakter"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:35
+msgid "Total Price"
+msgstr "Totale Prijs"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:36
+#: industry_reforged/templates/industry_reforged/view_quote.html:460
+msgid "Created"
+msgstr "Aangemaakt"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:84
+msgid "You have no orders yet."
+msgstr "Je hebt nog geen bestellingen."
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:103
+#: industry_reforged/templates/industry_reforged/view_quote.html:605
+msgid ""
+"Are you sure you want to delete this order? This action cannot be undone."
+msgstr ""
+"Weet je zeker dat je deze bestelling wilt verwijderen? Deze actie kan niet "
+"ongedaan worden gemaakt."
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:107
+#: industry_reforged/templates/industry_reforged/view_quote.html:53
+#: industry_reforged/templates/industry_reforged/view_quote.html:609
+msgid "Delete Order"
+msgstr "Bestelling Verwijderen"
+
+#: industry_reforged/templates/industry_reforged/orders_dashboard.html:144
+msgid "Please select at least one order to generate a shopping list."
+msgstr ""
+"Selecteer ten minste één bestelling om een boodschappenlijst te genereren."
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:8
+msgid "Required Quantity"
+msgstr "Vereiste Hoeveelheid"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:10
+msgid "Base Quantity (ME0)"
+msgstr "Basishoeveelheid (ME0)"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:15
+msgid "Modifiers Applied"
+msgstr "Toepaste Modificatoren"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:20
+msgid "Sourced from inventory"
+msgstr "Gehaald uit voorraad"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:25
+msgid "Delegated to a Child Order"
+msgstr "Gedelegeerd naar een Onderliggende Bestelling"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:30
+msgid ""
+"Excluded from automated build tasks (must be supplied manually or from "
+"stock)"
+msgstr ""
+"Uitgesloten van geautomatiseerde bouwtaken (moet handmatig of uit voorraad "
+"worden geleverd)"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:39
+msgid "Split this component to a new Child Order"
+msgstr "Splits deze component naar een nieuwe Onderliggende Bestelling"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:40
+msgid "Split"
+msgstr "Splitsen"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:43
+msgid "Shopping List for this component"
+msgstr "Boodschappenlijst voor deze component"
+
+#: industry_reforged/templates/industry_reforged/partials/bom_tree_node.html:47
+msgid "Drilldown"
+msgstr "Doorklikken"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:11
+msgid "Required Raw Materials"
+msgstr "Vereiste Grondstoffen"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:18
+#: industry_reforged/templates/industry_reforged/shopping_list.html:58
 msgid "Material"
-msgstr ""
+msgstr "Materiaal"
 
-#: templates/industry_reforged/shopping_list.html:29
-msgid "Total Quantity Required"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:19
+msgid "Base (ME0)"
+msgstr "Basis (ME0)"
 
-#: templates/industry_reforged/shopping_list.html:30
-#: templates/industry_reforged/view_quote.html:206
-msgid "Est. Jita Unit Price"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:20
+msgid "Required"
+msgstr "Vereist"
 
-#: templates/industry_reforged/shopping_list.html:31
-#: templates/industry_reforged/view_quote.html:207
-msgid "Est. Total Cost"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:22
+msgid "Unit Cost"
+msgstr "Kosten per Eenheid"
 
-#: templates/industry_reforged/shopping_list.html:53
-#: templates/industry_reforged/view_quote.html:231
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:23
+#, python-format
+msgid "Base prices fetched live from Fuzzwork (Jita 5%% Sell)"
+msgstr "Basisprijzen live opgehaald van Fuzzwork (Jita 5%% Verkoop)"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:25
+msgid "Total Cost"
+msgstr "Totale Kosten"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:52
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:54
+msgid "Original Jita Price"
+msgstr "Oorspronkelijke Jita Prijs"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:69
+#: industry_reforged/templates/industry_reforged/view_quote.html:283
+msgid "Original Jita Price (Est.):"
+msgstr "Oorspronkelijke Jita Prijs (Schatting):"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:70
+#, python-format
+msgid "Live Jita 5%% Sell Price fetched via Fuzzwork API"
+msgstr "Live Jita 5%% Verkoopprijs opgehaald via Fuzzwork API"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:75
+#: industry_reforged/templates/industry_reforged/shopping_list.html:83
 msgid "Estimated Total Materials Cost:"
-msgstr ""
+msgstr "Geschatte Totale Materiaalkosten:"
 
-#: templates/industry_reforged/view_quote.html:8
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:95
+#: industry_reforged/templates/industry_reforged/shopping_list.html:98
+msgid "Recursive Production Tree"
+msgstr "Recursieve Productieboom"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:97
+#: industry_reforged/templates/industry_reforged/shopping_list.html:100
+msgid "Search tree..."
+msgstr "Zoek in boom..."
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:98
+#: industry_reforged/templates/industry_reforged/shopping_list.html:101
+#: industry_reforged/templates/industry_reforged/shopping_list.html:210
+#: industry_reforged/templates/industry_reforged/view_quote.html:701
+msgid "Expand All"
+msgstr "Alles Uitklappen"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:104
+#: industry_reforged/templates/industry_reforged/shopping_list.html:107
+msgid "Processing Tree..."
+msgstr "Boom Verwerken..."
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:113
+#: industry_reforged/templates/industry_reforged/shopping_list.html:116
+msgid "No production tree available."
+msgstr "Geen productieboom beschikbaar."
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:124
+msgid "BOM Cost:"
+msgstr "Stuklijst Kosten:"
+
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:33
+msgid "My Industry Jobs"
+msgstr "Mijn Industrietaken"
+
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:59
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:111
+msgid "Cost"
+msgstr "Kosten"
+
+#: industry_reforged/templates/industry_reforged/personal_dashboard.html:439
+msgid "Empty"
+msgstr "Leeg"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:18
+msgid "Consolidated Shopping List"
+msgstr "Geconsolideerde Boodschappenlijst"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:20
+msgid "For:"
+msgstr "Voor:"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:24
+msgid "Copy for EVE Multibuy"
+msgstr "Kopiëren voor EVE Multibuy"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:36
+msgid "Flat Overview"
+msgstr "Vlak Overzicht"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:39
+msgid "Production Tree"
+msgstr "Productieboom"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:50
+msgid "Bill of Materials Overview"
+msgstr "Stuklijst Overzicht"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:59
+msgid "Total Quantity Required"
+msgstr "Totale Vereiste Hoeveelheid"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:60
+msgid "Est. Jita Unit Price"
+msgstr "Gesch. Jita Prijs per Eenheid"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:61
+msgid "Est. Total Cost"
+msgstr "Gesch. Totale Kosten"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:207
+#: industry_reforged/templates/industry_reforged/view_quote.html:698
+msgid "Collapse All"
+msgstr "Alles Inklappen"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:35
 msgid "Order #"
-msgstr ""
+msgstr "Bestelling #"
 
-#: templates/industry_reforged/view_quote.html:12
+#: industry_reforged/templates/industry_reforged/view_quote.html:39
 msgid "Requires Quote"
-msgstr ""
+msgstr "Offerte Vereist"
 
-#: templates/industry_reforged/view_quote.html:14
+#: industry_reforged/templates/industry_reforged/view_quote.html:41
 msgid "Pending Quote from Director"
-msgstr ""
+msgstr "Wacht op Offerte van Directeur"
 
-#: templates/industry_reforged/view_quote.html:18
+#: industry_reforged/templates/industry_reforged/view_quote.html:45
 msgid "Reject"
-msgstr ""
+msgstr "Afwijzen"
 
-#: templates/industry_reforged/view_quote.html:19
+#: industry_reforged/templates/industry_reforged/view_quote.html:46
 msgid "Accept Quote"
-msgstr ""
+msgstr "Offerte Accepteren"
 
-#: templates/industry_reforged/view_quote.html:21
+#: industry_reforged/templates/industry_reforged/view_quote.html:48
 msgid "Pending Acceptance by User"
-msgstr ""
+msgstr "Wacht op Acceptatie door Gebruiker"
 
-#: templates/industry_reforged/view_quote.html:35
+#: industry_reforged/templates/industry_reforged/view_quote.html:66
+msgid "Suborder Notice"
+msgstr "Suborder Kennisgeving"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:67
+msgid "This is a suborder. It is managed entirely through its parent order."
+msgstr "Dit is een suborder. Het wordt volledig beheerd via de hoofdorder."
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:70
+msgid "Main Order"
+msgstr "Hoofdorder"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:73
+#: industry_reforged/templates/industry_reforged/view_quote.html:100
+msgid "Parent Order"
+msgstr "Bovenliggende Bestelling"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:86
 msgid "Provide Quote"
-msgstr ""
+msgstr "Offerte Voorzien"
 
-#: templates/industry_reforged/view_quote.html:38
+#: industry_reforged/templates/industry_reforged/view_quote.html:89
 msgid ""
 "Review the order details and the estimated BOM cost, then provide a final "
 "quote."
 msgstr ""
+"Bekijk de bestelgegevens en de geschatte BOM kosten, en geef dan een "
+"definitieve offerte op."
 
-#: templates/industry_reforged/view_quote.html:48
+#: industry_reforged/templates/industry_reforged/view_quote.html:93
+msgid "Order Family Overview"
+msgstr "Bestellingsfamilie Overzicht"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:94
+msgid ""
+"This order is part of a larger production group. The final unified quote "
+"sent to the customer will be the sum of all orders in this group:"
+msgstr ""
+"Deze bestelling maakt deel uit van een grotere productiegroep. De "
+"definitieve verenigde offerte die naar de klant wordt gestuurd, is de som "
+"van alle bestellingen in deze groep:"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:116
+msgid "Child Order"
+msgstr "Onderliggende Bestelling"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:144
+msgid "Est. Value:"
+msgstr "Gesch. Waarde:"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:150
+#: industry_reforged/templates/industry_reforged/view_quote.html:302
+msgid "Default / No Facility"
+msgstr "Standaard / Geen Faciliteit"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:156
+msgid "Page will reload on change"
+msgstr "Pagina laadt opnieuw bij wijziging"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:167
+msgid "Optional downpayment"
+msgstr "Optionele aanbetaling"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:171
+msgid "Note"
+msgstr "Notitie"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:174
+msgid "Optional quote note"
+msgstr "Optionele offertenotitie"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:179
 msgid "Submit Quote"
-msgstr ""
+msgstr "Offerte Indienen"
 
-#: templates/industry_reforged/view_quote.html:61
-#: templates/industry_reforged/view_quote.html:139
+#: industry_reforged/templates/industry_reforged/view_quote.html:192
+#: industry_reforged/templates/industry_reforged/view_quote.html:433
 msgid "Order Details"
-msgstr ""
+msgstr "Bestellingsdetails"
 
-#: templates/industry_reforged/view_quote.html:64
+#: industry_reforged/templates/industry_reforged/view_quote.html:196
 msgid "Bill of Materials"
-msgstr ""
+msgstr "Stuklijst"
 
-#: templates/industry_reforged/view_quote.html:77
+#: industry_reforged/templates/industry_reforged/view_quote.html:199
+msgid "Full Production Tree"
+msgstr "Volledige Productieboom"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:204
+msgid "ME & BPC Overrides"
+msgstr "ME & BPC Overschrijvingen"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:219
 msgid "Itemized Invoice"
-msgstr ""
+msgstr "Gespecificeerde Factuur"
 
-#: templates/industry_reforged/view_quote.html:86
+#: industry_reforged/templates/industry_reforged/view_quote.html:237
+#: industry_reforged/templates/industry_reforged/view_quote.html:371
 msgid "Discount"
-msgstr ""
+msgstr "Korting"
 
-#: templates/industry_reforged/view_quote.html:87
+#: industry_reforged/templates/industry_reforged/view_quote.html:238
+#: industry_reforged/templates/industry_reforged/view_quote.html:372
 msgid "Unit Price"
-msgstr ""
+msgstr "Prijs per Eenheid"
 
-#: templates/industry_reforged/view_quote.html:88
+#: industry_reforged/templates/industry_reforged/view_quote.html:239
+#: industry_reforged/templates/industry_reforged/view_quote.html:373
 msgid "Total"
-msgstr ""
+msgstr "Totaal"
 
-#: templates/industry_reforged/view_quote.html:117
-msgid "Original Jita Price (Est.):"
-msgstr ""
-
-#: templates/industry_reforged/view_quote.html:122
+#: industry_reforged/templates/industry_reforged/view_quote.html:288
 msgid "Your Savings (Corp Discount / Adjustment):"
-msgstr ""
+msgstr "Jouw Besparingen (Bedrijfskorting / Aanpassing):"
 
-#: templates/industry_reforged/view_quote.html:127
+#: industry_reforged/templates/industry_reforged/view_quote.html:293
 msgid "Current Quote Total:"
-msgstr ""
+msgstr "Huidig Offertetotaal:"
 
-#: templates/industry_reforged/view_quote.html:170
-msgid "Quoted"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:307
+msgid "Split to new Order"
+msgstr "Splits naar nieuwe Bestelling"
 
-#: templates/industry_reforged/view_quote.html:175
-msgid "Accepted"
+#: industry_reforged/templates/industry_reforged/view_quote.html:309
+msgid "Select items to split them into a new Child Order."
 msgstr ""
+"Selecteer items om ze op te splitsen in een nieuwe Onderliggende Bestelling."
 
-#: templates/industry_reforged/view_quote.html:182
+#: industry_reforged/templates/industry_reforged/view_quote.html:362
+msgid "Split Order #"
+msgstr "Splits Bestelling #"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:407
+msgid "Target Facility:"
+msgstr "Doelfaciliteit:"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:408
+msgid "Default"
+msgstr "Standaard"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:411
+msgid "Child Order Total:"
+msgstr "Totaal Onderliggende Bestelling:"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:423
+msgid "Grand Total (All Orders):"
+msgstr "Eindtotaal (Alle Bestellingen):"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:477
+msgid "Amount Paid"
+msgstr "Betaald Bedrag"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:488
+msgid "Order Notes / Quote"
+msgstr "Bestellingsnotities / Offerte"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:498
 msgid "Raw Fit"
-msgstr ""
+msgstr "Ruwe Fit"
 
-#: templates/industry_reforged/view_quote.html:197
-msgid "Estimated Bill of Materials (BOM)"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:517
+msgid "Required Blueprints (ME & BPC Overrides)"
+msgstr "Vereiste Blueprints (ME & BPC Overschrijvingen)"
 
-#: templates/industry_reforged/view_quote.html:205
-msgid "Quantity Required"
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:521
+msgid "Apply Overrides & Recalculate BOM"
+msgstr "Overschrijvingen Toepassen & BOM Herberekenen"
 
-#: templates/industry_reforged/view_quote.html:226
-msgid "No BOM available."
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:532
+msgid "Blueprint"
+msgstr "Blauwdruk"
 
-#: views.py:145
+#: industry_reforged/templates/industry_reforged/view_quote.html:533
+msgid "Material Efficiency"
+msgstr "Materiaalefficiëntie"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:534
+msgid "Max Runs (BPC)"
+msgstr "Max Runs (BPC)"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:575
+msgid "No blueprints required for this order."
+msgstr "Geen blauwdrukken vereist voor deze bestelling."
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:720
+msgid "Split Sub-Component"
+msgstr "Splits Sub-component"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:724
 msgid ""
-"Planetary Interaction sync has been queued in the background. Please refresh "
-"in a few minutes."
+"You are splitting the following component into its own Child Order. It will "
+"be removed from the Parent Order's BOM calculation."
 msgstr ""
+"Je splitst de volgende component af naar een eigen Onderliggende Bestelling."
+" Het zal worden verwijderd uit de BOM berekening van de Hoofdorder."
 
-#: views.py:175
-msgid "No items selected for shopping list."
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:728
+msgid "Quantity to Split"
+msgstr "Hoeveelheid om te Splitsen"
 
-#: views.py:259
-msgid "Please provide an EFT fit and select a character."
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:733
+msgid "Target Facility for Child Order"
+msgstr "Doelfaciliteit voor Onderliggende Bestelling"
 
-#: views.py:269 views.py:607
-msgid "Invalid character selected."
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:735
+msgid "Select Facility"
+msgstr "Selecteer Faciliteit"
 
-#: views.py:285
-msgid "No valid items found in the fit."
-msgstr ""
+#: industry_reforged/templates/industry_reforged/view_quote.html:744
+msgid "Create Child Order"
+msgstr "Onderliggende Bestelling Aanmaken"
 
-#: views.py:337
-msgid "Order parsed and quoted successfully!"
-msgstr ""
-
-#: views.py:357
-msgid "Order not found."
-msgstr ""
-
-#: views.py:362
-msgid "Access denied."
-msgstr ""
-
-#: views.py:406
-msgid "Order not found or is not in REQUESTED status."
-msgstr ""
-
-#: views.py:435
-#, python-format
-msgid "Quote of %(total)s ISK submitted successfully."
-msgstr ""
-
-#: views.py:437
-msgid "Invalid price provided."
-msgstr ""
-
-#: views.py:497
+#: industry_reforged/views/api.py:71
 msgid ""
-"Quote accepted! Your order is now in progress and tasks have been generated "
-"for builders."
+"Planetary Interaction sync has been queued in the background. Please refresh"
+" in a few minutes."
 msgstr ""
+"Planetary Interaction synchronisatie is in de wachtrij geplaatst. Ververs de"
+" pagina over een paar minuten."
 
-#: views.py:537
-msgid "Quote rejected and order cancelled."
-msgstr ""
-
-#: views.py:623
-msgid "Task is no longer available or does not exist."
-msgstr ""
-
-#: views.py:660
-msgid "Task not found or not assigned to you."
-msgstr ""
-
-#: views.py:720
+#: industry_reforged/views/api.py:86
 msgid ""
 "Corporate Inventory sync has been queued in the background. Please refresh "
 "in a few minutes."
 msgstr ""
+"Bedrijfsvoorraad synchronisatie is in de wachtrij geplaatst. Ververs de "
+"pagina over een paar minuten."
 
-#: views.py:806
+#: industry_reforged/views/api.py:101
+msgid ""
+"Corporate Wallet sync has been queued in the background. Please refresh in a"
+" few minutes."
+msgstr ""
+"Bedrijfsportemonnee synchronisatie is in de wachtrij geplaatst. Ververs de "
+"pagina over een paar minuten."
+
+#: industry_reforged/views/dashboard.py:77
+msgid "PI configuration updated."
+msgstr "PI configuratie bijgewerkt."
+
+#: industry_reforged/views/director.py:197
+msgid "Order must be in READY state to be delivered."
+msgstr "Bestelling moet in KLAAR status zijn om geleverd te worden."
+
+#: industry_reforged/views/director.py:219
+msgid "Invalid status."
+msgstr "Ongeldige status."
+
+#: industry_reforged/views/director.py:281
+msgid "Invalid amount provided."
+msgstr "Ongeldig bedrag opgegeven."
+
+#: industry_reforged/views/director.py:311
+msgid "Order is already fully paid."
+msgstr "Bestelling is al volledig betaald."
+
+#: industry_reforged/views/director.py:358
+msgid "You are not part of a corporation to create payouts."
+msgstr "Je maakt geen deel uit van een bedrijf om uitbetalingen aan te maken."
+
+#: industry_reforged/views/director.py:398
+msgid "Batch is already paid."
+msgstr "Batch is al betaald."
+
+#: industry_reforged/views/director.py:531
+#: industry_reforged/views/director.py:758
 msgid "You are not part of a corporation."
-msgstr ""
+msgstr "Je maakt geen deel uit van een bedrijf."
 
-#: views.py:830
-msgid ""
-"No corporate sync configuration found. Please add a corporate token first."
-msgstr ""
+#: industry_reforged/views/director.py:740
+msgid "Master Deficit Shopping List"
+msgstr "Hoofd Tekort Boodschappenlijst"
 
-#: views.py:847
-msgid ""
-"Corporate sync character does not have the required asset and structure "
-"scopes. Please add a new corporate token."
-msgstr ""
+#: industry_reforged/views/director.py:862
+msgid "You do not have permission to modify this wallet."
+msgstr "Je hebt geen toestemming om deze portemonnee te wijzigen."
 
-#: views.py:951
+#: industry_reforged/views/director.py:874
+msgid "Threshold for {division.name} updated to {new_threshold:,} ISK."
+msgstr "Drempel voor {division.name} bijgewerkt naar {new_threshold:,} ISK."
+
+#: industry_reforged/views/director.py:877
+msgid "Invalid threshold value provided."
+msgstr "Ongeldige drempelwaarde opgegeven."
+
+#: industry_reforged/views/director.py:900
+msgid "Item configuration saved successfully."
+msgstr "Itemconfiguratie succesvol opgeslagen."
+
+#: industry_reforged/views/director.py:910
+msgid "Edit Item Configuration"
+msgstr "Bewerk Itemconfiguratie"
+
+#: industry_reforged/views/director.py:912
+msgid "Add Item Configuration"
+msgstr "Itemconfiguratie Toevoegen"
+
+#: industry_reforged/views/director.py:928
+msgid "Item configuration deleted."
+msgstr "Itemconfiguratie verwijderd."
+
+#: industry_reforged/views/director.py:946
+msgid "Global pricing configuration saved."
+msgstr "Globale prijsconfiguratie opgeslagen."
+
+#: industry_reforged/views/director.py:956
+msgid "Edit Corporation Pricing"
+msgstr "Bewerk Bedrijfsprijzen"
+
+#: industry_reforged/views/director.py:958
+msgid "Add Corporation Pricing"
+msgstr "Bedrijfsprijzen Toevoegen"
+
+#: industry_reforged/views/director.py:981
+msgid "Type discount saved successfully."
+msgstr "Type korting succesvol opgeslagen."
+
+#: industry_reforged/views/director.py:990
+msgid "Edit Type Discount"
+msgstr "Bewerk Type Korting"
+
+#: industry_reforged/views/director.py:990
+msgid "Add Type Discount"
+msgstr "Type Korting Toevoegen"
+
+#: industry_reforged/views/director.py:1005
+msgid "Type discount deleted."
+msgstr "Type korting verwijderd."
+
+#: industry_reforged/views/director.py:1026
+msgid "System taxes saved successfully."
+msgstr "Systeembelastingen succesvol opgeslagen."
+
+#: industry_reforged/views/director.py:1035
+msgid "Edit System Taxes"
+msgstr "Bewerk Systeembelastingen"
+
+#: industry_reforged/views/director.py:1035
+msgid "Add System Taxes"
+msgstr "Systeembelastingen Toevoegen"
+
+#: industry_reforged/views/facilities.py:120
+msgid "Facility added successfully."
+msgstr "Faciliteit succesvol toegevoegd."
+
+#: industry_reforged/views/facilities.py:151
+msgid "Add Production Facility"
+msgstr "Productiefaciliteit Toevoegen"
+
+#: industry_reforged/views/facilities.py:173
+msgid "Facility updated successfully."
+msgstr "Faciliteit succesvol bijgewerkt."
+
+#: industry_reforged/views/facilities.py:195
+msgid "Edit Production Facility"
+msgstr "Bewerk Productiefaciliteit"
+
+#: industry_reforged/views/facilities.py:208
+msgid "Facility deleted successfully."
+msgstr "Faciliteit succesvol verwijderd."
+
+#: industry_reforged/views/industrialist.py:206
+msgid "Keep the forge burning!"
+msgstr "Houd de smederij brandend!"
+
+#: industry_reforged/views/industrialist.py:207
+msgid "Building the future of the corporation, one module at a time."
+msgstr "We bouwen de toekomst van het bedrijf, één module per keer."
+
+#: industry_reforged/views/industrialist.py:208
+msgid "Industry is the backbone of our fleet."
+msgstr "Industrie is de ruggengraat van onze vloot."
+
+#: industry_reforged/views/industrialist.py:209
+msgid "Another day, another Capital ship."
+msgstr "Weer een dag, weer een Capital schip."
+
+#: industry_reforged/views/industrialist.py:210
+msgid "Tritanium flows where the industrialists go."
+msgstr "Tritanium stroomt waar de industriëlen gaan."
+
+#: industry_reforged/views/industrialist.py:211
+msgid "Measure twice, build once."
+msgstr "Twee keer meten, één keer bouwen."
+
+#: industry_reforged/views/industrialist.py:212
+msgid "The anvil never sleeps."
+msgstr "Het aambeeld slaapt nooit."
+
+#: industry_reforged/views/industrialist.py:213
+msgid "Forging victory out of raw materials."
+msgstr "De overwinning smeden uit grondstoffen."
+
+#: industry_reforged/views/industrialist.py:246
+#: industry_reforged/views/industrialist.py:355
+msgid "You must have a main character set to claim tasks."
+msgstr "Je moet een hoofdkarakter hebben ingesteld om taken te claimen."
+
+#: industry_reforged/views/industrialist.py:278
+#: industry_reforged/views/industrialist.py:296
+msgid "Task is no longer available or does not exist."
+msgstr "Taak is niet langer beschikbaar of bestaat niet."
+
+#: industry_reforged/views/industrialist.py:290
+#: industry_reforged/views/industrialist.py:405
+msgid "You must have a main character set to unclaim tasks."
+msgstr "Je moet een hoofdkarakter hebben ingesteld om taken te de-claimen."
+
+#: industry_reforged/views/industrialist.py:302
+msgid "You can only unclaim your own tasks."
+msgstr "Je kunt alleen je eigen taken de-claimen."
+
+#: industry_reforged/views/industrialist.py:390
+msgid "No valid tasks selected or they are already claimed."
+msgstr "Geen geldige taken geselecteerd of ze zijn al geclaimd."
+
+#: industry_reforged/views/industrialist.py:455
+msgid "No valid tasks selected or you do not own them."
+msgstr "Geen geldige taken geselecteerd of ze zijn niet van jou."
+
+#: industry_reforged/views/industrialist.py:510
+msgid "Task not found or not assigned to you."
+msgstr "Taak niet gevonden of niet aan jou toegewezen."
+
+#: industry_reforged/views/industrialist.py:576
+msgid "No valid tasks selected or they are already completed."
+msgstr "Geen geldige taken geselecteerd of ze zijn al voltooid."
+
+#: industry_reforged/views/orders/create.py:30
+msgid "Please provide an EFT fit."
+msgstr "Geef een EFT fit op."
+
+#: industry_reforged/views/orders/create.py:36
+msgid "You must have a main character set to create orders."
+msgstr ""
+"Je moet een hoofdkarakter hebben ingesteld om bestellingen aan te maken."
+
+#: industry_reforged/views/orders/create.py:67
 #, python-format
-msgid "Failed to fetch assets via ESI: %(error)s"
-msgstr ""
+msgid "Item '%(item)s' was automatically removed from your order."
+msgstr "Item '%(item)s' is automatisch uit je bestelling verwijderd."
 
-#: views.py:1009
-msgid ""
-"Corporate Wallet sync has been queued in the background. Please refresh in a "
-"few minutes."
+#: industry_reforged/views/orders/create.py:75
+msgid "No valid items remaining in the fit after filtering."
+msgstr "Er zijn geen geldige items meer over in de fit na het filteren."
+
+#: industry_reforged/views/orders/create.py:133
+msgid "Order parsed and quoted successfully!"
+msgstr "Bestelling succesvol geanalyseerd en geoffreerd!"
+
+#: industry_reforged/views/orders/management.py:139
+msgid "Order successfully deleted."
+msgstr "Bestelling succesvol verwijderd."
+
+#: industry_reforged/views/orders/management.py:143
+msgid "Order could not be found or you don't have permission to delete it."
 msgstr ""
+"Bestelling kon niet worden gevonden of je hebt geen toestemming om deze te "
+"verwijderen."
+
+#: industry_reforged/views/orders/quotes.py:40
+msgid "Order not found."
+msgstr "Bestelling niet gevonden."
+
+#: industry_reforged/views/orders/quotes.py:49
+msgid "Access denied."
+msgstr "Toegang geweigerd."
+
+#: industry_reforged/views/orders/quotes.py:174
+#: industry_reforged/views/orders/splitting.py:20
+#: industry_reforged/views/orders/splitting.py:139
+msgid "Order not found or is not in REQUESTED status."
+msgstr "Bestelling niet gevonden of niet in AANGEVRAAGD status."
+
+#: industry_reforged/views/orders/quotes.py:302
+#, python-format
+msgid "Quote of %(total)s ISK submitted successfully."
+msgstr "Offerte van %(total)s ISK succesvol ingediend."
+
+#: industry_reforged/views/orders/quotes.py:309
+msgid ""
+"Notification pending: other sub-orders in this group still require a quote."
+msgstr ""
+"Melding in afwachting: andere suborders in deze groep hebben nog een offerte"
+" nodig."
+
+#: industry_reforged/views/orders/quotes.py:313
+msgid "Invalid price provided."
+msgstr "Ongeldige prijs opgegeven."
+
+#: industry_reforged/views/orders/quotes.py:415
+msgid "Material Efficiency overrides have been applied and BOM recalculated."
+msgstr ""
+"Materiaalefficiëntie-overschrijvingen zijn toegepast en de stuklijst is "
+"herberekend."
+
+#: industry_reforged/views/orders/quotes.py:544
+msgid ""
+"Quote accepted! Your order is now in progress and tasks have been generated "
+"for builders."
+msgstr ""
+"Offerte geaccepteerd! Je bestelling is nu in behandeling en er zijn taken "
+"gegenereerd voor bouwers."
+
+#: industry_reforged/views/orders/quotes.py:581
+msgid "Quote rejected and order cancelled."
+msgstr "Offerte afgewezen en bestelling geannuleerd."
+
+#: industry_reforged/views/orders/shopping.py:32
+msgid "No items selected for shopping list."
+msgstr "Geen items geselecteerd voor de boodschappenlijst."
+
+#: industry_reforged/views/orders/shopping.py:138
+msgid "Shopping List"
+msgstr "Boodschappenlijst"
+
+#: industry_reforged/views/orders/splitting.py:25
+msgid "No items selected for splitting."
+msgstr "Geen items geselecteerd om te splitsen."
+
+#: industry_reforged/views/orders/splitting.py:61
+msgid ""
+"Cannot split all items completely from the order. Just change the facility "
+"instead."
+msgstr ""
+"Kan niet alle items volledig afsplitsen van de bestelling. Wijzig in plaats "
+"daarvan gewoon de faciliteit."
+
+#: industry_reforged/views/orders/splitting.py:127
+#, python-format
+msgid "Order split successfully into Child Order #%(child_id)s."
+msgstr ""
+"Bestelling succesvol opgesplitst in Onderliggende Bestelling #%(child_id)s."
+
+#: industry_reforged/views/orders/splitting.py:147
+msgid "Invalid component selection."
+msgstr "Ongeldige componentselectie."
+
+#: industry_reforged/views/orders/splitting.py:153
+msgid "Invalid quantity."
+msgstr "Ongeldige hoeveelheid."
+
+#: industry_reforged/views/orders/splitting.py:161
+msgid "Invalid EveType."
+msgstr "Ongeldig EveType."
+
+#: industry_reforged/views/orders/splitting.py:276
+#, python-format
+msgid ""
+"Sub-component %(name)s split successfully into Child Order #%(child_id)s."
+msgstr ""
+"Sub-component %(name)s succesvol opgesplitst in Onderliggende Bestelling "
+"#%(child_id)s."

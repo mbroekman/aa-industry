@@ -20,5 +20,17 @@ Use `backlog <command> --help` before running unfamiliar commands. Help shows op
 
 Do not edit Backlog task, draft, document, decision, or milestone markdown files directly. Use the `backlog` CLI so metadata, relationships, and history stay consistent.
 
+## acceptance criteria
+
+All criteria need to be checked off before a task can be considered done. If a criterion is not met, the task should be put into review. 
+
+## Implementation Plans and Walkthroughs
+
+When a task is finished and you have created an implementation plan and walkthrough artifact, you MUST always append the full contents of both the implementation plan and the walkthrough to the corresponding backlog task file. This ensures that the technical reasoning and changes are preserved within the project management history.
+
+## Documentation
+
+All documentation should be stored in the `backlog/docs` directory. 
+
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->

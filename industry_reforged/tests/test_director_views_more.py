@@ -1,0 +1,67 @@
+# Standard Library
+from unittest.mock import patch
+
+# Third Party
+import pytest
+
+# Django
+from django.contrib.auth.models import Permission
+from django.test import RequestFactory
+
+# AA Industry App
+from industry_reforged.tests.factories import (
+    EveCharacterFactory,
+    EveCorporationInfoFactory,
+    UserFactory,
+)
+from industry_reforged.views.director import (
+    director_config,
+    director_dashboard,
+    director_inventory,
+)
+
+
+@pytest.fixture
+def rf():
+    return RequestFactory()
+
+
+@pytest.mark.django_db
+class TestDirectorViewsMore:
+    def _get_director_user(self):
+        user = UserFactory()
+        corp = EveCorporationInfoFactory(corporation_id=1)
+        char = EveCharacterFactory(
+            corporation_id=corp.corporation_id, corporation_name=corp.corporation_name
+        )
+        user.profile.main_character = char
+        user.profile.save()
+
+        # Add necessary permissions
+        perms = Permission.objects.filter(
+            codename__in=["basic_access", "corp_access", "director_access"]
+        )
+        user.user_permissions.add(*perms)
+        user = user.__class__.objects.get(pk=user.pk)
+        return user
+
+    @patch("industry_reforged.views.director.render")
+    def test_director_dashboard(self, mock_render, rf):
+        request = rf.get("/")
+        request.user = self._get_director_user()
+        director_dashboard(request)
+        mock_render.assert_called()
+
+    @patch("industry_reforged.views.director.render")
+    def test_director_inventory(self, mock_render, rf):
+        request = rf.get("/")
+        request.user = self._get_director_user()
+        director_inventory(request)
+        mock_render.assert_called()
+
+    @patch("industry_reforged.views.director.render")
+    def test_director_config(self, mock_render, rf):
+        request = rf.get("/")
+        request.user = self._get_director_user()
+        director_config(request)
+        mock_render.assert_called()

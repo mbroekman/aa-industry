@@ -34,9 +34,9 @@ class TaxConfig(models.Model):
         EveCorporationInfo, on_delete=models.CASCADE, related_name="tax_config"
     )
     industry_tax_rate = models.FloatField(
-        default=0.0, help_text="Tax % applied to industry jobs"
+        default=0.0, help_text=_("Tax % applied to industry jobs")
     )
-    broker_fee_rate = models.FloatField(default=0.0, help_text="Broker fee %")
+    broker_fee_rate = models.FloatField(default=0.0, help_text=_("Broker fee %"))
 
     class Meta:
         verbose_name = _("Tax Config")
@@ -57,7 +57,9 @@ class CorpWalletDivision(models.Model):
     last_warning = models.DateTimeField(null=True, blank=True)
     warning_threshold = models.BigIntegerField(
         default=500000000,
-        help_text="Balance below which a warning is sent (default: 500 million ISK).",
+        help_text=_(
+            "Balance below which a warning is sent (default: 500 million ISK)."
+        ),
     )
 
     class Meta:

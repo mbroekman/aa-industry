@@ -46,12 +46,12 @@ def get_sde_bom(type_id):
                             "quantity": mat.quantity,
                         }
                     )
-                return materials, yield_qty
+                return materials, yield_qty, activity
 
         # Fallback to legacy EveType.materials
         eve_type = EveType.objects.get(id=type_id)
         if not eve_type.materials:
-            return [], 1
+            return [], 1, 1
 
         materials = []
         for mat in eve_type.materials.all():
@@ -62,9 +62,10 @@ def get_sde_bom(type_id):
                     "quantity": mat.quantity,
                 }
             )
-        return materials, 1
-    except Exception:
-        return [], 1
+        return materials, 1, 1
+    except Exception as e:
+        logger.error(f"Failed to get SDE bom for {type_id}: {e}")
+        return [], 1, 1
 
 
 def calculate_facility_me_multiplier(facility, product_type, return_breakdown=False):
@@ -136,8 +137,17 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     2. CorpItemConfig
     3. Global Tech 1/Tech 2 Default
     """
+    # Third Party
+    from eveuniverse.models import EveIndustryActivityProduct
+
     # AA Industry App
     from industry_reforged.models import CorpItemConfig, OrderBlueprintOverride
+
+    # If it is not manufacturable (e.g. reactions), ME is always 0
+    if not EveIndustryActivityProduct.objects.filter(
+        product_eve_type=product_type, activity_id=1
+    ).exists():
+        return 0, 0
 
     # Check for order-specific override first
     if order:
@@ -235,7 +245,7 @@ def calculate_order_bom(order):
             else get_blueprint_me(item.item_type, corp_info, None)[0]
         )
 
-        materials, yield_qty = get_sde_bom(type_id)
+        materials, yield_qty, activity_id = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
@@ -324,7 +334,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
             else get_blueprint_me(task.item_type, corp_info, None)[0]
         )
 
-        materials, yield_qty = get_sde_bom(type_id)
+        materials, yield_qty, activity_id = get_sde_bom(type_id)
         runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
@@ -426,6 +436,8 @@ def get_recursive_bom_tree(
                 quantity -= available
                 bom_splits[type_id] = 0
 
+    materials, yield_qty, activity_id = get_sde_bom(type_id)
+
     if depth > 15:  # Safety limit for recursion
         return {
             "type_id": type_id,
@@ -434,7 +446,7 @@ def get_recursive_bom_tree(
             "base_quantity": original_quantity,
             "provided_from_stock": provided_from_stock,
             "provided_from_child_order": provided_from_child_order,
-            "activity_id": 1,
+            "activity_id": activity_id,
             "sub_materials": [],
             "product_me": 0,
             "hull_bonus": 0.0,
@@ -450,7 +462,7 @@ def get_recursive_bom_tree(
             "base_quantity": original_quantity,
             "provided_from_stock": provided_from_stock,
             "provided_from_child_order": provided_from_child_order,
-            "activity_id": 1,
+            "activity_id": activity_id,
             "sub_materials": [],
             "product_me": 0,
             "hull_bonus": 0.0,
@@ -467,7 +479,7 @@ def get_recursive_bom_tree(
             "base_quantity": original_quantity,
             "provided_from_stock": provided_from_stock,
             "provided_from_child_order": provided_from_child_order,
-            "activity_id": 1,
+            "activity_id": activity_id,
             "sub_materials": [],
             "product_me": 0,
             "hull_bonus": 0.0,
@@ -495,7 +507,6 @@ def get_recursive_bom_tree(
     else:
         product_me, max_runs = 0, 0
 
-    materials, yield_qty = get_sde_bom(type_id)
     runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
     sub_materials = []
 
@@ -628,7 +639,7 @@ def get_recursive_bom_tree(
         "base_quantity": original_quantity,  # The root's quantity is the requested quantity
         "provided_from_stock": provided_from_stock,
         "provided_from_child_order": provided_from_child_order,
-        "activity_id": 1,  # Manufacturing
+        "activity_id": activity_id,
         "sub_materials": sub_materials,
         "product_me": product_me if "product_me" in locals() else 0,
         "hull_bonus": (hull_bonus * 100.0) if "hull_bonus" in locals() else 0.0,

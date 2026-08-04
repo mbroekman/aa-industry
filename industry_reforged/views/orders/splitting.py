@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy as _
 
-from ..models import (
+from ...models import (
     MemberOrder,
 )
 
@@ -28,7 +28,7 @@ def split_order(request: WSGIRequest, order_id: int) -> HttpResponse:
         items_to_split = order.items.filter(id__in=item_ids)
 
         target_facility_id = request.POST.get("target_facility")
-        from ..models import IndustryFacility
+        from ...models import IndustryFacility
 
         facility = None
         if target_facility_id:
@@ -91,7 +91,7 @@ def split_order(request: WSGIRequest, order_id: int) -> HttpResponse:
         )
 
         # Process splits
-        from ..models import OrderItem
+        from ...models import OrderItem
 
         for item, split_qty in split_requests:
             if split_qty == item.quantity:
@@ -161,7 +161,7 @@ def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
             messages.error(request, _("Invalid EveType."))
             return redirect("industry_reforged:view_quote", order_id=order.id)
 
-        from ..models import IndustryFacility
+        from ...models import IndustryFacility
 
         facility = None
         if target_facility_id:
@@ -196,7 +196,7 @@ def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
             notes=f"Sub-component '{product_type.name}' split from Order #{order.id}",
         )
 
-        from ..models import CorpPricingConfig, CorpTypeDiscount
+        from ...models import CorpPricingConfig, CorpTypeDiscount
 
         corp_id = order.character.corporation_id
         pricing_config = CorpPricingConfig.objects.filter(
@@ -214,7 +214,7 @@ def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
                 child_discount = td.discount_percent
 
         # Create OrderItem on the child order
-        from ..models import OrderItem
+        from ...models import OrderItem
 
         item = OrderItem.objects.create(
             order=child_order,
@@ -230,7 +230,7 @@ def split_bom_component(request: WSGIRequest, order_id: int) -> HttpResponse:
         # Alliance Auth
         from allianceauth.eveonline.models import EveCorporationInfo
 
-        from ..utils.pricing_engine import calculate_quote
+        from ...utils.pricing_engine import calculate_quote
 
         corp_id = order.character.corporation_id
         try:

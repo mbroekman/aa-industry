@@ -7,11 +7,11 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.translation import gettext_lazy as _
 
-from ..models import (
+from ...models import (
     MemberOrder,
     ProductionTask,
 )
-from ..utils.bom_engine import (
+from ...utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
     calculate_recursive_tasks_bom,
@@ -80,13 +80,13 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         recursive_bom_tree.extend(
             calculate_recursive_tasks_bom(tasks, corp_info=corp_info)
         )
-        from ..utils.bom_engine import calculate_tasks_bom
+        from ...utils.bom_engine import calculate_tasks_bom
 
         merge_bom(bom, calculate_tasks_bom(tasks, corp_info=corp_info))
 
     if type_id and quantity:
         quantity = int(quantity)
-        materials, yield_qty = get_sde_bom(type_id)
+        materials, yield_qty, _activity = get_sde_bom(type_id)
 
         corp_info = None
         main_char = request.user.profile.main_character
@@ -123,7 +123,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     if bom:
         mat_ids = list(bom.keys())
 
-        from ..utils.pricing_engine import get_fuzzwork_prices
+        from ...utils.pricing_engine import get_fuzzwork_prices
 
         prices = get_fuzzwork_prices(mat_ids)
         for mat_id, data in bom.items():

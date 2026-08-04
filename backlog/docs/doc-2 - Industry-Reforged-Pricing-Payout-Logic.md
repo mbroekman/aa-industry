@@ -1,3 +1,7 @@
+______________________________________________________________________
+
+## id: doc-2 title: 'Industry Reforged: Pricing & Payout Logic' type: guide created_date: '2026-08-03 18:12'
+
 # Industry Reforged: Pricing & Payout Logic
 
 This document serves as a reference for how initial order quotes, Bill of Materials (BOM) values, and builder payouts are calculated within the Alliance Auth Industry Reforged plugin.

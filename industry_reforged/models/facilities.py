@@ -26,15 +26,15 @@ class IndustryFacility(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     sync_inventory = models.BooleanField(
-        default=False, help_text="Sync corporate inventory from this facility."
+        default=False, help_text=_("Sync corporate inventory from this facility.")
     )
     is_production_facility = models.BooleanField(
         default=False,
-        help_text="Whether this facility is configured as a production facility.",
+        help_text=_("Whether this facility is configured as a production facility."),
     )
     is_default = models.BooleanField(
         default=False,
-        help_text="Whether this is the default facility for the corporation.",
+        help_text=_("Whether this is the default facility for the corporation."),
     )
 
     class Meta:
@@ -58,37 +58,43 @@ class IndustryFacility(models.Model):
             35825: "Raitaru",
             35826: "Azbel",
             35827: "Sotiyo",
-            35832: "Athanor",
-            35833: "Tatara",
-            35835: "Astrahus",
-            35836: "Fortizar",
+            35832: "Astrahus",
+            35833: "Fortizar",
             35834: "Keepstar",
+            35835: "Athanor",
+            35836: "Tatara",
         }
         return names.get(self.type_id, str(self.type_id))
 
 
 class IndustryRig(models.Model):
-    type_id = models.IntegerField(primary_key=True, help_text="EveType ID of the Rig")
+    type_id = models.IntegerField(
+        primary_key=True, help_text=_("EveType ID of the Rig")
+    )
     name = models.CharField(max_length=255)
     me_bonus = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=0.0,
-        help_text="Bonus as percentage (e.g. 2.0 for 2%)",
+        help_text=_("Bonus as percentage (e.g. 2.0 for 2%)"),
     )
     te_bonus = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=0.0,
-        help_text="Bonus as percentage (e.g. 20.0 for 20%)",
+        help_text=_("Bonus as percentage (e.g. 20.0 for 20%)"),
     )
     applies_to_groups = models.TextField(
-        help_text="Comma-separated list of EveGroup IDs this rig applies to. E.g. '419' for Battlecruisers",
+        help_text=_(
+            "Comma-separated list of EveGroup IDs this rig applies to. E.g. '419' for Battlecruisers"
+        ),
         blank=True,
         null=True,
     )
     applies_to_categories = models.TextField(
-        help_text="Comma-separated list of EveCategory IDs this rig applies to. E.g. '6' for Ships",
+        help_text=_(
+            "Comma-separated list of EveCategory IDs this rig applies to. E.g. '6' for Ships"
+        ),
         blank=True,
         null=True,
     )

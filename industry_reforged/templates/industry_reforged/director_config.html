@@ -63,14 +63,14 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th>Corporation</th>
-                                    <th>Item</th>
+                                    <th>{% translate "Item" %}</th>
                                     <th>BOM Strategy</th>
                                     <th class="text-end">ME/TE</th>
                                     <th class="text-end">Price Override</th>
                                     <th class="text-end">Threshold</th>
                                     <th class="text-center">Auto Produce</th>
                                     <th class="text-center">Excluded?</th>
-                                    <th class="text-end">Actions</th>
+                                    <th class="text-end">{% translate "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -89,7 +89,13 @@
                                         </span>
                                         <small class="d-block text-muted mt-1">{{ config.get_bom_source_display }}</small>
                                     </td>
-                                    <td class="text-end numeric">ME: {{ config.manual_me }}%<br>TE: {{ config.manual_te }}%<br>Runs: {% if config.max_runs == 0 %}BPO{% else %}{{ config.max_runs }}{% endif %}</td>
+                                    <td class="text-end numeric">
+                                        {% if config.has_blueprint %}
+                                            ME: {{ config.manual_me }}%<br>TE: {{ config.manual_te }}%<br>Runs: {% if config.max_runs == 0 %}BPO{% else %}{{ config.max_runs }}{% endif %}
+                                        {% else %}
+                                            <span class="text-muted fst-italic">N/A</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-end numeric text-warning fw-bold">{% if config.manual_price %}{{ config.manual_price|eve_isk }}{% else %}<span class="text-muted fw-normal"><em>Auto (Fuzzwork)</em></span>{% endif %}</td>
                                     <td class="text-end numeric">{{ config.target_threshold|intcomma }}</td>
                                     <td class="text-center">{% if config.auto_produce %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
@@ -274,7 +280,7 @@
                                         {% elif log.status == 'FAILED' %}
                                             <span class="badge bg-danger">Failed</span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">Running</span>
+                                            <span class="badge bg-warning text-dark">{% translate "Running" %}</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ log.last_run|naturaltime }}</td>

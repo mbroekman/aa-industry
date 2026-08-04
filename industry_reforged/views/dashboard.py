@@ -7,6 +7,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 
 from ..forms import UserPIConfigForm
 from ..models import (
@@ -67,13 +68,13 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
             planet.character_has_expired_extractors or planet.character_has_full_storage
         )
 
-    pi_config, _ = UserPIConfig.objects.get_or_create(user=request.user)
+    pi_config, _created = UserPIConfig.objects.get_or_create(user=request.user)
 
     if request.method == "POST" and "update_pi_config" in request.POST:
         pi_config_form = UserPIConfigForm(request.POST, instance=pi_config)
         if pi_config_form.is_valid():
             pi_config_form.save()
-            messages.success(request, "PI configuration updated.")
+            messages.success(request, _("PI configuration updated."))
             return redirect(
                 reverse("industry_reforged:personal_dashboard") + "#pi-pane"
             )

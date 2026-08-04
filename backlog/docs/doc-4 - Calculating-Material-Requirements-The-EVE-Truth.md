@@ -1,3 +1,7 @@
+______________________________________________________________________
+
+## id: doc-4 title: Calculating Material Requirements (The EVE Truth) type: guide created_date: '2026-08-03 18:12'
+
 # Calculating Material Requirements ("The EVE Truth")
 
 This document outlines how the **Alliance Auth Industry** application calculates the Bill of Materials (BOM) for manufacturing jobs. The calculation logic in our engine is specifically designed to replicate the "EVE Truth"—the exact math used by the EVE Online game client in the Industry window.

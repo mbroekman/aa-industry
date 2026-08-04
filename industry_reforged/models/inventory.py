@@ -23,7 +23,7 @@ class CorpInventory(models.Model):
     location_id = models.BigIntegerField()
 
     manual_override = models.BooleanField(
-        default=False, help_text="If true, ESI sync will not overwrite this quantity"
+        default=False, help_text=_("If true, ESI sync will not overwrite this quantity")
     )
     last_updated = models.DateTimeField(auto_now=True)
 

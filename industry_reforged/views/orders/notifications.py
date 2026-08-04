@@ -2,11 +2,11 @@
 
 # Django
 
-from ..models import (
+from ...models import (
     CorporationWebhookConfig,
     MemberOrder,
 )
-from ..utils.discord import send_discord_webhook
+from ...utils.discord import send_discord_webhook
 
 
 def notify_order_ready(order: MemberOrder):
@@ -35,7 +35,7 @@ def notify_order_ready(order: MemberOrder):
 
     # 2. Discord Webhook
     webhook_config = CorporationWebhookConfig.objects.filter(
-        corporation=order.corporation
+        corporation__corporation_id=order.character.corporation_id
     ).first()
     if webhook_config and webhook_config.directors_webhook:
         embed = {

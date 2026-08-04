@@ -21,7 +21,7 @@ class CorporationSyncConfig(models.Model):
     sync_character = models.ForeignKey(
         EveCharacter,
         on_delete=models.CASCADE,
-        help_text="Character with Director roles used for syncing.",
+        help_text=_("Character with Director roles used for syncing."),
     )
 
     class Meta:
@@ -39,27 +39,33 @@ class CorporationWebhookConfig(models.Model):
         related_name="industry_webhooks",
     )
     orders_webhook = models.URLField(
-        blank=True, null=True, help_text="Webhook URL for new Orders and Quotes."
+        blank=True, null=True, help_text=_("Webhook URL for new Orders and Quotes.")
     )
     directors_webhook = models.URLField(
         blank=True,
         null=True,
-        help_text="Webhook URL for Director-specific action alerts (e.g. New Quotes Requested, Orders Ready for Delivery).",
+        help_text=_(
+            "Webhook URL for Director-specific action alerts (e.g. New Quotes Requested, Orders Ready for Delivery)."
+        ),
     )
     jobs_webhook = models.URLField(
         blank=True,
         null=True,
-        help_text="Webhook URL for Corporate Industry Jobs completion.",
+        help_text=_("Webhook URL for Corporate Industry Jobs completion."),
     )
     wallets_webhook = models.URLField(
-        blank=True, null=True, help_text="Webhook URL for low wallet balance warnings."
+        blank=True,
+        null=True,
+        help_text=_("Webhook URL for low wallet balance warnings."),
     )
     wallet_warning_threshold = models.BigIntegerField(
         default=500000000,
-        help_text="Balance below which a warning is sent (default: 500 million ISK).",
+        help_text=_(
+            "Balance below which a warning is sent (default: 500 million ISK)."
+        ),
     )
     inventory_webhook = models.URLField(
-        blank=True, null=True, help_text="Webhook URL for low inventory warnings."
+        blank=True, null=True, help_text=_("Webhook URL for low inventory warnings.")
     )
 
     class Meta:
@@ -74,7 +80,7 @@ class CorpMOTD(models.Model):
     corporation = models.OneToOneField(
         EveCorporationInfo, on_delete=models.CASCADE, related_name="motd"
     )
-    message = models.TextField(help_text="Message of the day for industrialists")
+    message = models.TextField(help_text=_("Message of the day for industrialists"))
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
         EveCharacter, on_delete=models.SET_NULL, null=True, blank=True

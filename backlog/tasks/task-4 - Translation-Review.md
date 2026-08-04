@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## id: TASK-4 title: Translation Review status: To Do assignee: [] created_date: '2026-07-29 16:32' labels: [] dependencies: [] type: chore ordinal: 4000
+## id: TASK-4 title: Translation Review status: Done assignee: [] created_date: '2026-07-29 16:32' labels: [] dependencies: [] type: chore ordinal: 4000
 
 ## Description
 

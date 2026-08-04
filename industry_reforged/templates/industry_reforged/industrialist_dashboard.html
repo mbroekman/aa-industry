@@ -29,11 +29,11 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="member-tab" data-bs-toggle="tab" data-bs-target="#member-pane"
-                        type="button" role="tab" aria-controls="member-pane" aria-selected="false">Member Tasks</button>
+                        type="button" role="tab" aria-controls="member-pane" aria-selected="false">Claimed Jobs</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-pane"
-                        type="button" role="tab" aria-controls="summary-pane" aria-selected="false">Task Summary</button>
+                        type="button" role="tab" aria-controls="summary-pane" aria-selected="false">Build Steps</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="corporate-tab" data-bs-toggle="tab" data-bs-target="#corporate-pane"
@@ -181,7 +181,7 @@
                     <div class="card border-0 mb-4 h-100">
                                 <div
                                     class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <h4 class="card-title mb-0"><i class="fas fa-tasks"></i> {% trans "My Member Tasks" %}</h4>
+                                    <h4 class="card-title mb-0"><i class="fas fa-tasks"></i> {% trans "Claimed Jobs" %}</h4>
                                     <div class="d-flex align-items-center gap-2">
                                         <div id="list-view-controls" class="d-flex align-items-center gap-2">
                                             <label for="member-task-view-select"
@@ -230,7 +230,7 @@
                                                         </th>
                                                         <th>{% trans "Item" %}</th>
                                                         <th class="text-end">{% trans "Qty" %}</th>
-                                                        <th>{% trans "Assigned To" %}</th>
+                                                        <th>{% trans "Claimed By" %}</th>
                                                         <th class="text-end">{% trans "Reward" %}</th>
                                                         <th class="text-end">{% trans "Action" %}</th>
                                                     </tr>
@@ -306,7 +306,7 @@
                                                         <tr>
                                                             <th>{% trans "Item" %}</th>
                                                             <th class="text-end">{% trans "Qty" %}</th>
-                                                            <th>{% trans "Assigned To" %}</th>
+                                                            <th>{% trans "Claimed By" %}</th>
                                                             <th class="text-end">{% trans "Reward Earned" %}</th>
                                                             <th class="text-end">{% trans "Completed At" %}</th>
                                                         </tr>
@@ -322,7 +322,7 @@
                                                                         height="24" class="me-2 rounded opacity-50">
                                                                     <div>
                                                                         <span
-                                                                            class="text-muted text-decoration-line-through">{{ task.item_type.name }}</span>
+                                                                            class="text-muted">{{ task.item_type.name }}</span>
                                                                         {% if task.bom_parent %}
                                                                         <br><small class="text-muted"><i
                                                                                 class="fas fa-level-up-alt fa-rotate-90"></i>
@@ -351,7 +351,14 @@
                 <div class="tab-pane fade" id="summary-pane" role="tabpanel" aria-labelledby="summary-tab" tabindex="0">
                     <div class="card border-0 mb-4 h-100">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h4 class="card-title mb-0"><i class="fas fa-chart-pie"></i> {% trans "Task Summary" %}</h4>
+                                    <h4 class="card-title mb-0"><i class="fas fa-chart-pie"></i> {% trans "Build Steps" %}</h4>
+                                    <div>
+                                        <select id="summary-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="filterSummaryTable()">
+                                            <option value="active">{% trans "Active" %}</option>
+                                            <option value="completed">{% trans "Completed" %}</option>
+                                            <option value="all">{% trans "All" %}</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-responsive">
@@ -365,9 +372,14 @@
                                                     <th class="text-end">{% trans "Remaining" %}</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
-                                                {% for sum_item in my_claimed_summary %}
-                                                <tr>
+                                                {% regroup my_claimed_summary by activity_name as grouped_summary %}
+                                                {% for group in grouped_summary %}
+                                                <tbody class="summary-group">
+                                                <tr class="table-dark summary-group-header">
+                                                    <td colspan="5" class="fw-bold">{{ group.grouper }}</td>
+                                                </tr>
+                                                {% for sum_item in group.list %}
+                                                <tr class="summary-row" data-status="{% if sum_item.remaining <= 0 %}completed{% else %}active{% endif %}">
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <img onerror="handleImageFallback(this, {{ sum_item.item_type_id }})"
@@ -384,13 +396,41 @@
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="text-end numeric fw-bold {% if sum_item.remaining > 0 %}text-danger{% else %}text-success{% endif %}">{{ sum_item.remaining|floatformat:0 }}</td>
                                                 </tr>
+                                                {% endfor %}
+                                                </tbody>
                                                 {% empty %}
+                                                <tbody>
                                                 <tr>
                                                     <td colspan="5" class="text-center text-muted">{% trans "You have not claimed any production tasks." %}</td>
                                                 </tr>
+                                                </tbody>
                                                 {% endfor %}
-                                            </tbody>
                                         </table>
+                                        <script>
+                                            function filterSummaryTable() {
+                                                const filter = document.getElementById('summary-filter-select').value;
+                                                const groups = document.querySelectorAll('.summary-group');
+                                                groups.forEach(group => {
+                                                    const rows = group.querySelectorAll('.summary-row');
+                                                    let visibleCount = 0;
+                                                    rows.forEach(row => {
+                                                        const status = row.getAttribute('data-status');
+                                                        if (filter === 'all' || filter === status) {
+                                                            row.style.display = '';
+                                                            visibleCount++;
+                                                        } else {
+                                                            row.style.display = 'none';
+                                                        }
+                                                    });
+                                                    const header = group.querySelector('.summary-group-header');
+                                                    if (header) {
+                                                        header.style.display = visibleCount > 0 ? '' : 'none';
+                                                    }
+                                                });
+                                            }
+                                            // Initialize filter on load
+                                            document.addEventListener('DOMContentLoaded', filterSummaryTable);
+                                        </script>
                                     </div>
                                 </div>
                             </div>

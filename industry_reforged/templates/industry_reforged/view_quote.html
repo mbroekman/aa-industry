@@ -168,7 +168,7 @@
                             </div>
                         </div>
                         <div class="col-sm-3">
-                            <label class="form-label text-white mb-1 small">Note</label>
+                            <label class="form-label text-white mb-1 small">{% translate "Note" %}</label>
                             <input type="text" class="form-control bg-dark text-white border-secondary" name="note" placeholder="e.g. 50% upfront required">
                             <div class="form-text mt-1 text-muted">
                                 {% trans "Optional quote note" %}
@@ -437,13 +437,13 @@
                                         <dt class="col-sm-4">{% trans "Status" %}</dt>
                                         <dd class="col-sm-8">
                                             <div>
-                                                {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">Requested</span>
-                                                {% elif order.status == 'QUOTED' %}<span class="badge bg-primary">Quoted</span>
-                                                {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">Accepted</span>
+                                                {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">{% translate "Requested" %}</span>
+                                                {% elif order.status == 'QUOTED' %}<span class="badge bg-primary">{% translate "Quoted" %}</span>
+                                                {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">{% translate "Accepted" %}</span>
                                                 {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
-                                                {% elif order.status == 'READY' %}<span class="badge bg-primary">Ready</span>
-                                                {% elif order.status == 'DELIVERED' %}<span class="badge bg-success">Delivered</span>
-                                                {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">Rejected</span>
+                                                {% elif order.status == 'READY' %}<span class="badge bg-primary">{% translate "Ready" %}</span>
+                                                {% elif order.status == 'DELIVERED' %}<span class="badge bg-success">{% translate "Delivered" %}</span>
+                                                {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">{% translate "Rejected" %}</span>
                                                 {% endif %}
                                             </div>
                                             {% if order.production_tasks.exists %}
@@ -544,22 +544,30 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        {% if order.status == 'REQUESTED' %}
-                                                        <div class="input-group input-group-sm">
-                                                            <input type="number" class="form-control bg-dark text-white border-secondary" name="bp_me_{{ p.type_id }}" value="{{ p.current_me }}" min="0" max="10">
-                                                            <span class="input-group-text bg-secondary text-white border-secondary">%</span>
-                                                        </div>
+                                                        {% if not p.has_blueprint %}
+                                                        <span class="text-muted fst-italic">N/A</span>
                                                         {% else %}
-                                                        <span class="text-white">{{ p.current_me }}%</span>
+                                                            {% if order.status == 'REQUESTED' %}
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number" class="form-control bg-dark text-white border-secondary" name="bp_me_{{ p.type_id }}" value="{{ p.current_me }}" min="0" max="10">
+                                                                <span class="input-group-text bg-secondary text-white border-secondary">%</span>
+                                                            </div>
+                                                            {% else %}
+                                                            <span class="text-white">{{ p.current_me }}%</span>
+                                                            {% endif %}
                                                         {% endif %}
                                                     </td>
                                                     <td>
-                                                        {% if order.status == 'REQUESTED' %}
-                                                        <div class="input-group input-group-sm">
-                                                            <input type="number" class="form-control bg-dark text-white border-secondary" name="bp_runs_{{ p.type_id }}" value="{{ p.current_max_runs }}" min="0" placeholder="0 = infinite">
-                                                        </div>
+                                                        {% if not p.has_blueprint %}
+                                                        <span class="text-muted fst-italic">N/A</span>
                                                         {% else %}
-                                                        <span class="text-white">{% if p.current_max_runs == 0 %}Infinite (BPO){% else %}{{ p.current_max_runs }}{% endif %}</span>
+                                                            {% if order.status == 'REQUESTED' %}
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number" class="form-control bg-dark text-white border-secondary" name="bp_runs_{{ p.type_id }}" value="{{ p.current_max_runs }}" min="0" placeholder="0 = infinite">
+                                                            </div>
+                                                            {% else %}
+                                                            <span class="text-white">{% if p.current_max_runs == 0 %}Infinite (BPO){% else %}{{ p.current_max_runs }}{% endif %}</span>
+                                                            {% endif %}
                                                         {% endif %}
                                                     </td>
                                                 </tr>
