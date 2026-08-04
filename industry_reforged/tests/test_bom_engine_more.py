@@ -35,6 +35,7 @@ class TestBomEngineMore:
                 {"typeid": 35, "name": "Pyerite", "quantity": 50},
             ],
             1,
+            1,
         )
 
         mock_bp_me.return_value = (10, 1)
@@ -54,6 +55,7 @@ class TestBomEngineMore:
         mock_get_sde.return_value = (
             [{"typeid": 34, "name": "Tritanium", "quantity": 10}],
             1,
+            1,
         )
         mock_bp_me.return_value = (10, 1)
 
@@ -68,8 +70,8 @@ class TestBomEngineMore:
 
         def sde_bom_side_effect(type_id):
             if type_id == item_type.id:
-                return ([{"typeid": 1000, "name": "Component A", "quantity": 2}], 1)
-            return ([{"typeid": 34, "name": "Tritanium", "quantity": 50}], 1)
+                return ([{"typeid": 1000, "name": "Component A", "quantity": 2}], 1, 1)
+            return ([{"typeid": 34, "name": "Tritanium", "quantity": 50}], 1, 1)
 
         mock_get_sde.side_effect = sde_bom_side_effect
         mock_bp_me.return_value = (10, 1)
