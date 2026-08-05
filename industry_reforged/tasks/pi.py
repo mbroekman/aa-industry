@@ -102,6 +102,25 @@ def update_character_pi(character_id=None):
             # Now fetch pins for all known planets for this character
             char_planets = CharacterPlanet.objects.filter(character=character)
             for char_planet in char_planets:
+                if not char_planet.eve_planet_id or not char_planet.eve_system_id:
+                    # Third Party
+                    from eveuniverse.models import EvePlanet, EveSolarSystem
+
+                    eve_planet, _ = EvePlanet.objects.get_or_create_esi(
+                        id=char_planet.planet_id
+                    )
+                    eve_system, _ = EveSolarSystem.objects.get_or_create_esi(
+                        id=char_planet.system_id
+                    )
+                    char_planet.eve_planet = eve_planet
+                    char_planet.eve_system = eve_system
+                    char_planet.save(update_fields=["eve_planet", "eve_system"])
+                elif char_planet.eve_planet and not char_planet.eve_planet.name:
+                    # Third Party
+                    from eveuniverse.models import EvePlanet
+
+                    EvePlanet.objects.update_or_create_esi(id=char_planet.planet_id)
+
                 try:
                     planet_details = esi.client.Planetary_Interaction.GetCharactersCharacterIdPlanetsPlanetId(
                         character_id=token.character_id,

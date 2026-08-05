@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.1] - 05-08-2026
+
+### Fixed
+
+- **PI Sync**: Fixed an issue where Planetary Interaction planet names were missing in the dashboard due to ESI 304 Not Modified responses skipping the `EvePlanet` creation step.
+- **Translations**: Resolved a gettext `python-format` compilation error caused by percentage signs in `help_text` strings.
+- **CI / Testing (TASK-17)**: Fixed Python 3.13 test failures and Codecov upload issues in GitHub Actions.
+
 ## [0.3.0] - 04-08-2026
 
 ### Added
