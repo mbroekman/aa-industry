@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - **PI Sync**: Fixed an issue where Planetary Interaction planet names were missing in the dashboard due to ESI 304 Not Modified responses skipping the `EvePlanet` creation step.
 - **Translations**: Resolved a gettext `python-format` compilation error caused by percentage signs in `help_text` strings.
+- **Job Market**: Fixed an issue where root jobs in the Job Market were incorrectly rendered with folding buttons and indentation if they shared an ID with parents in the Active Production table.
 - **CI / Testing (TASK-17)**: Fixed Python 3.13 test failures and Codecov upload issues in GitHub Actions.
 
 ## [0.3.0] - 04-08-2026
