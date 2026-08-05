@@ -895,24 +895,26 @@
         var parentMap = {};
 
         $(document).ready(function() {
-            var parentIds = new Set();
-            $('tr[data-task-id]').each(function() {
-                var pId = $(this).attr('data-parent-id');
-                var tId = $(this).attr('data-task-id');
-                if (pId) {
-                    parentIds.add(pId);
-                    parentMap[tId] = pId;
-                }
-            });
+            $('table').each(function() {
+                var parentIds = new Set();
+                $(this).find('tr[data-task-id]').each(function() {
+                    var pId = $(this).attr('data-parent-id');
+                    var tId = $(this).attr('data-task-id');
+                    if (pId) {
+                        parentIds.add(pId);
+                        parentMap[tId] = pId;
+                    }
+                });
 
-            $('tr[data-task-id]').each(function() {
-                var tId = $(this).attr('data-task-id');
-                var $itemCol = $(this).find('td:eq(1) > div');
-                if (parentIds.has(tId)) {
-                    $itemCol.prepend('<button type="button" class="btn btn-xs btn-outline-secondary me-2 toggle-row-btn" onclick="toggleSingleRow(this, \''+tId+'\')"><i class="fas fa-minus"></i></button>');
-                } else {
-                    $itemCol.prepend('<span class="me-2" style="display:inline-block; width: 24px;"></span>');
-                }
+                $(this).find('tr[data-task-id]').each(function() {
+                    var tId = $(this).attr('data-task-id');
+                    var $itemCol = $(this).find('td:eq(1) > div');
+                    if (parentIds.has(tId)) {
+                        $itemCol.prepend('<button type="button" class="btn btn-xs btn-outline-secondary me-2 toggle-row-btn" onclick="toggleSingleRow(this, \''+tId+'\')"><i class="fas fa-minus"></i></button>');
+                    } else {
+                        $itemCol.prepend('<span class="me-2" style="display:inline-block; width: 24px;"></span>');
+                    }
+                });
             });
 
 
