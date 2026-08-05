@@ -149,15 +149,33 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     ).exists():
         return 0, 0
 
+    # First determine the default ME based on T1/T2
+    default_t1 = 10
+    default_t2 = 2
+    if corp_info and hasattr(corp_info, "pricing_config"):
+        default_t1 = corp_info.pricing_config.default_t1_me
+        default_t2 = corp_info.pricing_config.default_t2_me
+
+    bp_prod = EveIndustryActivityProduct.objects.filter(
+        product_eve_type_id=product_type.id, activity_id__in=[1, 11]
+    ).first()
+
+    default_me = default_t1
+    if bp_prod:
+        is_invented = EveIndustryActivityProduct.objects.filter(
+            product_eve_type_id=bp_prod.eve_type_id, activity_id=8
+        ).exists()
+        if is_invented:
+            default_me = default_t2
+
     # Check for order-specific override first
     if order:
         bp_override = OrderBlueprintOverride.objects.filter(
             order=order, item_type=product_type
         ).first()
         if bp_override and (bp_override.manual_me > 0 or bp_override.max_runs > 0):
-            # If ME is 0, we still might want to return the override if max_runs is > 0,
-            # but let's fall back to default ME if manual_me is 0.
-            me_val = bp_override.manual_me if bp_override.manual_me > 0 else None
+            # If manual_me is 0 but max_runs > 0, fallback to default ME
+            me_val = bp_override.manual_me if bp_override.manual_me > 0 else default_me
             return me_val, bp_override.max_runs
 
     # Then check for global corp config
@@ -166,31 +184,10 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
             corporation=corp_info, item_type=product_type
         ).first()
         if corp_config and (corp_config.manual_me > 0 or corp_config.max_runs > 0):
-            me_val = corp_config.manual_me if corp_config.manual_me > 0 else None
+            me_val = corp_config.manual_me if corp_config.manual_me > 0 else default_me
             return me_val, corp_config.max_runs
 
-    default_t1 = 10
-    default_t2 = 2
-    if corp_info and hasattr(corp_info, "pricing_config"):
-        default_t1 = corp_info.pricing_config.default_t1_me
-        default_t2 = corp_info.pricing_config.default_t2_me
-
-    # Third Party
-    from eveuniverse.models import EveIndustryActivityProduct
-
-    bp_prod = EveIndustryActivityProduct.objects.filter(
-        product_eve_type_id=product_type.id, activity_id__in=[1, 11]
-    ).first()
-
-    # We still need a default ME if none was provided by overrides
-    if bp_prod:
-        is_invented = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=bp_prod.eve_type_id, activity_id=8
-        ).exists()
-        if is_invented:
-            return default_t2, 0
-
-    return default_t1, 0
+    return default_me, 0
 
 
 def calculate_order_bom(order):
