@@ -1,6 +1,9 @@
-______________________________________________________________________
-
-## id: doc-3 title: Automated ME/TE Calculation via Structure Rigs type: guide created_date: '2026-08-03 18:12'
+---
+id: DOC-3
+title: "Automated ME/TE Calculation via Structure Rigs"
+type: guide
+created_date: '2026-08-06 17:53'
+---
 
 # Implementation Plan: Automated ME/TE Calculation via Structure Rigs
 

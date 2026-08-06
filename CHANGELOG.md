@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **BOM Engine**: Fixed a `FieldError` on the Shopping List where it incorrectly queried `activity_id` on `EveIndustryActivity` instead of `EveIndustryActivityDuration`.
 - **Wallets**: Fixed an `ImportError` where the background task `task_process_wallet_payments` failed due to a missing core Alliance Auth import for `EveCorporationInfo`.
 - **Payouts**: Fixed an `ImportError` in `generate_payout_batch` caused by an incorrect import path for `EveCharacter`.
+- **UI Dashboard**: Added a notification popup (alert) on the Director Dashboard for failed background jobs, linking to the execution logs.
+- **UI Dashboard**: Fixed an issue on the Industrialist Dashboard where `Remaining` amount was incorrectly subtracting EVE jobs in progress, and ensured EVE jobs are correctly filtered by both `product_type_id` and `activity_id`.
 
 ### Changed
 

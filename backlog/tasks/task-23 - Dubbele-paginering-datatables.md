@@ -1,3 +1,15 @@
+---
+id: TASK-23
+title: Dubbele Paginering op DataTables
+status: Done
+assignee: []
+created_date: '2026-08-06 17:51'
+updated_date: '2026-08-06 17:51'
+labels: []
+dependencies: []
+ordinal: 23000
+---
+
 # Task 23: Dubbele Paginering op DataTables
 
 ## Status

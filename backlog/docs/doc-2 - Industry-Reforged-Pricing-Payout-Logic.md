@@ -1,6 +1,9 @@
-______________________________________________________________________
-
-## id: doc-2 title: 'Industry Reforged: Pricing & Payout Logic' type: guide created_date: '2026-08-03 18:12'
+---
+id: DOC-2
+title: "Industry Reforged: Pricing & Payout Logic"
+type: guide
+created_date: '2026-08-06 17:53'
+---
 
 # Industry Reforged: Pricing & Payout Logic
 

@@ -1,6 +1,9 @@
-______________________________________________________________________
-
-## id: doc-4 title: Calculating Material Requirements (The EVE Truth) type: guide created_date: '2026-08-03 18:12'
+---
+id: DOC-4
+title: "Calculating Material Requirements (The EVE Truth)"
+type: guide
+created_date: '2026-08-06 17:53'
+---
 
 # Calculating Material Requirements ("The EVE Truth")
 

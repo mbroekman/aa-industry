@@ -151,6 +151,20 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
 
     buy_orders = CorpBuyOrder.objects.all().order_by("-created_at")
 
+    if TaskExecutionLog.objects.filter(status="FAILED").exists():
+        # Django
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        config_url = reverse("industry_reforged:director_config") + "#task-logs-pane"
+        msg = format_html(
+            _(
+                'Er zijn gefaalde background taken. Controleer het <a href="{}" class="alert-link">overzicht</a>.'
+            ),
+            config_url,
+        )
+        messages.error(request, msg)
+
     context = {
         "title": "Director Control Panel",
         "all_orders": all_orders,

@@ -1,3 +1,15 @@
+---
+id: TASK-24
+title: Hoeveelheden toekennen aan een fit
+status: Done
+assignee: []
+created_date: '2026-08-06 17:51'
+updated_date: '2026-08-06 17:51'
+labels: []
+dependencies: []
+ordinal: 24000
+---
+
 # Task 24: Hoeveelheden toekennen aan een fit
 
 ## Status

@@ -1,6 +1,9 @@
-______________________________________________________________________
-
-## id: doc-5 title: taak12_implementatie type: guide created_date: '2026-08-04 19:51' updated_date: '2026-08-04 19:51'
+---
+id: DOC-5
+title: "taak12_implementatie"
+type: guide
+created_date: '2026-08-06 17:53'
+---
 
 # TASK-12: Koppel geclaimde taken aan EVE ESI Industry Jobs
 

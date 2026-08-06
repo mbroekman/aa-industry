@@ -1,6 +1,9 @@
-______________________________________________________________________
-
-## id: doc-1 title: 'Technisch Ontwerp: Koppel taken aan EVE Jobs' type: guide created_date: '2026-08-03 18:08'
+---
+id: DOC-1
+title: "Technisch Ontwerp: Koppel taken aan EVE Jobs"
+type: guide
+created_date: '2026-08-06 17:53'
+---
 
 # Technical Design: Linking Claimed Tasks to EVE Industry Jobs
 

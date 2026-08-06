@@ -377,10 +377,10 @@
                                             <thead>
                                                 <tr>
                                                     <th>{% trans "Item" %}</th>
-                                                    <th class="text-end">{% trans "Total Claimed" %}</th>
-                                                    <th class="text-end">{% trans "In Progress (EVE)" %}</th>
+                                                    <th class="text-end">{% trans "To Build" %}</th>
                                                     <th class="text-end">{% trans "Completed" %}</th>
                                                     <th class="text-end">{% trans "Remaining" %}</th>
+                                                    <th class="text-end">{% trans "EVE In Progress" %}</th>
                                                 </tr>
                                             </thead>
                                                 {% regroup my_claimed_summary by activity_name as grouped_summary %}
@@ -402,10 +402,10 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end numeric fw-bold text-info">{{ sum_item.total_claimed }}</td>
-                                                    <td class="text-end numeric text-warning">{{ sum_item.in_progress|floatformat:0 }}</td>
+                                                    <td class="text-end numeric fw-bold text-info">{{ sum_item.to_build }}</td>
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="text-end numeric fw-bold {% if sum_item.remaining > 0 %}text-danger{% else %}text-success{% endif %}">{{ sum_item.remaining|floatformat:0 }}</td>
+                                                    <td class="text-end numeric text-warning">{{ sum_item.in_progress|floatformat:0 }}</td>
                                                 </tr>
                                                 {% endfor %}
                                                 </tbody>

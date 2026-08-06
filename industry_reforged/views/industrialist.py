@@ -110,8 +110,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         )
         .values("item_type__id", "item_type__name", "activity_id")
         .annotate(
-            total_claimed=Sum("quantity", filter=Q(status="IN_PRODUCTION")),
+            total_in_production=Sum("quantity", filter=Q(status="IN_PRODUCTION")),
             total_completed=Sum("quantity", filter=Q(status="COMPLETED")),
+            total_claimed=Sum("quantity"),
         )
         .order_by("activity_id", "item_type__name")
     )
@@ -163,27 +164,35 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             if bp_prod:
                 portion_size = bp_prod.quantity
 
-            # Filter jobs matching the product
-            matching_char_jobs = [j for j in char_jobs if j.product_type_id == type_id]
-            matching_corp_jobs = [j for j in corp_jobs if j.product_type_id == type_id]
+            # Filter jobs matching the product and activity
+            matching_char_jobs = [
+                j
+                for j in char_jobs
+                if j.product_type_id == type_id and j.activity_id == activity_id
+            ]
+            matching_corp_jobs = [
+                j
+                for j in corp_jobs
+                if j.product_type_id == type_id and j.activity_id == activity_id
+            ]
 
             for j in matching_char_jobs:
                 in_progress += j.runs * portion_size
             for j in matching_corp_jobs:
                 in_progress += j.runs * portion_size
 
-            total_claimed = item["total_claimed"] or 0
+            to_build = item["total_claimed"] or 0
             completed = item["total_completed"] or 0
 
-            # Since total_claimed is IN_PRODUCTION tasks, the remaining is based on total_claimed - in_progress
-            remaining = max(0, total_claimed - in_progress)
+            # Remaining is what still needs to be completed
+            remaining = max(0, to_build - completed)
 
             my_claimed_summary.append(
                 {
                     "item_type_id": type_id,
                     "item_type_name": item["item_type__name"],
                     "activity_name": activity_name,
-                    "total_claimed": total_claimed,
+                    "to_build": to_build,
                     "in_progress": in_progress,
                     "completed": completed,
                     "remaining": remaining,
