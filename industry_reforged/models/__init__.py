@@ -2,7 +2,7 @@ from .config import CorpMOTD, CorporationSyncConfig, CorporationWebhookConfig
 from .core import General, TaskExecutionLog
 from .facilities import IndustryFacility, IndustryFacilityRig, IndustryRig
 from .inventory import CorpInventory
-from .jobs import CharacterIndustryJob, CorporationIndustryJob
+from .jobs import CharacterIndustryJob, CorporationIndustryJob, TaskJobLink
 from .orders import (
     BuilderPayoutBatch,
     CorpBuyOrder,
@@ -31,6 +31,7 @@ __all__ = [
     "IndustryFacilityRig",
     "CharacterIndustryJob",
     "CorporationIndustryJob",
+    "TaskJobLink",
     "UserPIConfig",
     "CharacterPlanet",
     "PlanetPin",
