@@ -25,6 +25,12 @@ def create_order(request: WSGIRequest) -> HttpResponse:
     """Create a new order from EFT fit or single items"""
     if request.method == "POST":
         fit_text = request.POST.get("fit_text", "").strip()
+        try:
+            multiplier = int(request.POST.get("fit_multiplier", 1))
+            if multiplier < 1:
+                multiplier = 1
+        except (ValueError, TypeError):
+            multiplier = 1
 
         if not fit_text:
             messages.error(request, _("Please provide an EFT fit."))
@@ -38,6 +44,11 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             return redirect("industry_reforged:create_order")
 
         parsed_items, unrecognized = parse_fit_text(fit_text)
+
+        if multiplier > 1:
+            for item in parsed_items:
+                parsed_items[item] *= multiplier
+            fit_text = f"--- MULTIPLIER APPLIED: {multiplier}x ---\n\n" + fit_text
 
         if unrecognized:
             messages.warning(

@@ -32,11 +32,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- **Order Creation**: Added a "Quantity (Multiplier)" field to the Create Order page. This allows users to easily multiply the quantities of an entire EFT fit or bulk text input without needing to edit the raw text.
+
 - **PI Location Tracking**: Planetary Interaction dashboards now explicitly display the Solar System and specific Planet Name (e.g., `Jita » Jita IV`) instead of just the generic planet type.
+
 - **PI Notifications**: Added unified Alliance Auth and direct Discord DM notifications for PI events. Users are automatically notified when an extractor stops.
+
 - **Configurable PI Storage Thresholds**: Users can now configure the percentage at which they receive full storage/launchpad warnings directly from their Personal Dashboard settings (defaults to 75%).
+
 - **Completed Tasks Summary (TASK-8)**: Added functionality to view a summary of completed production tasks directly from the Industrialist dashboard, with filtering options for Active, Completed, or All tasks.
+
 - **Wallet Division Names**: The system now retrieves and updates dynamic corporation wallet division names directly from EVE ESI instead of using static defaults.
+
 - **Extensive Test Coverage (TASK-1)**: Added extensive unit tests and test coverage across the application to prevent regressions.
 
 ### Changed

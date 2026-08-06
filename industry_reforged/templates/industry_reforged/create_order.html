@@ -22,6 +22,13 @@
                     {% csrf_token %}
                     <div class="card-body">
 
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="fit_multiplier" class="form-label">{% trans "Quantity (Multiplier)" %}</label>
+                                <input type="number" name="fit_multiplier" id="fit_multiplier" class="form-control bg-dark text-white border-secondary" value="1" min="1" required>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="fit_text" class="form-label">{% trans "Items to Order" %}</label>
                             <textarea name="fit_text" id="fit_text" rows="15" class="form-control bg-dark text-white border-secondary" placeholder="[Drake, My Fit]&#10;Heavy Missile Launcher II&#10;...&#10;&#10;-- OR --&#10;20 Drake&#10;1000x Scourge Fury Heavy Missile&#10;&#10;-- OR --&#10;Drake 20" required></textarea>
