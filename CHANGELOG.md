@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.2] - 06-08-2026
+
+### Fixed
+
+- **BOM Engine**: Fixed a `TypeError` in `get_blueprint_me` where missing `manual_me` values on blueprint overrides returned `None` instead of properly falling back to the default Material Efficiency.
+- **BOM Engine**: Excluded non-researchable blueprints (such as Faction or Storyline) and reactions from Material Efficiency calculations (defaulting to 0), without skipping their `max_runs` override logic.
+
 ## [0.3.1] - 05-08-2026
 
 ### Fixed
@@ -12,7 +19,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **PI Sync**: Fixed an issue where Planetary Interaction planet names were missing in the dashboard due to ESI 304 Not Modified responses skipping the `EvePlanet` creation step.
 - **Translations**: Resolved a gettext `python-format` compilation error caused by percentage signs in `help_text` strings.
 - **Job Market**: Fixed an issue where root jobs in the Job Market were incorrectly rendered with folding buttons and indentation if they shared an ID with parents in the Active Production table.
-- **BOM Engine**: Fixed a `TypeError` in `get_blueprint_me` where missing `manual_me` values on blueprint overrides returned `None` instead of properly falling back to the default Material Efficiency.
 - **CI / Testing (TASK-17)**: Fixed Python 3.13 test failures and Codecov upload issues in GitHub Actions.
 
 ## [0.3.0] - 04-08-2026
