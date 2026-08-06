@@ -246,11 +246,11 @@ def link_orphaned_jobs_to_tasks():
         if not task.assigned_to:
             continue
 
-        first_ownership = task.assigned_to.character_ownerships.first()
-        if not first_ownership:
+        try:
+            user = task.assigned_to.character_ownership.user
+        except Exception:
             continue
 
-        user = first_ownership.user
         user_character_ids = list(
             user.character_ownerships.all().values_list("character_id", flat=True)
         )
