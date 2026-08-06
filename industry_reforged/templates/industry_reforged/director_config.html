@@ -447,6 +447,15 @@
                 tab.show();
             }
         }
+        {% if has_failed_tasks %}
+        else {
+            var triggerEl = document.querySelector('button[data-bs-target="#health"]');
+            if (triggerEl) {
+                var tab = new bootstrap.Tab(triggerEl);
+                tab.show();
+            }
+        }
+        {% endif %}
 
         // Initialize DataTables
         $('#itemConfigTable').DataTable({
