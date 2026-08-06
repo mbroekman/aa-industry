@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **BOM Engine**: Excluded non-researchable blueprints (such as Faction or Storyline) and reactions from Material Efficiency calculations (defaulting to 0), without skipping their `max_runs` override logic.
 - **BOM Engine**: Fixed a `FieldError` on the Shopping List where it incorrectly queried `activity_id` on `EveIndustryActivity` instead of `EveIndustryActivityDuration`.
 - **Wallets**: Fixed an `ImportError` where the background task `task_process_wallet_payments` failed due to a missing core Alliance Auth import for `EveCorporationInfo`.
+- **Payouts**: Fixed an `ImportError` in `generate_payout_batch` caused by an incorrect import path for `EveCharacter`.
 
 ### Changed
 

@@ -323,7 +323,10 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
         from django.db.models import Sum
         from django.utils.crypto import get_random_string
 
-        from ..models import BuilderPayoutBatch, EveCharacter
+        # Alliance Auth
+        from allianceauth.eveonline.models import EveCharacter
+
+        from ..models import BuilderPayoutBatch
 
         builder = get_object_or_404(EveCharacter, id=builder_id)
 
