@@ -202,10 +202,12 @@ def task_sync_corp_wallets():
 @log_task_execution("Task Process Wallet Payments")
 def task_process_wallet_payments():
     """Process new wallet journal entries and match them to Orders and Payouts."""
+    # Alliance Auth
+    from allianceauth.eveonline.models import EveCorporationInfo
+
     from ..models import (
         BuilderPayoutBatch,
         CorpWalletJournal,
-        EveCorporationInfo,
         MemberOrder,
         WalletJournalSyncState,
     )
