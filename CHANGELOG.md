@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **BOM Engine**: Fixed a `FieldError` on the Shopping List where it incorrectly queried `activity_id` on `EveIndustryActivity` instead of `EveIndustryActivityDuration`.
 - **Wallets**: Fixed an `ImportError` where the background task `task_process_wallet_payments` failed due to a missing core Alliance Auth import for `EveCorporationInfo`.
 
+### Changed
+
+- **UI Dashboard**: The Job Market (Unclaimed Tasks) is now sorted so the oldest orders always appear at the top.
+
 ## [0.3.1] - 05-08-2026
 
 ### Fixed
