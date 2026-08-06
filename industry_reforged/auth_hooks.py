@@ -134,7 +134,46 @@ class DirectorMenuItem(MenuItemHook):
 
     def render(self, request):
         if request.user.has_perm("industry_reforged.corp_access"):
-            return MenuItemHook.render(self, request)
+            html = MenuItemHook.render(self, request)
+
+            # Check for failed tasks and inject a global alert script
+            try:
+                # AA Industry App
+                from industry_reforged.models import TaskExecutionLog
+
+                if TaskExecutionLog.objects.filter(status="FAILED").exists():
+                    # Django
+                    from django.urls import reverse
+
+                    url = reverse("industry_reforged:director_config")
+                    alert_html = f"""
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {{
+                            if (!document.getElementById("global-task-error")) {{
+                                var alertDiv = document.createElement("div");
+                                alertDiv.id = "global-task-error";
+                                alertDiv.className = "alert alert-danger alert-dismissible fade show";
+                                alertDiv.style.position = "fixed";
+                                alertDiv.style.bottom = "20px";
+                                alertDiv.style.right = "20px";
+                                alertDiv.style.zIndex = "9999";
+                                alertDiv.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+                                alertDiv.innerHTML = `
+                                    <strong><i class="fas fa-exclamation-triangle"></i> System Error!</strong><br>
+                                    One or more background jobs have failed! <br>
+                                    <a href="{url}#health" class="alert-link">Check the task execution logs here.</a>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                `;
+                                document.body.appendChild(alertDiv);
+                            }}
+                        }});
+                    </script>
+                    """
+                    html += alert_html
+            except Exception:
+                pass
+
+            return html
         return ""
 
 
