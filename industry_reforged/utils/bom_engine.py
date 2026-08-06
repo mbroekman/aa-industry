@@ -143,12 +143,6 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     # AA Industry App
     from industry_reforged.models import CorpItemConfig, OrderBlueprintOverride
 
-    # If it is not manufacturable (e.g. reactions), ME is always 0
-    if not EveIndustryActivityProduct.objects.filter(
-        product_eve_type=product_type, activity_id=1
-    ).exists():
-        return 0, 0
-
     # First determine the default ME based on T1/T2
     default_t1 = 10
     default_t2 = 2
@@ -161,12 +155,26 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     ).first()
 
     default_me = default_t1
-    if bp_prod:
-        is_invented = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=bp_prod.eve_type_id, activity_id=8
+    if not bp_prod or bp_prod.activity_id == 11:
+        # Reactions or non-industry items
+        default_me = 0
+    else:
+        # Third Party
+        from eveuniverse.models import EveIndustryActivity
+
+        has_me_research = EveIndustryActivity.objects.filter(
+            eve_type_id=bp_prod.eve_type_id, activity_id=4
         ).exists()
-        if is_invented:
-            default_me = default_t2
+
+        if not has_me_research:
+            # Faction, storyline, or other non-researchable blueprints
+            default_me = 0
+        else:
+            is_invented = EveIndustryActivityProduct.objects.filter(
+                product_eve_type_id=bp_prod.eve_type_id, activity_id=8
+            ).exists()
+            if is_invented:
+                default_me = default_t2
 
     # Check for order-specific override first
     if order:
