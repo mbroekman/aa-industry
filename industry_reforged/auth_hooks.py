@@ -138,6 +138,9 @@ class DirectorMenuItem(MenuItemHook):
 
             # Check for failed tasks and inject a global alert script
             try:
+                # Django
+                from django.utils.safestring import mark_safe
+
                 # AA Industry App
                 from industry_reforged.models import TaskExecutionLog
 
@@ -169,7 +172,7 @@ class DirectorMenuItem(MenuItemHook):
                         }});
                     </script>
                     """
-                    html += alert_html
+                    html = mark_safe(html + alert_html)
             except Exception:
                 pass
 
