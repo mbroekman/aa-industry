@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - **UI Dashboard**: The Job Market (Unclaimed Tasks) is now sorted so the oldest orders always appear at the top.
+- **UI Dashboard**: All pages containing lists now display pagination controls both at the top and the bottom of the table to prevent unnecessary scrolling.
 
 ## [0.3.1] - 05-08-2026
 
