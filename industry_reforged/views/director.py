@@ -37,24 +37,7 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
     from django.db.models import Count, Q, Sum
     from django.db.models.functions import Coalesce
 
-    from ..models import BuilderPayoutBatch, CorpBuyOrder, TaskExecutionLog
-
-    # Check for failed background tasks and show a slide-in/popup message
-    failed_tasks_exist = TaskExecutionLog.objects.filter(status="FAILED").exists()
-    if failed_tasks_exist:
-        # Django
-        from django.utils.html import format_html
-
-        config_url = reverse("industry_reforged:director_config")
-        messages.error(
-            request,
-            format_html(
-                _(
-                    "Warning: One or more background jobs have failed! <a href='{url}#task-logs-pane' class='alert-link'>Check the task execution logs here.</a>"
-                ),
-                url=config_url,
-            ),
-        )
+    from ..models import BuilderPayoutBatch, CorpBuyOrder
 
     # We show orders for characters in the director's corps
     all_orders = MemberOrder.objects.filter(parent_order__isnull=True)
@@ -784,6 +767,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     )
     tax_configs = TaxConfig.objects.all().select_related("corporation")
     task_logs = TaskExecutionLog.objects.all().order_by("task_name")
+    has_failed_tasks = task_logs.filter(status="FAILED").exists()
 
     from ..models import IndustryFacility
 
@@ -796,6 +780,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "type_discounts": type_discounts,
         "tax_configs": tax_configs,
         "task_logs": task_logs,
+        "has_failed_tasks": has_failed_tasks,
         "facilities": facilities,
     }
     return render(request, "industry_reforged/director_config.html", context)
