@@ -23,10 +23,11 @@ for bp_prod in bps:
     bp_type = bp_prod.eve_type
     print(f"Blueprint: {bp_type.name}")
     # Check if blueprint has ME research
-    has_me_research = EveIndustryActivity.objects.filter(
-        eve_type=bp_type, activity_id=4
-    ).exists()
-    print(f"Has ME research (activity 4): {has_me_research}")
+    # AA Industry App
+    from industry_reforged.utils.bom_engine import get_blueprint_me
+
+    me_val, _ = get_blueprint_me(product)
+    print(f"Calculated ME: {me_val}")
 
 # Let's find a normal T1 product
 t1_product = EveType.objects.get(name="Incursus")

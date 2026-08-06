@@ -17,9 +17,7 @@ alliance_auth.sqlite3
 tmp_env/
 .venv/
 
-# Tijdelijke (scratch) scripts
-/test_bp.py
-/test_faction_bp.py
+# Tijdelijke (scratch) scripts in de root
+/*test*.py
 /append_task.py
-/generate_tests.py
 /make_migrations.py

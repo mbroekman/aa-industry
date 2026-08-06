@@ -162,19 +162,24 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         # Third Party
         from eveuniverse.models import EveIndustryActivityDuration
 
-        has_me_research = EveIndustryActivityDuration.objects.filter(
-            eve_type_id=bp_prod.eve_type_id, activity_id=4
+        is_invented = EveIndustryActivityProduct.objects.filter(
+            product_eve_type_id=bp_prod.eve_type_id, activity_id=8
         ).exists()
 
-        if not has_me_research:
-            # Faction, storyline, or other non-researchable blueprints
+        if is_invented:
+            default_me = default_t2
+        elif bp_prod.eve_type.eve_market_group_id is None:
+            # Faction, storyline, or other non-researchable BPCs are not on the market
             default_me = 0
         else:
-            is_invented = EveIndustryActivityProduct.objects.filter(
-                product_eve_type_id=bp_prod.eve_type_id, activity_id=8
+            has_me_research = EveIndustryActivityDuration.objects.filter(
+                eve_type_id=bp_prod.eve_type_id, activity_id=4
             ).exists()
-            if is_invented:
-                default_me = default_t2
+
+            if not has_me_research:
+                default_me = 0
+            else:
+                default_me = default_t1
 
     # Check for order-specific override first
     if order:

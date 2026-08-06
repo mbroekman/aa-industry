@@ -39,7 +39,7 @@ Verhelpen van ME calculatie bugs in BOM Engine voor release 0.3.2:
 <!-- SECTION:NOTES:BEGIN -->
 
 - BOM Engine: Logica in `bom_engine.py -> get_blueprint_me` geherstructureerd zodat `default_t1`/`default_t2` berekend wordt voordat de overrides worden gecontroleerd, om als veilige fallback te dienen bij missende overrides.
-- BOM Engine: Logica aangepast zodat blueprints zonder ME-research activity (zoals Faction) expliciet `default_me = 0` krijgen. De eerdere "vroege return" hiervoor is verwijderd, zodat de rest van de functie (zoals `max_runs` evaluatie) wel gewoon doorloopt voor deze types items.
+- BOM Engine: Logica aangepast zodat blueprints zonder ME-research activity expliciet `default_me = 0` krijgen. De check op `EveIndustryActivityDuration(activity_id=4)` bleek echter ook `True` terug te geven voor Faction BPCs zoals de Vindicator, doordat deze stiekem wél een duration in de SDE hebben. Daarom is de check uitgebreid: blueprints die niet op de markt beschikbaar zijn (waarbij `eve_market_group_id is None` en `is_invented=False`) worden nu correct herkend als Faction/Storyline BPCs en krijgen ME = 0.
 - BOM Engine: Bugfix voor ontbrekende `activity_id` query opgelost door `EveIndustryActivityDuration` te bevragen in plaats van `EveIndustryActivity`.
 - Taken: Bugfix voor `tasks/wallets.py` om `EveCorporationInfo` via Alliance Auth core in te laden in plaats van locale app models.
 - Versie verhoogd naar 0.3.2 in `__init__.py`.

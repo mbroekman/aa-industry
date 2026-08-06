@@ -243,7 +243,7 @@
                     {% for char_group in char_planets %}
                     <div id="pi-view-planets-{{ char_group.grouper.character_id }}" class="d-none pi-planets-container">
                         <div class="d-flex align-items-center mb-4">
-                            <button class="btn btn-outline-secondary me-3 shadow-none" onclick="showCharacters()"><i class="fas fa-arrow-left"></i> Back</button>
+                            <button class="btn btn-secondary me-3 shadow-none" onclick="showCharacters()"><i class="fas fa-arrow-left"></i> Back</button>
                             <img src="https://images.evetech.net/characters/{{ char_group.grouper.character_id }}/portrait?size=32" class="rounded-circle border border-secondary me-2">
                             <h4 class="mb-0 text-white">{{ char_group.grouper.character_name }}'s Planets</h4>
                         </div>
