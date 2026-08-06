@@ -160,9 +160,9 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         default_me = 0
     else:
         # Third Party
-        from eveuniverse.models import EveIndustryActivity
+        from eveuniverse.models import EveIndustryActivityDuration
 
-        has_me_research = EveIndustryActivity.objects.filter(
+        has_me_research = EveIndustryActivityDuration.objects.filter(
             eve_type_id=bp_prod.eve_type_id, activity_id=4
         ).exists()
 
