@@ -81,6 +81,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             bom_parent__isnull=True,
         )
         .select_related("item_type", "bom_parent")
+        .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
         .annotate(
             incomplete_children_count=Count(
                 "bom_children", filter=~Q(bom_children__status="COMPLETED")

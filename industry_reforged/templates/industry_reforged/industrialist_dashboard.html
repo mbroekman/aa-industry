@@ -257,6 +257,17 @@
                                                                     height="24" class="me-2 rounded">
                                                                 <div>
                                                                     <span><span class="badge bg-secondary me-1">{{ task.activity_name }}</span> {{ task.item_type.name }}</span>
+                                                                    {% if task.linked_jobs.all %}
+                                                                    <div class="mt-1 small">
+                                                                        {% for link in task.linked_jobs.all %}
+                                                                            {% with job=link.character_job|default:link.corporation_job %}
+                                                                            <span class="badge {% if job.status == 'delivered' %}bg-success{% elif job.status == 'ready' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}" title="ESI Job: {{ job.job_id }}">
+                                                                                <i class="fas fa-industry"></i> {{ job.status|title }} ({{ link.linked_runs }} runs)
+                                                                            </span>
+                                                                            {% endwith %}
+                                                                        {% endfor %}
+                                                                    </div>
+                                                                    {% endif %}
                                                                 </div>
                                                             </div>
                                                         </td>

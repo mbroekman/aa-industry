@@ -134,3 +134,25 @@ class CorporationIndustryJob(models.Model):
 
     def __str__(self):
         return f"{self.corporation.corporation_name} - Job {self.job_id}"
+
+
+class TaskJobLink(models.Model):
+    task = models.ForeignKey(
+        "ProductionTask", on_delete=models.CASCADE, related_name="linked_jobs"
+    )
+    character_job = models.ForeignKey(
+        "CharacterIndustryJob", on_delete=models.CASCADE, null=True, blank=True
+    )
+    corporation_job = models.ForeignKey(
+        "CorporationIndustryJob", on_delete=models.CASCADE, null=True, blank=True
+    )
+
+    # Amount of runs linked from this job to this task
+    linked_runs = models.IntegerField(default=1)
+
+    class Meta:
+        verbose_name = _("Task Job Link")
+        verbose_name_plural = _("Task Job Links")
+
+    def __str__(self):
+        return f"Link Task {self.task_id} -> Job {self.character_job_id or self.corporation_job_id}"
