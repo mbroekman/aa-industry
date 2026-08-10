@@ -21,8 +21,13 @@ from .factories import (
 
 @pytest.fixture
 def mock_fuzzwork():
+    # Django
+    from django.core.cache import cache
+
+    cache.clear()
     with patch("industry_reforged.utils.pricing_engine.requests.get") as mock_get:
         yield mock_get
+        cache.clear()
 
 
 @pytest.mark.django_db
