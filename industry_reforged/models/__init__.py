@@ -19,6 +19,7 @@ from .pi import CharacterPlanet, PlanetPin, UserPIConfig
 from .wallet import (
     CorpWalletDivision,
     CorpWalletJournal,
+    LedgerTransaction,
     TaxConfig,
     WalletJournalSyncState,
 )
@@ -53,4 +54,5 @@ __all__ = [
     "CorporationWebhookConfig",
     "CorpMOTD",
     "CorpInventory",
+    "LedgerTransaction",
 ]

@@ -1,0 +1,6 @@
+<div class="progress mt-1">
+    <div class="progress-bar bg-success" role="progressbar"
+        style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;">
+    </div>
+</div>
+<small class="numeric">{{ order.progress_percent|floatformat:2 }}%</small>

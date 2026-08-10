@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Director Dashboard**: Added a "Ledger Transactions" tab to track all internal payouts and payments.
+- **Personal Dashboard**: Added a dedicated "Research & Invention" tab that groups research jobs (ME/TE/Copying/Invention) per character.
+- **Personal Dashboard**: Added a "Character" column to the Manufacturing Jobs tables.
+
+## [0.3.3] - 09-08-2026
+
+### Added
+
+- **UI Dashboard**: Added a search bar to the "Build Steps" summary tab.
+- **UI Dashboard**: Added a legend to the active tasks list to clarify the behavior of the blue and yellow "Complete" buttons.
+- **UI Dashboard**: Added copy-to-clipboard icons for item names in the Build Steps tab, and for ISK amounts/references in the Director Payouts tab to easily paste values in-game.
+
+### Changed
+
+- **UI Dashboard**: Flattened the production tasks lists in the Claimed Jobs tab; hierarchical tree views and indentations have been removed for better overview.
+- **UI Dashboard**: Replaced "Order Progress" text with "Material Progress".
+- **UI Dashboard**: The Material Progress badge now tracks actual "Available" materials, accurately deducting completed materials that have already been consumed by downstream tasks in production.
+- **UI Dashboard**: In the Build Steps summary, renamed the "To Build" column to "Claimed" and updated the "Remaining" formula to subtract "EVE In Progress" amounts as well.
+
+### Fixed
+
+- **UI Dashboard**: Fixed a styling issue in the Darkly theme where the `bg-dark-subtle` class resulted in unreadable white text on a light gray background.
+- **Payouts**: Tasks with a reward of 0 are now filtered out from the Recent Completed Tasks list.
+- **Payouts**: Fixed missing ISK formatting on reward amounts in the ledger.
+- **Backend**: Resolved a `TypeError` (`unsupported operand type(s) for +: "QuerySet" and "list"`) in the industrialist dashboard view.
+- **Backend**: Resolved row displacement bugs in DataTables caused by residual tree-rendering javascript.
+
 ## [0.3.2] - 06-08-2026
 
 ### Fixed

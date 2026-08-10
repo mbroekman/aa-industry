@@ -61,11 +61,11 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     # Unclaimed tasks
     unclaimed_tasks_qs = (
-        ProductionTask.objects.filter(status="UNCLAIMED", bom_parent__isnull=True)
+        ProductionTask.objects.filter(status="UNCLAIMED")
         .select_related("item_type", "bom_parent", "created_from_order")
         .order_by("created_from_order__created_at", "id")
     )
-    unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
+    unclaimed_tasks = list(unclaimed_tasks_qs)
 
     # My active tasks
     # Django
@@ -78,7 +78,6 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         ProductionTask.objects.filter(
             status="IN_PRODUCTION",
             assigned_to_id__in=user_characters,
-            bom_parent__isnull=True,
         )
         .select_related("item_type", "bom_parent")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
@@ -89,12 +88,17 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         )
         .order_by("-assigned_at", "id")
     )
-    my_tasks = build_task_tree(my_tasks_qs)
+    my_tasks = list(my_tasks_qs)
 
     # My completed tasks (limit to recent 10 to avoid clutter)
-    my_completed_tasks = ProductionTask.objects.filter(
-        status="COMPLETED", assigned_to_id__in=user_characters, bom_parent__isnull=True
-    ).order_by("-completed_at")[:10]
+    my_completed_tasks = list(
+        ProductionTask.objects.filter(
+            status="COMPLETED", assigned_to_id__in=user_characters
+        )
+        .select_related("item_type")
+        .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
+        .order_by("-completed_at")[:10]
+    )
 
     # Summary of claimed tasks vs active jobs
     my_claimed_summary = []
@@ -185,7 +189,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             completed = item["total_completed"] or 0
 
             # Remaining is what still needs to be completed
-            remaining = max(0, to_build - completed)
+            remaining = max(0, to_build - in_progress - completed)
 
             my_claimed_summary.append(
                 {
@@ -234,6 +238,89 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "slogan": random.choice(slogans),
     }
 
+    # My payout tasks for the Payment Summary tab
+    my_payout_tasks = (
+        ProductionTask.objects.filter(
+            status="COMPLETED", assigned_to_id__in=user_characters, builder_reward__gt=0
+        )
+        .select_related("item_type", "payout_batch")
+        .order_by("-completed_at")
+    )
+
+    # Builder task progress tracking
+    active_order_ids = set()
+    for task in my_tasks + my_completed_tasks:
+        if task.created_from_order_id:
+            active_order_ids.add(task.created_from_order_id)
+
+    order_progress = {}
+    if active_order_ids:
+        # Django
+        from django.db.models import Exists, OuterRef, Sum
+
+        from ..models import TaskJobLink
+
+        has_linked_jobs = TaskJobLink.objects.filter(task_id=OuterRef("bom_parent_id"))
+
+        progress_qs = (
+            ProductionTask.objects.filter(created_from_order_id__in=active_order_ids)
+            .annotate(parent_has_jobs=Exists(has_linked_jobs))
+            .values("created_from_order_id", "item_type_id")
+            .annotate(
+                total_qty=Sum("quantity"),
+                completed_qty=Sum("quantity", filter=Q(status="COMPLETED")),
+                consumed_qty=Sum(
+                    "quantity",
+                    filter=Q(status="COMPLETED")
+                    & (
+                        Q(bom_parent__status="COMPLETED")
+                        | (
+                            Q(bom_parent__status="IN_PRODUCTION")
+                            & Q(parent_has_jobs=True)
+                        )
+                    ),
+                ),
+            )
+        )
+        for p in progress_qs:
+            comp = p["completed_qty"] or 0
+            cons = p["consumed_qty"] or 0
+            order_progress[(p["created_from_order_id"], p["item_type_id"])] = {
+                "total": p["total_qty"] or 0,
+                "completed": comp,
+                "consumed": cons,
+                "available": comp - cons,
+            }
+
+    for task in my_tasks + my_completed_tasks:
+        # Order Progress
+        if task.created_from_order_id:
+            prog = order_progress.get((task.created_from_order_id, task.item_type_id))
+            if prog:
+                task.order_total_qty = prog["total"]
+                task.order_completed_qty = prog["completed"]
+                task.order_consumed_qty = prog["consumed"]
+                task.order_available_qty = prog["available"]
+
+        # EVE Progress
+        eve_delivered = 0
+        eve_active = 0
+        portion_size = 1
+        if getattr(task.item_type, "portion_size", 0) > 0:
+            portion_size = task.item_type.portion_size
+
+        for link in getattr(task, "linked_jobs_cached", task.linked_jobs.all()):
+            job = link.character_job or link.corporation_job
+            if job:
+                if job.status == "delivered":
+                    eve_delivered += link.linked_runs * portion_size
+                elif job.status in ["active", "ready"]:
+                    eve_active += link.linked_runs * portion_size
+
+        task.eve_delivered_qty = eve_delivered
+        task.eve_active_qty = eve_active
+        task.eve_remaining_qty = max(0, task.quantity - eve_delivered)
+
     context = {
         "title": "Industrialist Dashboard",
         "motd": motd,
@@ -243,6 +330,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "my_completed_tasks": my_completed_tasks,
         "corp_active_jobs": corp_active_jobs,
         "my_claimed_summary": my_claimed_summary,
+        "my_payout_tasks": my_payout_tasks,
     }
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
 

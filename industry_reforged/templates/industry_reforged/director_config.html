@@ -439,20 +439,32 @@
             });
         }
 
-        var hash = window.location.hash;
+        // Update the URL hash when a tab is shown
+        var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabEls.forEach(function(el) {
+            el.addEventListener('shown.bs.tab', function(event) {
+                var target = event.target.getAttribute('data-bs-target');
+                if(window.history.replaceState) {
+                    window.history.replaceState(null, null, target);
+                } else {
+                    window.location.hash = target;
+                }
+                sessionStorage.setItem('directorConfigTab', target);
+            });
+        });
+
+        var hash = window.location.hash || sessionStorage.getItem('directorConfigTab');
         if (hash) {
             var triggerEl = document.querySelector('button[data-bs-target="' + hash + '"]');
             if (triggerEl) {
-                var tab = new bootstrap.Tab(triggerEl);
-                tab.show();
+                triggerEl.click();
             }
         }
         {% if has_failed_tasks %}
         else {
             var triggerEl = document.querySelector('button[data-bs-target="#health"]');
             if (triggerEl) {
-                var tab = new bootstrap.Tab(triggerEl);
-                tab.show();
+                triggerEl.click();
             }
         }
         {% endif %}

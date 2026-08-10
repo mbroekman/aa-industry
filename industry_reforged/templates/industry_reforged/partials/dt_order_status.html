@@ -1,0 +1,5 @@
+{% if order.status == 'READY' %}
+    <span class="badge bg-success"><i class="fas fa-box-open"></i> {{ order.get_status_display }}</span>
+{% else %}
+    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+{% endif %}

@@ -7,6 +7,7 @@ from django.urls import path
 from industry_reforged.views import (
     api,
     dashboard,
+    datatables,
     director,
     facilities,
     industrialist,
@@ -95,6 +96,21 @@ urlpatterns = [
         name="industrialist_leaderboard",
     ),
     path("director/", director.director_dashboard, name="director_dashboard"),
+    path(
+        "director/api/orders/", datatables.dt_director_orders, name="dt_director_orders"
+    ),
+    path("director/api/tasks/", datatables.dt_director_tasks, name="dt_director_tasks"),
+    path(
+        "director/api/buy-orders/",
+        datatables.dt_director_buy_orders,
+        name="dt_director_buy_orders",
+    ),
+    path(
+        "director/api/transactions/",
+        datatables.dt_director_transactions,
+        name="dt_director_transactions",
+    ),
+    path("corporate/api/jobs/", datatables.dt_corporate_jobs, name="dt_corporate_jobs"),
     path(
         "director/order/<int:order_id>/delivered/",
         director.mark_order_delivered,

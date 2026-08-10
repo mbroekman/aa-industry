@@ -1,0 +1,14 @@
+<form method="post" action="{% url 'industry_reforged:update_buy_order_status' buy_order.id %}" class="d-inline">
+    {% csrf_token %}
+    <select name="status" class="form-select form-select-sm d-inline w-auto me-1" onchange="this.form.submit()">
+        <option value="OPEN" {% if buy_order.status == 'OPEN' %}selected{% endif %}>Open</option>
+        <option value="IN_PROGRESS" {% if buy_order.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+        <option value="FULFILLED" {% if buy_order.status == 'FULFILLED' %}selected{% endif %}>Fulfilled</option>
+    </select>
+</form>
+<form method="post" action="{% url 'industry_reforged:delete_buy_order' buy_order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete this Buy Order?" data-btn-class="btn-danger">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+        <i class="fas fa-trash-alt"></i>
+    </button>
+</form>

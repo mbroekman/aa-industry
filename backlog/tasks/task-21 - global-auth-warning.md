@@ -6,8 +6,9 @@ assignee: []
 created_date: '2026-08-06 12:43'
 updated_date: '2026-08-06 12:43'
 labels: []
-dependencies: ['TASK-20']
-ordinal: 22000
+dependencies:
+  - TASK-20
+ordinal: 23000
 ---
 
 ## Description

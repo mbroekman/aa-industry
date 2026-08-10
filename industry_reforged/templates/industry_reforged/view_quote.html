@@ -293,6 +293,12 @@
                                                 <th colspan="4" class="text-end fs-4">{% trans "Current Quote Total:" %}</th>
                                                 <th class="text-end fs-4 text-warning numeric">{{ order.total_price|eve_isk }}</th>
                                             </tr>
+                                            {% if order.upfront_payment > 0 %}
+                                            <tr>
+                                                <th colspan="4" class="text-end fs-5 text-warning">{% trans "Upfront Payment Required:" %}</th>
+                                                <th class="text-end fs-5 text-warning numeric">{{ order.upfront_payment|eve_isk }}</th>
+                                            </tr>
+                                            {% endif %}
                                         </tfoot>
                                         </table>
                                         {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
@@ -468,6 +474,11 @@
                                         {% if order.accepted_at %}
                                         <dt class="col-sm-4 text-success"><i class="fas fa-check-circle"></i> {% trans "Accepted" %}</dt>
                                         <dd class="col-sm-8 text-success numeric">{{ order.accepted_at|date:"Y-m-d H:i" }}</dd>
+                                        {% endif %}
+
+                                        {% if order.upfront_payment > 0 %}
+                                        <dt class="col-sm-4 text-warning"><i class="fas fa-coins"></i> {% trans "Upfront Required" %}</dt>
+                                        <dd class="col-sm-8 text-warning numeric">{{ order.upfront_payment|eve_isk }}</dd>
                                         {% endif %}
 
                                         {% if order.status != 'REQUESTED' and order.status != 'REJECTED' %}

@@ -13,7 +13,6 @@ from ..forms import UserPIConfigForm
 from ..models import (
     CharacterIndustryJob,
     CharacterPlanet,
-    CorporationIndustryJob,
     MemberOrder,
     UserPIConfig,
 )
@@ -42,8 +41,31 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     )
 
     active_statuses = ["active", "paused", "ready"]
-    active_jobs = [j for j in jobs if j.status in active_statuses]
-    history_jobs = [j for j in jobs if j.status not in active_statuses]
+
+    manufacturing_activities = [1, 9]
+    research_activities = [3, 4, 5, 8]
+
+    active_jobs = [
+        j
+        for j in jobs
+        if j.status in active_statuses and j.activity_id in manufacturing_activities
+    ]
+    history_jobs = [
+        j
+        for j in jobs
+        if j.status not in active_statuses and j.activity_id in manufacturing_activities
+    ]
+
+    active_research_jobs = [
+        j
+        for j in jobs
+        if j.status in active_statuses and j.activity_id in research_activities
+    ]
+    history_research_jobs = [
+        j
+        for j in jobs
+        if j.status not in active_statuses and j.activity_id in research_activities
+    ]
 
     planets = list(
         CharacterPlanet.objects.filter(character_id__in=user_characters)
@@ -84,6 +106,8 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     context = {
         "active_jobs": active_jobs,
         "history_jobs": history_jobs,
+        "active_research_jobs": active_research_jobs,
+        "history_research_jobs": history_research_jobs,
         "planets": planets,
         "pi_config_form": pi_config_form,
         "title": "Personal Industry Dashboard",
@@ -95,20 +119,9 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def corporate_dashboard(request: WSGIRequest) -> HttpResponse:
     """Corporate Dashboard View"""
-    user_corps = request.user.character_ownerships.all().values_list(
-        "character__corporation_id", flat=True
-    )
-    jobs = (
-        CorporationIndustryJob.objects.filter(
-            corporation__corporation_id__in=user_corps
-        )
-        .select_related("blueprint_type", "product_type", "installer", "corporation")
-        .order_by("-end_date")
-    )
 
-    active_statuses = ["active", "paused", "ready"]
-    active_jobs = [j for j in jobs if j.status in active_statuses]
-    history_jobs = [j for j in jobs if j.status not in active_statuses]
+    active_jobs = []
+    history_jobs = []
 
     context = {
         "active_jobs": active_jobs,

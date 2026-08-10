@@ -9,12 +9,12 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
 
 ## Features
 
-- **Personal Dashboard**: Users can easily track their active, completed, and delivered industry jobs.
+- **Personal Dashboard**: Users can easily track their active, completed, and delivered manufacturing jobs. Includes a dedicated "Research & Invention" tab for tracking ME/TE/Copying and Invention jobs grouped by character.
 - **Corporate Dashboard**: Directors and Managers can monitor all corporate industry jobs, discover and explicitly configure Production Facilities, set Default Corporate Structures, and auto-sync installed structure rigs from a centralized overview.
 - **Member Portal (Self-Service)**: Members can request hulls, structures, or components, paste EFT fits directly to automatically parse requirements, and go through a professional quoting flow featuring **Exact EVE Math** for material calculations (Director approval -> User acceptance).
-- **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD.
+- **Industrialist Dashboard (Job Market)**: Corp builders can claim automated production tasks, track their history, compete on Gamification Leaderboards, and view real-time industry statistics via the Dynamic MOTD. Claimed task lists are flattened for clean oversight, and Material Progress badges accurately deduct EVE-consumed components.
 - **Recursive BOM Drilldown & Shopping List Treeview**: Builders and Directors can interactively drill down through complex order Bills of Materials to the base raw materials, generating customized EVE Multibuy shopping lists for specific intermediate components, and view fully interactive Production Trees with Modifier Badges (ME, Rigs, Structure) directly within the Consolidated Shopping Lists.
-- **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices entirely from the front-end (no Django Admin access required).
+- **Director Control Panel**: Complete ERP solution for directors to manage orders, provide custom quotes, prioritize tasks, analyze missing stock, and set rules for Material Efficiency and Prices entirely from the front-end. Includes easy copy-to-clipboard icons for payout amounts and references to streamline in-game payments.
 - **Corporate Wallets**: Track ISK balances and journal transactions across all 7 corporate wallet divisions. Directors can set custom **Warning Thresholds** per wallet division to trigger Discord alerts when balances drop too low.
 - **Smart ISK Formatting**: Features a built-in abbreviation engine that automatically formats large ISK values and displays precise tooltip translations (e.g., K, M, B, T) when hovered.
 - **Core Engine & Automation**: Automated Celery tasks to synchronize Corporate ESI Hangars, calculate complex Bills of Materials (SDE vs Fuzzwork API), and trigger jobs based on Target Thresholds.
@@ -23,6 +23,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
   - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
   - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed, quotes are updated, or orders are fully built and ready for delivery.
 - **Automated Payment Tracking**: Generate unique references for member orders and builder payouts. The background ESI Wallet Sync task automatically reads the corporate wallet journal, accumulates partial payments, logs them as order notes, and marks orders as "Paid" once the full amount is reached. Supports upfront payment requirements (downpayments).
+- **Transaction Ledger**: View a comprehensive history of all internal payments and payouts on the Director Dashboard.
 - **System Health Monitor**: A dedicated tab in the Director Configurations page that provides real-time logging and status updates for all Celery background tasks, including exact execution duration and Python error stack traces.
 - **Multilingual Support (i18n)**: Fully translatable UI using Django gettext (`django.po`). Prepare custom translations for your community (e.g., English, Dutch, etc.).
 - **DataTables**: Clean, sortable, and searchable tables for quick insights.
@@ -155,17 +156,17 @@ from celery.schedules import crontab
 if "CELERYBEAT_SCHEDULE" not in locals():
     CELERYBEAT_SCHEDULE = {}
 
-CELERYBEAT_SCHEDULE["industry_update_character_jobs"] = {
+CELERYBEAT_SCHEDULE["industry_reforged_update_character_jobs"] = {
     "task": "industry_reforged.tasks.update_character_jobs",
     "schedule": crontab(minute="*/30"),
 }
 
-CELERYBEAT_SCHEDULE["industry_update_corporation_jobs"] = {
+CELERYBEAT_SCHEDULE["industry_reforged_update_corporation_jobs"] = {
     "task": "industry_reforged.tasks.update_corporation_jobs",
     "schedule": crontab(minute="*/30"),
 }
 
-CELERYBEAT_SCHEDULE["industry_update_character_pi"] = {
+CELERYBEAT_SCHEDULE["industry_reforged_update_character_pi"] = {
     "task": "industry_reforged.tasks.update_character_pi",
     "schedule": crontab(minute="0"),
 }

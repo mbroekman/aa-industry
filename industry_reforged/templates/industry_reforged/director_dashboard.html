@@ -52,13 +52,20 @@
                         <i class="fas fa-shopping-basket"></i> Procurement Buy Orders
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions-pane"
+                        type="button" role="tab" aria-controls="transactions-pane" aria-selected="false">
+                        <i class="fas fa-book"></i> Ledger Transactions
+                    </button>
+                </li>
             </ul>
         </div>
         <div class="card-body">
             <div class="tab-content" id="director-tabContent">
                 <!-- Orders Tab -->
                 <div class="tab-pane fade show active" id="orders-pane" role="tabpanel" aria-labelledby="orders-tab" tabindex="0">
-                    <form method="get" action="#orders-pane" class="d-flex align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
+                        <form method="get" action="#orders-pane" class="d-flex align-items-center mb-0 gap-2 custom-filters">
                         <select name="status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
                             <option value="">{% trans "All Statuses" %}</option>
                             <option value="REQUESTED" {% if request.GET.status == 'REQUESTED' %}selected{% endif %}>{% trans "Requested" %}</option>
@@ -81,7 +88,9 @@
                             <option value="-id" {% if request.GET.sort == '-id' %}selected{% endif %}>{% trans "Order ID (High-Low)" %}</option>
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
-                    </form>
+                        </form>
+                        <div class="dt-search-placeholder" data-table-target="#order-management-table"></div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover m-0 w-100 dataTable" id="order-management-table">
                             <thead>
@@ -96,111 +105,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for order in all_orders %}
-                                <tr>
-                                    <td>#{{ order.id }}
-                                        {% if order.child_orders.exists %}
-                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has sub-orders">
-                                            <i class="fas fa-sitemap"></i> +{{ order.child_orders.count }}
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ order.character.character_name }}</td>
-                                    <td class="numeric text-warning text-end">{{order.total_price|eve_isk }}</td>
-                                    <td>
-                                        {% if order.payment_reference %}
-                                            <code>{{ order.payment_reference }}</code>
-                                            {% if order.is_paid %}
-                                                <span class="badge bg-success ms-1"><i class="fas fa-check"></i> Paid</span>
-                                            {% else %}
-                                                <span class="badge bg-danger ms-1">Unpaid</span>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if order.status == 'READY' %}
-                                            <span class="badge bg-success"><i class="fas fa-box-open"></i> {{ order.get_status_display }}</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ order.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="progress mt-1">
-                                            <div class="progress-bar bg-success" role="progressbar"
-                                                style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;">
-                                            </div>
-                                        </div>
-                                        <small class="numeric">{{ order.progress_percent|floatformat:2 }}%</small>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="{% url 'industry_reforged:view_quote' order.id %}" class="btn btn-sm btn-primary show-loader"><i class="fas fa-eye"></i> View</a>
-                                            {% if not order.is_paid %}
-                                            <button type="button" class="btn btn-sm btn-outline-success payment-modal-btn"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#paymentModal"
-                                                data-order-id="{{ order.id }}"
-                                                data-order-ref="{{ order.payment_reference }}"
-                                                data-order-remaining="{{ order.remaining_balance|stringformat:'f' }}"
-                                                data-action-url="{% url 'industry_reforged:mark_order_paid' order.id %}">
-                                                <i class="fas fa-money-bill-wave"></i> Process Payment
-                                            </button>
-                                            {% endif %}
-                                            {% if order.status == 'READY' %}
-                                            <form method="post" action="{% url 'industry_reforged:mark_order_delivered' order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to mark this as delivered? Ensure the contract is made in-game." data-btn-class="btn-success">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="fas fa-truck"></i> Deliver
-                                                </button>
-                                            </form>
-                                            {% endif %}
-                                            <form method="post" action="{% url 'industry_reforged:delete_order' order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to permanently delete this order? All associated production tasks will also be cancelled and deleted." data-btn-class="btn-danger">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                    <i class="fas fa-trash-alt"></i> Delete
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% for child in order.child_orders.all %}
-                                <tr class="table-active">
-                                    <td class="ps-4 text-muted"><i class="fas fa-level-up-alt fa-rotate-90"></i> #{{ child.id }}
-                                        {% if child.child_orders.exists %}
-                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has nested sub-orders">
-                                            <i class="fas fa-sitemap"></i> +{{ child.child_orders.count }}
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-muted">{{ child.character.character_name }}</td>
-                                    <td class="numeric text-warning text-end" style="opacity: 0.8;">{{ child.total_price|eve_isk }}</td>
-                                    <td>
-                                        <span class="text-muted"><i class="fas fa-ban"></i> {% trans "Managed via Parent" %}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary" style="opacity: 0.8;" data-bs-toggle="tooltip" title="Inherited from Parent Order">
-                                            <i class="fas fa-link"></i> {% trans "Linked" %}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="progress mt-1" style="opacity: 0.8;">
-                                            <div class="progress-bar bg-success" role="progressbar"
-                                                style="width: {{ child.progress_percent }}%; box-shadow: 0 0 8px #28a745;">
-                                            </div>
-                                        </div>
-                                        <small class="numeric text-muted">{{ child.progress_percent|floatformat:2 }}%</small>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <a href="{% url 'industry_reforged:view_quote' child.id %}" class="btn btn-sm btn-outline-primary show-loader me-2"><i class="fas fa-eye"></i> {% trans "View" %}</a>
-                                            <span class="text-muted small"><i class="fas fa-ban"></i> {% trans "Managed via Parent" %}</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -254,7 +158,8 @@
                 </div>
 
                 <div class="tab-pane fade" id="tasks-pane" role="tabpanel" aria-labelledby="tasks-tab" tabindex="0">
-                    <form method="get" action="#tasks-pane" class="d-flex align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
+                        <form method="get" action="#tasks-pane" class="d-flex align-items-center mb-0 gap-2 custom-filters">
                         <select name="task_status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
                             <option value="">{% trans "All Statuses" %}</option>
                             <option value="UNCLAIMED" {% if request.GET.task_status == 'UNCLAIMED' %}selected{% endif %}>{% trans "Unclaimed" %}</option>
@@ -276,7 +181,9 @@
                             <option value="-id" {% if request.GET.task_sort == '-id' %}selected{% endif %}>{% trans "Task ID (High-Low)" %}</option>
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
-                    </form>
+                        </form>
+                        <div class="dt-search-placeholder" data-table-target="#production-tasks-table"></div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover m-0 w-100 dataTable" id="production-tasks-table">
                             <thead>
@@ -291,29 +198,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for task in all_tasks %}
-                                <tr>
-                                    <td>{{ task.item_type.name }}</td>
-                                    <td class="numeric">{{ task.quantity }}</td>
-                                    <td><span class="badge bg-secondary">{{ task.get_status_display }}</span></td>
-                                    <td>
-                                        <span
-                                            class="badge {% if task.priority == 'HIGH' %}bg-danger{% elif task.priority == 'NORMAL' %}bg-primary{% else %}bg-secondary{% endif %}">
-                                            {{ task.priority }}
-                                        </span>
-                                    </td>
-                                    <td>{{ task.assigned_to.character_name|default:"-" }}</td>
-                                    <td class="text-end numeric text-warning">{% if task.builder_reward %}{{ task.builder_reward|eve_isk }}{% else %}-{% endif %}</td>
-                                    <td class="text-end">
-                                        <form method="post" action="{% url 'industry_reforged:delete_production_task' task.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete this Production Task?" data-btn-class="btn-danger">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -378,20 +262,6 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {% for task in payout_tasks %}
-                                            <tr>
-                                                <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <img onerror="handleImageFallback(this, {{ task.item_type.id }})" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32" alt="{{ task.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                                        <span>{{ task.item_type.name }}</span>
-                                                    </div>
-                                                </td>
-                                                <td class="text-end numeric">{{ task.quantity }}</td>
-                                                <td>{{ task.assigned_to.character_name }}</td>
-                                                <td class="text-end numeric text-warning">{{ task.builder_reward|eve_isk }}</td>
-                                                <td class="text-end numeric text-muted small">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
-                                            </tr>
-                                            {% endfor %}
                                         </tbody>
                                     </table>
                                 </div>
@@ -420,9 +290,15 @@
                                             {% for batch in payout_batches %}
                                             {% if batch.status == 'PENDING' %}
                                             <tr>
-                                                <td><code>{{ batch.payment_reference }}</code></td>
+                                                <td>
+                                                    <code>{{ batch.payment_reference }}</code>
+                                                    <i class="far fa-copy ms-1 text-muted cursor-pointer" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ batch.payment_reference|escapejs }}'); this.classList.remove('fa-copy', 'far'); this.classList.add('fa-check', 'fas', 'text-success'); setTimeout(() => { this.classList.remove('fa-check', 'fas', 'text-success'); this.classList.add('fa-copy', 'far'); }, 1500);" title="{% trans 'Copy to clipboard' %}"></i>
+                                                </td>
                                                 <td>{{ batch.builder.character_name }}</td>
-                                                <td class="text-end numeric text-warning fw-bold">{{ batch.total_amount|eve_isk }}</td>
+                                                <td class="text-end numeric text-warning fw-bold">
+                                                    {{ batch.total_amount|eve_isk }}
+                                                    <i class="far fa-copy ms-1 text-muted cursor-pointer" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ batch.total_amount }}'); this.classList.remove('fa-copy', 'far'); this.classList.add('fa-check', 'fas', 'text-success'); setTimeout(() => { this.classList.remove('fa-check', 'fas', 'text-success'); this.classList.add('fa-copy', 'far'); }, 1500);" title="{% trans 'Copy to clipboard' %}"></i>
+                                                </td>
                                                 <td><span class="badge bg-warning text-dark">{{ batch.status }}</span></td>
                                                 <td class="text-end numeric">{{ batch.created_at|date:"Y-m-d H:i" }}</td>
                                                 <td class="text-end">
@@ -449,6 +325,9 @@
                     <div class="alert alert-info shadow-sm mb-4">
                         <i class="fas fa-info-circle"></i> Procurement Buy Orders are generated from Low Stock deficits when the item is marked as <strong>"Buy"</strong> in the Item Configuration.
                     </div>
+                    <div class="d-flex justify-content-end align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
+                        <div class="dt-search-placeholder" data-table-target="#buy-orders-table"></div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover m-0 w-100 dataTable" id="buy-orders-table">
                             <thead>
@@ -462,44 +341,38 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for buy_order in buy_orders %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Transactions Tab -->
+                <div class="tab-pane fade" id="transactions-pane" role="tabpanel" aria-labelledby="transactions-tab" tabindex="0">
+                    <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
+                        <div class="d-flex align-items-center gap-2 custom-filters">
+                            <select id="tx-filter-select" class="form-select bg-dark text-white border-secondary form-select-sm" style="width: auto;" onchange="$('#transactions-table').DataTable().draw()">
+                                <option value="all">{% trans "All" %}</option>
+                                <option value="payout">{% trans "Payouts" %}</option>
+                                <option value="received">{% trans "Received" %}</option>
+                                <option value="pending">{% trans "Pending (To be paid)" %}</option>
+                            </select>
+                        </div>
+                        <div class="dt-search-placeholder" data-table-target="#transactions-table"></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 w-100 dataTable" id="transactions-table">
+                            <thead>
                                 <tr>
-                                    <td>#{{ buy_order.id }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <img onerror="handleImageFallback(this, {{ buy_order.item_type.id }})" src="https://images.evetech.net/types/{{ buy_order.item_type.id }}/icon?size=32" alt="{{ buy_order.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                            {{ buy_order.item_type.name }}
-                                        </div>
-                                    </td>
-                                    <td class="text-end numeric">{{ buy_order.quantity|intcomma }}</td>
-                                    <td>
-                                        {% if buy_order.status == 'OPEN' %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-box-open"></i> {{ buy_order.get_status_display }}</span>
-                                        {% elif buy_order.status == 'IN_PROGRESS' %}
-                                        <span class="badge bg-primary"><i class="fas fa-truck-loading"></i> {{ buy_order.get_status_display }}</span>
-                                        {% elif buy_order.status == 'FULFILLED' %}
-                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> {{ buy_order.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ buy_order.created_at|date:"Y-m-d H:i" }}</td>
-                                    <td class="text-end">
-                                        <form method="post" action="{% url 'industry_reforged:update_buy_order_status' buy_order.id %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <select name="status" class="form-select form-select-sm d-inline w-auto me-1" onchange="this.form.submit()">
-                                                <option value="OPEN" {% if buy_order.status == 'OPEN' %}selected{% endif %}>Open</option>
-                                                <option value="IN_PROGRESS" {% if buy_order.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
-                                                <option value="FULFILLED" {% if buy_order.status == 'FULFILLED' %}selected{% endif %}>Fulfilled</option>
-                                            </select>
-                                        </form>
-                                        <form method="post" action="{% url 'industry_reforged:delete_buy_order' buy_order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete this Buy Order?" data-btn-class="btn-danger">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Character</th>
+                                    <th>Reference</th>
+                                    <th>Director</th>
+                                    <th>Notes</th>
                                 </tr>
-                                {% endfor %}
+                            </thead>
+                            <tbody>
                             </tbody>
                         </table>
                     </div>
@@ -569,23 +442,47 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmModal = new bootstrap.Modal(document.getElementById('actionModal'));
     }
 
-    var hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    let hash = window.location.hash;
+
+    if (tabParam) {
+        hash = '#' + tabParam + '-pane';
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + hash;
+        window.history.replaceState({path:newUrl}, '', newUrl);
+    }
+
+    hash = hash || sessionStorage.getItem('directorDashboardTab');
+
+    // Update the URL hash when a tab is shown
+    var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabEls.forEach(function(el) {
+        el.addEventListener('shown.bs.tab', function(event) {
+            var target = event.target.getAttribute('data-bs-target');
+            if(window.history.replaceState) {
+                window.history.replaceState(null, null, target);
+            } else {
+                window.location.hash = target;
+            }
+            sessionStorage.setItem('directorDashboardTab', target);
+        });
+    });
+
     if (hash) {
         var triggerEl = document.querySelector('button[data-bs-target="' + hash + '"]');
         if (triggerEl) {
-            var tab = new bootstrap.Tab(triggerEl);
-            tab.show();
+            triggerEl.click();
         }
     }
 
-    document.querySelectorAll('.require-confirmation').forEach(form => {
-        form.addEventListener('submit', function(e) {
+    document.body.addEventListener('submit', function(e) {
+        if (e.target.matches('.require-confirmation')) {
             e.preventDefault();
-            formToSubmit = this;
-            const msg = this.getAttribute('data-action-msg') || "Are you sure?";
+            formToSubmit = e.target;
+            const msg = formToSubmit.getAttribute('data-action-msg') || "Are you sure?";
             document.getElementById('actionModalMessage').textContent = msg;
 
-            const btnClass = this.getAttribute('data-btn-class') || 'btn-primary';
+            const btnClass = formToSubmit.getAttribute('data-btn-class') || 'btn-primary';
             const submitBtn = document.getElementById('actionModalSubmitBtn');
             submitBtn.className = 'btn ' + btnClass;
 
@@ -596,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     formToSubmit.submit();
                 }
             }
-        });
+        }
     });
 
     document.getElementById('actionModalSubmitBtn').addEventListener('click', function() {
@@ -605,12 +502,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.querySelectorAll('.payment-modal-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            const orderRef = this.getAttribute('data-order-ref');
-            const remaining = this.getAttribute('data-order-remaining');
-            const actionUrl = this.getAttribute('data-action-url');
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.payment-modal-btn');
+        if (btn) {
+            const orderId = btn.getAttribute('data-order-id');
+            const orderRef = btn.getAttribute('data-order-ref');
+            const remaining = btn.getAttribute('data-order-remaining');
+            const actionUrl = btn.getAttribute('data-action-url');
 
             document.getElementById('paymentModalForm').setAttribute('action', actionUrl);
             document.getElementById('paymentAmount').value = remaining;
@@ -619,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Trigger input event to update helper format
             const event = new Event('input');
             document.getElementById('paymentAmount').dispatchEvent(event);
-        });
+        }
     });
 
     function formatISK(val) {
@@ -646,6 +544,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize DataTables
     if ($('#order-management-table').length) {
         $('#order-management-table').DataTable({
+            "serverSide": true,
+            "ajax": "{% url 'industry_reforged:dt_director_orders' %}" + window.location.search,
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
@@ -664,8 +564,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if ($('#production-tasks-table').length) {
         $('#production-tasks-table').DataTable({
+            "serverSide": true,
+            "ajax": "{% url 'industry_reforged:dt_director_tasks' %}?type=all" + (window.location.search ? "&" + window.location.search.substring(1) : ""),
             "autoWidth": false,
-            "order": [] // Let backend sorting apply
+            "order": [[ 0, "desc" ]],
+            "columnDefs": [
+                { "orderable": false, "targets": [6] }
+            ]
         });
     }
     if ($('#payouts-table').length) {
@@ -679,8 +584,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if ($('#recent-completed-tasks-table').length) {
         $('#recent-completed-tasks-table').DataTable({
+            "serverSide": true,
+            "ajax": "{% url 'industry_reforged:dt_director_tasks' %}?type=recent",
             "autoWidth": false,
             "order": [[ 4, "desc" ]]
+        });
+    }
+    if ($('#buy-orders-table').length) {
+        $('#buy-orders-table').DataTable({
+            "serverSide": true,
+            "ajax": "{% url 'industry_reforged:dt_director_buy_orders' %}",
+            "autoWidth": false,
+            "order": [[ 4, "desc" ]],
+            "columnDefs": [
+                { "orderable": false, "targets": [5] }
+            ]
+        });
+    }
+    if ($('#transactions-table').length) {
+        $('#transactions-table').DataTable({
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'industry_reforged:dt_director_transactions' %}",
+                "data": function (d) {
+                    d.tx_filter = $('#tx-filter-select').val();
+                }
+            },
+            "autoWidth": false,
+            "order": [[ 0, "desc" ]],
+            "columns": [
+                { "data": "date" },
+                { "data": "type" },
+                { "data": "amount", "className": "text-end text-warning fw-bold font-monospace" },
+                { "data": "character" },
+                { "data": "reference" },
+                { "data": "director" },
+                { "data": "notes" }
+            ],
+            "columnDefs": [
+                { "orderable": false, "targets": [1, 4, 6] }
+            ]
         });
     }
     if ($('#activity-recent-tasks-table').length) {
@@ -695,6 +638,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     $('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
         $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+    });
+
+    // Move DataTables search boxes to custom filter bars
+    $('.dt-search-placeholder').each(function() {
+        var $placeholder = $(this);
+        var targetId = $placeholder.data('table-target');
+        if (targetId) {
+            var $table = $(targetId);
+            var $wrapper = $table.closest('.dataTables_wrapper');
+            if ($wrapper.length) {
+                var $search = $wrapper.find('.dataTables_filter');
+                if ($search.length) {
+                    $search.appendTo($placeholder);
+                    $search.find('input').removeClass('form-control-sm').addClass('form-control form-control-sm bg-dark text-white border-secondary');
+                    $search.find('label').addClass('mb-0 text-white d-flex align-items-center gap-2');
+
+                    // The length changer (Show X entries) is managed by base.html based on total records
+                }
+            }
+        }
     });
 });
 </script>

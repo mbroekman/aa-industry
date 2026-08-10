@@ -1,0 +1,3 @@
+<span class="badge {% if job.is_ready %}bg-success{% elif job.status == 'active' or job.status == 'delivered' %}bg-primary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+    {% if job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
+</span>

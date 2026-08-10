@@ -1,0 +1,7 @@
+{% if buy_order.status == 'OPEN' %}
+<span class="badge bg-warning text-dark"><i class="fas fa-box-open"></i> {{ buy_order.get_status_display }}</span>
+{% elif buy_order.status == 'IN_PROGRESS' %}
+<span class="badge bg-primary"><i class="fas fa-truck-loading"></i> {{ buy_order.get_status_display }}</span>
+{% elif buy_order.status == 'FULFILLED' %}
+<span class="badge bg-success"><i class="fas fa-check-circle"></i> {{ buy_order.get_status_display }}</span>
+{% endif %}

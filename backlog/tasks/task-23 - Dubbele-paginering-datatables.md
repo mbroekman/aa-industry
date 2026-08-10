@@ -7,7 +7,7 @@ created_date: '2026-08-06 17:51'
 updated_date: '2026-08-06 17:51'
 labels: []
 dependencies: []
-ordinal: 23000
+ordinal: 24000
 ---
 
 # Task 23: Dubbele Paginering op DataTables

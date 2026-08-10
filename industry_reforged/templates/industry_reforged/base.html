@@ -64,10 +64,19 @@
                 "drawCallback": function(settings) {
                     var api = this.api();
                     var wrapper = $(this).closest('.dataTables_wrapper');
-                    if (api.page.info().pages <= 1) {
+                    var pageInfo = api.page.info();
+
+                    if (pageInfo.pages <= 1) {
                         wrapper.find('.dt-pagination-row').hide();
                     } else {
                         wrapper.find('.dt-pagination-row').show();
+                    }
+
+                    // Hide the 'Show X entries' dropdown if there are 10 or fewer records in total
+                    if (pageInfo.recordsTotal <= 10) {
+                        wrapper.find('.dataTables_length').hide();
+                    } else {
+                        wrapper.find('.dataTables_length').show();
                     }
                 },
                 "language": {

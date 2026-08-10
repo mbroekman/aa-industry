@@ -1,0 +1,31 @@
+{% load i18n %}
+{% load industry_tags %}
+
+<div class="btn-group">
+    <a href="{% url 'industry_reforged:view_quote' order.id %}" class="btn btn-sm btn-primary show-loader"><i class="fas fa-eye"></i> View</a>
+    {% if not order.is_paid %}
+    <button type="button" class="btn btn-sm btn-outline-success payment-modal-btn"
+        data-bs-toggle="modal"
+        data-bs-target="#paymentModal"
+        data-order-id="{{ order.id }}"
+        data-order-ref="{{ order.payment_reference }}"
+        data-order-remaining="{{ order.remaining_balance|stringformat:'f' }}"
+        data-action-url="{% url 'industry_reforged:mark_order_paid' order.id %}">
+        <i class="fas fa-money-bill-wave"></i> Process Payment
+    </button>
+    {% endif %}
+    {% if order.status == 'READY' %}
+    <form method="post" action="{% url 'industry_reforged:mark_order_delivered' order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to mark this as delivered? Ensure the contract is made in-game." data-btn-class="btn-success">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fas fa-truck"></i> Deliver
+        </button>
+    </form>
+    {% endif %}
+    <form method="post" action="{% url 'industry_reforged:delete_order' order.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to permanently delete this order? All associated production tasks will also be cancelled and deleted." data-btn-class="btn-danger">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-trash-alt"></i> Delete
+        </button>
+    </form>
+</div>

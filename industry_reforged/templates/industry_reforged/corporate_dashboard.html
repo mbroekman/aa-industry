@@ -41,42 +41,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for job in active_jobs %}
-                                <tr>
-                                    <td>
-                                        {% if job.installer %}
-                                        <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/characters/1/portrait?size=32';" src="https://images.evetech.net/characters/{{ job.installer.character_id }}/portrait?size=32" alt="{{ job.installer.character_name }}" title="{{ job.installer.character_name }}" class="rounded-circle me-2" width="24" height="24">
-                                            <span>{{ job.installer.character_name }}</span>
-                                        </div>
-                                        {% else %}
-                                        <span class="text-muted">Unknown</span>
-                                        {% endif %}
-                                    </td>
-                                    <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
-                                    <td>
-                                        {% if job.product_type %}
-                                            <img onerror="handleImageFallback(this, {{ job.product_type.id }})" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" title="{{ job.product_type.name }}" width="24" height="24" class="me-2">
-                                            {{ job.product_type.name }}
-                                        {% elif job.blueprint_type %}
-                                            <img onerror="handleImageFallback(this, {{ job.blueprint_type.id }})" src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32" alt="{{ job.blueprint_type.name }}" title="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2">
-                                            {{ job.blueprint_type.name }}
-                                        {% else %}
-                                            <span class="text-muted">Unknown Item</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end numeric">{{ job.runs }}</td>
-                                    <td class="text-end numeric">{% if job.probability %}{{ job.probability|floatformat:2 }}%{% endif %}</td>
-                                    <td class="text-end numeric text-warning">{{ job.cost|eve_isk }}</td>
-                                    <td>{{ job.wallet_division }}</td>
-                                    <td>
-                                        <span class="badge {% if job.is_ready %}bg-success{% elif job.status == 'active' %}bg-primary{% else %}bg-secondary{% endif %}">
-                                            {% if job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
-                                        </span>
-                                    </td>
-                                    <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}</td>
-                                </tr>
-                                {% endfor %}
+                                <!-- AJAX Content -->
                             </tbody>
                         </table>
                     </div>
@@ -100,42 +65,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for job in history_jobs %}
-                                <tr>
-                                    <td>
-                                        {% if job.installer %}
-                                        <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/characters/1/portrait?size=32';" src="https://images.evetech.net/characters/{{ job.installer.character_id }}/portrait?size=32" alt="{{ job.installer.character_name }}" title="{{ job.installer.character_name }}" class="rounded-circle me-2" width="24" height="24">
-                                            <span>{{ job.installer.character_name }}</span>
-                                        </div>
-                                        {% else %}
-                                        <span class="text-muted">Unknown</span>
-                                        {% endif %}
-                                    </td>
-                                    <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
-                                    <td>
-                                        {% if job.product_type %}
-                                            <img onerror="handleImageFallback(this, {{ job.product_type.id }})" src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" title="{{ job.product_type.name }}" width="24" height="24" class="me-2">
-                                            {{ job.product_type.name }}
-                                        {% elif job.blueprint_type %}
-                                            <img onerror="handleImageFallback(this, {{ job.blueprint_type.id }})" src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32" alt="{{ job.blueprint_type.name }}" title="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2">
-                                            {{ job.blueprint_type.name }}
-                                        {% else %}
-                                            <span class="text-muted">Unknown Item</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end numeric">{{ job.runs }}</td>
-                                    <td class="text-end numeric">{{ job.successful_runs|default_if_none:"-" }}</td>
-                                    <td class="text-end numeric text-warning">{{ job.cost|eve_isk }}</td>
-                                    <td>{{ job.wallet_division }}</td>
-                                    <td>
-                                        <span class="badge {% if job.status == 'delivered' %}bg-primary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                                            {{ job.status|title }}
-                                        </span>
-                                    </td>
-                                    <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}</td>
-                                </tr>
-                                {% endfor %}
+                                <!-- AJAX Content -->
                             </tbody>
                         </table>
                     </div>
@@ -150,9 +80,13 @@
 <script>
     $(document).ready(function() {
         $('#corporate-jobs-active-table').DataTable({
+            "serverSide": true,
+            "ajax": "{% url 'industry_reforged:dt_corporate_jobs' %}?type=active",
             "order": [[ 8, "desc" ]] // Sort by End Date
         });
         $('#corporate-jobs-history-table').DataTable({
+            "serverSide": true,
+            "ajax": "{% url 'industry_reforged:dt_corporate_jobs' %}?type=history",
             "order": [[ 8, "desc" ]] // Sort by End Date
         });
     });

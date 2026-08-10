@@ -1,0 +1,8 @@
+{% if installer %}
+<div class="d-flex align-items-center">
+    <img onerror="this.onerror=null; this.src='https://images.evetech.net/characters/1/portrait?size=32';" src="https://images.evetech.net/characters/{{ installer.character_id }}/portrait?size=32" alt="{{ installer.character_name }}" title="{{ installer.character_name }}" class="rounded-circle me-2" width="24" height="24">
+    <span>{{ installer.character_name }}</span>
+</div>
+{% else %}
+<span class="text-muted">Unknown</span>
+{% endif %}

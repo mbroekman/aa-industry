@@ -82,6 +82,9 @@
             <div class="card border-0 mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">{% trans "Journal Entries" %}</h4>
+                    <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
+                        <div class="dt-search-placeholder" data-table-target="#journalTable"></div>
+                    </div>
                 </div>
                 <div class="card-body p-0" >
                     <div class="table-responsive">
@@ -137,9 +140,9 @@
             initComplete: function () {
                 this.api().columns(1).every( function () {
                     var column = this;
-                    // Create a select element and append it to the DataTables filter section
-                    var select = $('<select class="form-select form-select-sm d-inline-block w-auto ms-2" ><option value="">All Types</option></select>')
-                        .appendTo( $('#journalTable_filter') )
+                    // Create a select element and append it to our custom bar
+                    var select = $('<select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;"><option value="">All Types</option></select>')
+                        .prependTo( $('.dt-search-placeholder').parent() )
                         .on( 'change', function () {
                             var val = $.fn.dataTable.util.escapeRegex(
                                 $(this).val()
@@ -148,6 +151,7 @@
                                 .search( val ? '^'+val+'$' : '', true, false )
                                 .draw();
                         } );
+                    $('<div class="vr bg-secondary mx-1"></div>').insertAfter(select);
 
                     column.data().unique().sort().each( function ( d, j ) {
                         // Extract text from the span badge
@@ -181,6 +185,26 @@
             }
             input.addEventListener('input', updateHelper);
             updateHelper(); // trigger on load
+        });
+
+        // Move DataTables search boxes to custom filter bars
+        $('.dt-search-placeholder').each(function() {
+            var $placeholder = $(this);
+            var targetId = $placeholder.data('table-target');
+            if (targetId) {
+                var $table = $(targetId);
+                var $wrapper = $table.closest('.dataTables_wrapper');
+                if ($wrapper.length) {
+                    var $search = $wrapper.find('.dataTables_filter');
+                    if ($search.length) {
+                        $search.appendTo($placeholder);
+                        $search.find('input').removeClass('form-control-sm').addClass('form-control form-control-sm bg-dark text-white border-secondary');
+                        $search.find('label').addClass('mb-0 text-white d-flex align-items-center gap-2');
+
+                        // The length changer (Show X entries) is managed by base.html based on total records
+                    }
+                }
+            }
         });
     });
 </script>

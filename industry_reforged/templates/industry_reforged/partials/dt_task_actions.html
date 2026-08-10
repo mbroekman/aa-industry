@@ -1,0 +1,6 @@
+<form method="post" action="{% url 'industry_reforged:delete_production_task' task.id %}" class="d-inline require-confirmation" data-action-msg="Are you sure you want to delete this Production Task?" data-btn-class="btn-danger">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+        <i class="fas fa-trash-alt"></i>
+    </button>
+</form>

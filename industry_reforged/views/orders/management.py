@@ -42,7 +42,12 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
         # So we just need to recalculate the parent order's total price.
 
         # Delete related tasks explicitly since they have on_delete=models.SET_NULL
-        ProductionTask.objects.filter(created_from_order=order).delete()
+        # Include child orders in case this is a parent order, so we don't orphan child tasks
+        order_ids_to_delete = [order.id]
+        order_ids_to_delete.extend(order.child_orders.values_list("id", flat=True))
+        ProductionTask.objects.filter(
+            created_from_order_id__in=order_ids_to_delete
+        ).delete()
 
         # Discord Webhook Notification
         corporation = None
@@ -143,4 +148,11 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
             _("Order could not be found or you don't have permission to delete it."),
         )
 
+    # Redirect to referer if valid (and not the quote page of the deleted order)
+    referer = request.headers.get("referer")
+    if referer and f"/quote/{order_id}" not in referer:
+        return redirect(referer)
+
+    if is_director:
+        return redirect("industry_reforged:director_dashboard")
     return redirect("industry_reforged:orders_dashboard")

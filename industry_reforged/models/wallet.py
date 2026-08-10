@@ -5,11 +5,12 @@ App Models
 # Third Party
 
 # Django
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 
 class WalletJournalSyncState(models.Model):
@@ -101,3 +102,54 @@ class CorpWalletJournal(models.Model):
 
     def __str__(self):
         return f"Journal {self.journal_id} - {self.ref_type}"
+
+
+class LedgerTransaction(models.Model):
+    TRANSACTION_TYPES = (
+        ("INCOME", _("Income (Member Payment)")),
+        ("PAYOUT", _("Payout (Builder Batch)")),
+        ("PROCUREMENT", _("Procurement (Buy Order)")),
+    )
+
+    date = models.DateTimeField(auto_now_add=True)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+
+    character = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="ledger_transactions",
+    )
+    director = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="processed_transactions",
+    )
+
+    reference = models.CharField(max_length=100)
+    notes = models.TextField(blank=True, null=True)
+
+    member_order = models.ForeignKey(
+        "industry_reforged.MemberOrder",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
+    payout_batch = models.ForeignKey(
+        "industry_reforged.BuilderPayoutBatch",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
+
+    class Meta:
+        verbose_name = _("Ledger Transaction")
+        verbose_name_plural = _("Ledger Transactions")
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.date.strftime('%Y-%m-%d')} - {self.transaction_type} - {self.amount} ISK"

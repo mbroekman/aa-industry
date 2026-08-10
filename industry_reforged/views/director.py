@@ -37,76 +37,7 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
     from django.db.models import Count, Q, Sum
     from django.db.models.functions import Coalesce
 
-    from ..models import BuilderPayoutBatch, CorpBuyOrder
-
-    # We show orders for characters in the director's corps
-    all_orders = MemberOrder.objects.filter(parent_order__isnull=True)
-
-    status_filter = request.GET.get("status", "")
-    if status_filter in [
-        "REQUESTED",
-        "QUOTED",
-        "ACCEPTED",
-        "REJECTED",
-        "IN_PRODUCTION",
-        "READY",
-        "DELIVERED",
-    ]:
-        all_orders = all_orders.filter(status=status_filter)
-    elif status_filter == "PAID":
-        all_orders = all_orders.filter(is_paid=True)
-    elif status_filter == "UNPAID":
-        all_orders = all_orders.filter(is_paid=False)
-
-    sort_by = request.GET.get("sort", "-created_at")
-    valid_sorts = [
-        "-created_at",
-        "created_at",
-        "-total_price",
-        "total_price",
-        "-id",
-        "id",
-    ]
-    if sort_by in valid_sorts:
-        all_orders = all_orders.order_by(sort_by)
-    else:
-        all_orders = all_orders.order_by("-created_at")
-
-    all_tasks = ProductionTask.objects.all()
-
-    task_status_filter = request.GET.get("task_status", "")
-    if task_status_filter in ["UNCLAIMED", "IN_PRODUCTION", "COMPLETED"]:
-        all_tasks = all_tasks.filter(status=task_status_filter)
-
-    task_assignee_filter = request.GET.get("task_assignee", "")
-    if task_assignee_filter:
-        try:
-            assignee_id = int(task_assignee_filter)
-            all_tasks = all_tasks.filter(assigned_to_id=assignee_id)
-        except ValueError:
-            pass
-
-    task_sort = request.GET.get("task_sort", "-created_at")
-    valid_task_sorts = [
-        "-created_at",
-        "created_at",
-        "-builder_reward",
-        "builder_reward",
-        "-id",
-        "id",
-    ]
-    if task_sort in valid_task_sorts:
-        all_tasks = all_tasks.order_by(task_sort)
-    else:
-        all_tasks = all_tasks.order_by("-created_at")
-
-    payout_tasks = (
-        ProductionTask.objects.filter(
-            status="COMPLETED", builder_reward__gt=0, payout_batch__isnull=True
-        )
-        .select_related("assigned_to", "item_type")
-        .order_by("-completed_at")[:200]
-    )
+    from ..models import BuilderPayoutBatch
 
     payout_summary = (
         ProductionTask.objects.filter(
@@ -149,32 +80,12 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
         .order_by("-total_qty")
     )
 
-    buy_orders = CorpBuyOrder.objects.all().order_by("-created_at")
-
-    if TaskExecutionLog.objects.filter(status="FAILED").exists():
-        # Django
-        from django.urls import reverse
-        from django.utils.html import format_html
-
-        config_url = reverse("industry_reforged:director_config") + "#task-logs-pane"
-        msg = format_html(
-            _(
-                'Er zijn gefaalde background taken. Controleer het <a href="{}" class="alert-link">overzicht</a>.'
-            ),
-            config_url,
-        )
-        messages.error(request, msg)
-
     context = {
         "title": "Director Control Panel",
-        "all_orders": all_orders,
-        "all_tasks": all_tasks,
-        "payout_tasks": payout_tasks,
         "payout_summary": payout_summary,
         "payout_batches": payout_batches,
         "task_assignees": task_assignees,
         "production_summary": production_summary,
-        "buy_orders": buy_orders,
     }
     return render(request, "industry_reforged/director_dashboard.html", context)
 
@@ -209,7 +120,7 @@ def mark_order_delivered(request: WSGIRequest, order_id: int) -> HttpResponse:
                 )
         else:
             messages.error(request, _("Order must be in READY state to be delivered."))
-    return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=orders")
 
 
 @login_required
@@ -232,9 +143,7 @@ def update_buy_order_status(request: WSGIRequest, order_id: int) -> HttpResponse
         else:
             messages.error(request, _("Invalid status."))
 
-    return redirect(
-        reverse("industry_reforged:director_dashboard") + "#buy-orders-pane"
-    )
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=buy-orders")
 
 
 @login_required
@@ -249,9 +158,7 @@ def delete_buy_order(request: WSGIRequest, order_id: int) -> HttpResponse:
         order.delete()
         messages.success(request, f"Buy Order for {item_name} deleted.")
 
-    return redirect(
-        reverse("industry_reforged:director_dashboard") + "#buy-orders-pane"
-    )
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=buy-orders")
 
 
 @login_required
@@ -266,7 +173,7 @@ def delete_production_task(request: WSGIRequest, task_id: int) -> HttpResponse:
         task.delete()
         messages.success(request, f"Production Task for {item_name} deleted.")
 
-    return redirect(reverse("industry_reforged:director_dashboard") + "#tasks-pane")
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=tasks")
 
 
 @login_required
@@ -294,11 +201,23 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
             except (ValueError, TypeError, ArithmeticError):
                 messages.error(request, _("Invalid amount provided."))
                 return redirect(
-                    reverse("industry_reforged:director_dashboard") + "#orders-pane"
+                    reverse("industry_reforged:director_dashboard") + "?tab=orders"
                 )
 
             if amount > 0:
                 order.amount_paid += amount
+
+                from ..models import LedgerTransaction
+
+                LedgerTransaction.objects.create(
+                    transaction_type="INCOME",
+                    amount=amount,
+                    character=order.character,
+                    director=request.user,
+                    reference=f"Order #{order.id}",
+                    notes=note_str if note_str else "Manual Payment",
+                    member_order=order,
+                )
 
             if note_str or amount > 0:
                 ts = timezone.now().strftime("%Y-%m-%d %H:%M")
@@ -323,7 +242,7 @@ def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
             )
         else:
             messages.error(request, _("Order is already fully paid."))
-    return redirect(reverse("industry_reforged:director_dashboard") + "#orders-pane")
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=orders")
 
 
 @login_required
@@ -400,7 +319,7 @@ def generate_payout_batch(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
     """Manually mark a BuilderPayoutBatch as paid."""
-    from ..models import BuilderPayoutBatch
+    from ..models import BuilderPayoutBatch, LedgerTransaction
 
     if request.method == "POST":
         batch = get_object_or_404(BuilderPayoutBatch, id=batch_id)
@@ -408,6 +327,18 @@ def mark_payout_batch_paid(request: WSGIRequest, batch_id: int) -> HttpResponse:
             batch.status = "PAID"
             batch.paid_at = timezone.now()
             batch.save()
+
+            if batch.total_amount > 0:
+                LedgerTransaction.objects.create(
+                    transaction_type="PAYOUT",
+                    amount=batch.total_amount,
+                    character=batch.builder,
+                    director=request.user,
+                    reference=batch.payment_reference,
+                    notes="Batch Payout",
+                    payout_batch=batch,
+                )
+
             messages.success(
                 request, f"Payout Batch {batch.payment_reference} marked as PAID."
             )

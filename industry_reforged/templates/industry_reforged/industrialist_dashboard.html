@@ -40,6 +40,10 @@
                         type="button" role="tab" aria-controls="corporate-pane" aria-selected="false">Corporate
                         Jobs</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="payout-tab" data-bs-toggle="tab" data-bs-target="#payout-pane"
+                        type="button" role="tab" aria-controls="payout-pane" aria-selected="false"><i class="fas fa-file-invoice-dollar"></i> Payment Summary</button>
+                </li>
             </ul>
         </div>
         <div class="card-body p-0 mt-3">
@@ -128,21 +132,13 @@
                                             </thead>
                                             <tbody>
                                                 {% for task in unclaimed_tasks %}
-                                                <tr data-depth="{{ task.depth|default:0 }}" data-task-id="{{ task.id }}" data-parent-id="{{ task.bom_parent_id|default:'' }}">
+                                                <tr data-task-id="{{ task.id }}">
                                                     <td class="text-center">
-                                                        {% if task.depth == 0 %}
                                                         <input type="checkbox" name="task_ids" value="{{ task.id }}"
-                                                            class="unclaimed-checkbox" data-task-id="{{ task.id }}"
-                                                            data-parent-id="{{ task.bom_parent_id|default:'' }}">
-                                                        {% endif %}
+                                                            class="unclaimed-checkbox" data-task-id="{{ task.id }}">
                                                     </td>
                                                     <td>
-                                                        <div class="d-flex align-items-center"
-                                                            style="padding-left: {% widthratio task.depth|default:0 1 25 %}px;">
-                                                            {% if task.depth > 0 %}
-                                                            <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2"
-                                                                style="font-size: 0.8rem;"></i>
-                                                            {% endif %}
+                                                        <div class="d-flex align-items-center">
                                                             <img onerror="handleImageFallback(this, {{ task.item_type.id }})"
                                                                 src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
@@ -214,12 +210,19 @@
                                             <button type="button" onclick="submitBulkUnclaim()"
                                                 class="btn btn-sm btn-outline-danger"><i class="fas fa-undo"></i> {% trans "Unclaim Selected" %}</button>
                                         </form>
+                                        <div class="vr bg-secondary mx-1"></div>
+                                        <div class="dt-search-placeholder" data-table-target="#active-production-table"></div>
                                     </div>
                                 </div>
                                 <div class="card-body p-0">
 
                                     <!-- My Active Production -->
                                     <div id="active-production-wrapper">
+                                        <div class="d-flex flex-wrap align-items-center gap-3 p-2 bg-dark border-bottom border-secondary small">
+                                            <span class="fw-bold text-muted"><i class="fas fa-info-circle"></i> {% trans "Legend:" %}</span>
+                                            <span class="text-muted"><span class="badge bg-primary"><i class="fas fa-check"></i> {% trans "Complete" %}</span> = {% trans "Complete single task" %}</span>
+                                            <span class="text-muted"><span class="badge bg-warning text-dark"><i class="fas fa-check"></i> {% trans "Complete" %}</span> = {% trans "Complete task and auto-complete all sub-tasks" %}</span>
+                                        </div>
                                         <div class="table-responsive" id="activeTableContainer">
                                             <table id="active-production-table"
                                                 class="table table-striped table-hover m-0 w-100">
@@ -237,20 +240,14 @@
                                                 </thead>
                                                 <tbody>
                                                     {% for task in my_tasks %}
-                                                    <tr data-depth="{{ task.depth|default:0 }}" data-task-id="{{ task.id }}" data-parent-id="{{ task.bom_parent_id|default:'' }}">
+                                                    <tr data-task-id="{{ task.id }}">
                                                         <td class="text-center">
                                                             <input type="checkbox" name="task_ids" value="{{ task.id }}"
                                                                 class="active-checkbox" data-task-id="{{ task.id }}"
-                                                                data-parent-id="{{ task.bom_parent_id|default:'' }}"
                                                                 onchange="toggleTaskAndChildrenActive(this)">
                                                         </td>
                                                         <td>
-                                                            <div class="d-flex align-items-center"
-                                                                style="padding-left: {% widthratio task.depth|default:0 1 25 %}px;">
-                                                                {% if task.depth > 0 %}
-                                                                <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2"
-                                                                    style="font-size: 0.8rem;"></i>
-                                                                {% endif %}
+                                                            <div class="d-flex align-items-center">
                                                                 <img onerror="handleImageFallback(this, {{ task.item_type.id }})"
                                                                     src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                     alt="{{ task.item_type.name }}" width="24"
@@ -266,6 +263,24 @@
                                                                             </span>
                                                                             {% endwith %}
                                                                         {% endfor %}
+                                                                    </div>
+                                                                    {% endif %}
+
+                                                                    <!-- Material Progress (if part of a larger order) -->
+                                                                    {% if task.status != 'COMPLETED' and task.order_total_qty and task.order_total_qty > task.quantity %}
+                                                                    <div class="mt-1 small">
+                                                                        <span class="badge bg-secondary border border-secondary" title="Completed: {{ task.order_completed_qty }} | Consumed: {{ task.order_consumed_qty }}">
+                                                                            <i class="fas fa-boxes"></i> Material Progress: {{ task.order_available_qty }} / {{ task.order_total_qty }}
+                                                                        </span>
+                                                                    </div>
+                                                                    {% endif %}
+
+                                                                    <!-- EVE Progress (for this specific task) -->
+                                                                    {% if task.eve_delivered_qty > 0 or task.eve_active_qty > 0 %}
+                                                                    <div class="mt-1 small">
+                                                                        <span class="badge bg-dark border border-secondary" title="EVE Online delivery progress">
+                                                                            <i class="fas fa-industry"></i> EVE Delivered: {{ task.eve_delivered_qty }} / {{ task.quantity }}
+                                                                        </span>
                                                                     </div>
                                                                     {% endif %}
                                                                 </div>
@@ -339,6 +354,24 @@
                                                                                 class="fas fa-level-up-alt fa-rotate-90"></i>
                                                                             {% trans "Sub-component of" %} {{ task.bom_parent.item_type.name }}</small>
                                                                         {% endif %}
+
+                                                                        <!-- Material Progress (if part of a larger order) -->
+                                                                        {% if task.status != 'COMPLETED' and task.order_total_qty and task.order_total_qty > task.quantity %}
+                                                                        <div class="mt-1 small">
+                                                                            <span class="badge bg-secondary border border-secondary" title="Completed: {{ task.order_completed_qty }} | Consumed: {{ task.order_consumed_qty }}">
+                                                                                <i class="fas fa-boxes"></i> Material Progress: {{ task.order_available_qty }} / {{ task.order_total_qty }}
+                                                                            </span>
+                                                                        </div>
+                                                                        {% endif %}
+
+                                                                        <!-- EVE Progress (for this specific task) -->
+                                                                        {% if task.eve_delivered_qty > 0 or task.eve_active_qty > 0 %}
+                                                                        <div class="mt-1 small">
+                                                                            <span class="badge bg-dark border border-secondary" title="EVE Online delivery progress">
+                                                                                <i class="fas fa-industry"></i> EVE Delivered: {{ task.eve_delivered_qty }} / {{ task.quantity }}
+                                                                            </span>
+                                                                        </div>
+                                                                        {% endif %}
                                                                     </div>
                                                                 </div>
                                                             </td>
@@ -363,12 +396,17 @@
                     <div class="card border-0 mb-4 h-100">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h4 class="card-title mb-0"><i class="fas fa-chart-pie"></i> {% trans "Build Steps" %}</h4>
-                                    <div>
-                                        <select id="summary-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="filterSummaryTable()">
+                                    <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
+                                        <select id="summary-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;" onchange="filterSummaryTable()">
                                             <option value="active">{% trans "Active" %}</option>
                                             <option value="completed">{% trans "Completed" %}</option>
                                             <option value="all">{% trans "All" %}</option>
                                         </select>
+                                        <div class="vr bg-secondary mx-1"></div>
+                                        <div class="input-group input-group-sm" style="width: 200px;">
+                                            <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-search"></i></span>
+                                            <input type="text" id="summary-search-input" class="form-control bg-dark text-white border-secondary" placeholder="{% trans 'Search item...' %}" onkeyup="filterSummaryTable()">
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-body p-0">
@@ -377,7 +415,7 @@
                                             <thead>
                                                 <tr>
                                                     <th>{% trans "Item" %}</th>
-                                                    <th class="text-end">{% trans "To Build" %}</th>
+                                                    <th class="text-end">{% trans "Claimed" %}</th>
                                                     <th class="text-end">{% trans "Completed" %}</th>
                                                     <th class="text-end">{% trans "Remaining" %}</th>
                                                     <th class="text-end">{% trans "EVE In Progress" %}</th>
@@ -398,7 +436,11 @@
                                                                 alt="{{ sum_item.item_type_name }}" width="24"
                                                                 height="24" class="me-2 rounded">
                                                             <div>
-                                                                <span><span class="badge bg-secondary me-1">{{ sum_item.activity_name }}</span> {{ sum_item.item_type_name }}</span>
+                                                                <span>
+                                                                    <span class="badge bg-secondary me-1">{{ sum_item.activity_name }}</span>
+                                                                    {{ sum_item.item_type_name }}
+                                                                    <i class="far fa-copy ms-1 text-muted cursor-pointer" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ sum_item.item_type_name|escapejs }}'); this.classList.remove('fa-copy', 'far'); this.classList.add('fa-check', 'fas', 'text-success'); setTimeout(() => { this.classList.remove('fa-check', 'fas', 'text-success'); this.classList.add('fa-copy', 'far'); }, 1500);" title="{% trans 'Copy to clipboard' %}"></i>
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -420,13 +462,21 @@
                                         <script>
                                             function filterSummaryTable() {
                                                 const filter = document.getElementById('summary-filter-select').value;
+                                                const searchInput = document.getElementById('summary-search-input');
+                                                const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
                                                 const groups = document.querySelectorAll('.summary-group');
+
                                                 groups.forEach(group => {
                                                     const rows = group.querySelectorAll('.summary-row');
                                                     let visibleCount = 0;
                                                     rows.forEach(row => {
                                                         const status = row.getAttribute('data-status');
-                                                        if (filter === 'all' || filter === status) {
+                                                        const rowText = row.textContent.toLowerCase();
+
+                                                        const matchesStatus = (filter === 'all' || filter === status);
+                                                        const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
+
+                                                        if (matchesStatus && matchesSearch) {
                                                             row.style.display = '';
                                                             visibleCount++;
                                                         } else {
@@ -502,6 +552,73 @@
                                     </div>
                                 </div>
                     </div> <!-- End Tab 4 -->
+
+                <!-- TAB 5: PAYMENT SUMMARY -->
+                <div class="tab-pane fade" id="payout-pane" role="tabpanel" aria-labelledby="payout-tab" tabindex="0">
+                    <div class="card border-0 mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="card-title mb-0"><i class="fas fa-file-invoice-dollar"></i> {% trans "My Payouts & Payment Summary" %}</h4>
+                            <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
+                                <select id="payout-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;" onchange="$('#payout-summary-table').DataTable().draw()">
+                                    <option value="all">{% trans "All" %}</option>
+                                    <option value="paid">{% trans "Paid" %}</option>
+                                    <option value="unpaid">{% trans "Unpaid" %}</option>
+                                </select>
+                                <div class="vr bg-secondary mx-1"></div>
+                                <div class="dt-search-placeholder" data-table-target="#payout-summary-table"></div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table id="payout-summary-table" class="table table-striped table-hover m-0 w-100">
+                                    <thead>
+                                        <tr>
+                                            <th>{% trans "Date Completed" %}</th>
+                                            <th>{% trans "Item" %}</th>
+                                            <th class="text-end">{% trans "Qty" %}</th>
+                                            <th class="text-end">{% trans "Payout Value" %}</th>
+                                            <th>{% trans "Payment ID" %}</th>
+                                            <th>{% trans "Payment Date" %}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for task in my_payout_tasks %}
+                                        <tr data-payment-status="{% if task.payout_batch and task.payout_batch.status == 'PAID' %}paid{% else %}unpaid{% endif %}">
+                                            <td class="numeric">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img onerror="handleImageFallback(this, {{ task.item_type.id }})" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32" alt="{{ task.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                    <span>{{ task.item_type.name }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end numeric">{{ task.quantity }}</td>
+                                            <td class="text-end numeric text-success">{{ task.builder_reward|eve_isk }}</td>
+                                            <td>
+                                                {% if task.payout_batch %}
+                                                    <span class="badge bg-secondary">{{ task.payout_batch.payment_reference }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-dark text-muted">{% trans "Unbatched" %}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if task.payout_batch %}
+                                                    {% if task.payout_batch.status == "PAID" %}
+                                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> {{ task.payout_batch.paid_at|date:"Y-m-d H:i" }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> {% trans "Pending" %}</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-danger"><i class="fas fa-times-circle"></i> {% trans "Unpaid" %}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Tab 5 -->
 
                 </div> <!-- End Tab Content -->
             </div> <!-- End Card Body -->
@@ -585,23 +702,28 @@
     {{ block.super }}
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Restore active tab from sessionStorage
-            var activeTab = sessionStorage.getItem('industrialistActiveTab');
-            if (activeTab) {
-                var triggerEl = document.querySelector('button[data-bs-target="' + activeTab + '"]');
-                if (triggerEl) {
-                    var tab = new bootstrap.Tab(triggerEl);
-                    tab.show();
-                }
-            }
-
             // Save active tab to sessionStorage when changed
             var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
             tabEls.forEach(function (el) {
                 el.addEventListener('shown.bs.tab', function (event) {
-                    sessionStorage.setItem('industrialistActiveTab', event.target.getAttribute('data-bs-target'));
+                    var target = event.target.getAttribute('data-bs-target');
+                    if(window.history.replaceState) {
+                        window.history.replaceState(null, null, target);
+                    } else {
+                        window.location.hash = target;
+                    }
+                    sessionStorage.setItem('industrialistActiveTab', target);
                 });
             });
+
+            // Restore active tab from sessionStorage or URL Hash
+            var activeTab = window.location.hash || sessionStorage.getItem('industrialistActiveTab');
+            if (activeTab) {
+                var triggerEl = document.querySelector('button[data-bs-target="' + activeTab + '"]');
+                if (triggerEl) {
+                    triggerEl.click();
+                }
+            }
 
             var completeBtn = document.getElementById('confirmCompleteBtn');
             if (completeBtn) {
@@ -893,115 +1015,55 @@
                 }
             } catch (e) { console.error("Error init corporate jobs table:", e); }
 
+            try {
+                if ($('#payout-summary-table').length) {
+                    $('#payout-summary-table').DataTable($.extend(true, {}, baseConfig));
+                }
+            } catch (e) { console.error("Error init payout summary table:", e); }
+
             $('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
                 $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
             });
-        });
 
-        // Fold / Unfold functionality
-        var tableState = {
-            'jobmarket-table': { collapsed: {} },
-            'active-production-table': { collapsed: {} }
-        };
-        var parentMap = {};
+            // Move DataTables search boxes to custom filter bars
+            $('.dt-search-placeholder').each(function() {
+                var $placeholder = $(this);
+                var targetId = $placeholder.data('table-target');
+                if (targetId) {
+                    var $table = $(targetId);
+                    var $wrapper = $table.closest('.dataTables_wrapper');
+                    if ($wrapper.length) {
+                        var $search = $wrapper.find('.dataTables_filter');
+                        if ($search.length) {
+                            $search.appendTo($placeholder);
+                            $search.find('input').removeClass('form-control-sm').addClass('form-control form-control-sm bg-dark text-white border-secondary');
+                            $search.find('label').addClass('mb-0 text-white d-flex align-items-center gap-2');
 
-        $(document).ready(function() {
-            $('table').each(function() {
-                var parentIds = new Set();
-                $(this).find('tr[data-task-id]').each(function() {
-                    var pId = $(this).attr('data-parent-id');
-                    var tId = $(this).attr('data-task-id');
-                    if (pId) {
-                        parentIds.add(pId);
-                        parentMap[tId] = pId;
+                            // The length changer (Show X entries) is managed by base.html based on total records
+                        }
                     }
-                });
-
-                $(this).find('tr[data-task-id]').each(function() {
-                    var tId = $(this).attr('data-task-id');
-                    var $itemCol = $(this).find('td:eq(1) > div');
-                    if (parentIds.has(tId)) {
-                        $itemCol.prepend('<button type="button" class="btn btn-xs btn-outline-secondary me-2 toggle-row-btn" onclick="toggleSingleRow(this, \''+tId+'\')"><i class="fas fa-minus"></i></button>');
-                    } else {
-                        $itemCol.prepend('<span class="me-2" style="display:inline-block; width: 24px;"></span>');
-                    }
-                });
+                }
             });
-
-
         });
+
+
 
         $.fn.dataTable.ext.search.push(
             function(settings, data, dataIndex, rowData, counter) {
                 var tableId = settings.nTable.id;
-                var state = tableState[tableId];
-                if (!state) return true;
 
-                var rowNode = settings.aoData[dataIndex].nTr;
-                var depth = parseInt($(rowNode).attr('data-depth')) || 0;
-                var parentId = $(rowNode).attr('data-parent-id');
-
-                if (depth === 0) return true;
-
-                var currParent = parentId;
-                while (currParent) {
-                    if (state.collapsed[currParent]) {
-                        return false;
-                    }
-                    currParent = parentMap[currParent];
+                if (tableId === 'payout-summary-table') {
+                    var filter = $('#payout-filter-select').val();
+                    if (!filter || filter === 'all') return true;
+                    var rowNode = settings.aoData[dataIndex].nTr;
+                    var status = $(rowNode).attr('data-payment-status');
+                    return status === filter;
                 }
+
                 return true;
             }
         );
 
-        function toggleSingleRow(btn, taskId) {
-            var $btn = $(btn);
-            var tableId = $btn.closest('table').attr('id');
-            var state = tableState[tableId];
 
-            if (state.collapsed[taskId]) {
-                delete state.collapsed[taskId];
-                $btn.html('<i class="fas fa-minus"></i>');
-            } else {
-                state.collapsed[taskId] = true;
-                $btn.html('<i class="fas fa-plus"></i>');
-            }
-            $('#' + tableId).DataTable().draw();
-        }
-
-        function toggleFoldTier(btn, tableId) {
-            var state = tableState[tableId];
-            var isFolded = $(btn).attr('data-folded') === 'true';
-
-            if (isFolded) {
-                // Unfold all: clear the collapsed set
-                state.collapsed = {};
-                $(btn).attr('data-folded', 'false');
-                btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> {% trans "Fold Sub-tiers" %}';
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-info');
-
-                $('#' + tableId + ' .toggle-row-btn').html('<i class="fas fa-minus"></i>');
-            } else {
-                // Fold all: add ALL nodes to collapsed set
-                $('tr[data-task-id]', '#' + tableId).each(function() {
-                    var tId = $(this).attr('data-task-id');
-                    state.collapsed[tId] = true;
-                });
-
-                $(btn).attr('data-folded', 'true');
-                btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> {% trans "Unfold Sub-tiers" %}';
-                btn.classList.remove('btn-info');
-                btn.classList.add('btn-secondary');
-
-                $('#' + tableId + ' .toggle-row-btn').html('<i class="fas fa-plus"></i>');
-            }
-            $('#' + tableId).DataTable().draw();
-        }
-
-        function restoreTreeSort(tableId) {
-            var $table = $('#' + tableId).DataTable();
-            $table.order([]).draw();
-        }
     </script>
     {% endblock %}
