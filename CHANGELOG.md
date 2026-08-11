@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **Personal Dashboard**: Added a dedicated "Research & Invention" tab that groups research jobs (ME/TE/Copying/Invention) per character.
 - **Personal Dashboard**: Added a "Character" column to the Manufacturing Jobs tables.
 
+## [0.3.4] - 11-08-2026
+
+### Fixed
+
+- **UI Dashboard**: Restored `bom_parent__isnull=True` filter to the Job Market to prevent excessive subtaks and restored Claim functionality.
+- **UI Dashboard**: Fixed missing DataTables "Items Per Page" dropdown on the initial load of the Claimed Jobs page.
+
 ## [0.3.3] - 09-08-2026
 
 ### Added

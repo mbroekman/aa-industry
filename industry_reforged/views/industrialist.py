@@ -61,7 +61,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     # Unclaimed tasks
     unclaimed_tasks_qs = (
-        ProductionTask.objects.filter(status="UNCLAIMED")
+        ProductionTask.objects.filter(status="UNCLAIMED", bom_parent__isnull=True)
         .select_related("item_type", "bom_parent", "created_from_order")
         .order_by("created_from_order__created_at", "id")
     )
