@@ -369,6 +369,10 @@ def dt_corporate_jobs(request):
             search_q |= Q(wallet_division=int(search))
         qs = qs.filter(search_q)
 
+    activity_filter = request.GET.get("activity")
+    if activity_filter and activity_filter.isdigit():
+        qs = qs.filter(activity_id=int(activity_filter))
+
     filtered_records = qs.count()
 
     # Columns:

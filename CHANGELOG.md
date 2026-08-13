@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.5] - 13-08-2026
+
 ### Added
 
 - **Director Dashboard**: Added a "Ledger Transactions" tab to track all internal payouts and payments.
 - **Personal Dashboard**: Added a dedicated "Research & Invention" tab that groups research jobs (ME/TE/Copying/Invention) per character.
 - **Personal Dashboard**: Added a "Character" column to the Manufacturing Jobs tables.
+- **UI Dashboard**: Added an Activity filter dropdown to both the Corporate and Personal Industry Jobs dashboards (TASK-66).
+
+### Fixed
+
+- **ESI Sync**: Fixed a major bug where active long-running jobs (like Titans) disappeared from the corporate dashboard due to ESI dropping them after 90 days. Added pagination, double-fetching, and safer cleanup logic (TASK-65).
+- **Database**: Added data migration `0043` to automatically restore active jobs that were falsely marked as `delivered` by the old sync logic.
 
 ## [0.3.4] - 11-08-2026
 

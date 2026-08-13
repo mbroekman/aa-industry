@@ -37,18 +37,35 @@ def update_character_jobs():
             if not character:
                 continue
 
-            jobs = esi.client.Industry.GetCharactersCharacterIdIndustryJobs(
-                character_id=token.character_id,
-                token=token,
-                include_completed=True,
-            ).results()
+            all_jobs = []
 
-            if jobs is not None:
+            for include_completed in [False, True]:
+                try:
+                    jobs_res = esi.client.Industry.GetCharactersCharacterIdIndustryJobs(
+                        character_id=token.character_id,
+                        token=token,
+                        include_completed=include_completed,
+                    ).results()
+                    if jobs_res:
+                        all_jobs.extend(jobs_res)
+                except HTTPNotModified:
+                    pass
+                except Exception as e:
+                    logger.error(
+                        f"Failed to fetch char jobs (include_completed={include_completed}) for {token.character_id}: {e}"
+                    )
+
+            if all_jobs:
                 logger.info(
-                    f"Fetched {len(jobs)} character jobs from ESI for character {token.character_id}"
+                    f"Fetched {len(all_jobs)} character jobs from ESI for character {token.character_id}"
                 )
-                for job in jobs:
+                seen_jobs = set()
+                for job in all_jobs:
                     job_id = getattr(job, "job_id")
+                    if job_id in seen_jobs:
+                        continue
+                    seen_jobs.add(job_id)
+
                     blueprint_type_id = getattr(job, "blueprint_type_id", None)
                     product_type_id = getattr(job, "product_type_id", None)
                     ensure_eve_type(blueprint_type_id)
@@ -89,16 +106,20 @@ def update_character_jobs():
                             f"Your industry job {obj.job_id} has finished.",
                         )
 
-                # Any jobs in our DB for this character that are NOT in the fetched list
-                # have aged out of ESI (meaning they are completed/delivered/cancelled > 90 days ago).
-                fetched_job_ids = [getattr(j, "job_id") for j in jobs]
-                CharacterIndustryJob.objects.filter(
-                    character=character, status__in=["active", "paused", "ready"]
-                ).exclude(job_id__in=fetched_job_ids).update(status="delivered")
+            # Cleanup aged-out jobs that fell off ESI
+            # Standard Library
+            import datetime
 
-        except HTTPNotModified:
-            # 304 Not Modified, ignore
-            continue
+            # Django
+            from django.utils import timezone
+
+            cutoff = timezone.now() - datetime.timedelta(days=90)
+            CharacterIndustryJob.objects.filter(
+                character=character,
+                status__in=["active", "paused", "ready"],
+                end_date__lt=cutoff,
+            ).update(status="delivered")
+
         except Exception as e:
             logger.error(
                 f"Failed to fetch character jobs for {token.character_id}: {e}"
@@ -128,100 +149,126 @@ def update_corporation_jobs():
             )
             continue
 
-        try:
-            jobs = esi.client.Industry.GetCorporationsCorporationIdIndustryJobs(
-                corporation_id=config.corporation.corporation_id,
-                token=token,
-                include_completed=True,
-            ).results()
-
-            if jobs is not None:
-                logger.info(
-                    f"Fetched {len(jobs)} corporation jobs from ESI for corporation {config.corporation.corporation_name}"
-                )
-                for job in jobs:
-                    job_id = getattr(job, "job_id")
-                    blueprint_type_id = getattr(job, "blueprint_type_id", None)
-                    product_type_id = getattr(job, "product_type_id", None)
-                    ensure_eve_type(blueprint_type_id)
-                    ensure_eve_type(product_type_id)
-
-                    installer_eve_id = getattr(job, "installer_id", None)
-                    installer = None
-                    if installer_eve_id:
-                        # Alliance Auth
-                        from allianceauth.eveonline.models import EveCharacter
-
-                        installer = EveCharacter.objects.filter(
-                            character_id=installer_eve_id
-                        ).first()
-
-                    existing = CorporationIndustryJob.objects.filter(
-                        job_id=job_id
-                    ).first()
-                    was_active = existing and existing.status == "active"
-
-                    # Add job logic similar to character jobs
-                    obj, created = CorporationIndustryJob.objects.update_or_create(
-                        job_id=job_id,
-                        defaults={
-                            "corporation": config.corporation,
-                            "installer": installer,
-                            "activity_id": getattr(job, "activity_id", None),
-                            "blueprint_type_id": blueprint_type_id,
-                            "product_type_id": product_type_id,
-                            "status": getattr(job, "status", None),
-                            "start_date": getattr(job, "start_date", None),
-                            "end_date": getattr(job, "end_date", None),
-                            "runs": getattr(job, "runs", None),
-                            "probability": getattr(job, "probability", None),
-                            "successful_runs": getattr(job, "successful_runs", None),
-                            "cost": getattr(job, "cost", None),
-                            "facility_id": getattr(job, "facility_id", None),
-                            "station_id": getattr(job, "station_id", None),
-                            "location_id": getattr(job, "location_id", None),
-                            "wallet_division": getattr(job, "wallet_division", None),
-                        },
+        all_jobs = []
+        for include_completed in [False, True]:
+            page = 1
+            while True:
+                try:
+                    jobs_res = (
+                        esi.client.Industry.GetCorporationsCorporationIdIndustryJobs(
+                            corporation_id=config.corporation.corporation_id,
+                            token=token,
+                            include_completed=include_completed,
+                            page=page,
+                        ).results()
                     )
 
-                    if was_active and obj.status == "ready":
-                        from ..models import CorporationWebhookConfig
+                    if not jobs_res:
+                        break
 
-                        webhook_config = CorporationWebhookConfig.objects.filter(
-                            corporation=config.corporation
-                        ).first()
-                        if webhook_config and webhook_config.jobs_webhook:
-                            from ..utils.discord import send_discord_webhook
+                    all_jobs.extend(jobs_res)
 
-                            p_name = (
-                                obj.product_type.name if obj.product_type else "Unknown"
-                            )
-                            i_name = (
-                                obj.installer.character_name
-                                if obj.installer
-                                else "Unknown"
-                            )
-                            embed = {
-                                "title": f"Corporate Job Ready: {p_name}",
-                                "description": f"Job **{obj.job_id}** is now ready to be delivered by **{i_name}**.",
-                                "color": 15844367,  # Gold
-                            }
-                            send_discord_webhook(webhook_config.jobs_webhook, embed)
+                    if len(jobs_res) < 1000:
+                        break
 
-                # Any jobs in our DB for this corp that are NOT in the fetched list
-                # have aged out of ESI (meaning they are completed/delivered/cancelled > 90 days ago).
-                fetched_job_ids = [getattr(j, "job_id") for j in jobs]
-                CorporationIndustryJob.objects.filter(
-                    corporation=config.corporation,
-                    status__in=["active", "paused", "ready"],
-                ).exclude(job_id__in=fetched_job_ids).update(status="delivered")
-        except HTTPNotModified:
-            # 304 Not Modified, ignore
-            continue
-        except Exception as e:
-            logger.error(
-                f"Failed to fetch jobs for corp {config.corporation.corporation_id}: {e}"
+                    page += 1
+                except HTTPNotModified:
+                    break
+                except Exception as e:
+                    if hasattr(e, "status_code") and e.status_code == 404:
+                        break
+                    logger.error(
+                        f"Failed to fetch corp jobs page {page} (completed={include_completed}) for {config.corporation.corporation_id}: {e}"
+                    )
+                    break
+
+        if all_jobs:
+            logger.info(
+                f"Fetched {len(all_jobs)} corporation jobs from ESI for corporation {config.corporation.corporation_name}"
             )
+            seen_jobs = set()
+            for job in all_jobs:
+                job_id = getattr(job, "job_id")
+                if job_id in seen_jobs:
+                    continue
+                seen_jobs.add(job_id)
+
+                blueprint_type_id = getattr(job, "blueprint_type_id", None)
+                product_type_id = getattr(job, "product_type_id", None)
+                ensure_eve_type(blueprint_type_id)
+                ensure_eve_type(product_type_id)
+
+                installer_eve_id = getattr(job, "installer_id", None)
+                installer = None
+                if installer_eve_id:
+                    # Alliance Auth
+                    from allianceauth.eveonline.models import EveCharacter
+
+                    installer = EveCharacter.objects.filter(
+                        character_id=installer_eve_id
+                    ).first()
+
+                existing = CorporationIndustryJob.objects.filter(job_id=job_id).first()
+                was_active = existing and existing.status == "active"
+
+                # Add job logic similar to character jobs
+                obj, created = CorporationIndustryJob.objects.update_or_create(
+                    job_id=job_id,
+                    defaults={
+                        "corporation": config.corporation,
+                        "installer": installer,
+                        "activity_id": getattr(job, "activity_id", None),
+                        "blueprint_type_id": blueprint_type_id,
+                        "product_type_id": product_type_id,
+                        "status": getattr(job, "status", None),
+                        "start_date": getattr(job, "start_date", None),
+                        "end_date": getattr(job, "end_date", None),
+                        "runs": getattr(job, "runs", None),
+                        "probability": getattr(job, "probability", None),
+                        "successful_runs": getattr(job, "successful_runs", None),
+                        "cost": getattr(job, "cost", None),
+                        "facility_id": getattr(job, "facility_id", None),
+                        "station_id": getattr(job, "station_id", None),
+                        "location_id": getattr(job, "location_id", None),
+                        "wallet_division": getattr(job, "wallet_division", None),
+                    },
+                )
+
+                if was_active and obj.status == "ready":
+                    from ..models import CorporationWebhookConfig
+
+                    webhook_config = CorporationWebhookConfig.objects.filter(
+                        corporation=config.corporation
+                    ).first()
+                    if webhook_config and webhook_config.jobs_webhook:
+                        from ..utils.discord import send_discord_webhook
+
+                        p_name = (
+                            obj.product_type.name if obj.product_type else "Unknown"
+                        )
+                        i_name = (
+                            obj.installer.character_name if obj.installer else "Unknown"
+                        )
+                        embed = {
+                            "title": f"Corporate Job Ready: {p_name}",
+                            "description": f"Job **{obj.job_id}** is now ready to be delivered by **{i_name}**.",
+                            "color": 15844367,  # Gold
+                        }
+                        send_discord_webhook(webhook_config.jobs_webhook, embed)
+
+        # Cleanup aged-out jobs that fell off ESI
+        # Standard Library
+        import datetime
+
+        # Django
+        from django.utils import timezone
+
+        cutoff = timezone.now() - datetime.timedelta(days=90)
+        CorporationIndustryJob.objects.filter(
+            corporation=config.corporation,
+            status__in=["active", "paused", "ready"],
+            end_date__lt=cutoff,
+        ).update(status="delivered")
 
     # Link tasks
     link_orphaned_jobs_to_tasks.delay()

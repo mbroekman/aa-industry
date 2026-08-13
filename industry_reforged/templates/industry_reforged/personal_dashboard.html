@@ -41,14 +41,28 @@
                         </div>
                     </div>
 
-                    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="pills-active-tab" data-bs-toggle="pill" data-bs-target="#pills-active" type="button" role="tab" aria-controls="pills-active" aria-selected="true">Active Jobs</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="pills-history-tab" data-bs-toggle="pill" data-bs-target="#pills-history" type="button" role="tab" aria-controls="pills-history" aria-selected="false">{% translate "History" %}</button>
-                        </li>
-                    </ul>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <ul class="nav nav-pills" id="pills-tab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="pills-active-tab" data-bs-toggle="pill" data-bs-target="#pills-active" type="button" role="tab" aria-controls="pills-active" aria-selected="true">Active Jobs</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="pills-history-tab" data-bs-toggle="pill" data-bs-target="#pills-history" type="button" role="tab" aria-controls="pills-history" aria-selected="false">{% translate "History" %}</button>
+                            </li>
+                        </ul>
+                        <div class="d-flex align-items-center">
+                            <label for="personal-activity-filter" class="me-2 fw-bold text-nowrap"><i class="fas fa-filter text-muted"></i> Activity:</label>
+                            <select id="personal-activity-filter" class="form-select form-select-sm" style="width: auto;">
+                                <option value="">-- All Activities --</option>
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Researching Time Efficiency">Research TE</option>
+                                <option value="Researching Material Efficiency">Research ME</option>
+                                <option value="Copying">Copying</option>
+                                <option value="Invention">Invention</option>
+                                <option value="Reactions">Reactions</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <div class="tab-content" id="pills-tabContent">
                         <div class="tab-pane fade show active" id="pills-active" role="tabpanel" aria-labelledby="pills-active-tab" tabindex="0">
@@ -223,12 +237,16 @@
                                                                 <td>
                                                                     {% if job.product_type %}
                                                                     <div class="d-flex align-items-center">
-                                                                        <img src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                                        <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.product_type.id }}/bp?size=32';"
+                                                                            src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32"
+                                                                            alt="{{ job.product_type.name }}" width="24" height="24" class="me-2 rounded">
                                                                         <span class="small">{{ job.product_type.name }}</span>
                                                                     </div>
                                                                     {% elif job.blueprint_type %}
                                                                     <div class="d-flex align-items-center">
-                                                                        <img src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32" alt="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                                        <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32';"
+                                                                            src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32"
+                                                                            alt="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2 rounded">
                                                                         <span class="small">{{ job.blueprint_type.name }}</span>
                                                                     </div>
                                                                     {% else %}
@@ -288,12 +306,16 @@
                                                                 <td>
                                                                     {% if job.product_type %}
                                                                     <div class="d-flex align-items-center">
-                                                                        <img src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32" alt="{{ job.product_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                                        <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.product_type.id }}/bp?size=32';"
+                                                                            src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32"
+                                                                            alt="{{ job.product_type.name }}" width="24" height="24" class="me-2 rounded">
                                                                         <span class="small">{{ job.product_type.name }}</span>
                                                                     </div>
                                                                     {% elif job.blueprint_type %}
                                                                     <div class="d-flex align-items-center">
-                                                                        <img src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32" alt="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                                        <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32';"
+                                                                            src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/bp?size=32"
+                                                                            alt="{{ job.blueprint_type.name }}" width="24" height="24" class="me-2 rounded">
                                                                         <span class="small">{{ job.blueprint_type.name }}</span>
                                                                     </div>
                                                                     {% else %}
@@ -677,11 +699,18 @@
     });
 
     $(document).ready(function () {
-        $('#personal-jobs-active-table').DataTable({
+        var activePersonalTable = $('#personal-jobs-active-table').DataTable({
             "order": [[6, "desc"]] // Sort by End Date
         });
-        $('#personal-jobs-history-table').DataTable({
+        var historyPersonalTable = $('#personal-jobs-history-table').DataTable({
             "order": [[6, "desc"]] // Sort by End Date
+        });
+
+        $('#personal-activity-filter').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            // Filter column 1 (Activity)
+            activePersonalTable.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
+            historyPersonalTable.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
         });
 
         // Initial timer setup for PI Dashboard

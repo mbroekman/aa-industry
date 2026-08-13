@@ -78,6 +78,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         ProductionTask.objects.filter(
             status="IN_PRODUCTION",
             assigned_to_id__in=user_characters,
+            bom_parent__isnull=True,
         )
         .select_related("item_type", "bom_parent")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
@@ -93,7 +94,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     # My completed tasks (limit to recent 10 to avoid clutter)
     my_completed_tasks = list(
         ProductionTask.objects.filter(
-            status="COMPLETED", assigned_to_id__in=user_characters
+            status="COMPLETED",
+            assigned_to_id__in=user_characters,
+            bom_parent__isnull=True,
         )
         .select_related("item_type")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
