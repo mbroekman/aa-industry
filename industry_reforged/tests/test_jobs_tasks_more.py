@@ -21,7 +21,12 @@ from industry_reforged.tests.factories import (
 class TestJobsTasks:
     @patch("industry_reforged.tasks.jobs.esi")
     @patch("industry_reforged.tasks.jobs.Token.objects.filter")
-    def test_update_character_jobs(self, mock_filter, mock_esi):
+    @patch("industry_reforged.tasks.jobs.ensure_eve_type")
+    @patch("industry_reforged.tasks.jobs.CharacterIndustryJob.objects.update_or_create")
+    def test_update_character_jobs(
+        self, mock_update, mock_ensure_eve_type, mock_filter, mock_esi
+    ):
+        mock_update.return_value = (MagicMock(), True)
         user = UserFactory()
         char = EveCharacterFactory()
         token = Token.objects.create(
@@ -37,6 +42,7 @@ class TestJobsTasks:
                 job_id=1,
                 activity_id=1,
                 blueprint_type_id=2,
+                product_type_id=3,
                 status="active",
                 duration=100,
             )
@@ -48,7 +54,14 @@ class TestJobsTasks:
 
     @patch("industry_reforged.tasks.jobs.esi")
     @patch("industry_reforged.tasks.jobs.Token.objects.filter")
-    def test_update_corporation_jobs(self, mock_filter, mock_esi):
+    @patch("industry_reforged.tasks.jobs.ensure_eve_type")
+    @patch(
+        "industry_reforged.tasks.jobs.CorporationIndustryJob.objects.update_or_create"
+    )
+    def test_update_corporation_jobs(
+        self, mock_update, mock_ensure_eve_type, mock_filter, mock_esi
+    ):
+        mock_update.return_value = (MagicMock(status="active"), True)
         user = UserFactory()
         corp = EveCorporationInfoFactory(corporation_id=123)
         char = EveCharacterFactory(corporation_id=123)
@@ -62,6 +75,8 @@ class TestJobsTasks:
                 job_id=2,
                 activity_id=1,
                 blueprint_type_id=2,
+                product_type_id=3,
+                installer_id=char.character_id,
                 status="active",
                 duration=100,
             )
