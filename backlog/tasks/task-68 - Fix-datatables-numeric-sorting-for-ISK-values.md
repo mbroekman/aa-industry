@@ -13,16 +13,23 @@ ordinal: 68000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Sort by reward and cost yields weird sorting because DataTables sorts formatted ISK alphabetically. Added data-sort attributes with raw values to fix this.
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [ ] #1 Clicking sort on ISK columns sorts numerically
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Added data-sort to templates
+
 <!-- SECTION:NOTES:END -->
