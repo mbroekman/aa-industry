@@ -226,7 +226,7 @@
                                             <tr>
                                                 <td class="fw-bold">{{ summary.assigned_to__character_name }}</td>
                                                 <td class="text-end numeric">{{ summary.task_count }}</td>
-                                                <td class="text-end numeric text-warning fw-bold">{{ summary.total_reward|eve_isk }}</td>
+                                                <td class="text-end numeric text-warning fw-bold" data-sort="{{ summary.total_reward }}">{{ summary.total_reward|eve_isk }}</td>
                                                 <td class="text-end">
                                                     <form method="post" action="{% url 'industry_reforged:generate_payout_batch' %}" class="require-confirmation" data-action-msg="Generate a payout batch for {{ summary.assigned_to__character_name }}?" data-btn-class="btn-success">
                                                         {% csrf_token %}
@@ -295,7 +295,7 @@
                                                     <i class="far fa-copy ms-1 text-muted cursor-pointer" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ batch.payment_reference|escapejs }}'); this.classList.remove('fa-copy', 'far'); this.classList.add('fa-check', 'fas', 'text-success'); setTimeout(() => { this.classList.remove('fa-check', 'fas', 'text-success'); this.classList.add('fa-copy', 'far'); }, 1500);" title="{% trans 'Copy to clipboard' %}"></i>
                                                 </td>
                                                 <td>{{ batch.builder.character_name }}</td>
-                                                <td class="text-end numeric text-warning fw-bold">
+                                                <td class="text-end numeric text-warning fw-bold" data-sort="{{ batch.total_amount }}">
                                                     {{ batch.total_amount|eve_isk }}
                                                     <i class="far fa-copy ms-1 text-muted cursor-pointer" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ batch.total_amount }}'); this.classList.remove('fa-copy', 'far'); this.classList.add('fa-check', 'fas', 'text-success'); setTimeout(() => { this.classList.remove('fa-check', 'fas', 'text-success'); this.classList.add('fa-copy', 'far'); }, 1500);" title="{% trans 'Copy to clipboard' %}"></i>
                                                 </td>

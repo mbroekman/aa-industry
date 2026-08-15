@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.3.6] - 15-08-2026
+
+### Fixed
+
+- **BOM Engine**: Fixed a critical bug in the recursive BOM calculation for Reactions and PI materials (e.g., Tungsten Carbide) where missing blueprint data caused the system to hardcode the yield quantity to 1 instead of its proper output size (e.g., 10,000). This caused wildly inflated required material quantities and build times.
+- **DataTables Sorting**: Fixed an issue across all dashboards (Orders, Tasks, Leaderboard) where columns formatted with the `eve_isk` filter sorted alphabetically rather than numerically (TASK-68).
 
 ## [0.3.5] - 13-08-2026
 

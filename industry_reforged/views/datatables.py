@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.timesince import timesince, timeuntil
 
 from ..models import CorpBuyOrder, LedgerTransaction, MemberOrder, ProductionTask
 from ..templatetags.industry_tags import eve_isk
@@ -419,6 +421,17 @@ def dt_corporate_jobs(request):
             "industry_reforged/partials/dt_corp_job_status.html", {"job": job}
         )
 
+        end_html = "-"
+        if job.end_date:
+            dt_str = job.end_date.strftime("%Y-%m-%d %H:%M")
+            countdown = ""
+            if job.status in ["active", "ready"]:
+                if job.end_date > timezone.now():
+                    countdown = f'<br><span class="text-muted small">(in {timeuntil(job.end_date)})</span>'
+                else:
+                    countdown = f'<br><span class="text-muted small">({timesince(job.end_date)} ago)</span>'
+            end_html = f'<div class="numeric">{dt_str}{countdown}</div>'
+
         row = [
             installer_html,
             f'<span class="badge bg-secondary">{job.activity_name}</span>',
@@ -428,7 +441,7 @@ def dt_corporate_jobs(request):
             cost_html,
             job.wallet_division,
             status_html,
-            f'<div class="numeric">{job.end_date.strftime("%Y-%m-%d %H:%M") if job.end_date else "-"}</div>',
+            end_html,
         ]
 
         if job_type == "active":

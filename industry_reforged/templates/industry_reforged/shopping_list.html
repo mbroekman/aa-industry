@@ -71,8 +71,8 @@
                                 </div>
                             </td>
                             <td class="text-end numeric">{{ mat.quantity|intcomma }}</td>
-                            <td class="text-end numeric text-muted">{{ mat.price_per_unit|eve_isk }}</td>
-                            <td class="text-end numeric text-warning">{{ mat.total_price|eve_isk }}</td>
+                            <td class="text-end numeric text-muted" data-sort="{{ mat.price_per_unit }}">{{ mat.price_per_unit|eve_isk }}</td>
+                            <td class="text-end numeric text-warning" data-sort="{{ mat.total_price }}">{{ mat.total_price|eve_isk }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4" class="text-center py-4">No materials found.</td></tr>

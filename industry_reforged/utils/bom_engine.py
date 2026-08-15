@@ -50,8 +50,11 @@ def get_sde_bom(type_id):
 
         # Fallback to legacy EveType.materials
         eve_type = EveType.objects.get(id=type_id)
-        if not eve_type.materials:
-            return [], 1, 1
+
+        fallback_yield = eve_type.portion_size or 1
+
+        if not eve_type.materials.exists():
+            return [], fallback_yield, 1
 
         materials = []
         for mat in eve_type.materials.all():
@@ -62,10 +65,16 @@ def get_sde_bom(type_id):
                     "quantity": mat.quantity,
                 }
             )
-        return materials, 1, 1
+        return materials, fallback_yield, 1
     except Exception as e:
         logger.error(f"Failed to get SDE bom for {type_id}: {e}")
-        return [], 1, 1
+        try:
+            # Third Party
+            from eveuniverse.models import EveType
+
+            return [], EveType.objects.get(id=type_id).portion_size or 1, 1
+        except Exception:
+            return [], 1, 1
 
 
 def calculate_facility_me_multiplier(facility, product_type, return_breakdown=False):

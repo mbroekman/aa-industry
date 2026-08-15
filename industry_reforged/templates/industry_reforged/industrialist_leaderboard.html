@@ -66,7 +66,7 @@
                                 <tr>
                                     <td class="numeric"><strong>{{ forloop.counter }}</strong></td>
                                     <td>{{ entry.assigned_to__character_name }}</td>
-                                    <td class="text-end fw-bold text-warning numeric">{{ entry.total_isk|eve_isk }}</td>
+                                    <td class="text-end fw-bold text-warning numeric" data-sort="{{ entry.total_isk }}">{{ entry.total_isk|eve_isk }}</td>
                                 </tr>
                             {% empty %}
                             <tr>

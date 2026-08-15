@@ -149,7 +149,7 @@
                                                         </div>
                                                     </td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
-                                                    <td class="text-end numeric text-warning">
+                                                    <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">
                                                         {{ task.builder_reward|eve_isk }}
                                                     </td>
                                                     <td class="text-end">
@@ -288,7 +288,7 @@
                                                         </td>
                                                         <td class="text-end numeric">{{ task.quantity }}</td>
                                                         <td>{{ task.assigned_to.character_name }}</td>
-                                                        <td class="text-end numeric text-warning">{{ task.builder_reward|eve_isk }}</td>
+                                                        <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">{{ task.builder_reward|eve_isk }}</td>
                                                         <td class="text-end">
                                                             <div class="d-flex justify-content-end gap-1">
                                                                 <form method="post"
@@ -379,7 +379,7 @@
                                                             </td>
                                                             <td class="text-muted">{{ task.assigned_to.character_name }}
                                                             </td>
-                                                            <td class="text-end numeric text-success">{{ task.builder_reward|eve_isk }}</td>
+                                                            <td class="text-end numeric text-success" data-sort="{{ task.builder_reward }}">{{ task.builder_reward|eve_isk }}</td>
                                                             <td class="text-end text-muted numeric">{{ task.completed_at|date:"Y-m-d H:i" }}</td>
                                                         </tr>
                                                         {% endfor %}
@@ -543,7 +543,7 @@
                                                         </td>
                                                         <td class="text-end numeric">{{ job.runs }}</td>
                                                         <td>{{ job.installer.character_name|default:"Unknown" }}</td>
-                                                        <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}</td>
+                                                        <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted small">({{ job.end_date|naturaltime }})</span></td>
                                                     </tr>
                                                     {% endfor %}
                                                 </tbody>
@@ -592,7 +592,7 @@
                                                 </div>
                                             </td>
                                             <td class="text-end numeric">{{ task.quantity }}</td>
-                                            <td class="text-end numeric text-success">{{ task.builder_reward|eve_isk }}</td>
+                                            <td class="text-end numeric text-success" data-sort="{{ task.builder_reward }}">{{ task.builder_reward|eve_isk }}</td>
                                             <td>
                                                 {% if task.payout_batch %}
                                                     <span class="badge bg-secondary">{{ task.payout_batch.payment_reference }}</span>
