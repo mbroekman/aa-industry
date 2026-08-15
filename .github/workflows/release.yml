@@ -9,9 +9,9 @@
 name: Release
 
 on:
-  release:
-    # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
-    types: [released, prereleased]
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
 
 jobs:
