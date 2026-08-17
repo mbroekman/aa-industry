@@ -38,6 +38,7 @@ def update_character_jobs():
                 continue
 
             all_jobs = []
+            successful_fetches = 0
 
             for include_completed in [False, True]:
                 try:
@@ -46,6 +47,7 @@ def update_character_jobs():
                         token=token,
                         include_completed=include_completed,
                     ).results()
+                    successful_fetches += 1
                     if jobs_res:
                         all_jobs.extend(jobs_res)
                 except HTTPNotModified:
@@ -121,13 +123,13 @@ def update_character_jobs():
                         )
 
             # Cleanup jobs that fell off ESI
-            if len(all_jobs) > 0:
+            if successful_fetches == 2:
                 CharacterIndustryJob.objects.filter(
                     character=character,
                     status__in=["active", "paused", "ready"],
                 ).exclude(job_id__in=seen_jobs).update(status="delivered")
             else:
-                # Fallback if no jobs were processed (e.g. 304 Not Modified)
+                # Fallback if no jobs were processed or partial fetch (e.g. 304 Not Modified)
                 # Standard Library
                 import datetime
 
@@ -171,8 +173,11 @@ def update_corporation_jobs():
             continue
 
         all_jobs = []
+        successful_fetches = 0
+
         for include_completed in [False, True]:
             page = 1
+            page_success = True
             while True:
                 try:
                     jobs_res = (
@@ -194,14 +199,19 @@ def update_corporation_jobs():
 
                     page += 1
                 except HTTPNotModified:
+                    page_success = False
                     break
                 except Exception as e:
+                    page_success = False
                     if hasattr(e, "status_code") and e.status_code == 404:
                         break
                     logger.error(
                         f"Failed to fetch corp jobs page {page} (completed={include_completed}) for {config.corporation.corporation_id}: {e}"
                     )
                     break
+
+            if page_success:
+                successful_fetches += 1
 
         if all_jobs:
             logger.info(
@@ -285,13 +295,13 @@ def update_corporation_jobs():
                         send_discord_webhook(webhook_config.jobs_webhook, embed)
 
         # Cleanup jobs that fell off ESI
-        if len(all_jobs) > 0:
+        if successful_fetches == 2:
             CorporationIndustryJob.objects.filter(
                 corporation=config.corporation,
                 status__in=["active", "paused", "ready"],
             ).exclude(job_id__in=seen_jobs).update(status="delivered")
         else:
-            # Fallback if no jobs were processed (e.g. 304 Not Modified)
+            # Fallback if no jobs were processed or partial fetch (e.g. 304 Not Modified)
             # Standard Library
             import datetime
 
