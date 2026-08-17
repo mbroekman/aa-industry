@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.8] - 17-08-2026
+
+### Fixed
+
+- **ESI Syncing (Hotfix)**: Fixed a bug where the aggressive ESI cleanup logic would fail to run if the application received a `304 Not Modified` cached response or if a user genuinely had zero jobs. The sync task now tracks successful HTTP requests instead of list size to safely run the cleanup (TASK-76).
+
 ## [0.3.7] - 16-08-2026
 
 ### Added
