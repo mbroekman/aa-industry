@@ -41,6 +41,10 @@
                         Jobs</button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="myevejobs-tab" data-bs-toggle="tab" data-bs-target="#myevejobs-pane"
+                        type="button" role="tab" aria-controls="myevejobs-pane" aria-selected="false"><i class="fas fa-hammer"></i> My Corporate Jobs</button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="payout-tab" data-bs-toggle="tab" data-bs-target="#payout-pane"
                         type="button" role="tab" aria-controls="payout-pane" aria-selected="false"><i class="fas fa-file-invoice-dollar"></i> Payment Summary</button>
                 </li>
@@ -399,6 +403,7 @@
                                     <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
                                         <select id="summary-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;" onchange="filterSummaryTable()">
                                             <option value="active">{% trans "Active" %}</option>
+                                            <option value="ready">{% trans "Ready" %}</option>
                                             <option value="completed">{% trans "Completed" %}</option>
                                             <option value="all">{% trans "All" %}</option>
                                         </select>
@@ -418,7 +423,7 @@
                                                     <th class="text-end">{% trans "Claimed" %}</th>
                                                     <th class="text-end">{% trans "Completed" %}</th>
                                                     <th class="text-end">{% trans "Remaining" %}</th>
-                                                    <th class="text-end">{% trans "EVE In Progress" %}</th>
+                                                    <th class="text-end">{% trans "EVE Jobs" %}</th>
                                                 </tr>
                                             </thead>
                                                 {% regroup my_claimed_summary by activity_name as grouped_summary %}
@@ -428,7 +433,7 @@
                                                     <td colspan="5" class="fw-bold">{{ group.grouper }}</td>
                                                 </tr>
                                                 {% for sum_item in group.list %}
-                                                <tr class="summary-row" data-status="{% if sum_item.remaining <= 0 %}completed{% else %}active{% endif %}">
+                                                <tr class="summary-row" data-status="{{ sum_item.row_status }}">
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <img onerror="handleImageFallback(this, {{ sum_item.item_type_id }})"
@@ -447,7 +452,18 @@
                                                     <td class="text-end numeric fw-bold text-info">{{ sum_item.to_build }}</td>
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="text-end numeric fw-bold {% if sum_item.remaining > 0 %}text-danger{% else %}text-success{% endif %}">{{ sum_item.remaining|floatformat:0 }}</td>
-                                                    <td class="text-end numeric text-warning">{{ sum_item.in_progress|floatformat:0 }}</td>
+                                                    <td class="text-end numeric">
+                                                        {% if sum_item.eve_ready > 0 %}
+                                                        <span class="text-warning fw-bold" title="Ready to deliver">{{ sum_item.eve_ready|floatformat:0 }} <i class="fas fa-check"></i></span>
+                                                        {% endif %}
+                                                        {% if sum_item.eve_active > 0 %}
+                                                        {% if sum_item.eve_ready > 0 %}<br>{% endif %}
+                                                        <span class="text-info" title="In production">{{ sum_item.eve_active|floatformat:0 }} <i class="fas fa-industry"></i></span>
+                                                        {% endif %}
+                                                        {% if sum_item.eve_ready == 0 and sum_item.eve_active == 0 %}
+                                                        <span class="text-muted">-</span>
+                                                        {% endif %}
+                                                    </td>
                                                 </tr>
                                                 {% endfor %}
                                                 </tbody>
@@ -501,9 +517,19 @@
                 <div class="tab-pane fade" id="corporate-pane" role="tabpanel" aria-labelledby="corporate-tab"
                         tabindex="0">
                     <div class="card border-0 mb-4">
-                                    <div class="card-header">
-                                        <h4 class="card-title mb-0"><i class="fas fa-industry"></i> {% trans "Corp Active Jobs Overview" %}
-                                        </h4>
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h4 class="card-title mb-0"><i class="fas fa-industry"></i> {% trans "Corporate Jobs Overview" %}</h4>
+                                        <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
+                                            <select id="corporatejobs-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;" onchange="$('#corporate-jobs-table').DataTable().draw()">
+                                                <option value="all">{% trans "All" %}</option>
+                                                <option value="active" selected>{% trans "Active" %}</option>
+                                                <option value="ready">{% trans "Ready" %}</option>
+                                                <option value="delivered">{% trans "Delivered" %}</option>
+                                                <option value="other">{% trans "Other" %}</option>
+                                            </select>
+                                            <div class="vr bg-secondary mx-1"></div>
+                                            <div class="dt-search-placeholder" data-table-target="#corporate-jobs-table"></div>
+                                        </div>
                                     </div>
                                     <div class="card-body p-0">
                                         <div class="table-responsive">
@@ -513,13 +539,14 @@
                                                     <tr>
                                                         <th>{% trans "Product" %}</th>
                                                         <th class="text-end">{% trans "Runs" %}</th>
+                                                        <th>{% trans "Status" %}</th>
                                                         <th>{% trans "Installer" %}</th>
                                                         <th>{% trans "End Date" %}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {% for job in corp_active_jobs %}
-                                                    <tr>
+                                                    <tr data-job-status="{% if job.status == 'delivered' %}delivered{% elif job.is_ready %}ready{% else %}{{ job.status }}{% endif %}">
                                                         <td>
                                                             {% if job.product_type %}
                                                             <div class="d-flex align-items-center">
@@ -542,8 +569,13 @@
                                                             {% endif %}
                                                         </td>
                                                         <td class="text-end numeric">{{ job.runs }}</td>
+                                                        <td>
+                                                            <span class="badge {% if job.status == 'delivered' %}bg-success{% elif job.is_ready %}bg-warning text-dark{% elif job.status == 'paused' %}bg-secondary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-info text-dark{% endif %}">
+                                                                {% if job.status == 'delivered' %}Delivered{% elif job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
+                                                            </span>
+                                                        </td>
                                                         <td>{{ job.installer.character_name|default:"Unknown" }}</td>
-                                                        <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted small">({{ job.end_date|naturaltime }})</span></td>
+                                                        <td class="numeric" data-sort="{{ job.end_date|date:'U'|default:0 }}">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted small">({{ job.end_date|naturaltime }})</span></td>
                                                     </tr>
                                                     {% endfor %}
                                                 </tbody>
@@ -552,6 +584,82 @@
                                     </div>
                                 </div>
                     </div> <!-- End Tab 4 -->
+
+                <!-- TAB 4B: MY EVE JOBS -->
+                <div class="tab-pane fade" id="myevejobs-pane" role="tabpanel" aria-labelledby="myevejobs-tab" tabindex="0">
+                    <div class="card border-0 mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="card-title mb-0"><i class="fas fa-hammer"></i> {% trans "My Corporate Jobs" %}</h4>
+                            <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
+                                <select id="myevejobs-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;" onchange="$('#myevejobs-table').DataTable().draw()">
+                                    <option value="all">{% trans "All" %}</option>
+                                    <option value="active">{% trans "Active" %}</option>
+                                    <option value="ready">{% trans "Ready" %}</option>
+                                    <option value="delivered">{% trans "Delivered" %}</option>
+                                    <option value="other">{% trans "Other" %}</option>
+                                </select>
+                                <div class="vr bg-secondary mx-1"></div>
+                                <div class="dt-search-placeholder" data-table-target="#myevejobs-table"></div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table id="myevejobs-table" class="table table-striped table-hover m-0 w-100">
+                                    <thead>
+                                        <tr>
+                                            <th>{% trans "Product" %}</th>
+                                            <th class="text-end">{% trans "Runs" %}</th>
+                                            <th>{% trans "Status" %}</th>
+                                            <th>{% trans "Installer" %}</th>
+                                            <th>{% trans "End Date" %}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for job in my_eve_jobs %}
+                                        <tr data-job-status="{% if job.status == 'delivered' %}delivered{% elif job.is_ready %}ready{% else %}{{ job.status }}{% endif %}">
+                                            <td>
+                                                {% if job.product_type %}
+                                                <div class="d-flex align-items-center">
+                                                    <img onerror="handleImageFallback(this, {{ job.product_type.id }})"
+                                                        src="https://images.evetech.net/types/{{ job.product_type.id }}/icon?size=32"
+                                                        alt="{{ job.product_type.name }}" width="24"
+                                                        height="24" class="me-2 rounded">
+                                                    <span>{{ job.product_type.name }}</span>
+                                                </div>
+                                                {% elif job.blueprint_type %}
+                                                <div class="d-flex align-items-center">
+                                                    <img onerror="handleImageFallback(this, {{ job.blueprint_type.id }})"
+                                                        src="https://images.evetech.net/types/{{ job.blueprint_type.id }}/icon?size=32"
+                                                        alt="{{ job.blueprint_type.name }}" width="24"
+                                                        height="24" class="me-2 rounded">
+                                                    <span><span class="badge bg-secondary me-1">{{ job.activity_name }}</span> {{ job.blueprint_type.name }}</span>
+                                                </div>
+                                                {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end numeric">{{ job.runs }}</td>
+                                            <td>
+                                                <span class="badge {% if job.status == 'delivered' %}bg-success{% elif job.is_ready %}bg-warning text-dark{% elif job.status == 'paused' %}bg-secondary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-info text-dark{% endif %}">
+                                                    {% if job.status == 'delivered' %}Delivered{% elif job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
+                                                </span>
+                                            </td>
+                                            <td>{{ job.installer.character_name|default:"Unknown" }}</td>
+                                            <td class="numeric" data-sort="{{ job.end_date|date:'U'|default:0 }}">
+                                                {% if job.end_date %}
+                                                    {{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted small">({{ job.end_date|naturaltime }})</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Tab 4B -->
 
                 <!-- TAB 5: PAYMENT SUMMARY -->
                 <div class="tab-pane fade" id="payout-pane" role="tabpanel" aria-labelledby="payout-tab" tabindex="0">
@@ -1016,6 +1124,12 @@
             } catch (e) { console.error("Error init corporate jobs table:", e); }
 
             try {
+                if ($('#myevejobs-table').length) {
+                    $('#myevejobs-table').DataTable($.extend(true, {}, baseConfig));
+                }
+            } catch (e) { console.error("Error init my eve jobs table:", e); }
+
+            try {
                 if ($('#payout-summary-table').length) {
                     $('#payout-summary-table').DataTable($.extend(true, {}, baseConfig));
                 }
@@ -1057,6 +1171,26 @@
                     if (!filter || filter === 'all') return true;
                     var rowNode = settings.aoData[dataIndex].nTr;
                     var status = $(rowNode).attr('data-payment-status');
+                    return status === filter;
+                }
+                if (tableId === 'myevejobs-table') {
+                    var filter = $('#myevejobs-filter-select').val();
+                    if (!filter || filter === 'all') return true;
+                    var rowNode = settings.aoData[dataIndex].nTr;
+                    var status = $(rowNode).attr('data-job-status');
+                    if (filter === 'other') {
+                        return status === 'paused' || status === 'cancelled';
+                    }
+                    return status === filter;
+                }
+                if (tableId === 'corporate-jobs-table') {
+                    var filter = $('#corporatejobs-filter-select').val();
+                    if (!filter || filter === 'all') return true;
+                    var rowNode = settings.aoData[dataIndex].nTr;
+                    var status = $(rowNode).attr('data-job-status');
+                    if (filter === 'other') {
+                        return status === 'paused' || status === 'cancelled';
+                    }
                     return status === filter;
                 }
 

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.7] - 16-08-2026
+
+### Added
+
+- **Industrialist Dashboard**: Added a new "My Corporate Jobs" tab to specifically track EVE jobs installed by the user's characters (TASK-70).
+- **Industrialist Dashboard**: Upgraded the general "Corporate Jobs Overview" tab to include the same advanced filtering (Active, Ready, Delivered, etc.) and visual status indicators as the "My Corporate Jobs" tab (TASK-74).
+- **Industrialist Dashboard**: Enhanced the "Build Steps" tab to split "EVE In Progress" into "EVE Active" and "EVE Ready", providing better insight into which jobs are ready to deliver. A "Ready" option was also added to the filter dropdown (TASK-71).
+
+### Fixed
+
+- **ESI Syncing**: Fixed a critical synchronization bug where ESI caching caused delivered/cancelled jobs to be ignored in favor of stale "active" statuses. Implemented a self-healing cleanup mechanism that automatically updates active/ready jobs to "delivered" if they inexplicably drop off the ESI response. Jobs that were delivered in-game will now properly update in the app after a data refresh (TASK-75).
+- **DataTables Sorting**: Fixed an issue where the "End Date" column (which includes HTML countdown text) sorted alphabetically instead of chronologically across the Industrialist and Personal dashboards (TASK-72).
+
 ## [0.3.6] - 15-08-2026
 
 ### Fixed

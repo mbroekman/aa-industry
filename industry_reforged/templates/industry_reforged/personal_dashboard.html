@@ -117,7 +117,7 @@
                                                     {% if job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
                                                 </span>
                                             </td>
-                                            <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted small">({{ job.end_date|naturaltime }})</span></td>
+                                            <td class="numeric" data-sort="{{ job.end_date|date:'U'|default:0 }}">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted small">({{ job.end_date|naturaltime }})</span></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -176,7 +176,7 @@
                                                     {{ job.status|title }}
                                                 </span>
                                             </td>
-                                            <td class="numeric">{{ job.end_date|date:"Y-m-d H:i" }}</td>
+                                            <td class="numeric" data-sort="{{ job.end_date|date:'U'|default:0 }}">{{ job.end_date|date:"Y-m-d H:i" }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -259,7 +259,7 @@
                                                                         {% if job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
                                                                     </span>
                                                                 </td>
-                                                                <td class="numeric small">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted">({{ job.end_date|naturaltime }})</span></td>
+                                                                <td class="numeric small" data-sort="{{ job.end_date|date:'U'|default:0 }}">{{ job.end_date|date:"Y-m-d H:i" }}<br><span class="text-muted">({{ job.end_date|naturaltime }})</span></td>
                                                             </tr>
                                                             {% endfor %}
                                                         </tbody>
@@ -328,7 +328,7 @@
                                                                         {{ job.status|title }}
                                                                     </span>
                                                                 </td>
-                                                                <td class="numeric small">{{ job.end_date|date:"Y-m-d H:i" }}</td>
+                                                                <td class="numeric small" data-sort="{{ job.end_date|date:'U'|default:0 }}">{{ job.end_date|date:"Y-m-d H:i" }}</td>
                                                             </tr>
                                                             {% endfor %}
                                                         </tbody>

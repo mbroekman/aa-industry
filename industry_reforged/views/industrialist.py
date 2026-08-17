@@ -183,16 +183,31 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                 if j.product_type_id == type_id and j.activity_id == activity_id
             ]
 
-            for j in matching_char_jobs:
-                in_progress += j.runs * portion_size
-            for j in matching_corp_jobs:
-                in_progress += j.runs * portion_size
+            eve_active = 0
+            eve_ready = 0
+
+            for j in matching_char_jobs + matching_corp_jobs:
+                runs = j.runs * portion_size
+                if getattr(j, "is_ready", False):
+                    eve_ready += runs
+                else:
+                    eve_active += runs
+
+            in_progress = eve_active + eve_ready
 
             to_build = item["total_claimed"] or 0
             completed = item["total_completed"] or 0
 
-            # Remaining is what still needs to be completed
+            # Remaining is what still needs to be started
             remaining = max(0, to_build - in_progress - completed)
+
+            # Determine row status based on progress
+            if to_build <= completed:
+                row_status = "completed"
+            elif to_build <= completed + eve_ready:
+                row_status = "ready"
+            else:
+                row_status = "active"
 
             my_claimed_summary.append(
                 {
@@ -201,8 +216,11 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                     "activity_name": activity_name,
                     "to_build": to_build,
                     "in_progress": in_progress,
+                    "eve_active": eve_active,
+                    "eve_ready": eve_ready,
                     "completed": completed,
                     "remaining": remaining,
+                    "row_status": row_status,
                 }
             )
 
@@ -211,7 +229,14 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "character__corporation_id", flat=True
     )
     corp_active_jobs = CorporationIndustryJob.objects.filter(
-        corporation__corporation_id__in=user_corps, status="active"
+        corporation__corporation_id__in=user_corps,
+        status__in=["active", "ready", "delivered", "paused", "cancelled"],
+    ).select_related("blueprint_type", "product_type", "installer")
+
+    # My EVE jobs (Corp jobs installed by the industrialist)
+    my_eve_jobs = CorporationIndustryJob.objects.filter(
+        installer_id__in=user_characters,
+        status__in=["active", "ready", "delivered", "paused", "cancelled"],
     ).select_related("blueprint_type", "product_type", "installer")
 
     # Standard Library
@@ -332,6 +357,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "my_tasks": my_tasks,
         "my_completed_tasks": my_completed_tasks,
         "corp_active_jobs": corp_active_jobs,
+        "my_eve_jobs": my_eve_jobs,
         "my_claimed_summary": my_claimed_summary,
         "my_payout_tasks": my_payout_tasks,
     }

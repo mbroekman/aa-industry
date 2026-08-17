@@ -59,6 +59,20 @@ def update_character_jobs():
                 logger.info(
                     f"Fetched {len(all_jobs)} character jobs from ESI for character {token.character_id}"
                 )
+
+                # Sort jobs so that completed/delivered statuses are processed first
+                status_priority = {
+                    "delivered": 0,
+                    "cancelled": 1,
+                    "ready": 2,
+                    "active": 3,
+                }
+                all_jobs.sort(
+                    key=lambda j: status_priority.get(
+                        getattr(j, "status", "active"), 99
+                    )
+                )
+
                 seen_jobs = set()
                 for job in all_jobs:
                     job_id = getattr(job, "job_id")
@@ -106,19 +120,26 @@ def update_character_jobs():
                             f"Your industry job {obj.job_id} has finished.",
                         )
 
-            # Cleanup aged-out jobs that fell off ESI
-            # Standard Library
-            import datetime
+            # Cleanup jobs that fell off ESI
+            if len(all_jobs) > 0:
+                CharacterIndustryJob.objects.filter(
+                    character=character,
+                    status__in=["active", "paused", "ready"],
+                ).exclude(job_id__in=seen_jobs).update(status="delivered")
+            else:
+                # Fallback if no jobs were processed (e.g. 304 Not Modified)
+                # Standard Library
+                import datetime
 
-            # Django
-            from django.utils import timezone
+                # Django
+                from django.utils import timezone
 
-            cutoff = timezone.now() - datetime.timedelta(days=90)
-            CharacterIndustryJob.objects.filter(
-                character=character,
-                status__in=["active", "paused", "ready"],
-                end_date__lt=cutoff,
-            ).update(status="delivered")
+                cutoff = timezone.now() - datetime.timedelta(days=90)
+                CharacterIndustryJob.objects.filter(
+                    character=character,
+                    status__in=["active", "paused", "ready"],
+                    end_date__lt=cutoff,
+                ).update(status="delivered")
 
         except Exception as e:
             logger.error(
@@ -186,6 +207,13 @@ def update_corporation_jobs():
             logger.info(
                 f"Fetched {len(all_jobs)} corporation jobs from ESI for corporation {config.corporation.corporation_name}"
             )
+
+            # Sort jobs so that completed/delivered statuses are processed first
+            status_priority = {"delivered": 0, "cancelled": 1, "ready": 2, "active": 3}
+            all_jobs.sort(
+                key=lambda j: status_priority.get(getattr(j, "status", "active"), 99)
+            )
+
             seen_jobs = set()
             for job in all_jobs:
                 job_id = getattr(job, "job_id")
@@ -256,19 +284,26 @@ def update_corporation_jobs():
                         }
                         send_discord_webhook(webhook_config.jobs_webhook, embed)
 
-        # Cleanup aged-out jobs that fell off ESI
-        # Standard Library
-        import datetime
+        # Cleanup jobs that fell off ESI
+        if len(all_jobs) > 0:
+            CorporationIndustryJob.objects.filter(
+                corporation=config.corporation,
+                status__in=["active", "paused", "ready"],
+            ).exclude(job_id__in=seen_jobs).update(status="delivered")
+        else:
+            # Fallback if no jobs were processed (e.g. 304 Not Modified)
+            # Standard Library
+            import datetime
 
-        # Django
-        from django.utils import timezone
+            # Django
+            from django.utils import timezone
 
-        cutoff = timezone.now() - datetime.timedelta(days=90)
-        CorporationIndustryJob.objects.filter(
-            corporation=config.corporation,
-            status__in=["active", "paused", "ready"],
-            end_date__lt=cutoff,
-        ).update(status="delivered")
+            cutoff = timezone.now() - datetime.timedelta(days=90)
+            CorporationIndustryJob.objects.filter(
+                corporation=config.corporation,
+                status__in=["active", "paused", "ready"],
+                end_date__lt=cutoff,
+            ).update(status="delivered")
 
     # Link tasks
     link_orphaned_jobs_to_tasks.delay()
