@@ -228,16 +228,26 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     user_corps = request.user.character_ownerships.all().values_list(
         "character__corporation_id", flat=True
     )
-    corp_active_jobs = CorporationIndustryJob.objects.filter(
-        corporation__corporation_id__in=user_corps,
-        status__in=["active", "ready", "delivered", "paused", "cancelled"],
-    ).select_related("blueprint_type", "product_type", "installer")
+    corp_active_jobs = (
+        CorporationIndustryJob.objects.filter(
+            corporation__corporation_id__in=user_corps,
+            status__in=["active", "ready", "delivered", "paused", "cancelled"],
+            taskjoblink__task__status="IN_PRODUCTION",
+        )
+        .select_related("blueprint_type", "product_type", "installer")
+        .distinct()
+    )
 
     # My EVE jobs (Corp jobs installed by the industrialist)
-    my_eve_jobs = CorporationIndustryJob.objects.filter(
-        installer_id__in=user_characters,
-        status__in=["active", "ready", "delivered", "paused", "cancelled"],
-    ).select_related("blueprint_type", "product_type", "installer")
+    my_eve_jobs = (
+        CorporationIndustryJob.objects.filter(
+            installer_id__in=user_characters,
+            status__in=["active", "ready", "delivered", "paused", "cancelled"],
+            taskjoblink__task__status="IN_PRODUCTION",
+        )
+        .select_related("blueprint_type", "product_type", "installer")
+        .distinct()
+    )
 
     # Standard Library
     import random

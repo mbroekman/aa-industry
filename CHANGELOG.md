@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.11] - 18-08-2026
+
+### Fixed
+
+- **Industrialist Dashboard**: The "My Corporate Jobs" and "Corporate Jobs Overview" tabs now strictly filter jobs. They will only display EVE jobs that are successfully linked to an active `IN_PRODUCTION` claimed task. Unrelated jobs, personal jobs, or jobs linked to completed tasks will no longer clutter the view (TASK-79).
+
 ## [0.3.10] - 18-08-2026
 
 ### Fixed
