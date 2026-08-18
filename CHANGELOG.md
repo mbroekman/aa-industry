@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.9] - 18-08-2026
+
+### Fixed
+
+- **Task Job Linking**: Fixed an issue where old, previously completed EVE jobs were incorrectly linked to newly claimed production tasks. Jobs are now strictly filtered and will only link if their expected completion time (`end_date`) is strictly *after* the exact moment the task was claimed (TASK-77).
+
 ## [0.3.8] - 17-08-2026
 
 ### Fixed

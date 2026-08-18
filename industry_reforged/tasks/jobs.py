@@ -323,7 +323,7 @@ def update_corporation_jobs():
 @log_task_execution("Link orphaned jobs to tasks")
 def link_orphaned_jobs_to_tasks():
     # Django
-    from django.db.models import Sum
+    from django.db.models import Q, Sum
 
     from ..models import (
         CharacterIndustryJob,
@@ -347,8 +347,11 @@ def link_orphaned_jobs_to_tasks():
             user.character_ownerships.all().values_list("character_id", flat=True)
         )
 
+        cutoff = task.assigned_at or task.created_at
+
         char_jobs = (
             CharacterIndustryJob.objects.filter(
+                Q(end_date__gte=cutoff) | Q(end_date__isnull=True),
                 character_id__in=user_character_ids,
                 product_type_id=task.item_type_id,
                 activity_id=task.activity_id,
@@ -360,6 +363,7 @@ def link_orphaned_jobs_to_tasks():
 
         corp_jobs = (
             CorporationIndustryJob.objects.filter(
+                Q(end_date__gte=cutoff) | Q(end_date__isnull=True),
                 installer_id__in=user_character_ids,
                 product_type_id=task.item_type_id,
                 activity_id=task.activity_id,
