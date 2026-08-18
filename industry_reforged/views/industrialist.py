@@ -232,7 +232,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         CorporationIndustryJob.objects.filter(
             corporation__corporation_id__in=user_corps,
             status__in=["active", "ready", "delivered", "paused", "cancelled"],
-            taskjoblink__task__status="IN_PRODUCTION",
+            taskjoblink__isnull=False,
         )
         .select_related("blueprint_type", "product_type", "installer")
         .distinct()
@@ -243,7 +243,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         CorporationIndustryJob.objects.filter(
             installer_id__in=user_characters,
             status__in=["active", "ready", "delivered", "paused", "cancelled"],
-            taskjoblink__task__status="IN_PRODUCTION",
+            taskjoblink__isnull=False,
         )
         .select_related("blueprint_type", "product_type", "installer")
         .distinct()
