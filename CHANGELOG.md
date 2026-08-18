@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.10] - 18-08-2026
+
+### Fixed
+
+- **Industrialist Dashboard**: Fixed an issue where fully completed tasks were still showing up in the "Build Steps" view and artificially absorbing unrelated active EVE jobs. The Build Steps now strictly only show items that have pending `IN_PRODUCTION` tasks (TASK-78).
+
 ## [0.3.9] - 18-08-2026
 
 ### Fixed

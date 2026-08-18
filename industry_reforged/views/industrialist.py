@@ -112,7 +112,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     # Total Claimed (from ProductionTask)
     all_tasks_grouped = (
         ProductionTask.objects.filter(
-            status__in=["IN_PRODUCTION", "COMPLETED"],
+            status="IN_PRODUCTION",
             assigned_to_id__in=user_characters,
         )
         .values("item_type__id", "item_type__name", "activity_id")
