@@ -3,7 +3,16 @@ from django import template
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.utils.safestring import mark_safe
 
+# AA Industry App
+from industry_reforged import __version__
+
 register = template.Library()
+
+
+@register.simple_tag
+def industry_version():
+    """Returns the current version of Industry Reforged."""
+    return __version__
 
 
 @register.filter

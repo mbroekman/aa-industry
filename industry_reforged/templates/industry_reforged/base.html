@@ -1,6 +1,6 @@
 {% extends 'allianceauth/base-bs5.html' %}
 
-{% load i18n static %}
+{% load i18n static industry_tags %}
 
 {% block page_title %}
     {% translate "Industry Reforged" %}
@@ -30,7 +30,7 @@
 {% endblock %}
 
 {% block header_nav_brand %}
-    {% translate "Industry Reforged" %}
+    {% translate "Industry Reforged" %} <span class="badge bg-secondary ms-2 text-white" style="font-size: 0.5em; vertical-align: middle;">v{% industry_version %}</span>
 {% endblock header_nav_brand %}
 
 {% block content %}
