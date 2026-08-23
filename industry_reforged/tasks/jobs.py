@@ -397,7 +397,7 @@ def link_orphaned_jobs_to_tasks():
             if linked_total >= required_runs:
                 break
 
-            runs_to_link = min(job.runs, required_runs - linked_total)
+            runs_to_link = job.runs
             if runs_to_link > 0:
                 is_char = isinstance(job, CharacterIndustryJob)
                 TaskJobLink.objects.create(

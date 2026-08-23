@@ -284,6 +284,9 @@
                                                                     <div class="mt-1 small">
                                                                         <span class="badge bg-dark border border-secondary" title="EVE Online delivery progress">
                                                                             <i class="fas fa-industry"></i> EVE Delivered: {{ task.eve_delivered_qty }} / {{ task.quantity }}
+                                                                            {% if task.eve_overdelivered_qty > 0 %}
+                                                                            <span class="text-success">(+{{ task.eve_overdelivered_qty }} extra)</span>
+                                                                            {% endif %}
                                                                         </span>
                                                                     </div>
                                                                     {% endif %}
@@ -373,6 +376,9 @@
                                                                         <div class="mt-1 small">
                                                                             <span class="badge bg-dark border border-secondary" title="EVE Online delivery progress">
                                                                                 <i class="fas fa-industry"></i> EVE Delivered: {{ task.eve_delivered_qty }} / {{ task.quantity }}
+                                                                                {% if task.eve_overdelivered_qty > 0 %}
+                                                                                <span class="text-success">(+{{ task.eve_overdelivered_qty }} extra)</span>
+                                                                                {% endif %}
                                                                             </span>
                                                                         </div>
                                                                         {% endif %}
@@ -453,14 +459,18 @@
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="text-end numeric fw-bold {% if sum_item.remaining > 0 %}text-danger{% else %}text-success{% endif %}">{{ sum_item.remaining|floatformat:0 }}</td>
                                                     <td class="text-end numeric">
+                                                        {% if sum_item.eve_delivered > 0 %}
+                                                        <span class="text-success fw-bold" title="EVE Delivered">{{ sum_item.eve_delivered|floatformat:0 }} <i class="fas fa-box-open"></i></span>
+                                                        {% endif %}
                                                         {% if sum_item.eve_ready > 0 %}
+                                                        {% if sum_item.eve_delivered > 0 %}<br>{% endif %}
                                                         <span class="text-warning fw-bold" title="Ready to deliver">{{ sum_item.eve_ready|floatformat:0 }} <i class="fas fa-check"></i></span>
                                                         {% endif %}
                                                         {% if sum_item.eve_active > 0 %}
-                                                        {% if sum_item.eve_ready > 0 %}<br>{% endif %}
+                                                        {% if sum_item.eve_ready > 0 or sum_item.eve_delivered > 0 %}<br>{% endif %}
                                                         <span class="text-info" title="In production">{{ sum_item.eve_active|floatformat:0 }} <i class="fas fa-industry"></i></span>
                                                         {% endif %}
-                                                        {% if sum_item.eve_ready == 0 and sum_item.eve_active == 0 %}
+                                                        {% if sum_item.eve_ready == 0 and sum_item.eve_active == 0 and sum_item.eve_delivered == 0 %}
                                                         <span class="text-muted">-</span>
                                                         {% endif %}
                                                     </td>

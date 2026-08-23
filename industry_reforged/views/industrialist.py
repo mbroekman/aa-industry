@@ -128,6 +128,22 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         # Third Party
         from eveuniverse.models import EveIndustryActivityProduct
 
+        # AA Industry App
+        from industry_reforged.models import TaskJobLink
+
+        # Pre-fetch delivered quantities using TaskJobLink
+        delivered_map = {}
+        for link in TaskJobLink.objects.filter(
+            task__status="IN_PRODUCTION", task__assigned_to_id__in=user_characters
+        ).select_related("task__item_type", "character_job", "corporation_job"):
+            job = link.character_job or link.corporation_job
+            if job and job.status == "delivered":
+                key = (link.task.item_type_id, link.task.activity_id)
+                portion = getattr(link.task.item_type, "portion_size", 1) or 1
+                delivered_map[key] = delivered_map.get(key, 0) + (
+                    link.linked_runs * portion
+                )
+
         # Get active Character/Corp jobs for the user
         char_jobs = CharacterIndustryJob.objects.filter(
             character_id__in=user_characters, status__in=["active", "ready"]
@@ -194,17 +210,18 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                     eve_active += runs
 
             in_progress = eve_active + eve_ready
+            eve_delivered = delivered_map.get((type_id, activity_id), 0)
 
             to_build = item["total_claimed"] or 0
             completed = item["total_completed"] or 0
 
             # Remaining is what still needs to be started
-            remaining = max(0, to_build - in_progress - completed)
+            remaining = max(0, to_build - in_progress - eve_delivered - completed)
 
             # Determine row status based on progress
-            if to_build <= completed:
+            if to_build <= completed + eve_delivered:
                 row_status = "completed"
-            elif to_build <= completed + eve_ready:
+            elif to_build <= completed + eve_delivered + eve_ready:
                 row_status = "ready"
             else:
                 row_status = "active"
@@ -218,6 +235,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                     "in_progress": in_progress,
                     "eve_active": eve_active,
                     "eve_ready": eve_ready,
+                    "eve_delivered": eve_delivered,
                     "completed": completed,
                     "remaining": remaining,
                     "row_status": row_status,
@@ -355,7 +373,8 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                 elif job.status in ["active", "ready"]:
                     eve_active += link.linked_runs * portion_size
 
-        task.eve_delivered_qty = eve_delivered
+        task.eve_delivered_qty = min(eve_delivered, task.quantity)
+        task.eve_overdelivered_qty = max(0, eve_delivered - task.quantity)
         task.eve_active_qty = eve_active
         task.eve_remaining_qty = max(0, task.quantity - eve_delivered)
 
