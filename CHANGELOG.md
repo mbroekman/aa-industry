@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **BOM & Shopping List**: Display corporation stock levels directly in the BOM overview and shopping lists (TASK-80).
+
+### Fixed
+
+- **Job Claims**: Fixed a bug where partial job claims were capped, causing orphaned runs that were lost from the dashboard. Tasks now claim the entire EVE job and accurately track the over-delivery (TASK-81).
+- **Industrialist Dashboard**: The "Build Steps" summary pane now accurately reflects actual EVE Delivered runs alongside the remaining required runs (TASK-82).
+
 ## [0.3.12] - 18-08-2026
 
 ### Fixed
