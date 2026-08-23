@@ -16,6 +16,7 @@
                                 <thead>
                                     <tr>
                                         <th>{% trans "Material" %}</th>
+                                        <th class="text-end">{% trans "Corp Stock" %}</th>
                                         <th class="text-end">{% trans "Base (ME0)" %}</th>
                                         <th class="text-end">{% trans "Required" %}</th>
                                         <th class="text-end">
@@ -33,6 +34,13 @@
                                                 <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ mat.type_id }}/bp?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
                                                 <span>{{ mat.name }}</span>
                                             </div>
+                                        </td>
+                                        <td class="text-end numeric">
+                                            {% if mat.corp_stock >= mat.quantity %}
+                                                <span class="text-success" data-bs-toggle="tooltip" title="{% trans 'Sufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                            {% else %}
+                                                <span class="text-danger" data-bs-toggle="tooltip" title="{% trans 'Insufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                            {% endif %}
                                         </td>
                                         <td class="text-end numeric text-muted">
                                             {% if mat.base_quantity and mat.base_quantity > mat.quantity %}
@@ -60,19 +68,19 @@
                                         <td class="text-end numeric text-warning">{{ mat.total_price|eve_isk }}</td>
                                     </tr>
                                     {% empty %}
-                                    <tr><td colspan="5" class="text-center">No materials required or failed to load SDE data.</td></tr>
+                                    <tr><td colspan="6" class="text-center">No materials required or failed to load SDE data.</td></tr>
                                     {% endfor %}
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th colspan="4" class="text-end text-muted">
+                                        <th colspan="5" class="text-end text-muted">
                                             {% trans "Original Jita Price (Est.):" %}
                                             <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{% trans 'Live Jita 5% Sell Price fetched via Fuzzwork API' %}"></i>
                                         </th>
                                         <th class="text-end text-muted numeric">{{ original_price|eve_isk }}</th>
                                     </tr>
                                     <tr>
-                                        <th colspan="4" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
+                                        <th colspan="5" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
                                         <th class="text-end fs-5 text-warning numeric">{{ total_bom_price|eve_isk }}</th>
                                     </tr>
                                 </tfoot>

@@ -243,6 +243,22 @@ def calculate_order_bom(order):
                     bom_splits.get(child_item.item_type.id, 0) + child_item.quantity
                 )
 
+    corp_stock = {}
+    if corp_info:
+        # Django
+        from django.db.models import Sum
+
+        # AA Industry App
+        from industry_reforged.models import CorpInventory
+
+        inventory = (
+            CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
+            .values("item_type_id")
+            .annotate(total=Sum("quantity"))
+        )
+        for inv in inventory:
+            corp_stock[inv["item_type_id"]] = inv["total"]
+
     for item in order.items.all():
         type_id = item.item_type.id
         quantity = item.quantity
@@ -320,6 +336,7 @@ def calculate_order_bom(order):
                     "quantity": required_qty,
                     "base_quantity": base_total,
                     "savings": base_total - required_qty,
+                    "corp_stock": corp_stock.get(mat_type_id, 0),
                 }
 
     return bom

@@ -666,6 +666,7 @@ def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
                         "name": mat.get("name"),
                         "quantity": req,
                         "base_quantity": req,
+                        "corp_stock": inv_dict.get(mat_type_id, 0),
                     }
                 merge_bom(bom, type_bom)
 
