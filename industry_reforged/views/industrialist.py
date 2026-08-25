@@ -160,6 +160,24 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             corporation__corporation_id__in=corp_ids,
         )
 
+        # Pre-fetch available stock from CorpInventory
+        # AA Industry App
+        from industry_reforged.models import CorpInventory
+
+        type_ids = [item["item_type__id"] for item in all_tasks_grouped]
+        stock_dict = {}
+        if type_ids and corp_ids:
+            inventory_qs = (
+                CorpInventory.objects.filter(
+                    corporation__corporation_id__in=corp_ids, item_type_id__in=type_ids
+                )
+                .values("item_type_id")
+                .annotate(total_qty=Sum("quantity"))
+            )
+
+            for inv in inventory_qs:
+                stock_dict[inv["item_type_id"]] = inv["total_qty"]
+
         # Mapping for activity_name
         activity_name_map = {
             1: "Manufacturing",
@@ -238,6 +256,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                     "eve_delivered": eve_delivered,
                     "completed": completed,
                     "remaining": remaining,
+                    "corp_stock": stock_dict.get(type_id, 0),
                     "row_status": row_status,
                 }
             )
@@ -256,13 +275,29 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         .distinct()
     )
 
+    # Determine the oldest claim date for the current user's active tasks ONLY
+    # Django
+    from django.db.models import Q
+
+    oldest_claim_date = None
+
+    assigned_dates = [
+        t.assigned_at for t in my_tasks if t.assigned_at and t.status == "IN_PRODUCTION"
+    ]
+    if assigned_dates:
+        oldest_claim_date = min(assigned_dates)
+
+    q_filter = Q(taskjoblink__isnull=False)
+    if oldest_claim_date:
+        q_filter |= Q(start_date__gte=oldest_claim_date)
+
     # My EVE jobs (Corp jobs installed by the industrialist)
     my_eve_jobs = (
         CorporationIndustryJob.objects.filter(
             installer_id__in=user_characters,
             status__in=["active", "ready", "delivered", "paused", "cancelled"],
-            taskjoblink__isnull=False,
         )
+        .filter(q_filter)
         .select_related("blueprint_type", "product_type", "installer")
         .distinct()
     )

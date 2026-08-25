@@ -60,7 +60,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ inv.item_type__id }}/icon?size=32"
+                                            <img onerror="handleImageFallback(this, {{ inv.item_type__id }})" src="https://images.evetech.net/types/{{ inv.item_type__id }}/icon?size=32"
                                                 alt="{{ inv.item_type__name }}" width="24" height="24"
                                                 class="me-2 rounded">
                                             <span>{{ inv.item_type__name }}</span>
@@ -141,7 +141,14 @@
                         <tbody>
                             {% for item in low_stock %}
                             <tr>
-                                <td><strong class="text-white">{{ item.item_type.name }}</strong></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img onerror="handleImageFallback(this, {{ item.item_type.id }})" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32"
+                                            alt="{{ item.item_type.name }}" width="24" height="24"
+                                            class="me-2 rounded">
+                                        <strong class="text-white">{{ item.item_type.name }}</strong>
+                                    </div>
+                                </td>
                                 <td class="text-end numeric text-muted">{{ item.current_qty|intcomma }}</td>
                                 <td class="text-end numeric text-info">{% if item.in_progress > 0 %}{{ item.in_progress|intcomma }}{% else %}-{% endif %}</td>
                                 <td class="text-end numeric text-muted">{{ item.target|intcomma }}</td>
@@ -189,7 +196,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ inv.item_type__id }}/icon?size=32"
+                                            <img onerror="handleImageFallback(this, {{ inv.item_type__id }})" src="https://images.evetech.net/types/{{ inv.item_type__id }}/icon?size=32"
                                                 alt="{{ inv.item_type__name }}" width="24" height="24"
                                                 class="me-2 rounded">
                                             <span>{{ inv.item_type__name }}</span>

@@ -93,6 +93,21 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         if main_char and main_char.corporation:
             corp_info = main_char.corporation
 
+        corp_stock = {}
+        if corp_info:
+            # Django
+            from django.db.models import Sum
+
+            from ...models import CorpInventory
+
+            inventory = (
+                CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
+                .values("item_type_id")
+                .annotate(total=Sum("quantity"))
+            )
+            for inv in inventory:
+                corp_stock[inv["item_type_id"]] = inv["total"]
+
         node = get_recursive_bom_tree(
             type_id,
             item_name or str(type_id),
@@ -115,6 +130,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
                 "name": mat.get("name"),
                 "quantity": req,
                 "base_quantity": req,
+                "corp_stock": corp_stock.get(mat_type_id, 0),
             }
         merge_bom(bom, type_bom)
 

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Corporate Dashboard**: Added a status filter dropdown to the Corporate Jobs overview (TASK-84).
+- **Industrialist Dashboard**: "My Corporate Jobs" tab now defaults to filtering on "Active" jobs (TASK-83).
+
+### Fixed
+
+- **Industrialist Dashboard**: The "My Corporate Jobs" tab now displays unlinked EVE jobs (like Reactions) as long as they were started during an active work session. The time window is based on the oldest currently claimed task (`IN_PRODUCTION`). Unrelated older private jobs are still hidden (TASK-87, TASK-88).
+- **Inventory & Analytics**: Fixed a bug where Blueprint icons would display as Tritanium. The UI now falls back to correct `/bp` or `/bpc` image endpoints (TASK-86).
+- **Shopping List**: Fixed a bug where the "Corp Stock" column in the manual Shopping List flat overview remained empty. It now accurately fetches available stock (TASK-85).
+
 ## [0.3.13] - 23-08-2026
 
 ### Added

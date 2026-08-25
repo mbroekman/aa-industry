@@ -429,6 +429,7 @@
                                                     <th class="text-end">{% trans "Claimed" %}</th>
                                                     <th class="text-end">{% trans "Completed" %}</th>
                                                     <th class="text-end">{% trans "Remaining" %}</th>
+                                                    <th class="text-end" title="{% trans 'Available corporation stock' %}">{% trans "Stock" %}</th>
                                                     <th class="text-end">{% trans "EVE Jobs" %}</th>
                                                 </tr>
                                             </thead>
@@ -436,7 +437,7 @@
                                                 {% for group in grouped_summary %}
                                                 <tbody class="summary-group">
                                                 <tr class="table-dark summary-group-header">
-                                                    <td colspan="5" class="fw-bold">{{ group.grouper }}</td>
+                                                    <td colspan="6" class="fw-bold">{{ group.grouper }}</td>
                                                 </tr>
                                                 {% for sum_item in group.list %}
                                                 <tr class="summary-row" data-status="{{ sum_item.row_status }}">
@@ -458,6 +459,9 @@
                                                     <td class="text-end numeric fw-bold text-info">{{ sum_item.to_build }}</td>
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="text-end numeric fw-bold {% if sum_item.remaining > 0 %}text-danger{% else %}text-success{% endif %}">{{ sum_item.remaining|floatformat:0 }}</td>
+                                                    <td class="text-end numeric {% if sum_item.corp_stock >= sum_item.remaining and sum_item.remaining > 0 %}text-success fw-bold{% elif sum_item.corp_stock > 0 %}text-info{% else %}text-muted{% endif %}">
+                                                        {% if sum_item.corp_stock > 0 %}{{ sum_item.corp_stock|floatformat:0 }}{% else %}-{% endif %}
+                                                    </td>
                                                     <td class="text-end numeric">
                                                         {% if sum_item.eve_delivered > 0 %}
                                                         <span class="text-success fw-bold" title="EVE Delivered">{{ sum_item.eve_delivered|floatformat:0 }} <i class="fas fa-box-open"></i></span>
@@ -480,7 +484,7 @@
                                                 {% empty %}
                                                 <tbody>
                                                 <tr>
-                                                    <td colspan="5" class="text-center text-muted">{% trans "You have not claimed any production tasks." %}</td>
+                                                    <td colspan="6" class="text-center text-muted">{% trans "You have not claimed any production tasks." %}</td>
                                                 </tr>
                                                 </tbody>
                                                 {% endfor %}
@@ -603,7 +607,7 @@
                             <div class="d-flex align-items-center gap-2 bg-dark p-1 px-2 rounded border border-secondary">
                                 <select id="myevejobs-filter-select" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;" onchange="$('#myevejobs-table').DataTable().draw()">
                                     <option value="all">{% trans "All" %}</option>
-                                    <option value="active">{% trans "Active" %}</option>
+                                    <option value="active" selected>{% trans "Active" %}</option>
                                     <option value="ready">{% trans "Ready" %}</option>
                                     <option value="delivered">{% trans "Delivered" %}</option>
                                     <option value="other">{% trans "Other" %}</option>

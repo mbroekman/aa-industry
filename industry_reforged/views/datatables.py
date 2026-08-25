@@ -375,6 +375,10 @@ def dt_corporate_jobs(request):
     if activity_filter and activity_filter.isdigit():
         qs = qs.filter(activity_id=int(activity_filter))
 
+    status_filter = request.GET.get("status")
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
     filtered_records = qs.count()
 
     # Columns:

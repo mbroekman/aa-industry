@@ -347,6 +347,22 @@ def calculate_tasks_bom(tasks, corp_info=None):
     Calculates the aggregated Bill of Materials for a list of ProductionTask objects.
     Optionally pass corp_info (EveCorporationInfo) to apply corporate ME discounts.
     """
+    corp_stock = {}
+    if corp_info:
+        # Django
+        from django.db.models import Sum
+
+        # AA Industry App
+        from industry_reforged.models import CorpInventory
+
+        inventory = (
+            CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
+            .values("item_type_id")
+            .annotate(total=Sum("quantity"))
+        )
+        for inv in inventory:
+            corp_stock[inv["item_type_id"]] = inv["total"]
+
     bom = {}
     for task in tasks:
         type_id = task.item_type.id
@@ -413,6 +429,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
                     "quantity": required_qty,
                     "base_quantity": base_total,
                     "savings": base_total - required_qty,
+                    "corp_stock": corp_stock.get(mat_type_id, 0),
                 }
 
     return bom
