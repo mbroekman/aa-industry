@@ -1,9 +1,10 @@
 ---
 id: doc-8
-title: Job Filtering Logic (v0.3.12)
+title: Job Filtering Logic (v0.4.1)
 type: guide
 status: published
 created: 2026-08-19
+updated: 2026-08-25
 ---
 
 # Job Filtering Logic
@@ -26,8 +27,10 @@ Since v0.3.12 and subsequent updates, the logic works as follows:
 
 - **Strict Relation Check for Corp Jobs Overview**: The Corporate Dashboard tab filters jobs using `taskjoblink__isnull=False`. This means an EVE job is **only** retrieved if it is successfully linked to a `ProductionTask` via a `TaskJobLink`.
 - **Time Window for My Corporate Jobs**: The Industrialist Dashboard uses a more flexible time window approach to support unlinked jobs like Reactions. It calculates the `oldest_claim_date` based on the user's currently active claims (`IN_PRODUCTION` status).
-- **Visibility of Unlinked Jobs**: Jobs started by the user in EVE without a corresponding claimed task (e.g. Reactions) are shown **only if** their `start_date` falls on or after the `oldest_claim_date`. If the user has no active claims, unlinked jobs are hidden.
-- **Preservation of History**: Jobs with a valid link (`taskjoblink__isnull=False`) are always shown regardless of the time window. This ensures that users can still view their historical claimed tasks by setting the UI filter to "Delivered" or "All".
+- **Visibility of Unlinked Jobs**: Jobs started by the user in EVE without a corresponding claimed task (e.g., Reactions) are shown under two conditions:
+  - **Always Visible if Active**: If the unlinked job is currently running (`active`) or finished and waiting to be delivered (`ready`), it is always shown, bypassing any date filters.
+  - **Time-Based Visibility for Delivered Jobs**: If the unlinked job has already been delivered, it is only shown if its `start_date` falls on or after the `oldest_claim_date`. If the user has no active claims, old unlinked delivered jobs are hidden.
+- **Preservation of History**: Jobs with a valid link (`taskjoblink__isnull=False`) are always shown regardless of the time window or their current state. This ensures that users can still view their historical claimed tasks by setting the UI filter to "Delivered" or "All".
 
 ## Diagram: Data Flow and Visibility
 
@@ -40,9 +43,11 @@ graph TD
     DB_JOB -->|"Is this job linked to a task?"| CHECK{"Has TaskJobLink?"}
 
     CHECK -->|No| UNLINKED["Unlinked Job (e.g., Reactions or Private)"]
-    UNLINKED --> TIME_CHECK{"Started on/after oldest claim?"}
+    UNLINKED --> STATUS_CHECK{"Is status Active or Ready?"}
+    STATUS_CHECK -->|Yes| VISIBLE_ACTIVE(("Visible in My Corporate Jobs"))
+    STATUS_CHECK -->|No| TIME_CHECK{"Started on/after oldest claim?"}
     TIME_CHECK -->|No| HIDDEN(("Hidden from Dashboard"))
-    TIME_CHECK -->|Yes| VISIBLE_ACTIVE(("Visible in My Corporate Jobs"))
+    TIME_CHECK -->|Yes| VISIBLE_DELIVERED(("Visible via UI Filter"))
 
     CHECK -->|Yes| LINKED["Linked Job"]
     LINKED --> TASK_STATE{"Status of the Linked Task?"}
@@ -59,5 +64,6 @@ graph TD
 By employing a hybrid filtering approach, we ensure the dashboard displays exactly what the user expects:
 
 1. Jobs explicitly linked to tasks (`taskjoblink__isnull=False`) are always retained for history.
-1. Unlinked jobs (such as EVE Reactions) are visible dynamically, but only if they were started during an active work session (measured from the oldest active claim date).
+1. Unlinked jobs that are currently running (`active`) or waiting to be delivered (`ready`) are always visible so you can monitor your active work, regardless of linked tasks.
+1. Delivered unlinked jobs (such as completed EVE Reactions) are visible dynamically, but only if they were started during an active work session (measured from the oldest active claim date).
    This prevents old private jobs from cluttering the interface while fully supporting complex production chains that include unlinked steps.
