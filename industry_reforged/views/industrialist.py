@@ -199,8 +199,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
             # Fetch portion size
             portion_size = 1
+            search_activity_id = 11 if activity_id == 9 else activity_id
             bp_prod = EveIndustryActivityProduct.objects.filter(
-                product_eve_type_id=type_id, activity_id=activity_id
+                product_eve_type_id=type_id, activity_id=search_activity_id
             ).first()
             if bp_prod:
                 portion_size = bp_prod.quantity

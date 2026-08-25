@@ -69,7 +69,24 @@ class CharacterIndustryJob(models.Model):
 
     @property
     def expected_output(self):
-        portion = getattr(self.product_type, "portion_size", 1) or 1
+        # Third Party
+        from eveuniverse.models import EveIndustryActivityProduct
+
+        portion = 1
+        if (
+            self.blueprint_type_id
+            and self.product_type_id
+            and self.activity_id in [1, 9]
+        ):
+            search_activity_id = 11 if self.activity_id == 9 else self.activity_id
+            bp_prod = EveIndustryActivityProduct.objects.filter(
+                eve_type_id=self.blueprint_type_id,
+                product_eve_type_id=self.product_type_id,
+                activity_id=search_activity_id,
+            ).first()
+            if bp_prod:
+                portion = bp_prod.quantity
+
         return self.runs * portion
 
     def __str__(self):
@@ -139,7 +156,24 @@ class CorporationIndustryJob(models.Model):
 
     @property
     def expected_output(self):
-        portion = getattr(self.product_type, "portion_size", 1) or 1
+        # Third Party
+        from eveuniverse.models import EveIndustryActivityProduct
+
+        portion = 1
+        if (
+            self.blueprint_type_id
+            and self.product_type_id
+            and self.activity_id in [1, 9]
+        ):
+            search_activity_id = 11 if self.activity_id == 9 else self.activity_id
+            bp_prod = EveIndustryActivityProduct.objects.filter(
+                eve_type_id=self.blueprint_type_id,
+                product_eve_type_id=self.product_type_id,
+                activity_id=search_activity_id,
+            ).first()
+            if bp_prod:
+                portion = bp_prod.quantity
+
         return self.runs * portion
 
     def __str__(self):

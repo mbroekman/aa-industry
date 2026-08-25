@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.4.2 (2026-08-25)
+
+### Fix
+
+- mapped ESI reaction activity ID (9) to SDE reaction activity ID (11) for accurate expected output calculation
+
 ## v0.4.1 (2026-08-25)
 
 ### Feat
