@@ -103,3 +103,5 @@ messages_control.disable = [
 name = "cz_conventional_commits"
 version = "0.3.13"
 version_files = [ "industry_reforged/__init__.py", "pyproject.toml:version" ]
+tag_format = "v$version"
+update_changelog_on_bump = true
