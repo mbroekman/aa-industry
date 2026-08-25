@@ -231,15 +231,15 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             eve_delivered = delivered_map.get((type_id, activity_id), 0)
 
             to_build = item["total_claimed"] or 0
-            completed = item["total_completed"] or 0
+            completed = (item["total_completed"] or 0) + eve_delivered
 
             # Remaining is what still needs to be started
-            remaining = max(0, to_build - in_progress - eve_delivered - completed)
+            remaining = max(0, to_build - in_progress - completed)
 
             # Determine row status based on progress
-            if to_build <= completed + eve_delivered:
+            if to_build <= completed:
                 row_status = "completed"
-            elif to_build <= completed + eve_delivered + eve_ready:
+            elif to_build <= completed + eve_ready:
                 row_status = "ready"
             else:
                 row_status = "active"
