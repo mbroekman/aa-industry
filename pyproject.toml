@@ -98,3 +98,8 @@ messages_control.disable = [
     "W0718", # broad-exception-caught
     "W1203", # logging-fstring-interpolation
 ]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.3.13"
+version_files = [ "industry_reforged/__init__.py", "pyproject.toml:version" ]
