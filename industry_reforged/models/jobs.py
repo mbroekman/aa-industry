@@ -67,6 +67,11 @@ class CharacterIndustryJob(models.Model):
             return True
         return False
 
+    @property
+    def expected_output(self):
+        portion = getattr(self.product_type, "portion_size", 1) or 1
+        return self.runs * portion
+
     def __str__(self):
         return f"{self.character.character_name} - Job {self.job_id}"
 
@@ -131,6 +136,11 @@ class CorporationIndustryJob(models.Model):
         ):
             return True
         return False
+
+    @property
+    def expected_output(self):
+        portion = getattr(self.product_type, "portion_size", 1) or 1
+        return self.runs * portion
 
     def __str__(self):
         return f"{self.corporation.corporation_name} - Job {self.job_id}"

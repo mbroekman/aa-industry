@@ -323,7 +323,8 @@ def update_corporation_jobs():
 @log_task_execution("Link orphaned jobs to tasks")
 def link_orphaned_jobs_to_tasks():
     # Django
-    from django.db.models import Q, Sum
+    from django.db.models import F, Q, Sum
+    from django.db.models.functions import Coalesce
 
     from ..models import (
         CharacterIndustryJob,
@@ -357,7 +358,8 @@ def link_orphaned_jobs_to_tasks():
                 activity_id=task.activity_id,
                 status__in=["active", "ready", "delivered"],
             )
-            .exclude(taskjoblink__isnull=False)
+            .annotate(sum_linked_runs=Coalesce(Sum("taskjoblink__linked_runs"), 0))
+            .filter(sum_linked_runs__lt=F("runs"))
             .order_by("start_date")
         )
 
@@ -369,7 +371,8 @@ def link_orphaned_jobs_to_tasks():
                 activity_id=task.activity_id,
                 status__in=["active", "ready", "delivered"],
             )
-            .exclude(taskjoblink__isnull=False)
+            .annotate(sum_linked_runs=Coalesce(Sum("taskjoblink__linked_runs"), 0))
+            .filter(sum_linked_runs__lt=F("runs"))
             .order_by("start_date")
         )
 
@@ -397,7 +400,9 @@ def link_orphaned_jobs_to_tasks():
             if linked_total >= required_runs:
                 break
 
-            runs_to_link = job.runs
+            runs_available = job.runs - job.sum_linked_runs
+            runs_to_link = min(runs_available, required_runs - linked_total)
+
             if runs_to_link > 0:
                 is_char = isinstance(job, CharacterIndustryJob)
                 TaskJobLink.objects.create(

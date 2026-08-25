@@ -582,7 +582,12 @@
                                                             <span class="text-muted">Unknown</span>
                                                             {% endif %}
                                                         </td>
-                                                        <td class="text-end numeric">{{ job.runs }}</td>
+                                                        <td class="text-end numeric">
+                                                            {{ job.runs }}
+                                                            {% if job.product_type %}
+                                                            <br><span class="text-muted small">({{ job.expected_output }} output)</span>
+                                                            {% endif %}
+                                                        </td>
                                                         <td>
                                                             <span class="badge {% if job.status == 'delivered' %}bg-success{% elif job.is_ready %}bg-warning text-dark{% elif job.status == 'paused' %}bg-secondary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-info text-dark{% endif %}">
                                                                 {% if job.status == 'delivered' %}Delivered{% elif job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
@@ -652,7 +657,12 @@
                                                 <span class="text-muted">Unknown</span>
                                                 {% endif %}
                                             </td>
-                                            <td class="text-end numeric">{{ job.runs }}</td>
+                                            <td class="text-end numeric">
+                                                {{ job.runs }}
+                                                {% if job.product_type %}
+                                                <br><span class="text-muted small">({{ job.expected_output }} output)</span>
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 <span class="badge {% if job.status == 'delivered' %}bg-success{% elif job.is_ready %}bg-warning text-dark{% elif job.status == 'paused' %}bg-secondary{% elif job.status == 'cancelled' %}bg-danger{% else %}bg-info text-dark{% endif %}">
                                                     {% if job.status == 'delivered' %}Delivered{% elif job.is_ready %}Ready{% else %}{{ job.status|title }}{% endif %}
