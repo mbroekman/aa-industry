@@ -287,7 +287,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     if assigned_dates:
         oldest_claim_date = min(assigned_dates)
 
-    q_filter = Q(taskjoblink__isnull=False)
+    q_filter = Q(taskjoblink__isnull=False) | Q(status__in=["active", "ready"])
     if oldest_claim_date:
         q_filter |= Q(start_date__gte=oldest_claim_date)
 
