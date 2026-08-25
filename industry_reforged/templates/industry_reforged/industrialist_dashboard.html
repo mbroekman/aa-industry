@@ -584,7 +584,7 @@
                                                         </td>
                                                         <td class="text-end numeric">
                                                             {{ job.runs }}
-                                                            {% if job.product_type %}
+                                                            {% if job.product_type and job.expected_output != job.runs %}
                                                             <br><span class="text-muted small">({{ job.expected_output }} output)</span>
                                                             {% endif %}
                                                         </td>
@@ -659,7 +659,7 @@
                                             </td>
                                             <td class="text-end numeric">
                                                 {{ job.runs }}
-                                                {% if job.product_type %}
+                                                {% if job.product_type and job.expected_output != job.runs %}
                                                 <br><span class="text-muted small">({{ job.expected_output }} output)</span>
                                                 {% endif %}
                                             </td>
