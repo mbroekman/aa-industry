@@ -5,17 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## Unreleased
+## v0.5.0 (2026-08-26)
 
 ### Feat
 
-- improve Build Steps to proportionally reduce remaining materials based on parent task completion
+- add industry job ownership filtering and fix expected output calculation logic
+- improve Build Steps remaining calculation and dashboard UI
 
 ### Fix
 
-- UI: move Add Personal Token button inline with filters to save vertical space
-- UI: remove redundant Planetary Interaction title
-- UI: fix javascript syntax error causing filters to fail
+- hide expected_output in UI when equal to runs
 
 ## v0.4.2 (2026-08-25)
 
