@@ -164,7 +164,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                 parent = task_map[t.bom_parent_id]
                 parent_rem = get_remaining(parent)
                 if parent.quantity > 0:
-                    val = parent_rem * (t.quantity / parent.quantity)
+                    val = int(round(parent_rem * (t.quantity / parent.quantity)))
                 else:
                     val = 0
 
