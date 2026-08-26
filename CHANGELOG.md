@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Feat
+
+- improve Build Steps to proportionally reduce remaining materials based on parent task completion
+
+### Fix
+
+- UI: move Add Personal Token button inline with filters to save vertical space
+- UI: remove redundant Planetary Interaction title
+- UI: fix javascript syntax error causing filters to fail
+
 ## v0.4.2 (2026-08-25)
 
 ### Fix

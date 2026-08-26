@@ -10,7 +10,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from ..models import (
-    CharacterIndustryJob,
     CorpMOTD,
     CorporationIndustryJob,
     MemberOrder,
@@ -109,62 +108,91 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     # Django
     from django.db.models import Q, Sum
 
-    # Total Claimed (from ProductionTask)
-    all_tasks_grouped = (
+    # Load ALL IN_PRODUCTION tasks for Build Steps proportional calculation
+    all_my_tasks = list(
         ProductionTask.objects.filter(
             status="IN_PRODUCTION",
             assigned_to_id__in=user_characters,
-        )
-        .values("item_type__id", "item_type__name", "activity_id")
-        .annotate(
-            total_in_production=Sum("quantity", filter=Q(status="IN_PRODUCTION")),
-            total_completed=Sum("quantity", filter=Q(status="COMPLETED")),
-            total_claimed=Sum("quantity"),
-        )
-        .order_by("activity_id", "item_type__name")
+        ).select_related("item_type", "bom_parent")
     )
 
-    if all_tasks_grouped:
-        # Third Party
-        from eveuniverse.models import EveIndustryActivityProduct
-
+    if all_my_tasks:
         # AA Industry App
         from industry_reforged.models import TaskJobLink
 
-        # Pre-fetch delivered quantities using TaskJobLink
-        delivered_map = {}
-        for link in TaskJobLink.objects.filter(
-            task__status="IN_PRODUCTION", task__assigned_to_id__in=user_characters
-        ).select_related("task__item_type", "character_job", "corporation_job"):
-            job = link.character_job or link.corporation_job
-            if job and job.status == "delivered":
-                key = (link.task.item_type_id, link.task.activity_id)
-                portion = getattr(link.task.item_type, "portion_size", 1) or 1
-                delivered_map[key] = delivered_map.get(key, 0) + (
-                    link.linked_runs * portion
-                )
-
-        # Get active Character/Corp jobs for the user
-        char_jobs = CharacterIndustryJob.objects.filter(
-            character_id__in=user_characters, status__in=["active", "ready"]
+        # Pre-fetch TaskJobLinks to get progress per task
+        task_links = TaskJobLink.objects.filter(task__in=all_my_tasks).select_related(
+            "character_job", "corporation_job", "task__item_type"
         )
+
+        for t in all_my_tasks:
+            t.task_eve_delivered = 0
+            t.task_eve_active = 0
+            t.task_eve_ready = 0
+
+        task_map = {t.id: t for t in all_my_tasks}
+
+        for link in task_links:
+            job = link.character_job or link.corporation_job
+            if not job:
+                continue
+
+            task = task_map.get(link.task_id)
+            if not task:
+                continue
+
+            portion = getattr(link.task.item_type, "portion_size", 1) or 1
+            runs = link.linked_runs * portion
+
+            if job.status == "delivered":
+                task.task_eve_delivered += runs
+            elif job.status == "ready":
+                task.task_eve_ready += runs
+            elif job.status == "active":
+                task.task_eve_active += runs
+
+        memo_remaining = {}
+        memo_effective_needed = {}
+
+        def get_effective_needed(t):
+            if t.id in memo_effective_needed:
+                return memo_effective_needed[t.id]
+
+            if not t.bom_parent_id or t.bom_parent_id not in task_map:
+                val = t.quantity
+            else:
+                parent = task_map[t.bom_parent_id]
+                parent_rem = get_remaining(parent)
+                if parent.quantity > 0:
+                    val = parent_rem * (t.quantity / parent.quantity)
+                else:
+                    val = 0
+
+            memo_effective_needed[t.id] = val
+            return val
+
+        def get_remaining(t):
+            if t.id in memo_remaining:
+                return memo_remaining[t.id]
+
+            needed = get_effective_needed(t)
+            completed = t.task_eve_delivered
+            in_progress = t.task_eve_active + t.task_eve_ready
+
+            rem = max(0, needed - completed - in_progress)
+            memo_remaining[t.id] = rem
+            return rem
 
         # Determine all corp IDs for this user
         corp_ids = request.user.character_ownerships.all().values_list(
             "character__corporation_id", flat=True
         )
 
-        corp_jobs = CorporationIndustryJob.objects.filter(
-            installer_id__in=user_characters,
-            status__in=["active", "ready"],
-            corporation__corporation_id__in=corp_ids,
-        )
-
         # Pre-fetch available stock from CorpInventory
         # AA Industry App
         from industry_reforged.models import CorpInventory
 
-        type_ids = [item["item_type__id"] for item in all_tasks_grouped]
+        type_ids = [item.item_type_id for item in all_my_tasks]
         stock_dict = {}
         if type_ids and corp_ids:
             inventory_qs = (
@@ -188,59 +216,38 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             11: "Reactions",
         }
 
-        for item in all_tasks_grouped:
-            type_id = item["item_type__id"]
-            activity_id = item["activity_id"]
+        grouped_tasks = {}
+
+        for t in all_my_tasks:
+            type_id = t.item_type_id
+            activity_id = t.activity_id
+
+            key = (type_id, activity_id)
+            if key not in grouped_tasks:
+                grouped_tasks[key] = []
+            grouped_tasks[key].append(t)
+
+        for (type_id, activity_id), tasks in grouped_tasks.items():
             activity_name = activity_name_map.get(
                 activity_id, f"Activity {activity_id}"
             )
 
-            in_progress = 0
-
-            # Fetch portion size
-            portion_size = 1
-            search_activity_id = 11 if activity_id == 9 else activity_id
-            bp_prod = EveIndustryActivityProduct.objects.filter(
-                product_eve_type_id=type_id, activity_id=search_activity_id
-            ).first()
-            if bp_prod:
-                portion_size = bp_prod.quantity
-
-            # Filter jobs matching the product and activity
-            matching_char_jobs = [
-                j
-                for j in char_jobs
-                if j.product_type_id == type_id and j.activity_id == activity_id
-            ]
-            matching_corp_jobs = [
-                j
-                for j in corp_jobs
-                if j.product_type_id == type_id and j.activity_id == activity_id
-            ]
-
-            eve_active = 0
-            eve_ready = 0
-
-            for j in matching_char_jobs + matching_corp_jobs:
-                runs = j.runs * portion_size
-                if getattr(j, "is_ready", False):
-                    eve_ready += runs
-                else:
-                    eve_active += runs
-
+            # Sum up dynamic properties
+            to_build = sum(t.quantity for t in tasks)
+            remaining = sum(get_remaining(t) for t in tasks)
+            eve_active = sum(t.task_eve_active for t in tasks)
+            eve_ready = sum(t.task_eve_ready for t in tasks)
+            eve_delivered = sum(t.task_eve_delivered for t in tasks)
             in_progress = eve_active + eve_ready
-            eve_delivered = delivered_map.get((type_id, activity_id), 0)
 
-            to_build = item["total_claimed"] or 0
-            completed = (item["total_completed"] or 0) + eve_delivered
-
-            # Remaining is what still needs to be started
-            remaining = max(0, to_build - in_progress - completed)
+            # Since 'completed' includes what's consumed, we calculate it dynamically
+            # so that Claimed (to_build) = Completed + Remaining + InProgress
+            completed = max(0, to_build - in_progress - remaining)
 
             # Determine row status based on progress
-            if to_build <= completed:
+            if remaining <= 0 and in_progress <= 0:
                 row_status = "completed"
-            elif to_build <= completed + eve_ready:
+            elif remaining <= 0 and eve_ready > 0:
                 row_status = "ready"
             else:
                 row_status = "active"
@@ -248,7 +255,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             my_claimed_summary.append(
                 {
                     "item_type_id": type_id,
-                    "item_type_name": item["item_type__name"],
+                    "item_type_name": tasks[0].item_type.name,
                     "activity_name": activity_name,
                     "to_build": to_build,
                     "in_progress": in_progress,
@@ -261,6 +268,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                     "row_status": row_status,
                 }
             )
+
+        # Sort the summary to match original order
+        my_claimed_summary.sort(key=lambda x: (x["activity_name"], x["item_type_name"]))
 
     # Active corp jobs (from ESI sync)
     user_corps = request.user.character_ownerships.all().values_list(

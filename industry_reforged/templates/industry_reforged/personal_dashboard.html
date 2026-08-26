@@ -34,14 +34,6 @@
                 <!-- Jobs Tab -->
                 <div class="tab-pane fade show active" id="jobs-pane" role="tabpanel" aria-labelledby="jobs-tab" tabindex="0">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="card-title"><i class="fas fa-hammer"></i> {% trans "My Manufacturing Jobs" %}</h4>
-                        <div>
-                            <a href="{% url 'industry_reforged:add_personal_token' %}" class="btn btn-success btn-sm"><i
-                                    class="fas fa-key"></i> Add Personal Token</a>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
                         <ul class="nav nav-pills" id="pills-tab" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active" id="pills-active-tab" data-bs-toggle="pill" data-bs-target="#pills-active" type="button" role="tab" aria-controls="pills-active" aria-selected="true">Active Jobs</button>
@@ -51,16 +43,22 @@
                             </li>
                         </ul>
                         <div class="d-flex align-items-center">
+                            <label for="personal-ownership-filter" class="me-2 fw-bold text-nowrap"><i class="fas fa-building text-muted"></i> Ownership:</label>
+                            <select id="personal-ownership-filter" class="form-select form-select-sm me-3" style="width: auto;">
+                                <option value="">-- All --</option>
+                                <option value="Personal">Personal</option>
+                                <option value="Corp">Corp</option>
+                            </select>
+
                             <label for="personal-activity-filter" class="me-2 fw-bold text-nowrap"><i class="fas fa-filter text-muted"></i> Activity:</label>
-                            <select id="personal-activity-filter" class="form-select form-select-sm" style="width: auto;">
+                            <select id="personal-activity-filter" class="form-select form-select-sm me-3" style="width: auto;">
                                 <option value="">-- All Activities --</option>
                                 <option value="Manufacturing">Manufacturing</option>
-                                <option value="Researching Time Efficiency">Research TE</option>
-                                <option value="Researching Material Efficiency">Research ME</option>
-                                <option value="Copying">Copying</option>
-                                <option value="Invention">Invention</option>
                                 <option value="Reactions">Reactions</option>
                             </select>
+
+                            <a href="{% url 'industry_reforged:add_personal_token' %}" class="btn btn-success btn-sm ms-2 text-nowrap"><i
+                                    class="fas fa-key"></i> Add Personal Token</a>
                         </div>
                     </div>
 
@@ -71,6 +69,7 @@
                                     <thead>
                                         <tr>
                                             <th>{% translate "Character" %}</th>
+                                            <th>Ownership</th>
                                             <th>{% translate "Activity" %}</th>
                                             <th>{% translate "Item" %}</th>
                                             <th>{% translate "Runs" %}</th>
@@ -89,6 +88,7 @@
                                                     <span>{{ job.character.character_name }}</span>
                                                 </div>
                                             </td>
+                                            <td><span class="badge {% if job.job_type == 'Personal' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ job.job_type }}</span></td>
                                             <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
                                             <td>
                                                 {% if job.product_type %}
@@ -130,6 +130,7 @@
                                     <thead>
                                         <tr>
                                             <th>{% translate "Character" %}</th>
+                                            <th>Ownership</th>
                                             <th>{% translate "Activity" %}</th>
                                             <th>{% translate "Item" %}</th>
                                             <th>{% translate "Runs" %}</th>
@@ -148,6 +149,7 @@
                                                     <span>{{ job.character.character_name }}</span>
                                                 </div>
                                             </td>
+                                            <td><span class="badge {% if job.job_type == 'Personal' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ job.job_type }}</span></td>
                                             <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
                                             <td>
                                                 {% if job.product_type %}
@@ -189,21 +191,36 @@
                 <!-- Research Tab -->
                 <div class="tab-pane fade" id="research-pane" role="tabpanel" aria-labelledby="research-tab" tabindex="0">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="card-title"><i class="fas fa-flask"></i> {% trans "My Research & Invention" %}</h4>
-                        <div>
-                            <a href="{% url 'industry_reforged:add_personal_token' %}" class="btn btn-success btn-sm"><i
+                        <ul class="nav nav-pills" id="research-pills-tab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="research-pills-active-tab" data-bs-toggle="pill" data-bs-target="#research-pills-active" type="button" role="tab" aria-controls="research-pills-active" aria-selected="true">Active Research</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="research-pills-history-tab" data-bs-toggle="pill" data-bs-target="#research-pills-history" type="button" role="tab" aria-controls="research-pills-history" aria-selected="false">{% translate "History" %}</button>
+                            </li>
+                        </ul>
+
+                        <div class="d-flex align-items-center">
+                            <label for="research-ownership-filter" class="me-2 fw-bold text-nowrap"><i class="fas fa-building text-muted"></i> Ownership:</label>
+                            <select id="research-ownership-filter" class="form-select form-select-sm me-3" style="width: auto;">
+                                <option value="">-- All --</option>
+                                <option value="Personal">Personal</option>
+                                <option value="Corp">Corp</option>
+                            </select>
+
+                            <label for="research-activity-filter" class="me-2 fw-bold text-nowrap"><i class="fas fa-filter text-muted"></i> Activity:</label>
+                            <select id="research-activity-filter" class="form-select form-select-sm me-3" style="width: auto;">
+                                <option value="">-- All Activities --</option>
+                                <option value="Research TE">Research TE</option>
+                                <option value="Research ME">Research ME</option>
+                                <option value="Copying">Copying</option>
+                                <option value="Invention">Invention</option>
+                            </select>
+
+                            <a href="{% url 'industry_reforged:add_personal_token' %}" class="btn btn-success btn-sm ms-2 text-nowrap"><i
                                     class="fas fa-key"></i> Add Personal Token</a>
                         </div>
                     </div>
-
-                    <ul class="nav nav-pills mb-3" id="research-pills-tab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="research-pills-active-tab" data-bs-toggle="pill" data-bs-target="#research-pills-active" type="button" role="tab" aria-controls="research-pills-active" aria-selected="true">Active Research</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="research-pills-history-tab" data-bs-toggle="pill" data-bs-target="#research-pills-history" type="button" role="tab" aria-controls="research-pills-history" aria-selected="false">{% translate "History" %}</button>
-                        </li>
-                    </ul>
 
                     <div class="tab-content" id="research-pills-tabContent">
                         <!-- Active Research -->
@@ -224,6 +241,7 @@
                                                         <thead>
                                                             <tr>
                                                                 <th>Activity</th>
+                                                                <th>Ownership</th>
                                                                 <th>Item</th>
                                                                 <th>Runs</th>
                                                                 <th>Status</th>
@@ -232,8 +250,9 @@
                                                         </thead>
                                                         <tbody>
                                                             {% for job in char_group.list %}
-                                                            <tr>
+                                                            <tr class="research-job-row" data-job-type="{{ job.job_type }}" data-activity-type="{{ job.activity_name }}">
                                                                 <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
+                                                                <td><span class="badge {% if job.job_type == 'Personal' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ job.job_type }}</span></td>
                                                                 <td>
                                                                     {% if job.product_type %}
                                                                     <div class="d-flex align-items-center">
@@ -293,6 +312,7 @@
                                                         <thead>
                                                             <tr>
                                                                 <th>Activity</th>
+                                                                <th>Ownership</th>
                                                                 <th>Item</th>
                                                                 <th>Runs</th>
                                                                 <th>Status</th>
@@ -301,8 +321,9 @@
                                                         </thead>
                                                         <tbody>
                                                             {% for job in char_group.list %}
-                                                            <tr>
+                                                            <tr class="research-job-row" data-job-type="{{ job.job_type }}" data-activity-type="{{ job.activity_name }}">
                                                                 <td><span class="badge bg-secondary">{{ job.activity_name }}</span></td>
+                                                                <td><span class="badge {% if job.job_type == 'Personal' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ job.job_type }}</span></td>
                                                                 <td>
                                                                     {% if job.product_type %}
                                                                     <div class="d-flex align-items-center">
@@ -348,8 +369,7 @@
 
                 <!-- PI Tab -->
                 <div class="tab-pane fade" id="pi-pane" role="tabpanel" aria-labelledby="pi-tab" tabindex="0">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="card-title"><i class="fas fa-globe"></i> Planetary Interaction</h3>
+                    <div class="d-flex justify-content-end align-items-center mb-3">
                         <div>
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#piSettingsModal">
                                 <i class="fas fa-cog"></i> Settings
@@ -700,18 +720,41 @@
 
     $(document).ready(function () {
         var activePersonalTable = $('#personal-jobs-active-table').DataTable({
-            "order": [[6, "desc"]] // Sort by End Date
+            "order": [[8, "desc"]] // Sort by End Date
         });
         var historyPersonalTable = $('#personal-jobs-history-table').DataTable({
-            "order": [[6, "desc"]] // Sort by End Date
+            "order": [[8, "desc"]] // Sort by End Date
+        });
+
+        $('#personal-ownership-filter').on('change', function() {
+            var val = $(this).val();
+            activePersonalTable.column(1).search(val ? val : '', false, true).draw();
+            historyPersonalTable.column(1).search(val ? val : '', false, true).draw();
         });
 
         $('#personal-activity-filter').on('change', function() {
-            var val = $.fn.dataTable.util.escapeRegex($(this).val());
-            // Filter column 1 (Activity)
-            activePersonalTable.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
-            historyPersonalTable.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
+            var val = $(this).val();
+            activePersonalTable.column(2).search(val ? val : '', false, true).draw();
+            historyPersonalTable.column(2).search(val ? val : '', false, true).draw();
         });
+
+        function filterResearchJobs() {
+            var ownership = $('#research-ownership-filter').val();
+            var activity = $('#research-activity-filter').val();
+
+            $('.research-job-row').each(function() {
+                var matchOwnership = !ownership || $(this).attr('data-job-type') === ownership;
+                var matchActivity = !activity || $(this).attr('data-activity-type') === activity;
+
+                if (matchOwnership && matchActivity) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        $('#research-ownership-filter, #research-activity-filter').on('change', filterResearchJobs);
 
         // Initial timer setup for PI Dashboard
         initCountdownTimers();

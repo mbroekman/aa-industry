@@ -13,6 +13,7 @@ from ..forms import UserPIConfigForm
 from ..models import (
     CharacterIndustryJob,
     CharacterPlanet,
+    CorporationIndustryJob,
     MemberOrder,
     UserPIConfig,
 )
@@ -34,11 +35,34 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    jobs = (
-        CharacterIndustryJob.objects.filter(character_id__in=user_characters)
-        .select_related("blueprint_type", "product_type", "character")
-        .order_by("-end_date")
-    )
+    jobs_qs = CharacterIndustryJob.objects.filter(
+        character_id__in=user_characters
+    ).select_related("blueprint_type", "product_type", "character")
+    jobs = list(jobs_qs)
+    for j in jobs:
+        j.job_type = "Personal"
+
+    corp_jobs_qs = CorporationIndustryJob.objects.filter(
+        installer_id__in=user_characters
+    ).select_related("blueprint_type", "product_type", "installer")
+    corp_jobs = list(corp_jobs_qs)
+    for j in corp_jobs:
+        j.character = j.installer
+        j.job_type = "Corp"
+
+    jobs.extend(corp_jobs)
+
+    # Sort descending by end_date, putting jobs without end_date at the end
+    # Standard Library
+    import datetime
+
+    # Django
+    from django.utils import timezone
+
+    def get_sort_key(j):
+        return j.end_date or timezone.make_aware(datetime.datetime.min)
+
+    jobs.sort(key=get_sort_key, reverse=True)
 
     active_statuses = ["active", "paused", "ready"]
 
