@@ -1,0 +1,19 @@
+{% load i18n %}
+{% if req.status == 'PENDING' %}
+    <form method="POST" action="{% url 'industry_reforged:update_request_status' req.id %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="ACCEPTED">
+        <button type="submit" class="btn btn-sm btn-success" title="{% translate 'Accept' %}"><i class="fas fa-check"></i></button>
+    </form>
+    <form method="POST" action="{% url 'industry_reforged:update_request_status' req.id %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="REJECTED">
+        <button type="submit" class="btn btn-sm btn-danger" title="{% translate 'Reject' %}"><i class="fas fa-times"></i></button>
+    </form>
+{% elif req.status == 'ACCEPTED' %}
+    <form method="POST" action="{% url 'industry_reforged:update_request_status' req.id %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="PROCESSED">
+        <button type="submit" class="btn btn-sm btn-info" title="{% translate 'Mark as Processed' %}"><i class="fas fa-clipboard-check"></i></button>
+    </form>
+{% endif %}

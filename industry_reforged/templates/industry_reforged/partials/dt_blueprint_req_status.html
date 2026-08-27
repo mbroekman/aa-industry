@@ -1,0 +1,1 @@
+<span class="badge {% if req.status == 'PENDING' %}bg-warning text-dark{% elif req.status == 'ACCEPTED' %}bg-success{% elif req.status == 'PROCESSED' %}bg-info{% elif req.status == 'REJECTED' or req.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">{{ req.status }}</span>

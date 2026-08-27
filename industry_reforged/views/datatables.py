@@ -206,7 +206,7 @@ def dt_director_tasks(request):
                 [
                     render_to_string(
                         "industry_reforged/partials/dt_item_type.html",
-                        {"type": task.item_type},
+                        {"type": task.item_type, "task": task},
                     ),
                     task.quantity,
                     render_to_string(
@@ -236,7 +236,7 @@ def dt_director_tasks(request):
                 [
                     render_to_string(
                         "industry_reforged/partials/dt_item_type.html",
-                        {"type": task.item_type},
+                        {"type": task.item_type, "task": task},
                     ),
                     task.quantity,
                     render_to_string(
@@ -611,6 +611,164 @@ def dt_director_transactions(request):
             "draw": draw,
             "recordsTotal": total_records,
             "recordsFiltered": total_records,
+            "data": data,
+        }
+    )
+
+
+@login_required
+@permission_required("industry_reforged.basic_access")
+def dt_blueprint_library(request):
+    """AJAX endpoint for Corp Blueprint Library"""
+    draw, start, length, search, order_col, order_dir = get_datatables_params(request)
+
+    from ..models import CorpBlueprint
+
+    qs = CorpBlueprint.objects.select_related("corporation", "eve_type")
+
+    # Custom filters
+    # Simple search handling from original view
+    q = request.GET.get("q", "")
+    if q:
+        qs = qs.filter(eve_type__name__icontains=q)
+
+    group_filter = request.GET.get("group", "ALL")
+    if group_filter != "ALL":
+        qs = qs.filter(eve_type__eve_group_id=group_filter)
+
+    total_records = qs.count()
+
+    # Search
+    if search:
+        qs = qs.filter(
+            Q(eve_type__name__icontains=search)
+            | Q(corporation__corporation_name__icontains=search)
+        )
+
+    filtered_records = qs.count()
+
+    # Columns: 0: Blueprint, 1: Corporation, 2: Runs, 3: Actions
+    order_map = {
+        "0": "eve_type__name",
+        "1": "corporation__corporation_name",
+        "2": "runs",
+    }
+
+    order_field = order_map.get(str(order_col), "eve_type__name")
+    if order_dir == "desc":
+        order_field = f"-{order_field}"
+
+    qs = qs.order_by(order_field)
+    if length > 0:
+        qs = qs[start : start + length]
+
+    data = []
+    for bp in qs:
+        runs_html = "&infin;" if bp.is_original else str(bp.runs)
+
+        data.append(
+            [
+                render_to_string(
+                    "industry_reforged/partials/dt_blueprint_item.html", {"bp": bp}
+                ),
+                bp.corporation.corporation_name,
+                runs_html,
+                render_to_string(
+                    "industry_reforged/partials/dt_blueprint_actions.html",
+                    {"bp": bp},
+                    request=request,
+                ),
+            ]
+        )
+
+    return JsonResponse(
+        {
+            "draw": draw,
+            "recordsTotal": total_records,
+            "recordsFiltered": filtered_records,
+            "data": data,
+        }
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def dt_blueprint_requests(request):
+    """AJAX endpoint for Blueprint Requests Management"""
+    draw, start, length, search, order_col, order_dir = get_datatables_params(request)
+
+    from ..models import BlueprintRequest
+
+    qs = BlueprintRequest.objects.select_related(
+        "requester", "blueprint__eve_type", "blueprint__corporation"
+    )
+
+    status_filter = request.GET.get("status", "PENDING")
+    if status_filter != "ALL":
+        qs = qs.filter(status=status_filter)
+
+    total_records = qs.count()
+
+    if search:
+        qs = qs.filter(
+            Q(requester__username__icontains=search)
+            | Q(blueprint__eve_type__name__icontains=search)
+            | Q(notes__icontains=search)
+        )
+
+    filtered_records = qs.count()
+
+    # Columns: 0: Date, 1: Requester, 2: Blueprint, 3: Qty, 4: Runs, 5: Status, 6: Notes, 7: Actions
+    order_map = {
+        "0": "created_at",
+        "1": "requester__username",
+        "2": "blueprint__eve_type__name",
+        "3": "requested_quantity",
+        "4": "requested_runs",
+        "5": "status",
+    }
+
+    order_field = order_map.get(str(order_col), "-created_at")
+    if order_dir == "desc" and not order_field.startswith("-"):
+        order_field = f"-{order_field}"
+    elif order_dir == "asc" and order_field.startswith("-"):
+        order_field = order_field[1:]
+
+    qs = qs.order_by(order_field)
+    if length > 0:
+        qs = qs[start : start + length]
+
+    data = []
+    for req in qs:
+        bp_html = render_to_string(
+            "industry_reforged/partials/dt_blueprint_item.html", {"bp": req.blueprint}
+        )
+
+        data.append(
+            [
+                req.created_at.strftime("%Y-%m-%d %H:%M"),
+                req.requester.username,
+                bp_html,
+                req.requested_quantity,
+                req.requested_runs,
+                render_to_string(
+                    "industry_reforged/partials/dt_blueprint_req_status.html",
+                    {"req": req},
+                ),
+                req.notes or "-",
+                render_to_string(
+                    "industry_reforged/partials/dt_blueprint_req_actions.html",
+                    {"req": req},
+                    request=request,
+                ),
+            ]
+        )
+
+    return JsonResponse(
+        {
+            "draw": draw,
+            "recordsTotal": total_records,
+            "recordsFiltered": filtered_records,
             "data": data,
         }
     )

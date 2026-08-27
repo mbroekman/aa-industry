@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@antigravity'
 created_date: '2026-08-27 09:38'
-updated_date: '2026-08-27 10:07'
+updated_date: '2026-08-27 13:22'
 labels: []
 dependencies: []
 ordinal: 89000
@@ -38,6 +38,6 @@ A feature for integrating the blueprints of the corp so members can request copi
 
 <!-- SECTION:NOTES:BEGIN -->
 
-Implemented the Blueprint Request System according to the plan. All models, views, templates, celery tasks, and webhooks are functional.
+Fixed ESI model attribute parsing (aiopenapi3 pydantic objects vs dicts) and resolved blueprint cache refresh on empty DB.
 
 <!-- SECTION:NOTES:END -->

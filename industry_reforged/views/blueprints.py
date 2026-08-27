@@ -28,18 +28,21 @@ logger = logging.getLogger(__name__)
 @permission_required("industry_reforged.basic_access")
 def blueprint_library(request: WSGIRequest) -> HttpResponse:
     """View to display available corp blueprints for members."""
-    blueprints = CorpBlueprint.objects.select_related(
-        "corporation", "eve_type"
-    ).order_by("eve_type__name")
-
     # Simple search handling
     query = request.GET.get("q", "")
-    if query:
-        blueprints = blueprints.filter(eve_type__name__icontains=query)
+
+    # Get distinct blueprint groups for filtering
+    # Third Party
+    from eveuniverse.models import EveGroup
+
+    group_ids = CorpBlueprint.objects.values_list(
+        "eve_type__eve_group_id", flat=True
+    ).distinct()
+    bp_groups = EveGroup.objects.filter(id__in=group_ids).order_by("name")
 
     context = {
-        "blueprints": blueprints,
         "query": query,
+        "bp_groups": bp_groups,
     }
     return render(request, "industry_reforged/blueprints/library.html", context)
 
@@ -112,15 +115,7 @@ def manage_requests(request: WSGIRequest) -> HttpResponse:
     """View for directors to manage incoming blueprint requests."""
     status_filter = request.GET.get("status", "PENDING")
 
-    requests = BlueprintRequest.objects.select_related(
-        "requester", "blueprint__eve_type", "blueprint__corporation"
-    ).order_by("-created_at")
-
-    if status_filter != "ALL":
-        requests = requests.filter(status=status_filter)
-
     context = {
-        "requests": requests,
         "status_filter": status_filter,
     }
     return render(request, "industry_reforged/blueprints/management.html", context)

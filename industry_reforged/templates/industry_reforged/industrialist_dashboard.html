@@ -148,7 +148,11 @@
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
                                                                 class="me-2 rounded">
                                                             <div>
-                                                                <span><span class="badge bg-secondary me-1">{{ task.activity_name }}</span> {{ task.item_type.name }}</span>
+                                                                <span><span class="badge bg-secondary me-1">{{ task.activity_name }}</span> {{ task.item_type.name }}
+                                                                    {% if task.created_from_blueprint_request %}
+                                                                        <span class="badge bg-info ms-1" title="Runs per copy"><i class="fas fa-layer-group"></i> {{ task.created_from_blueprint_request.requested_runs }} Runs</span>
+                                                                    {% endif %}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -257,7 +261,11 @@
                                                                     alt="{{ task.item_type.name }}" width="24"
                                                                     height="24" class="me-2 rounded">
                                                                 <div>
-                                                                    <span><span class="badge bg-secondary me-1">{{ task.activity_name }}</span> {{ task.item_type.name }}</span>
+                                                                    <span><span class="badge bg-secondary me-1">{{ task.activity_name }}</span> {{ task.item_type.name }}
+                                                                        {% if task.created_from_blueprint_request %}
+                                                                            <span class="badge bg-info ms-1" title="Runs per copy"><i class="fas fa-layer-group"></i> {{ task.created_from_blueprint_request.requested_runs }} Runs</span>
+                                                                        {% endif %}
+                                                                    </span>
                                                                     {% if task.linked_jobs.all %}
                                                                     <div class="mt-1 small">
                                                                         {% for link in task.linked_jobs.all %}
@@ -355,7 +363,11 @@
                                                                         height="24" class="me-2 rounded opacity-50">
                                                                     <div>
                                                                         <span
-                                                                            class="text-muted">{{ task.item_type.name }}</span>
+                                                                            class="text-muted">{{ task.item_type.name }}
+                                                                            {% if task.created_from_blueprint_request %}
+                                                                                <span class="badge bg-info ms-1" title="Runs per copy"><i class="fas fa-layer-group"></i> {{ task.created_from_blueprint_request.requested_runs }} Runs</span>
+                                                                            {% endif %}
+                                                                        </span>
                                                                         {% if task.bom_parent %}
                                                                         <br><small class="text-muted"><i
                                                                                 class="fas fa-level-up-alt fa-rotate-90"></i>
@@ -720,7 +732,11 @@
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <img onerror="handleImageFallback(this, {{ task.item_type.id }})" src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32" alt="{{ task.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                                    <span>{{ task.item_type.name }}</span>
+                                                    <span>{{ task.item_type.name }}
+                                                        {% if task.created_from_blueprint_request %}
+                                                            <span class="badge bg-info ms-1" title="Runs per copy"><i class="fas fa-layer-group"></i> {{ task.created_from_blueprint_request.requested_runs }} Runs</span>
+                                                        {% endif %}
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td class="text-end numeric">{{ task.quantity }}</td>

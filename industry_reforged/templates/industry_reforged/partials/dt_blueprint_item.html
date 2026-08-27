@@ -1,0 +1,7 @@
+<img src="https://images.evetech.net/types/{{ bp.eve_type.id }}/{% if bp.is_original %}bp{% else %}bpc{% endif %}?size=32" alt="{{ bp.eve_type.name }}" class="me-2">
+{{ bp.eve_type.name }}
+{% if bp.is_original %}
+    <span class="badge bg-primary ms-1">BPO <small>({{ bp.material_efficiency }}/{{ bp.time_efficiency }})</small></span>
+{% else %}
+    <span class="badge bg-secondary ms-1">BPC <small>({{ bp.material_efficiency }}/{{ bp.time_efficiency }})</small></span>
+{% endif %}

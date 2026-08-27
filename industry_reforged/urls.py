@@ -252,6 +252,16 @@ urlpatterns = [
     ),
     path("blueprints/", blueprints.blueprint_library, name="blueprint_library"),
     path(
+        "api/blueprints/library/",
+        datatables.dt_blueprint_library,
+        name="dt_blueprint_library",
+    ),
+    path(
+        "api/blueprints/requests/",
+        datatables.dt_blueprint_requests,
+        name="dt_blueprint_requests",
+    ),
+    path(
         "blueprints/<int:item_id>/request/",
         blueprints.request_blueprint,
         name="request_blueprint",

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.5.4 (2026-08-27)
+
+### Feat
+
+- blueprint library category filtering added
+
+### Fix
+
+- correctly show requested runs on accepted blueprint requests
+- fixed invalid image URLs for blueprint originals and copies
+- replaced me/te columns with badges in blueprint datatables
+
 ## v0.5.3 (2026-08-27)
 
 ### Fix
