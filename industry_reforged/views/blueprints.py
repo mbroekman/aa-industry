@@ -111,18 +111,6 @@ def request_blueprint(request: WSGIRequest, item_id: int) -> HttpResponse:
 
 @login_required
 @permission_required("industry_reforged.corp_access")
-def manage_requests(request: WSGIRequest) -> HttpResponse:
-    """View for directors to manage incoming blueprint requests."""
-    status_filter = request.GET.get("status", "PENDING")
-
-    context = {
-        "status_filter": status_filter,
-    }
-    return render(request, "industry_reforged/blueprints/management.html", context)
-
-
-@login_required
-@permission_required("industry_reforged.corp_access")
 def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse:
     """Endpoint for directors to accept/reject/process a request."""
     if request.method == "POST":
@@ -170,4 +158,4 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
     referer = request.headers.get("referer")
     if referer:
         return HttpResponseRedirect(referer)
-    return redirect("industry_reforged:manage_requests")
+    return redirect("/director/?tab=blueprint-requests")

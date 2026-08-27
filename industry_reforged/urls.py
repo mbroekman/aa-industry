@@ -267,11 +267,6 @@ urlpatterns = [
         name="request_blueprint",
     ),
     path(
-        "director/blueprints/requests/",
-        blueprints.manage_requests,
-        name="manage_requests",
-    ),
-    path(
         "director/blueprints/requests/<int:request_id>/update/",
         blueprints.update_request_status,
         name="update_request_status",

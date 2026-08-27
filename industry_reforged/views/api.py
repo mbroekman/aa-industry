@@ -121,5 +121,5 @@ def trigger_blueprint_sync(request: WSGIRequest) -> HttpResponse:
     # Redirect back to where they came from (could be library or requests)
     referer = request.headers.get("referer")
     if referer and "director" in referer:
-        return redirect("industry_reforged:manage_requests")
+        return redirect("/director/?tab=blueprint-requests")
     return redirect("industry_reforged:blueprint_library")
