@@ -6,6 +6,7 @@ from django.urls import path
 # AA Industry App
 from industry_reforged.views import (
     api,
+    blueprints,
     dashboard,
     datatables,
     director,
@@ -248,5 +249,26 @@ urlpatterns = [
         "director/wallets/update-threshold/<int:division_id>/",
         director.update_wallet_threshold,
         name="update_wallet_threshold",
+    ),
+    path("blueprints/", blueprints.blueprint_library, name="blueprint_library"),
+    path(
+        "blueprints/<int:item_id>/request/",
+        blueprints.request_blueprint,
+        name="request_blueprint",
+    ),
+    path(
+        "director/blueprints/requests/",
+        blueprints.manage_requests,
+        name="manage_requests",
+    ),
+    path(
+        "director/blueprints/requests/<int:request_id>/update/",
+        blueprints.update_request_status,
+        name="update_request_status",
+    ),
+    path(
+        "director/blueprints/sync/",
+        api.trigger_blueprint_sync,
+        name="trigger_blueprint_sync",
     ),
 ]

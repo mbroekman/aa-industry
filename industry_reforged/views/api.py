@@ -15,6 +15,7 @@ from esi.decorators import token_required
 from ..models import (
     CorporationSyncConfig,
 )
+from ..tasks.blueprints import task_sync_corp_blueprints
 from ..tasks.inventory import task_sync_corp_inventory
 from ..tasks.pi import update_character_pi
 from ..tasks.wallets import task_sync_corp_wallets
@@ -37,6 +38,7 @@ def add_personal_token(request: WSGIRequest, token) -> HttpResponse:
         "esi-universe.read_structures.v1",
         "esi-corporations.read_structures.v1",
         "esi-corporations.read_divisions.v1",
+        "esi-corporations.read_blueprints.v1",
         "esi-wallet.read_corporation_wallets.v1",
     ]
 )
@@ -102,3 +104,22 @@ def trigger_wallet_sync(request: WSGIRequest) -> HttpResponse:
         ),
     )
     return redirect("industry_reforged:director_wallets")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def trigger_blueprint_sync(request: WSGIRequest) -> HttpResponse:
+    """Manually trigger blueprint sync for all configured corporations"""
+
+    task_sync_corp_blueprints.delay()
+    messages.success(
+        request,
+        _(
+            "Corporate Blueprint sync has been queued in the background. Please refresh in a few minutes."
+        ),
+    )
+    # Redirect back to where they came from (could be library or requests)
+    referer = request.headers.get("referer")
+    if referer and "director" in referer:
+        return redirect("industry_reforged:manage_requests")
+    return redirect("industry_reforged:blueprint_library")

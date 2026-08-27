@@ -67,6 +67,9 @@ class CorporationWebhookConfig(models.Model):
     inventory_webhook = models.URLField(
         blank=True, null=True, help_text=_("Webhook URL for low inventory warnings.")
     )
+    blueprint_requests_webhook = models.URLField(
+        blank=True, null=True, help_text=_("Webhook URL for new Blueprint Requests.")
+    )
 
     class Meta:
         verbose_name = _("Discord Webhook Configuration")

@@ -1,3 +1,4 @@
+from .blueprints import BlueprintRequest, CorpBlueprint
 from .config import CorpMOTD, CorporationSyncConfig, CorporationWebhookConfig
 from .core import General, TaskExecutionLog
 from .facilities import IndustryFacility, IndustryFacilityRig, IndustryRig
@@ -25,6 +26,8 @@ from .wallet import (
 )
 
 __all__ = [
+    "BlueprintRequest",
+    "CorpBlueprint",
     "General",
     "TaskExecutionLog",
     "IndustryFacility",

@@ -1,5 +1,6 @@
 """Tasks package"""
 
+from .blueprints import task_sync_corp_blueprints
 from .facilities import (
     sync_facility_rigs,
     update_industry_facilities,
@@ -25,6 +26,7 @@ from .wallets import (
 )
 
 __all__ = [
+    "task_sync_corp_blueprints",
     "sync_facility_rigs",
     "update_industry_facilities",
     "task_sync_corp_inventory",

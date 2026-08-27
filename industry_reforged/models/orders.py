@@ -275,6 +275,13 @@ class ProductionTask(models.Model):
         blank=True,
         related_name="production_tasks",
     )
+    created_from_blueprint_request = models.ForeignKey(
+        "BlueprintRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="production_tasks",
+    )
     assigned_to = models.ForeignKey(
         EveCharacter,
         on_delete=models.SET_NULL,

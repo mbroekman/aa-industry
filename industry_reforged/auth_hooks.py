@@ -210,6 +210,30 @@ def register_leaderboard_menu():
     return LeaderboardMenuItem()
 
 
+class BlueprintLibraryMenuItem(MenuItemHook):
+    """Menu entry for Blueprint Library"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("Blueprint Library"),
+            "fas fa-book fa-fw",
+            "industry_reforged:blueprint_library",
+            navactive=["industry_reforged:blueprint_library"],
+        )
+
+    def render(self, request):
+        if request.user.has_perm("industry_reforged.basic_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_blueprint_library_menu():
+    """Register the blueprint library menu item"""
+    return BlueprintLibraryMenuItem()
+
+
 @hooks.register("url_hook")
 def register_urls():
     """Register app urls"""

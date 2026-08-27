@@ -120,3 +120,8 @@ DEFAULT_FROM_EMAIL = ""
 #######################################
 # Add any custom settings below here. #
 #######################################
+
+CELERYBEAT_SCHEDULE["industry_sync_corp_blueprints"] = {
+    "task": "industry_reforged.tasks.task_sync_corp_blueprints",
+    "schedule": crontab(minute="0", hour="*/2"),
+}

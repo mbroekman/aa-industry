@@ -176,6 +176,11 @@ CELERYBEAT_SCHEDULE["industry_sync_corp_inventory"] = {
     "schedule": crontab(minute="*/15"),
 }
 
+CELERYBEAT_SCHEDULE["industry_sync_corp_blueprints"] = {
+    "task": "industry_reforged.tasks.task_sync_corp_blueprints",
+    "schedule": crontab(minute="0", hour="*/2"),  # Every 2 hours
+}
+
 CELERYBEAT_SCHEDULE["industry_pull_market_data"] = {
     "task": "industry_reforged.tasks.task_pull_market_data",
     "schedule": crontab(hour="11", minute="30"),  # Around EVE Downtime
