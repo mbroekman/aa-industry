@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.5.3 (2026-08-27)
+
+### Fix
+
+- resolve ESI cache issue on empty db and properly read pydantic models
+
 ## v0.5.2 (2026-08-26)
 
 ### Fix
