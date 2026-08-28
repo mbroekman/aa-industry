@@ -101,7 +101,7 @@ messages_control.disable = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.5.5"
+version = "0.5.7"
 version_files = [ "industry_reforged/__init__.py", "pyproject.toml:version" ]
 tag_format = "v$version"
 update_changelog_on_bump = true
