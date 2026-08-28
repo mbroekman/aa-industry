@@ -277,6 +277,8 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             # so that Claimed (to_build) = Completed + Remaining + InProgress
             completed = max(0, to_build - in_progress - remaining)
 
+            progress_percent = (completed / to_build * 100) if to_build > 0 else 100
+
             my_claimed_summary.append(
                 {
                     "item_type_id": type_id,
@@ -291,6 +293,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                     "remaining": remaining,
                     "corp_stock": stock_dict.get(type_id, 0),
                     "row_status": row_status,
+                    "progress_percent": progress_percent,
                 }
             )
 
