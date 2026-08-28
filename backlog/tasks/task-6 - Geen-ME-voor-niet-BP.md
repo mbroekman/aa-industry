@@ -4,6 +4,7 @@ title: 'Geen ME voor niet-BP producten (zoals reactions)'
 status: Done
 assignee: []
 created_date: '2026-08-01 15:30'
+updated_date: '2026-08-01 15:30'
 labels: []
 dependencies: []
 type: feature

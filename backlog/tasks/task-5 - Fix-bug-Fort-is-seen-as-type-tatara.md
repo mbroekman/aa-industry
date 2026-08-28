@@ -4,6 +4,7 @@ title: 'Fix bug: Fort is seen as type tatara'
 status: Done
 assignee: []
 created_date: '2026-07-31 12:59'
+updated_date: '2026-07-31 12:59'
 labels: []
 dependencies: []
 type: bug

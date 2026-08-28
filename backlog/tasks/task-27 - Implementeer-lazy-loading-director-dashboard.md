@@ -6,7 +6,6 @@ assignee: []
 created_date: '2026-08-07 08:30'
 updated_date: '2026-08-07 11:52'
 labels:
-  - performance
 dependencies: []
 ordinal: 37000
 ---

@@ -4,6 +4,7 @@ title: 'Verwijder doorgestreepte tekst bij voltooide member tasks'
 status: Done
 assignee: []
 created_date: '2026-08-02 10:40'
+updated_date: '2026-08-02 10:40'
 labels: []
 dependencies: []
 type: chore

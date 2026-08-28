@@ -3,7 +3,6 @@ id: TASK-99
 title: Blueprint Request System
 status: Done
 assignee:
-  - '@antigravity'
 created_date: '2026-08-27 09:38'
 updated_date: '2026-08-27 13:22'
 labels: []

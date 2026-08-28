@@ -4,6 +4,7 @@ title: 'Task summary overzicht: Toon ook afgeronde taken'
 status: Done
 assignee: []
 created_date: '2026-08-02 10:50'
+updated_date: '2026-08-02 10:50'
 labels: []
 dependencies: []
 type: feature

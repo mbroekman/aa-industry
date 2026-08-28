@@ -1,8 +1,13 @@
 ---
-id: task-73
+id: TASK-73
 title: Prepare release 0.3.7
 status: Done
-created: 2026-08-16
+assignee: []
+created_date: '2026-08-16 12:00'
+updated_date: '2026-08-16 12:00'
+labels: []
+dependencies: []
+ordinal: 73000
 ---
 
 # Prepare release 0.3.7

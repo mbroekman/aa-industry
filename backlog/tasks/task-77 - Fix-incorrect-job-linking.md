@@ -1,8 +1,13 @@
 ---
-id: task-77
+id: TASK-77
 title: Fix incorrect job linking due to missing claim date filter
 status: Done
-created: 2026-08-18
+assignee: []
+created_date: '2026-08-18 12:00'
+updated_date: '2026-08-18 12:00'
+labels: []
+dependencies: []
+ordinal: 77000
 ---
 
 # Fix incorrect job linking due to missing claim date filter

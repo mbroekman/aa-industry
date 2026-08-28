@@ -1,8 +1,13 @@
 ---
-id: task-71
+id: TASK-71
 title: Add subdivision and ready status to Build Steps tab
 status: Done
-created: 2026-08-16
+assignee: []
+created_date: '2026-08-16 12:00'
+updated_date: '2026-08-16 12:00'
+labels: []
+dependencies: []
+ordinal: 71000
 ---
 
 # Add subdivision and ready status to Build Steps tab

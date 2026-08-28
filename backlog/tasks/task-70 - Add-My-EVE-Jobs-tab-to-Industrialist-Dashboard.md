@@ -1,7 +1,13 @@
 ---
+id: TASK-70
 title: Add My EVE Jobs tab to Industrialist Dashboard
 status: Done
-created: 2026-08-16
+assignee: []
+created_date: '2026-08-16 12:00'
+updated_date: '2026-08-16 12:00'
+labels: []
+dependencies: []
+ordinal: 70000
 ---
 
 # Add My EVE Jobs tab to Industrialist Dashboard

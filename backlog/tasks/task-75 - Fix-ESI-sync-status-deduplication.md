@@ -1,8 +1,13 @@
 ---
-id: task-75
+id: TASK-75
 title: Fix ESI sync status deduplication ignoring delivered jobs
 status: Done
-created: 2026-08-17
+assignee: []
+created_date: '2026-08-17 12:00'
+updated_date: '2026-08-17 12:00'
+labels: []
+dependencies: []
+ordinal: 75000
 ---
 
 # Fix ESI sync status deduplication ignoring delivered jobs

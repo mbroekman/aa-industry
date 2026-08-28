@@ -4,6 +4,7 @@ title: 'Fix AttributeError: MemberOrder object has no attribute corporation'
 status: Done
 assignee: []
 created_date: '2026-08-03 16:35'
+updated_date: '2026-08-03 16:35'
 labels: []
 dependencies: []
 type: bug

@@ -1,8 +1,13 @@
 ---
-id: task-78
+id: TASK-78
 title: Filter completed tasks from industrialist build steps
 status: Done
-created: 2026-08-18
+assignee: []
+created_date: '2026-08-18 12:00'
+updated_date: '2026-08-18 12:00'
+labels: []
+dependencies: []
+ordinal: 78000
 ---
 
 # Filter completed tasks from industrialist build steps

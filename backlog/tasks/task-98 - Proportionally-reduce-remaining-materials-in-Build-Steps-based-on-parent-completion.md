@@ -1,8 +1,6 @@
 ---
 id: TASK-98
-title: >-
-  Proportionally reduce remaining materials in Build Steps based on parent
-  completion
+title: >
 status: Done
 assignee: []
 created_date: '2026-08-26 21:03'

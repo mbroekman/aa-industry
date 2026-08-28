@@ -3,7 +3,6 @@ id: TASK-80
 title: Show corp stock in BOM
 status: Done
 assignee:
-  - '@antigravity'
 created_date: '2026-08-22 11:59'
 updated_date: '2026-08-22 12:44'
 labels: []

@@ -1,8 +1,13 @@
 ---
-id: task-76
+id: TASK-76
 title: Hotfix ESI sync cache 304 skipping cleanup
 status: Done
-created: 2026-08-17
+assignee: []
+created_date: '2026-08-17 12:00'
+updated_date: '2026-08-17 12:00'
+labels: []
+dependencies: []
+ordinal: 76000
 ---
 
 # Hotfix ESI sync cache 304 skipping cleanup

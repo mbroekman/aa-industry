@@ -1,8 +1,13 @@
 ---
-id: task-79
+id: TASK-79
 title: Filter corporate jobs to only show linked active tasks
 status: Done
-created: 2026-08-18
+assignee: []
+created_date: '2026-08-18 12:00'
+updated_date: '2026-08-18 12:00'
+labels: []
+dependencies: []
+ordinal: 79000
 ---
 
 # Filter corporate jobs to only show linked tasks

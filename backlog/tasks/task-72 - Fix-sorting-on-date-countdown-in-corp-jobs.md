@@ -1,8 +1,13 @@
 ---
-id: task-72
+id: TASK-72
 title: Fix sorting on date countdown in corp jobs
 status: Done
-created: 2026-08-16
+assignee: []
+created_date: '2026-08-16 12:00'
+updated_date: '2026-08-16 12:00'
+labels: []
+dependencies: []
+ordinal: 72000
 ---
 
 # Fix sorting on date countdown in corp jobs
