@@ -232,25 +232,50 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                 activity_id, f"Activity {activity_id}"
             )
 
-            # Sum up dynamic properties
-            to_build = sum(t.quantity for t in tasks)
-            remaining = sum(get_remaining(t) for t in tasks)
-            eve_active = sum(t.task_eve_active for t in tasks)
-            eve_ready = sum(t.task_eve_ready for t in tasks)
-            eve_delivered = sum(t.task_eve_delivered for t in tasks)
+            # Splitting tasks into those that are "done" (consumed/completed) and "active"
+            active_tasks = [
+                t
+                for t in tasks
+                if get_remaining(t) > 0 or t.task_eve_active > 0 or t.task_eve_ready > 0
+            ]
+
+            if active_tasks:
+                # If there are active tasks, we only summarize the active ones
+                # so the user doesn't see inflated "Claimed" numbers from old, already-consumed tasks.
+                tasks_to_summarize = active_tasks
+
+                # Determine row status based on the active tasks
+                eve_ready = sum(t.task_eve_ready for t in active_tasks)
+                remaining = sum(get_remaining(t) for t in active_tasks)
+                in_progress = sum(
+                    t.task_eve_active + t.task_eve_ready for t in active_tasks
+                )
+
+                if remaining <= 0 and in_progress <= 0:
+                    row_status = (
+                        "completed"  # Fallback, though active_tasks should prevent this
+                    )
+                elif remaining <= 0 and eve_ready > 0:
+                    row_status = "ready"
+                else:
+                    row_status = "active"
+            else:
+                # If all tasks are completed/consumed, we summarize all of them
+                # so the row still appears under the "Completed" filter.
+                tasks_to_summarize = tasks
+                row_status = "completed"
+
+            # Sum up dynamic properties using the filtered list
+            to_build = sum(t.quantity for t in tasks_to_summarize)
+            remaining = sum(get_remaining(t) for t in tasks_to_summarize)
+            eve_active = sum(t.task_eve_active for t in tasks_to_summarize)
+            eve_ready = sum(t.task_eve_ready for t in tasks_to_summarize)
+            eve_delivered = sum(t.task_eve_delivered for t in tasks_to_summarize)
             in_progress = eve_active + eve_ready
 
             # Since 'completed' includes what's consumed, we calculate it dynamically
             # so that Claimed (to_build) = Completed + Remaining + InProgress
             completed = max(0, to_build - in_progress - remaining)
-
-            # Determine row status based on progress
-            if remaining <= 0 and in_progress <= 0:
-                row_status = "completed"
-            elif remaining <= 0 and eve_ready > 0:
-                row_status = "ready"
-            else:
-                row_status = "active"
 
             my_claimed_summary.append(
                 {

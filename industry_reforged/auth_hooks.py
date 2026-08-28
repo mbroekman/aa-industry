@@ -216,7 +216,7 @@ class BlueprintLibraryMenuItem(MenuItemHook):
     def __init__(self):
         MenuItemHook.__init__(
             self,
-            _("Blueprint Library"),
+            _("Corp Blueprint Library"),
             "fas fa-book fa-fw",
             "industry_reforged:blueprint_library",
             navactive=["industry_reforged:blueprint_library"],
