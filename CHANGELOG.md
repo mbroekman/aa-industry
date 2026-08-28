@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.7.0 (2026-08-28)
+
+### Feat
+
+- **ui**: simplify Build Steps table (#106)
+- add commit skill definition for automated git workflow management
+
 ## v0.6.0 (2026-08-28)
 
 ### Feat
