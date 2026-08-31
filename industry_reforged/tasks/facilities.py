@@ -259,3 +259,64 @@ def sync_facility_rigs():
 
         except Exception as e:
             logger.error(f"Failed to sync rigs for corp {corp_id}: {e}")
+
+
+@shared_task(name="industry_reforged.tasks.task_sync_all_rigs")
+@log_task_execution("Sync All Rigs from SDE")
+def task_sync_all_rigs():
+    """Fetch all industry rigs from eveuniverse (SDE) and load them into IndustryRig."""
+    # Third Party
+    from eveuniverse.models import EveType
+
+    from ..models import IndustryRig
+
+    # Fetch any Standup Rig that does Manufacturing or Efficiency
+    types = (
+        EveType.objects.filter(name__icontains="Standup")
+        .filter(name__icontains="Set")
+        .filter(name__icontains="Efficiency")
+    )
+
+    count = 0
+    for t in types:
+        me, te = 0.0, 0.0
+        cats = ""
+        groups = ""
+        name = t.name
+
+        if "Material Efficiency II" in name:
+            me, te = 2.4, 24.0
+        elif "Material Efficiency I" in name:
+            me, te = 2.0, 20.0
+        elif "Time Efficiency II" in name:
+            me, te = 0.0, 24.0
+        elif "Time Efficiency I" in name:
+            me, te = 0.0, 20.0
+
+        if "Ship" in name:
+            cats = "6"
+        elif "Equipment" in name:
+            cats = "65"  # 65 is Structure Modules in EVE (used for equipment in seed script)
+        elif "Ammunition" in name or "Consumable" in name:
+            cats = "8"
+        elif "Drone" in name or "Fighter" in name:
+            cats = "18"
+        elif "Structure" in name or "Upwell" in name:
+            cats = "66"
+
+        rig, created = IndustryRig.objects.update_or_create(
+            type_id=t.id,
+            defaults={
+                "name": name,
+                "me_bonus": me,
+                "te_bonus": te,
+                "applies_to_categories": cats,
+                "applies_to_groups": groups,
+            },
+        )
+        if created:
+            count += 1
+
+    return (
+        f"Successfully imported/updated {types.count()} rigs. Created {count} new rigs."
+    )

@@ -3,6 +3,7 @@
 from .blueprints import task_sync_corp_blueprints
 from .facilities import (
     sync_facility_rigs,
+    task_sync_all_rigs,
     update_industry_facilities,
 )
 from .inventory import (
@@ -29,6 +30,7 @@ __all__ = [
     "task_sync_corp_blueprints",
     "sync_facility_rigs",
     "update_industry_facilities",
+    "task_sync_all_rigs",
     "task_sync_corp_inventory",
     "update_character_pi",
     "task_notify_expired_extractors",

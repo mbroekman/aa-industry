@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Feat
+
+- **industry**: add capability to dynamically sync and load all industry rigs from SDE (TASK-109)
+
 ## v0.7.0 (2026-08-28)
 
 ### Feat

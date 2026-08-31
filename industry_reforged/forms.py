@@ -236,9 +236,9 @@ class IndustryFacilityForm(forms.ModelForm):
         (35826, "Azbel"),
         (35827, "Sotiyo"),
         (35832, "Athanor"),
-        (35833, "Tatara"),
+        (35833, "Fortizar"),
         (35835, "Astrahus"),
-        (35836, "Fortizar"),
+        (35836, "Tatara"),
         (35834, "Keepstar"),
     ]
 

@@ -176,6 +176,11 @@ urlpatterns = [
     ),
     path("director/config/", director.director_config, name="director_config"),
     path(
+        "director/config/sync-rigs/",
+        director.director_config_sync_rigs,
+        name="director_config_sync_rigs",
+    ),
+    path(
         "director/config/item/add/",
         director.director_config_item_edit,
         name="director_config_item_add",

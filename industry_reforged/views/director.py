@@ -989,3 +989,14 @@ def director_config_tax_edit(
             "back_hash": "#pricing",
         },
     )
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_sync_rigs(request: WSGIRequest) -> HttpResponse:
+    """Trigger the celery task to sync industry rigs from SDE."""
+    if request.method == "POST":
+        from ..tasks import task_sync_all_rigs
+        task_sync_all_rigs.delay()
+        messages.success(request, _("Syncing Industry Rigs from SDE in the background."))
+    
+    return redirect("industry_reforged:director_config")
