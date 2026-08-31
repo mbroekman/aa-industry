@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.8.0 (2026-08-31)
+
+### Feat
+
+- **industry**: add capability to sync rigs (TASK-109) and fix forms mapping (TASK-111)
+- **industry**: add capability to sync rigs (TASK-109) and fix forms mapping (TASK-111)
+- add task-108 documentation for BOM-based cost calculation research and recommendations
+
 ## v0.7.0 (2026-08-28)
 
 ### Feat
