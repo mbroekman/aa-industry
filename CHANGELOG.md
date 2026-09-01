@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.8.1 (2026-09-01)
+
+### Feat
+
+- **ui**: redesign PI factory and extractor layout on personal dashboard (TASK-113)
+- **ui**: add visual warning for extractor deficits on character cards and planet pins
+- **industry**: add factory depletion timers and end product visibility on launchpads (TASK-112)
+
+### Fix
+
+- **industry**: exclude locally supplied inputs from factory depletion time calculation to prevent premature simulation halting
+
 ## v0.8.0 (2026-08-31)
 
 ### Feat

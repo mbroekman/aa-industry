@@ -458,3 +458,64 @@ def task_notify_expired_extractors():
     # Deprecated: Notification logic has been moved into the main update_pi_planets task
     # to guarantee atomicity and combine Auth and Discord notifications reliably.
     pass
+
+
+@shared_task(name="industry_reforged.tasks.update_pi_schematics_from_sde")
+@log_task_execution("Update PI Schematics from SDE")
+def update_pi_schematics_from_sde():
+    """Fetch PI schematics from SDE mirrors and update local database."""
+    # Third Party
+    import requests
+
+    from ..models.pi import PISchematic, PISchematicInput, PISchematicOutput
+
+    try:
+        r1 = requests.get("https://sde.zzeve.com/planetSchematics.json", timeout=15)
+        r1.raise_for_status()
+        schematics = r1.json()
+
+        r2 = requests.get(
+            "https://sde.zzeve.com/planetSchematicsTypeMap.json", timeout=15
+        )
+        r2.raise_for_status()
+        typemap = r2.json()
+
+        for sch in schematics:
+            PISchematic.objects.update_or_create(
+                schematic_id=sch["schematicID"],
+                defaults={
+                    "name": sch["schematicName"],
+                    "cycle_time": sch["cycleTime"],
+                },
+            )
+
+        for tm in typemap:
+            sid = tm["schematicID"]
+            tid = tm["typeID"]
+            qty = tm["quantity"]
+            is_in = tm["isInput"]
+
+            ensure_eve_type(tid)
+            # Third Party
+            from eveuniverse.models import EveType
+
+            eve_type = EveType.objects.filter(id=tid).first()
+            if not eve_type:
+                continue
+
+            sch = PISchematic.objects.filter(schematic_id=sid).first()
+            if not sch:
+                continue
+
+            if is_in == 1 or is_in == True:
+                PISchematicInput.objects.update_or_create(
+                    schematic=sch, type=eve_type, defaults={"quantity": qty}
+                )
+            else:
+                PISchematicOutput.objects.update_or_create(
+                    schematic=sch, type=eve_type, defaults={"quantity": qty}
+                )
+
+        logger.info("Successfully updated PI schematics from SDE.")
+    except Exception as e:
+        logger.error(f"Failed to update PI schematics from SDE: {e}")

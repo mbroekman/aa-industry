@@ -312,7 +312,7 @@ IndustryFacilityRigFormSet = inlineformset_factory(
 class UserPIConfigForm(forms.ModelForm):
     class Meta:
         model = UserPIConfig
-        fields = ["storage_warning_threshold"]
+        fields = ["storage_warning_threshold", "extraction_deficit_threshold_percent"]
         widgets = {
             "storage_warning_threshold": forms.NumberInput(
                 attrs={
@@ -321,8 +321,17 @@ class UserPIConfigForm(forms.ModelForm):
                     "min": "1",
                     "max": "100",
                 }
-            )
+            ),
+            "extraction_deficit_threshold_percent": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "1",
+                    "min": "0",
+                    "max": "1000",
+                }
+            ),
         }
         labels = {
             "storage_warning_threshold": _("Storage Warning Threshold (%)"),
+            "extraction_deficit_threshold_percent": _("Deficit Warning Threshold (%)"),
         }

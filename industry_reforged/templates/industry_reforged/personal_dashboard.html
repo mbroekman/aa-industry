@@ -390,7 +390,7 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <p>Configure when you want to receive a notification for full storage facilities or launchpads.</p>
+                                        <p>Configure when you want to receive notifications for full storage facilities and extraction deficits.</p>
                                         {{ pi_config_form.as_p }}
                                     </div>
                                     <div class="modal-footer">
@@ -440,6 +440,9 @@
                                             {% if char_group.list.0.character_has_full_storage %}
                                             <div class="text-warning"><i class="fas fa-database fa-2x" data-bs-toggle="tooltip" title="Storage Almost Full"></i></div>
                                             {% endif %}
+                                            {% if char_group.list.0.character_has_extraction_deficit %}
+                                            <div class="text-warning"><i class="fas fa-battery-quarter fa-2x" data-bs-toggle="tooltip" title="Extraction Deficit (Low Supply)"></i></div>
+                                            {% endif %}
                                             {% if not char_group.list.0.character_needs_attention %}
                                             <div class="text-success"><i class="fas fa-check-circle fa-2x" data-bs-toggle="tooltip" title="All Good"></i></div>
                                             {% endif %}
@@ -477,6 +480,11 @@
                                                     <span class="fs-6 text-muted">({{ planet.planet_type.name|default:"Unknown" }})</span>
                                                 </h5>
                                                 <div class="small text-muted">Level {{ planet.upgrade_level }} CC &bull; {{ planet.num_pins }} Pins</div>
+                                                <div class="mt-2 d-flex flex-wrap gap-1">
+                                                    {% for product in planet.end_products %}
+                                                        <img src="https://images.evetech.net/types/{{ product.id }}/icon?size=32" alt="{{ product.name }}" title="{{ product.name }}" class="rounded border border-secondary" style="width: 24px; height: 24px;" data-bs-toggle="tooltip">
+                                                    {% endfor %}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -495,12 +503,19 @@
                                                     <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
                                                     <div class="text-warning fw-bold fs-5"><i class="fas fa-pause-circle me-1"></i> Idle Extractor</div>
                                                 {% else %}
-                                                    <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
-                                                    {% if planet.high_tech_factories %}
+                                                    {% if planet.factory_depletion_time %}
+                                                        <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Depletion Time</div>
+                                                        <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.factory_depletion_time|date:'c' }}">
+                                                            Calculating...
+                                                        </div>
+                                                    {% elif planet.high_tech_factories %}
+                                                        <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
                                                         <div class="text-info fw-bold fs-5"><i class="fas fa-industry me-1"></i> P3/P4 Factory</div>
                                                     {% elif planet.advanced_factories or planet.basic_factories %}
+                                                        <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
                                                         <div class="text-info fw-bold fs-5"><i class="fas fa-industry me-1"></i> Factory Planet</div>
                                                     {% else %}
+                                                        <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
                                                         <div class="text-secondary fw-bold fs-5"><i class="fas fa-boxes me-1"></i> Storage Only</div>
                                                     {% endif %}
                                                 {% endif %}
@@ -542,18 +557,38 @@
                                                         {% for pin in planet.extractors %}
                                                         <li class="list-group-item bg-transparent text-white px-3 py-3 border-secondary d-flex align-items-center">
                                                             {% if pin.product_type %}
-                                                            <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-3 rounded border border-secondary" title="{{ pin.product_type.name }}">
+                                                            <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-3 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 40px; height: 40px;">
                                                             {% else %}
-                                                            <div class="me-3 border border-secondary rounded" style="width:32px; height:32px;"></div>
+                                                            <div class="me-3 border border-secondary rounded bg-secondary d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;">
+                                                                <i class="fas fa-hammer text-dark"></i>
+                                                            </div>
                                                             {% endif %}
-                                                            <div class="flex-grow-1">
-                                                                <div class="fw-bold">{{ pin.product_type.name|default:"Unknown" }}</div>
-                                                                <div class="small mt-1">
-                                                                    {% if pin.is_expired %}
-                                                                    <span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> Expired</span>
-                                                                    {% else %}
-                                                                    <span class="text-success countdown-timer fw-bold" data-expiry="{{ pin.expiry_time|date:'c' }}">{% translate "Running" %}</span>
-                                                                    {% endif %}
+                                                            <div class="flex-grow-1 w-100" style="min-width: 0;">
+                                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                    <div class="fw-bold text-truncate" title="{{ pin.product_type.name|default:'Unknown' }}">{{ pin.product_type.name|default:"Unknown" }}</div>
+                                                                    <div class="small text-muted">
+                                                                        <span class="badge bg-secondary shadow-sm">{{ pin.extraction_yield|floatformat:0|intcomma }} / cyc</span>
+                                                                        {% if pin.extraction_deficit_info %}
+                                                                        <i class="fas fa-battery-quarter text-warning ms-1" data-bs-toggle="tooltip" title="Produces {{ pin.extraction_deficit_info.extraction_per_hour|floatformat:0|intcomma }}/h, factories consume {{ pin.extraction_deficit_info.consumption_per_hour|floatformat:0|intcomma }}/h (Deficit: {{ pin.extraction_deficit_info.deficit_per_hour|floatformat:0|intcomma }}/h)"></i>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="progress" style="height: 6px; background-color: #1a1e23;" title="Extraction progress">
+                                                                    <div class="progress-bar {% if pin.progress_percent > 90 %}bg-danger{% elif pin.progress_percent > 75 %}bg-warning{% else %}bg-info{% endif %}" role="progressbar" style="width: {{ pin.progress_percent }}%;"></div>
+                                                                </div>
+
+                                                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                                                    <div class="small">
+                                                                        {% if pin.is_expired %}
+                                                                        <span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> Expired</span>
+                                                                        {% else %}
+                                                                        <span class="text-success"><i class="fas fa-spinner fa-spin me-1"></i>Running</span>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    <div class="small text-muted">
+                                                                        <i class="far fa-clock me-1"></i><span class="countdown-timer" data-expiry="{{ pin.expiry_time|date:'c' }}"></span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -571,61 +606,156 @@
                                             <div class="card bg-transparent border-secondary h-100">
                                                 <div class="card-header border-secondary bg-transparent text-warning fw-bold"><i class="fas fa-industry me-2"></i> Factories</div>
                                                 <div class="card-body p-0">
-                                                    {% if planet.basic_factories or planet.advanced_factories or planet.high_tech_factories %}
-                                                    <ul class="list-group list-group-flush">
-                                                        {% if planet.basic_factories %}
-                                                        <li class="list-group-item bg-transparent text-white px-3 border-secondary text-muted small fw-bold" style="letter-spacing:1px;">BASIC (T1)</li>
-                                                        {% for pin in planet.basic_factories %}
-                                                        <li class="list-group-item bg-transparent text-white px-3 py-2 border-0 d-flex justify-content-between align-items-center">
-                                                            <div class="d-flex align-items-center">
-                                                                {% if pin.product_type %}
-                                                                <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-2 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 24px; height: 24px;">
-                                                                <span class="small">{{ pin.product_type.name }}</span>
-                                                                {% else %}
-                                                                <i class="fas fa-cog text-secondary me-2"></i> <span class="text-muted small">No Schematic</span>
-                                                                {% endif %}
+                                                    {% if planet.grouped_factories.basic or planet.grouped_factories.advanced or planet.grouped_factories.high_tech %}
+                                                    <div class="d-flex flex-column gap-3 p-3">
+                                                        {% if planet.grouped_factories.basic %}
+                                                        <div>
+                                                            <div class="text-muted small fw-bold mb-2" style="letter-spacing:1px;">BASIC (T1)</div>
+                                                            <div class="row g-2">
+                                                                {% for group in planet.grouped_factories.basic %}
+                                                                <div class="col-12 col-xl-6">
+                                                                    <div class="card bg-dark border-secondary h-100">
+                                                                        <div class="card-body p-2 d-flex align-items-center justify-content-between">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <div class="position-relative me-3">
+                                                                                    {% if group.product_type %}
+                                                                                    <img src="https://images.evetech.net/types/{{ group.product_type.id }}/icon?size=32" class="rounded border border-secondary" title="{{ group.product_name }}" style="width: 40px; height: 40px;">
+                                                                                    {% else %}
+                                                                                    <div class="rounded border border-secondary d-flex align-items-center justify-content-center bg-secondary" style="width: 40px; height: 40px;">
+                                                                                        <i class="fas fa-cog text-dark"></i>
+                                                                                    </div>
+                                                                                    {% endif %}
+                                                                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary shadow-sm" style="font-size: 0.7rem;">
+                                                                                        {{ group.count }}x
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div class="small fw-bold text-white text-truncate" style="max-width: 120px;" title="{{ group.product_name }}">{{ group.product_name }}</div>
+                                                                                    <div class="small text-muted"><i class="far fa-clock me-1"></i>{{ group.cycle_str }}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span class="badge {% if group.is_idle %}bg-secondary{% else %}bg-success{% endif %} shadow-sm">{{ group.status_label }}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                {% endfor %}
                                                             </div>
-                                                            <span class="badge {% if pin.status_label == 'Idle' %}bg-secondary{% else %}bg-success{% endif %}">{{ pin.status_label }}</span>
-                                                        </li>
-                                                        {% endfor %}
+                                                        </div>
                                                         {% endif %}
 
-                                                        {% if planet.advanced_factories %}
-                                                        <li class="list-group-item bg-transparent text-white px-3 border-secondary text-muted small fw-bold mt-2" style="letter-spacing:1px;">ADVANCED (T2/T3)</li>
-                                                        {% for pin in planet.advanced_factories %}
-                                                        <li class="list-group-item bg-transparent text-white px-3 py-2 border-0 d-flex justify-content-between align-items-center">
-                                                            <div class="d-flex align-items-center">
-                                                                {% if pin.product_type %}
-                                                                <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-2 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 24px; height: 24px;">
-                                                                <span class="small">{{ pin.product_type.name }}</span>
-                                                                {% else %}
-                                                                <i class="fas fa-cogs text-secondary me-2"></i> <span class="text-muted small">No Schematic</span>
-                                                                {% endif %}
+                                                        {% if planet.grouped_factories.advanced %}
+                                                        <div>
+                                                            <div class="text-muted small fw-bold mb-2" style="letter-spacing:1px;">ADVANCED (T2/T3)</div>
+                                                            <div class="row g-2">
+                                                                {% for group in planet.grouped_factories.advanced %}
+                                                                <div class="col-12 col-xl-6">
+                                                                    <div class="card bg-dark border-secondary h-100">
+                                                                        <div class="card-body p-2 d-flex align-items-center justify-content-between">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <div class="position-relative me-3">
+                                                                                    {% if group.product_type %}
+                                                                                    <img src="https://images.evetech.net/types/{{ group.product_type.id }}/icon?size=32" class="rounded border border-secondary" title="{{ group.product_name }}" style="width: 40px; height: 40px;">
+                                                                                    {% else %}
+                                                                                    <div class="rounded border border-secondary d-flex align-items-center justify-content-center bg-secondary" style="width: 40px; height: 40px;">
+                                                                                        <i class="fas fa-cogs text-dark"></i>
+                                                                                    </div>
+                                                                                    {% endif %}
+                                                                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary shadow-sm" style="font-size: 0.7rem;">
+                                                                                        {{ group.count }}x
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div class="small fw-bold text-white text-truncate" style="max-width: 120px;" title="{{ group.product_name }}">{{ group.product_name }}</div>
+                                                                                    <div class="small text-muted"><i class="far fa-clock me-1"></i>{{ group.cycle_str }}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span class="badge {% if group.is_idle %}bg-secondary{% else %}bg-success{% endif %} shadow-sm">{{ group.status_label }}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                {% endfor %}
                                                             </div>
-                                                            <span class="badge {% if pin.status_label == 'Idle' %}bg-secondary{% else %}bg-success{% endif %}">{{ pin.status_label }}</span>
-                                                        </li>
-                                                        {% endfor %}
+                                                        </div>
                                                         {% endif %}
 
-                                                        {% if planet.high_tech_factories %}
-                                                        <li class="list-group-item bg-transparent text-white px-3 border-secondary text-muted small fw-bold mt-2" style="letter-spacing:1px;">HIGH TECH (T4)</li>
-                                                        {% for pin in planet.high_tech_factories %}
-                                                        <li class="list-group-item bg-transparent text-white px-3 py-2 border-0 d-flex justify-content-between align-items-center">
-                                                            <div class="d-flex align-items-center">
-                                                                {% if pin.product_type %}
-                                                                <img src="https://images.evetech.net/types/{{ pin.product_type.id }}/icon?size=32" class="me-2 rounded border border-secondary" title="{{ pin.product_type.name }}" style="width: 24px; height: 24px;">
-                                                                <span class="small">{{ pin.product_type.name }}</span>
-                                                                {% else %}
-                                                                <i class="fas fa-microchip text-secondary me-2"></i> <span class="text-muted small">No Schematic</span>
-                                                                {% endif %}
+                                                        {% if planet.grouped_factories.high_tech %}
+                                                        <div>
+                                                            <div class="text-muted small fw-bold mb-2" style="letter-spacing:1px;">HIGH TECH (T4)</div>
+                                                            <div class="row g-2">
+                                                                {% for group in planet.grouped_factories.high_tech %}
+                                                                <div class="col-12 col-xl-6">
+                                                                    <div class="card bg-dark border-secondary h-100">
+                                                                        <div class="card-body p-2 d-flex align-items-center justify-content-between">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <div class="position-relative me-3">
+                                                                                    {% if group.product_type %}
+                                                                                    <img src="https://images.evetech.net/types/{{ group.product_type.id }}/icon?size=32" class="rounded border border-secondary" title="{{ group.product_name }}" style="width: 40px; height: 40px;">
+                                                                                    {% else %}
+                                                                                    <div class="rounded border border-secondary d-flex align-items-center justify-content-center bg-secondary" style="width: 40px; height: 40px;">
+                                                                                        <i class="fas fa-microchip text-dark"></i>
+                                                                                    </div>
+                                                                                    {% endif %}
+                                                                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary shadow-sm" style="font-size: 0.7rem;">
+                                                                                        {{ group.count }}x
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div class="small fw-bold text-white text-truncate" style="max-width: 120px;" title="{{ group.product_name }}">{{ group.product_name }}</div>
+                                                                                    <div class="small text-muted"><i class="far fa-clock me-1"></i>{{ group.cycle_str }}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span class="badge {% if group.is_idle %}bg-secondary{% else %}bg-success{% endif %} shadow-sm">{{ group.status_label }}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                {% endfor %}
                                                             </div>
-                                                            <span class="badge {% if pin.status_label == 'Idle' %}bg-secondary{% else %}bg-success{% endif %}">{{ pin.status_label }}</span>
-                                                        </li>
-                                                        {% endfor %}
+                                                        </div>
                                                         {% endif %}
-                                                    </ul>
+                                                    </div>
                                                     {% else %}
                                                     <div class="text-muted small text-center my-4">No factories installed</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Supply & Demand Graph -->
+                                        <div class="col-12">
+                                            <div class="card bg-transparent border-secondary">
+                                                <div class="card-header border-secondary bg-transparent text-info fw-bold"><i class="fas fa-chart-bar me-2"></i> Supply & Demand (Units/Hour)</div>
+                                                <div class="card-body p-3">
+                                                    {% if planet.deficit_graph_data %}
+                                                        <div class="d-flex flex-column gap-3">
+                                                            {% for data in planet.deficit_graph_data %}
+                                                            <div>
+                                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                    <div class="d-flex align-items-center">
+                                                                        <img src="https://images.evetech.net/types/{{ data.type_id }}/icon?size=32" class="me-2 rounded" style="width: 24px; height: 24px;">
+                                                                        <span class="small fw-bold text-white">{{ data.name }}</span>
+                                                                    </div>
+                                                                    <div class="small text-muted">
+                                                                        <span class="text-success"><i class="fas fa-hammer"></i> {{ data.extraction|floatformat:0|intcomma }}</span> /
+                                                                        <span class="text-warning"><i class="fas fa-industry"></i> {{ data.consumption|floatformat:0|intcomma }}</span>
+                                                                        {% if data.deficit > 0 %}
+                                                                        <span class="text-danger ms-2 fw-bold">(-{{ data.deficit|floatformat:0|intcomma }})</span>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                </div>
+                                                                <div class="progress" style="height: 12px; background-color: #343a40;">
+                                                                    <div class="progress-bar {% if data.extraction_pct < 100 %}bg-danger{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ data.extraction_pct|floatformat:0 }}%;" aria-valuenow="{{ data.extraction_pct|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                                </div>
+                                                            </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="text-muted small text-center my-2">No consumption data found</div>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -646,7 +776,7 @@
                                                                 <div class="fw-bold small text-white"><i class="fas fa-box text-secondary me-1"></i> {{ pin.type.name|default:"Storage" }}</div>
                                                                 <div class="small text-muted">{{ pin.contents_volume|floatformat:0|intcomma }} / {{ pin.capacity|floatformat:0|intcomma }} m&sup3;</div>
                                                             </div>
-                                                            <div class="progress" style="height: 6px; background-color: #1a1e23; cursor: help;"
+                                                            <div class="progress mb-2" style="height: 6px; background-color: #1a1e23; cursor: help;"
                                                                 data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
                                                                 title="<div class='text-start'>{% if pin.contents %}{% for name, item in pin.contents.items %}<strong>{{ name }}</strong>: {{ item.amount|intcomma }} ({{ item.volume|floatformat:0|intcomma }} m&sup3;)<br>{% endfor %}{% else %}<em>{% translate "Empty" %}</em>{% endif %}</div>">
                                                                 <div class="progress-bar {% if pin.utilization_pct > 90 %}bg-danger{% elif pin.utilization_pct > 75 %}bg-warning{% else %}bg-info{% endif %}"
@@ -655,6 +785,25 @@
                                                                     aria-valuenow="{{ pin.utilization_pct|floatformat:0 }}"
                                                                     aria-valuemin="0"
                                                                     aria-valuemax="100"></div>
+                                                            </div>
+                                                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                                                {% for item in pin.categorized_contents.produced %}
+                                                                    <div class="d-flex align-items-center bg-success bg-opacity-25 rounded px-1 border border-success" title="Product: {{ item.name }} ({{ item.amount|intcomma }})" data-bs-toggle="tooltip">
+                                                                        <img src="https://images.evetech.net/types/{{ item.type_id }}/icon?size=32" alt="{{ item.name }}" style="width: 20px; height: 20px;" class="me-1 rounded">
+                                                                        <span class="small text-white fw-bold" style="font-size: 0.75rem;">{{ item.amount|intcomma }}</span>
+                                                                    </div>
+                                                                {% endfor %}
+
+                                                                {% for item in pin.categorized_contents.resources %}
+                                                                    <div class="d-flex align-items-center bg-black bg-opacity-25 rounded px-1" title="Resource: {{ item.name }} ({{ item.amount|intcomma }})" data-bs-toggle="tooltip">
+                                                                        <img src="https://images.evetech.net/types/{{ item.type_id }}/icon?size=32" alt="{{ item.name }}" style="width: 20px; height: 20px;" class="me-1 border border-secondary rounded">
+                                                                        <span class="small text-white" style="font-size: 0.75rem;">{{ item.amount|intcomma }}</span>
+                                                                    </div>
+                                                                {% endfor %}
+
+                                                                {% if not pin.categorized_contents.produced and not pin.categorized_contents.resources %}
+                                                                    <span class="small text-muted fst-italic">Empty</span>
+                                                                {% endif %}
                                                             </div>
                                                         </div>
                                                     </div>
