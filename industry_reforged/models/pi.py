@@ -555,27 +555,31 @@ class PlanetPin(models.Model):
     def extraction_deficit_info(self):
         if not self.is_extractor or not self.product_type_id:
             return None
-        
+
         consumption = self.planet.hourly_consumption_rates.get(self.product_type_id, 0)
         if consumption == 0:
             return None
-            
+
         extraction = self.planet.hourly_extraction_rates.get(self.product_type_id, 0)
         production = self.planet.hourly_production_rates.get(self.product_type_id, 0)
         supply = extraction + production
-        
+
         threshold_pct = 100
         try:
-            if hasattr(self.planet.character.character_ownership.user, "industry_pi_config"):
-                threshold_pct = self.planet.character.character_ownership.user.industry_pi_config.extraction_deficit_threshold_percent
+            if hasattr(
+                self.planet.character.character_ownership.user, "industry_pi_config"
+            ):
+                threshold_pct = (
+                    self.planet.character.character_ownership.user.industry_pi_config.extraction_deficit_threshold_percent
+                )
         except Exception:
             pass
-        
+
         if supply < (consumption * (threshold_pct / 100.0)):
             return {
-                'deficit_per_hour': consumption - supply,
-                'consumption_per_hour': consumption,
-                'extraction_per_hour': supply
+                "deficit_per_hour": consumption - supply,
+                "consumption_per_hour": consumption,
+                "extraction_per_hour": supply,
             }
         return None
 

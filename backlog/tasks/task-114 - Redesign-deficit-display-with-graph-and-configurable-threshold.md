@@ -4,7 +4,7 @@ title: Redesign deficit display with graph and configurable threshold
 status: Done
 assignee: []
 created_date: '2026-09-01 17:01'
-updated_date: '2026-09-01 17:20'
+updated_date: '2026-09-01 19:59'
 labels: []
 dependencies: []
 ordinal: 104000
@@ -13,9 +13,7 @@ ordinal: 104000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-
 Show the deficit using a graph demonstrating yield decrease and make the deficit warning message threshold configurable.
-
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -31,7 +29,5 @@ Show the deficit using a graph demonstrating yield decrease and make the deficit
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-
-Implemented configurable extraction deficit threshold on UserPIConfig. Added Supply & Demand visual bar graph to planet dashboard template. Tests passing.
-
+Implemented Supply & Demand graph, added configurable threshold for extraction deficits, and added deficit indicators to planet overview cards.
 <!-- SECTION:NOTES:END -->
