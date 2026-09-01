@@ -10,11 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Feat
 
 - **ui**: redesign PI factory and extractor layout on personal dashboard (TASK-113)
-- **ui**: add visual warning for extractor deficits on character cards and planet pins
+- **ui**: redesign PI extraction deficit display with Supply & Demand graph, configurable threshold, and planet overview indicators (TASK-114)
 - **industry**: add factory depletion timers and end product visibility on launchpads (TASK-112)
 
 ### Fix
 
+- **industry**: resolve simulated PI production distribution loss (prevent integer truncation "7 items bug") and zero amounts
 - **industry**: exclude locally supplied inputs from factory depletion time calculation to prevent premature simulation halting
 
 ## v0.8.0 (2026-08-31)
