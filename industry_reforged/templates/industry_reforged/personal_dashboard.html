@@ -520,11 +520,18 @@
                                                     {% endif %}
                                                 {% endif %}
                                             </div>
-                                            {% if planet.has_full_storage %}
-                                            <div class="text-warning" data-bs-toggle="tooltip" title="Storage Almost Full">
-                                                <i class="fas fa-database fa-2x"></i>
+                                            <div class="d-flex align-items-center gap-2">
+                                                {% if planet.has_extraction_deficit %}
+                                                <div class="text-warning" data-bs-toggle="tooltip" title="Extraction Deficit Detected">
+                                                    <i class="fas fa-battery-quarter fa-2x"></i>
+                                                </div>
+                                                {% endif %}
+                                                {% if planet.has_full_storage %}
+                                                <div class="text-warning" data-bs-toggle="tooltip" title="Storage Almost Full">
+                                                    <i class="fas fa-database fa-2x"></i>
+                                                </div>
+                                                {% endif %}
                                             </div>
-                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
