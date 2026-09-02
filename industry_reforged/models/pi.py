@@ -365,8 +365,8 @@ class CharacterPlanet(models.Model):
                 if t_id in available_qty:
                     available_qty[t_id] += item_data.get("amount", 0)
 
-        # 2. Use extraction_deficit_info to find actual deficits
-        deficit_info = self.extraction_deficit_info
+        # 2. Use deficit_graph_data to find actual deficits
+        deficit_info = self.deficit_graph_data
         if not deficit_info:
             return None
 
