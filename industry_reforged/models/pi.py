@@ -353,6 +353,22 @@ class CharacterPlanet(models.Model):
         if not factories:
             return None
 
+        # 0. Check if any factory is currently idle (last cycle finished before last update)
+        for f in factories:
+            if not f.last_cycle_start:
+                continue
+            try:
+                schematic = PISchematic.objects.get(schematic_id=f.schematic_id)
+                if schematic.cycle_time:
+                    expected_end = f.last_cycle_start + datetime.timedelta(
+                        seconds=schematic.cycle_time
+                    )
+                    # Add 5 minutes margin for ESI cache/jitter
+                    if expected_end + datetime.timedelta(minutes=5) < self.last_update:
+                        return self.last_update  # Already stopped!
+            except PISchematic.DoesNotExist:
+                continue
+
         # 1. Sum available quantity of all inputs in all storage pins
         consumption_per_hour = self.hourly_consumption_rates
         if not consumption_per_hour:
