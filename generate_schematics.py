@@ -34,7 +34,7 @@ def generate():
         else:
             out[sid]["outputs"][tid] = qty
 
-    with open("industry_reforged/utils/pi_schematics.py", "w") as f:
+    with open("industry_reforged/utils/pi_schematics.py", "w", encoding="utf-8") as f:
         f.write("# Auto-generated from EVE SDE\n\n")
         f.write("PI_SCHEMATICS = \\\n")
         f.write(json.dumps(out, indent=4))

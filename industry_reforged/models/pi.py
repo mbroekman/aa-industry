@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 """
 App Models
 """
@@ -150,7 +151,6 @@ class CharacterPlanet(models.Model):
     def schematic_cycle_times(self):
         if not hasattr(self, "_schematic_cycle_times"):
             # AA Industry App
-            from industry_reforged.models.pi import PISchematic
 
             factory_schematics = [
                 p.schematic_id
@@ -230,7 +230,6 @@ class CharacterPlanet(models.Model):
     def hourly_consumption_rates(self):
         if not hasattr(self, "_hourly_consumption_rates"):
             # AA Industry App
-            from industry_reforged.models.pi import PISchematic
 
             factories = [p for p in self.pins.all() if p.is_factory and p.schematic_id]
             rates = {}
@@ -273,7 +272,6 @@ class CharacterPlanet(models.Model):
     def hourly_production_rates(self):
         if not hasattr(self, "_hourly_production_rates"):
             # AA Industry App
-            from industry_reforged.models.pi import PISchematic
 
             factories = [p for p in self.pins.all() if p.is_factory and p.schematic_id]
             rates = {}
@@ -361,7 +359,7 @@ class CharacterPlanet(models.Model):
             return None
 
         # 2. Sum available quantity of these inputs in all storage pins
-        available_qty = {t_id: 0 for t_id in consumption_per_hour.keys()}
+        available_qty = {t_id: 0 for t_id in consumption_per_hour}
         for p in self.storage_pins:
             for item_name, item_data in p.contents.items():
                 t_id = item_data.get("type_id")
@@ -394,8 +392,7 @@ class CharacterPlanet(models.Model):
 
             if hourly_rate > 0:
                 hours_left = available_qty.get(t_id, 0) / hourly_rate
-                if hours_left < min_hours_remaining:
-                    min_hours_remaining = hours_left
+                min_hours_remaining = min(min_hours_remaining, hours_left)
 
         if min_hours_remaining == float("inf"):
             return None
@@ -472,7 +469,6 @@ class PlanetPin(models.Model):
                     if f.is_factory and f.schematic_id:
                         try:
                             # AA Industry App
-                            from industry_reforged.models.pi import PISchematic
 
                             schematic = PISchematic.objects.get(
                                 schematic_id=f.schematic_id
