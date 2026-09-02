@@ -496,8 +496,6 @@ def update_pi_schematics_from_sde():
             is_in = tm["isInput"]
 
             ensure_eve_type(tid)
-            # Third Party
-            from eveuniverse.models import EveType
 
             eve_type = EveType.objects.filter(id=tid).first()
             if not eve_type:
@@ -507,7 +505,7 @@ def update_pi_schematics_from_sde():
             if not sch:
                 continue
 
-            if is_in == 1 or is_in == True:
+            if is_in == 1 or is_in is True:
                 PISchematicInput.objects.update_or_create(
                     schematic=sch, type=eve_type, defaults={"quantity": qty}
                 )

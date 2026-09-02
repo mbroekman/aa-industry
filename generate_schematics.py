@@ -1,6 +1,5 @@
 # Standard Library
 import json
-import os
 
 # Third Party
 import requests
@@ -30,7 +29,7 @@ def generate():
         tid = tm["typeID"]
         qty = tm["quantity"]
         is_in = tm["isInput"]
-        if is_in == 1 or is_in == True:
+        if is_in == 1 or is_in is True:
             out[sid]["inputs"][tid] = qty
         else:
             out[sid]["outputs"][tid] = qty

@@ -2,12 +2,16 @@
 App Models
 """
 
+# Standard Library
+import datetime
+
 # Third Party
 from eveuniverse.models import EveType
 
 # Django
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
@@ -247,7 +251,6 @@ class CharacterPlanet(models.Model):
     @property
     def hourly_extraction_rates(self):
         # Django
-        from django.utils import timezone
 
         rates = {}
         for ext in self.extractors:
@@ -352,12 +355,6 @@ class CharacterPlanet(models.Model):
         if not factories:
             return None
 
-        # Standard Library
-        import datetime
-
-        # Django
-        from django.utils import timezone
-
         # 1. Calculate total planet-wide consumption per hour for each input
         consumption_per_hour = self.hourly_consumption_rates
         if not consumption_per_hour:
@@ -454,10 +451,8 @@ class PlanetPin(models.Model):
 
         # Calculate simulated production for the planet
         # Standard Library
-        import datetime
 
         # Django
-        from django.utils import timezone
 
         now = timezone.now()
 
@@ -634,7 +629,6 @@ class PlanetPin(models.Model):
         if not self.install_time or not self.expiry_time:
             return 0
         # Django
-        from django.utils import timezone
 
         now = timezone.now()
         if now >= self.expiry_time:
@@ -652,7 +646,6 @@ class PlanetPin(models.Model):
         if not self.expiry_time:
             return False
         # Django
-        from django.utils import timezone
 
         return timezone.now() >= self.expiry_time
 

@@ -13,7 +13,9 @@ ordinal: 104000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Show the deficit using a graph demonstrating yield decrease and make the deficit warning message threshold configurable.
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -29,5 +31,7 @@ Show the deficit using a graph demonstrating yield decrease and make the deficit
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Implemented Supply & Demand graph, added configurable threshold for extraction deficits, and added deficit indicators to planet overview cards.
+
 <!-- SECTION:NOTES:END -->
