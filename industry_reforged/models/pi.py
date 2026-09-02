@@ -353,12 +353,11 @@ class CharacterPlanet(models.Model):
         if not factories:
             return None
 
-        # 1. Calculate total planet-wide consumption per hour for each input
+        # 1. Sum available quantity of all inputs in all storage pins
         consumption_per_hour = self.hourly_consumption_rates
         if not consumption_per_hour:
             return None
 
-        # 2. Sum available quantity of these inputs in all storage pins
         available_qty = {t_id: 0 for t_id in consumption_per_hour}
         for p in self.storage_pins:
             for item_name, item_data in p.contents.items():
@@ -366,32 +365,17 @@ class CharacterPlanet(models.Model):
                 if t_id in available_qty:
                     available_qty[t_id] += item_data.get("amount", 0)
 
-        # 2.5 Identify which inputs are being extracted or produced locally
-        supplied_type_ids = set()
-        for ext in self.extractors:
-            if (
-                ext.product_type_id
-                and ext.expiry_time
-                and ext.expiry_time > self.last_update
-            ):
-                supplied_type_ids.add(ext.product_type_id)
+        # 2. Use extraction_deficit_info to find actual deficits
+        deficit_info = self.extraction_deficit_info
+        if not deficit_info:
+            return None
 
-        for f in factories:
-            try:
-                schematic = PISchematic.objects.get(schematic_id=f.schematic_id)
-                for out in schematic.outputs.all():
-                    supplied_type_ids.add(out.type_id)
-            except PISchematic.DoesNotExist:
-                continue
-
-        # 3. Find the minimum hours remaining
         min_hours_remaining = float("inf")
-        for t_id, hourly_rate in consumption_per_hour.items():
-            if t_id in supplied_type_ids:
-                continue  # Ignore this input, it's being supplied locally!
-
-            if hourly_rate > 0:
-                hours_left = available_qty.get(t_id, 0) / hourly_rate
+        for info in deficit_info:
+            deficit = info["deficit"]
+            if deficit > 0:
+                t_id = info["type_id"]
+                hours_left = available_qty.get(t_id, 0) / deficit
                 min_hours_remaining = min(min_hours_remaining, hours_left)
 
         if min_hours_remaining == float("inf"):
