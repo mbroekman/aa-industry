@@ -522,6 +522,9 @@ def update_pi_schematics_from_sde():
                     schematic=sch, type=eve_type, defaults={"quantity": qty}
                 )
 
+        from ..models.pi import clear_schematics_cache
+
+        clear_schematics_cache()
         logger.info("Successfully updated PI schematics from SDE.")
     except Exception as e:
         logger.error(f"Failed to update PI schematics from SDE: {e}")

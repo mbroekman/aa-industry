@@ -1,4 +1,4 @@
-# pylint: disable=attribute-defined-outside-init,too-many-public-methods
+# pylint: disable=attribute-defined-outside-init,too-many-public-methods,global-statement
 """
 App Models
 """
@@ -35,6 +35,53 @@ class UserPIConfig(models.Model):
 
     def __str__(self):
         return f"{self.user.username} PI Config"
+
+
+_SCHEMATICS_CACHE = None
+
+
+def get_all_schematics_dict():
+    """
+    Returns a cached dictionary of all PISchematic objects with their inputs and outputs.
+    Format:
+    {
+        schematic_id: {
+            "name": schematic.name,
+            "cycle_time": schematic.cycle_time,
+            "inputs": [{"type_id": inp.type_id, "quantity": inp.quantity}, ...],
+            "outputs": [{"type_id": out.type_id, "quantity": out.quantity}, ...],
+        }
+    }
+    """
+    global _SCHEMATICS_CACHE
+    if _SCHEMATICS_CACHE is None:
+        cache = {}
+        try:
+            schematics = PISchematic.objects.prefetch_related("inputs", "outputs").all()
+            for s in schematics:
+                cache[s.schematic_id] = {
+                    "name": s.name,
+                    "cycle_time": s.cycle_time,
+                    "inputs": [
+                        {"type_id": inp.type_id, "quantity": inp.quantity}
+                        for inp in s.inputs.all()
+                    ],
+                    "outputs": [
+                        {"type_id": out.type_id, "quantity": out.quantity}
+                        for out in s.outputs.all()
+                    ],
+                }
+        except Exception:
+            pass
+        if cache:
+            _SCHEMATICS_CACHE = cache
+    return _SCHEMATICS_CACHE or {}
+
+
+def clear_schematics_cache():
+    """Clear the cached schematics dictionary"""
+    global _SCHEMATICS_CACHE
+    _SCHEMATICS_CACHE = None
 
 
 class CharacterPlanet(models.Model):
@@ -261,21 +308,17 @@ class CharacterPlanet(models.Model):
     @property
     def hourly_consumption_rates(self):
         if not hasattr(self, "_hourly_consumption_rates"):
-            # AA Industry App
-
+            schematics_dict = get_all_schematics_dict()
             factories = [p for p in self.pins.all() if p.is_factory and p.schematic_id]
             rates = {}
             for f in factories:
-                try:
-                    schematic = PISchematic.objects.get(schematic_id=f.schematic_id)
-                    if schematic.cycle_time:
-                        cycles_per_hour = 3600.0 / schematic.cycle_time
-                        for inp in schematic.inputs.all():
-                            rates[inp.type_id] = rates.get(inp.type_id, 0) + (
-                                inp.quantity * cycles_per_hour
-                            )
-                except PISchematic.DoesNotExist:
-                    continue
+                schematic = schematics_dict.get(f.schematic_id)
+                if schematic and schematic.get("cycle_time"):
+                    cycles_per_hour = 3600.0 / schematic["cycle_time"]
+                    for inp in schematic.get("inputs", []):
+                        rates[inp["type_id"]] = rates.get(inp["type_id"], 0) + (
+                            inp["quantity"] * cycles_per_hour
+                        )
             self._hourly_consumption_rates = rates
         return self._hourly_consumption_rates
 
@@ -303,21 +346,17 @@ class CharacterPlanet(models.Model):
     @property
     def hourly_production_rates(self):
         if not hasattr(self, "_hourly_production_rates"):
-            # AA Industry App
-
+            schematics_dict = get_all_schematics_dict()
             factories = [p for p in self.pins.all() if p.is_factory and p.schematic_id]
             rates = {}
             for f in factories:
-                try:
-                    schematic = PISchematic.objects.get(schematic_id=f.schematic_id)
-                    if schematic.cycle_time:
-                        cycles_per_hour = 3600.0 / schematic.cycle_time
-                        for out in schematic.outputs.all():
-                            rates[out.type_id] = rates.get(out.type_id, 0) + (
-                                out.quantity * cycles_per_hour
-                            )
-                except PISchematic.DoesNotExist:
-                    continue
+                schematic = schematics_dict.get(f.schematic_id)
+                if schematic and schematic.get("cycle_time"):
+                    cycles_per_hour = 3600.0 / schematic["cycle_time"]
+                    for out in schematic.get("outputs", []):
+                        rates[out["type_id"]] = rates.get(out["type_id"], 0) + (
+                            out["quantity"] * cycles_per_hour
+                        )
             self._hourly_production_rates = rates
         return self._hourly_production_rates
 
@@ -344,39 +383,42 @@ class CharacterPlanet(models.Model):
 
     @property
     def deficit_graph_data(self):
+        cached_data = getattr(self, "_deficit_graph_data", None)
+        if cached_data is not None:
+            return cached_data
+
         consumption = self.hourly_consumption_rates
         extraction = self.hourly_extraction_rates
         production = self.hourly_production_rates
 
         data = []
-        for type_id, cons_rate in consumption.items():
-            if cons_rate > 0:
-                supply = extraction.get(type_id, 0) + production.get(type_id, 0)
-                deficit = max(0, cons_rate - supply)
-                extraction_pct = (
-                    min(100.0, (supply / cons_rate) * 100.0) if cons_rate > 0 else 100.0
-                )
+        active_type_ids = [t_id for t_id, c in consumption.items() if c > 0]
+        eve_types_map = {}
+        if active_type_ids:
+            eve_types_map = {
+                t.id: t.name for t in EveType.objects.filter(id__in=active_type_ids)
+            }
 
-                # Fetch EveType for name (caching handled by ORM if possible)
-                # Third Party
-                from eveuniverse.models import EveType
+        for type_id in active_type_ids:
+            cons_rate = consumption[type_id]
+            supply = extraction.get(type_id, 0) + production.get(type_id, 0)
+            deficit = max(0, cons_rate - supply)
+            extraction_pct = (
+                min(100.0, (supply / cons_rate) * 100.0) if cons_rate > 0 else 100.0
+            )
+            name = eve_types_map.get(type_id, f"Type {type_id}")
 
-                try:
-                    eve_type = EveType.objects.get(id=type_id)
-                    name = eve_type.name
-                except EveType.DoesNotExist:
-                    name = f"Type {type_id}"
-
-                data.append(
-                    {
-                        "type_id": type_id,
-                        "name": name,
-                        "consumption": cons_rate,
-                        "extraction": supply,
-                        "deficit": deficit,
-                        "extraction_pct": extraction_pct,
-                    }
-                )
+            data.append(
+                {
+                    "type_id": type_id,
+                    "name": name,
+                    "consumption": cons_rate,
+                    "extraction": supply,
+                    "deficit": deficit,
+                    "extraction_pct": extraction_pct,
+                }
+            )
+        self._deficit_graph_data = data
         return data
 
     @property
@@ -484,41 +526,36 @@ class PlanetPin(models.Model):
                 )
 
             if elapsed_seconds > 0:
+                schematics_dict = get_all_schematics_dict()
+                storage_pins = self.planet.storage_pins
+                best_pin = None
+                for sp in storage_pins:
+                    if sp.is_launchpad:
+                        best_pin = sp
+                        break
+                if not best_pin and storage_pins:
+                    best_pin = storage_pins[0]
+
+                is_target_pin = best_pin and self.pin_id == best_pin.pin_id
+
                 for f in self.planet.pins.all():
                     if f.is_factory and f.schematic_id:
-                        try:
-                            # AA Industry App
-
-                            schematic = PISchematic.objects.get(
-                                schematic_id=f.schematic_id
-                            )
-                            if schematic.cycle_time:
-                                cycles = int(elapsed_seconds / schematic.cycle_time)
-                                if cycles > 0:
-                                    for out in schematic.outputs.all():
-                                        if out.type_id not in simulated_produced:
-                                            simulated_produced[out.type_id] = 0
-                                        storage_pins = self.planet.storage_pins
-                                        best_pin = None
-                                        for sp in storage_pins:
-                                            if sp.is_launchpad:
-                                                best_pin = sp
-                                                break
-                                        if not best_pin and storage_pins:
-                                            best_pin = storage_pins[0]
-
-                                        if best_pin and self.pin_id == best_pin.pin_id:
-                                            simulated_produced[out.type_id] += (
-                                                out.quantity * cycles
-                                            )
-
-                                    for inp in schematic.inputs.all():
-                                        simulated_consumed[inp.type_id] = (
-                                            simulated_consumed.get(inp.type_id, 0)
-                                            + (inp.quantity * cycles)
+                        schematic = schematics_dict.get(f.schematic_id)
+                        if schematic and schematic.get("cycle_time"):
+                            cycles = int(elapsed_seconds / schematic["cycle_time"])
+                            if cycles > 0:
+                                if is_target_pin:
+                                    for out in schematic.get("outputs", []):
+                                        simulated_produced[out["type_id"]] = (
+                                            simulated_produced.get(out["type_id"], 0)
+                                            + (out["quantity"] * cycles)
                                         )
-                        except PISchematic.DoesNotExist:
-                            continue
+
+                                for inp in schematic.get("inputs", []):
+                                    simulated_consumed[inp["type_id"]] = (
+                                        simulated_consumed.get(inp["type_id"], 0)
+                                        + (inp["quantity"] * cycles)
+                                    )
 
         for ep in end_products:
             amount = 0
@@ -693,6 +730,14 @@ class PISchematic(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        clear_schematics_cache()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        clear_schematics_cache()
+        super().delete(*args, **kwargs)
+
 
 class PISchematicInput(models.Model):
     schematic = models.ForeignKey(
@@ -701,6 +746,14 @@ class PISchematicInput(models.Model):
     type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     quantity = models.IntegerField()
 
+    def save(self, *args, **kwargs):
+        clear_schematics_cache()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        clear_schematics_cache()
+        super().delete(*args, **kwargs)
+
 
 class PISchematicOutput(models.Model):
     schematic = models.ForeignKey(
@@ -708,3 +761,11 @@ class PISchematicOutput(models.Model):
     )
     type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     quantity = models.IntegerField()
+
+    def save(self, *args, **kwargs):
+        clear_schematics_cache()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        clear_schematics_cache()
+        super().delete(*args, **kwargs)
