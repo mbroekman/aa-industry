@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.8.4 (2026-09-03)
+
+### Fix
+
+- **industry**: automatically bootstrap PI schematics from SDE during PI sync or dashboard view if table is empty (TASK-119)
+
 ## v0.8.3 (2026-09-03)
 
 ### Fix

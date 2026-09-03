@@ -73,3 +73,18 @@ class TestPITasks:
         )
 
         update_character_pi()
+
+    @patch("industry_reforged.tasks.pi.update_pi_schematics_from_sde")
+    @patch("industry_reforged.tasks.pi.esi")
+    def test_update_character_pi_autoboots_schematics_when_empty(
+        self, mock_esi, mock_update_schematics
+    ):
+        # AA Industry App
+        from industry_reforged.models import PISchematic
+
+        PISchematic.objects.all().delete()
+        assert not PISchematic.objects.exists()
+
+        update_character_pi()
+
+        mock_update_schematics.assert_called_once()

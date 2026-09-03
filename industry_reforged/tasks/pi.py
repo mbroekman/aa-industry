@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 @log_task_execution("Update Character Pi")
 def update_character_pi(character_id=None):
     """Fetch PI planets and pins from ESI for all users or a specific user."""
+    from ..models.pi import PISchematic
+
+    if not PISchematic.objects.exists():
+        try:
+            update_pi_schematics_from_sde()
+        except Exception as e:
+            logger.warning(f"Failed to auto-bootstrap PI schematics: {e}")
+
     tokens_query = Token.objects.filter(scopes__name="esi-planets.manage_planets.v1")
     if character_id:
         tokens_query = tokens_query.filter(character_id=character_id)

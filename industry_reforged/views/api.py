@@ -61,6 +61,12 @@ def add_corporate_token(request: WSGIRequest, token) -> HttpResponse:
 @permission_required("industry_reforged.basic_access")
 def trigger_pi_sync(request: WSGIRequest) -> HttpResponse:
     """Manually trigger PI sync for all characters of the user"""
+    from ..models.pi import PISchematic
+    from ..tasks.pi import update_pi_schematics_from_sde
+
+    if not PISchematic.objects.exists():
+        update_pi_schematics_from_sde.delay()
+
     user_characters = request.user.character_ownerships.all().values_list(
         "character__character_id", flat=True
     )

@@ -15,8 +15,10 @@ from ..models import (
     CharacterPlanet,
     CorporationIndustryJob,
     MemberOrder,
+    PISchematic,
     UserPIConfig,
 )
+from ..tasks.pi import update_pi_schematics_from_sde
 
 
 @login_required
@@ -97,6 +99,12 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
         .prefetch_related("pins", "pins__type", "pins__product_type")
         .order_by("character__character_name", "planet_id")
     )
+
+    if planets and not PISchematic.objects.exists():
+        try:
+            update_pi_schematics_from_sde.delay()
+        except Exception:
+            pass
 
     expired_chars = set()
     full_storage_chars = set()
