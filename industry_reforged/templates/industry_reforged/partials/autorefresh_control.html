@@ -1,0 +1,125 @@
+{% load i18n %}
+<div class="d-inline-flex align-items-center ms-2" id="autorefresh-container">
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center" type="button" id="autoRefreshDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="{% translate 'Page Auto-refresh' %}">
+            <i class="fas fa-sync-alt me-1" id="auto-refresh-icon"></i>
+            <span id="auto-refresh-label">{% translate "Auto-refresh: Off" %}</span>
+            <span class="badge bg-primary ms-1 d-none" id="auto-refresh-timer"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="autoRefreshDropdown">
+            <li><h6 class="dropdown-header">{% translate "Refresh Interval" %}</h6></li>
+            <li><button class="dropdown-item active" type="button" data-interval="0">{% translate "Off" %}</button></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item" type="button" data-interval="300">{% translate "5 minutes" %}</button></li>
+            <li><button class="dropdown-item" type="button" data-interval="600">{% translate "10 minutes" %}</button></li>
+            <li><button class="dropdown-item" type="button" data-interval="900">{% translate "15 minutes" %}</button></li>
+            <li><button class="dropdown-item" type="button" data-interval="1500">{% translate "25 minutes" %}</button></li>
+            <li><button class="dropdown-item" type="button" data-interval="1800">{% translate "30 minutes" %}</button></li>
+        </ul>
+    </div>
+</div>
+
+<script>
+(function() {
+    const STORAGE_KEY = 'industry_autorefresh_interval_' + window.location.pathname.replace(/\/+$/, '');
+    let intervalSeconds = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+    let remainingSeconds = intervalSeconds;
+    let timerId = null;
+
+    const labelEl = document.getElementById('auto-refresh-label');
+    const timerEl = document.getElementById('auto-refresh-timer');
+    const iconEl = document.getElementById('auto-refresh-icon');
+    const items = document.querySelectorAll('#autorefresh-container .dropdown-item');
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function updateUI() {
+        items.forEach(item => {
+            const itemVal = parseInt(item.getAttribute('data-interval'), 10);
+            if (itemVal === intervalSeconds) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
+        if (intervalSeconds === 0) {
+            labelEl.textContent = '{% translate "Auto-refresh: Off" %}';
+            timerEl.classList.add('d-none');
+            iconEl.classList.remove('text-success');
+        } else {
+            const mins = Math.floor(intervalSeconds / 60);
+            labelEl.textContent = `Auto-refresh: ${mins}m`;
+            timerEl.textContent = formatTime(remainingSeconds);
+            timerEl.classList.remove('d-none');
+            iconEl.classList.add('text-success');
+        }
+    }
+
+    function tick() {
+        if (intervalSeconds <= 0) return;
+
+        // Check if any modal is currently open
+        const hasOpenModal = document.querySelector('.modal.show') !== null;
+        if (hasOpenModal) {
+            timerEl.textContent = 'Paused';
+            return;
+        }
+
+        remainingSeconds--;
+        if (remainingSeconds <= 0) {
+            // Save tab state if any
+            const activeTab = document.querySelector('.nav-tabs .nav-link.active, .nav-pills .nav-link.active');
+            if (activeTab && activeTab.id) {
+                sessionStorage.setItem('industry_active_tab', activeTab.id);
+            }
+            window.location.reload();
+            return;
+        }
+
+        timerEl.textContent = formatTime(remainingSeconds);
+    }
+
+    function setIntervalVal(val) {
+        intervalSeconds = val;
+        remainingSeconds = val;
+        localStorage.setItem(STORAGE_KEY, val);
+        updateUI();
+
+        if (timerId) {
+            clearInterval(timerId);
+            timerId = null;
+        }
+
+        if (intervalSeconds > 0) {
+            timerId = setInterval(tick, 1000);
+        }
+    }
+
+    items.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const val = parseInt(this.getAttribute('data-interval'), 10);
+            setIntervalVal(val);
+        });
+    });
+
+    // Restore active tab after reload if stored
+    const storedTab = sessionStorage.getItem('industry_active_tab');
+    if (storedTab) {
+        const tabTrigger = document.getElementById(storedTab);
+        if (tabTrigger && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+            const tabInstance = bootstrap.Tab.getOrCreateInstance(tabTrigger);
+            tabInstance.show();
+        }
+        sessionStorage.removeItem('industry_active_tab');
+    }
+
+    // Initialize
+    setIntervalVal(intervalSeconds);
+})();
+</script>

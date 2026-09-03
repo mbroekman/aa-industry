@@ -7,8 +7,11 @@
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <h3>{% trans "Industrialist Dashboard" %}</h3>
-            <a href="{% url 'industry_reforged:industrialist_leaderboard' %}" class="btn btn-success"><i
-                    class="fas fa-trophy"></i> {% trans "Leaderboards & History" %}</a>
+            <div class="d-flex align-items-center">
+                <a href="{% url 'industry_reforged:industrialist_leaderboard' %}" class="btn btn-success"><i
+                        class="fas fa-trophy"></i> {% trans "Leaderboards & History" %}</a>
+                {% include 'industry_reforged/partials/autorefresh_control.html' %}
+            </div>
         </div>
     </div>
 

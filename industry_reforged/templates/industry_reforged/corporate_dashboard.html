@@ -7,8 +7,9 @@
     <div class="card border-0 mb-4">
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-building"></i> {{ title }}</h3>
-            <div class="ms-auto">
+            <div class="ms-auto d-flex align-items-center">
                 <a href="{% url 'industry_reforged:add_corporate_token' %}" class="btn btn-success btn-sm"><i class="fas fa-key"></i> Add Corporate Token</a>
+                {% include 'industry_reforged/partials/autorefresh_control.html' %}
             </div>
         </div>
 
