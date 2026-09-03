@@ -1,20 +1,20 @@
 {% load i18n %}
 <div class="d-inline-flex align-items-center ms-2" id="autorefresh-container">
     <div class="dropdown">
-        <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center" type="button" id="autoRefreshDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="{% translate 'Page Auto-refresh' %}">
-            <i class="fas fa-sync-alt me-1" id="auto-refresh-icon"></i>
-            <span id="auto-refresh-label">{% translate "Auto-refresh: Off" %}</span>
-            <span class="badge bg-primary ms-1 d-none" id="auto-refresh-timer"></span>
+        <button class="btn btn-outline-info btn-sm dropdown-toggle d-flex align-items-center shadow-sm" type="button" id="autoRefreshDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="{% translate 'Page Auto-refresh' %}">
+            <i class="fas fa-sync-alt me-1.5" id="auto-refresh-icon"></i>
+            <span id="auto-refresh-label" class="fw-semibold">{% translate "Auto-refresh: Off" %}</span>
+            <span class="badge bg-light text-dark ms-2 fw-bold d-none" id="auto-refresh-timer"></span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="autoRefreshDropdown">
-            <li><h6 class="dropdown-header">{% translate "Refresh Interval" %}</h6></li>
-            <li><button class="dropdown-item active" type="button" data-interval="0">{% translate "Off" %}</button></li>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-secondary" aria-labelledby="autoRefreshDropdown">
+            <li><h6 class="dropdown-header text-info"><i class="fas fa-clock me-1"></i> {% translate "Auto-refresh Interval" %}</h6></li>
+            <li><button class="dropdown-item active d-flex justify-content-between align-items-center" type="button" data-interval="0"><span><i class="fas fa-ban text-muted me-2"></i>{% translate "Off" %}</span></button></li>
             <li><hr class="dropdown-divider"></li>
-            <li><button class="dropdown-item" type="button" data-interval="300">{% translate "5 minutes" %}</button></li>
-            <li><button class="dropdown-item" type="button" data-interval="600">{% translate "10 minutes" %}</button></li>
-            <li><button class="dropdown-item" type="button" data-interval="900">{% translate "15 minutes" %}</button></li>
-            <li><button class="dropdown-item" type="button" data-interval="1500">{% translate "25 minutes" %}</button></li>
-            <li><button class="dropdown-item" type="button" data-interval="1800">{% translate "30 minutes" %}</button></li>
+            <li><button class="dropdown-item d-flex justify-content-between align-items-center" type="button" data-interval="300"><span><i class="far fa-clock text-info me-2"></i>{% translate "5 minutes" %}</span></button></li>
+            <li><button class="dropdown-item d-flex justify-content-between align-items-center" type="button" data-interval="600"><span><i class="far fa-clock text-info me-2"></i>{% translate "10 minutes" %}</span></button></li>
+            <li><button class="dropdown-item d-flex justify-content-between align-items-center" type="button" data-interval="900"><span><i class="far fa-clock text-info me-2"></i>{% translate "15 minutes" %}</span></button></li>
+            <li><button class="dropdown-item d-flex justify-content-between align-items-center" type="button" data-interval="1500"><span><i class="far fa-clock text-info me-2"></i>{% translate "25 minutes" %}</span></button></li>
+            <li><button class="dropdown-item d-flex justify-content-between align-items-center" type="button" data-interval="1800"><span><i class="far fa-clock text-info me-2"></i>{% translate "30 minutes" %}</span></button></li>
         </ul>
     </div>
 </div>
@@ -26,6 +26,7 @@
     let remainingSeconds = intervalSeconds;
     let timerId = null;
 
+    const btnEl = document.getElementById('autoRefreshDropdown');
     const labelEl = document.getElementById('auto-refresh-label');
     const timerEl = document.getElementById('auto-refresh-timer');
     const iconEl = document.getElementById('auto-refresh-icon');
@@ -48,15 +49,18 @@
         });
 
         if (intervalSeconds === 0) {
+            btnEl.classList.remove('btn-success', 'text-white');
+            btnEl.classList.add('btn-outline-info');
             labelEl.textContent = '{% translate "Auto-refresh: Off" %}';
             timerEl.classList.add('d-none');
-            iconEl.classList.remove('text-success');
+            iconEl.classList.remove('fa-spin');
         } else {
             const mins = Math.floor(intervalSeconds / 60);
+            btnEl.classList.remove('btn-outline-info');
+            btnEl.classList.add('btn-success', 'text-white');
             labelEl.textContent = `Auto-refresh: ${mins}m`;
             timerEl.textContent = formatTime(remainingSeconds);
             timerEl.classList.remove('d-none');
-            iconEl.classList.add('text-success');
         }
     }
 
