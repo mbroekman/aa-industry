@@ -437,6 +437,9 @@
                                             {% if char_group.list.0.character_has_expired_extractors %}
                                             <div class="text-danger"><i class="fas fa-exclamation-triangle fa-2x" data-bs-toggle="tooltip" title="Extractors Expired"></i></div>
                                             {% endif %}
+                                            {% if char_group.list.0.character_has_depleted_factories %}
+                                            <div class="text-warning"><i class="fas fa-industry fa-2x" data-bs-toggle="tooltip" title="Factories Out of Resources"></i></div>
+                                            {% endif %}
                                             {% if char_group.list.0.character_has_full_storage %}
                                             <div class="text-warning"><i class="fas fa-database fa-2x" data-bs-toggle="tooltip" title="Storage Almost Full"></i></div>
                                             {% endif %}
@@ -504,10 +507,15 @@
                                                     <div class="text-warning fw-bold fs-5"><i class="fas fa-pause-circle me-1"></i> Idle Extractor</div>
                                                 {% else %}
                                                     {% if planet.factory_depletion_time %}
-                                                        <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Depletion Time</div>
-                                                        <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.factory_depletion_time|date:'c' }}">
-                                                            Calculating...
-                                                        </div>
+                                                        {% if planet.is_factory_depleted %}
+                                                            <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
+                                                            <div class="text-warning fw-bold fs-5"><i class="fas fa-pause-circle me-1"></i> Out of Resources</div>
+                                                        {% else %}
+                                                            <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">Depletion Time</div>
+                                                            <div class="text-success fw-bold fs-5 countdown-timer" data-expiry="{{ planet.factory_depletion_time|date:'c' }}">
+                                                                Calculating...
+                                                            </div>
+                                                        {% endif %}
                                                     {% elif planet.high_tech_factories %}
                                                         <div class="small text-muted mb-1 text-uppercase fw-bold" style="letter-spacing: 1px; font-size: 0.7rem;">{% translate "Status" %}</div>
                                                         <div class="text-info fw-bold fs-5"><i class="fas fa-industry me-1"></i> P3/P4 Factory</div>

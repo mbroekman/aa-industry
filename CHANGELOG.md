@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.8.3 (2026-09-03)
+
+### Fix
+
+- **industry**: resolve PI factory depletion baseline calculation using pin cycle start timestamp (TASK-118)
+- **industry**: prevent extraction planets with active extractors from incorrectly displaying "Out of Resources" (TASK-118)
+- **industry**: add dynamic resource consumption deduction on storage and launchpad pins (TASK-117)
+- **industry**: add accurate factory running, depleted, and idle status badges on dashboard and modals (TASK-117)
+- **industry**: remove flawed cycle start check causing running factory planets to show as stopped (TASK-116)
+
 ## v0.8.1 (2026-09-01)
 
 ### Feat

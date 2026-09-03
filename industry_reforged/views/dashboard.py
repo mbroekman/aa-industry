@@ -101,6 +101,7 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     expired_chars = set()
     full_storage_chars = set()
     deficit_chars = set()
+    depleted_factory_chars = set()
 
     for planet in planets:
         if planet.has_expired_extractors:
@@ -109,15 +110,21 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
             full_storage_chars.add(planet.character_id)
         if planet.has_extraction_deficit:
             deficit_chars.add(planet.character_id)
+        if planet.is_factory_depleted:
+            depleted_factory_chars.add(planet.character_id)
 
     for planet in planets:
         planet.character_has_expired_extractors = planet.character_id in expired_chars
         planet.character_has_full_storage = planet.character_id in full_storage_chars
         planet.character_has_extraction_deficit = planet.character_id in deficit_chars
+        planet.character_has_depleted_factories = (
+            planet.character_id in depleted_factory_chars
+        )
         planet.character_needs_attention = (
             planet.character_has_expired_extractors
             or planet.character_has_full_storage
             or planet.character_has_extraction_deficit
+            or planet.character_has_depleted_factories
         )
 
     pi_config, _created = UserPIConfig.objects.get_or_create(user=request.user)

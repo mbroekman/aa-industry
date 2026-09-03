@@ -16,7 +16,14 @@ from .orders import (
     OrderItem,
     ProductionTask,
 )
-from .pi import CharacterPlanet, PlanetPin, UserPIConfig
+from .pi import (
+    CharacterPlanet,
+    PISchematic,
+    PISchematicInput,
+    PISchematicOutput,
+    PlanetPin,
+    UserPIConfig,
+)
 from .wallet import (
     CorpWalletDivision,
     CorpWalletJournal,
@@ -39,6 +46,9 @@ __all__ = [
     "UserPIConfig",
     "CharacterPlanet",
     "PlanetPin",
+    "PISchematic",
+    "PISchematicInput",
+    "PISchematicOutput",
     "CorpPricingConfig",
     "CorpTypeDiscount",
     "MemberOrder",

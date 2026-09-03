@@ -1,4 +1,4 @@
-# pylint: disable=attribute-defined-outside-init
+# pylint: disable=attribute-defined-outside-init,too-many-public-methods
 """
 App Models
 """
@@ -148,6 +148,33 @@ class CharacterPlanet(models.Model):
         return [p for p in self.pins.all() if p.is_command_center]
 
     @property
+    def has_factories(self):
+        return bool(
+            self.basic_factories or self.advanced_factories or self.high_tech_factories
+        )
+
+    @property
+    def factory_baseline_time(self):
+        cycle_starts = [
+            p.last_cycle_start
+            for p in self.pins.all()
+            if p.is_factory and p.schematic_id and p.last_cycle_start
+        ]
+        if cycle_starts:
+            return max(cycle_starts)
+        return self.last_update
+
+    @property
+    def is_factory_depleted(self):
+        # Extraction planets are powered by active extractors, not static storage
+        if self.extractors:
+            return False
+        depletion = self.factory_depletion_time
+        if not depletion:
+            return False
+        return timezone.now() >= depletion
+
+    @property
     def schematic_cycle_times(self):
         if not hasattr(self, "_schematic_cycle_times"):
             # AA Industry App
@@ -192,6 +219,15 @@ class CharacterPlanet(models.Model):
                     else:
                         cycle_str = f"{int(cycle_time_sec / 60)}m"
 
+                is_running = True
+                status_label = "Running"
+                if not p.schematic_id:
+                    is_running = False
+                    status_label = "Idle"
+                elif not self.extractors and self.is_factory_depleted:
+                    is_running = False
+                    status_label = "Out of Resources"
+
                 key = (product_id, p.schematic_id)
                 if key not in groups[group_key]:
                     groups[group_key][key] = {
@@ -200,15 +236,11 @@ class CharacterPlanet(models.Model):
                         "product_name": product_name,
                         "cycle_time_sec": cycle_time_sec,
                         "cycle_str": cycle_str,
-                        "status_label": p.status_label,
-                        "is_idle": p.status_label == "Idle",
+                        "status_label": status_label,
+                        "is_idle": not is_running,
                     }
                 else:
                     groups[group_key][key]["count"] += 1
-                    # If any factory is idle, we might want to flag the group, but let's keep it simple
-                    if p.status_label == "Idle":
-                        groups[group_key][key]["is_idle"] = True
-                        groups[group_key][key]["status_label"] = "Some Idle"
 
         return {
             "basic": list(groups["basic"].values()),
@@ -353,22 +385,6 @@ class CharacterPlanet(models.Model):
         if not factories:
             return None
 
-        # 0. Check if any factory is currently idle (last cycle finished before last update)
-        for f in factories:
-            if not f.last_cycle_start:
-                continue
-            try:
-                schematic = PISchematic.objects.get(schematic_id=f.schematic_id)
-                if schematic.cycle_time:
-                    expected_end = f.last_cycle_start + datetime.timedelta(
-                        seconds=schematic.cycle_time
-                    )
-                    # Add 5 minutes margin for ESI cache/jitter
-                    if expected_end + datetime.timedelta(minutes=5) < self.last_update:
-                        return self.last_update  # Already stopped!
-            except PISchematic.DoesNotExist:
-                continue
-
         # 1. Sum available quantity of all inputs in all storage pins
         consumption_per_hour = self.hourly_consumption_rates
         if not consumption_per_hour:
@@ -397,7 +413,8 @@ class CharacterPlanet(models.Model):
         if min_hours_remaining == float("inf"):
             return None
 
-        return self.last_update + datetime.timedelta(hours=min_hours_remaining)
+        baseline_time = self.factory_baseline_time
+        return baseline_time + datetime.timedelta(hours=min_hours_remaining)
 
 
 class PlanetPin(models.Model):
@@ -453,16 +470,18 @@ class PlanetPin(models.Model):
 
         now = timezone.now()
 
-        simulated_amounts = {}
+        simulated_produced = {}
+        simulated_consumed = {}
         # Only add simulation if this pin is a storage/launchpad
         if self.is_storage:
+            baseline_time = self.planet.factory_baseline_time
             depletion_time = self.planet.factory_depletion_time
-            elapsed_seconds = (now - self.planet.last_update).total_seconds()
+            elapsed_seconds = (now - baseline_time).total_seconds()
 
             if depletion_time and now > depletion_time:
-                elapsed_seconds = (
-                    depletion_time - self.planet.last_update
-                ).total_seconds()
+                elapsed_seconds = max(
+                    0, (depletion_time - baseline_time).total_seconds()
+                )
 
             if elapsed_seconds > 0:
                 for f in self.planet.pins.all():
@@ -477,8 +496,8 @@ class PlanetPin(models.Model):
                                 cycles = int(elapsed_seconds / schematic.cycle_time)
                                 if cycles > 0:
                                     for out in schematic.outputs.all():
-                                        if out.type_id not in simulated_amounts:
-                                            simulated_amounts[out.type_id] = 0
+                                        if out.type_id not in simulated_produced:
+                                            simulated_produced[out.type_id] = 0
                                         storage_pins = self.planet.storage_pins
                                         best_pin = None
                                         for sp in storage_pins:
@@ -489,9 +508,15 @@ class PlanetPin(models.Model):
                                             best_pin = storage_pins[0]
 
                                         if best_pin and self.pin_id == best_pin.pin_id:
-                                            simulated_amounts[out.type_id] += (
+                                            simulated_produced[out.type_id] += (
                                                 out.quantity * cycles
                                             )
+
+                                    for inp in schematic.inputs.all():
+                                        simulated_consumed[inp.type_id] = (
+                                            simulated_consumed.get(inp.type_id, 0)
+                                            + (inp.quantity * cycles)
+                                        )
                         except PISchematic.DoesNotExist:
                             continue
 
@@ -503,7 +528,7 @@ class PlanetPin(models.Model):
                 vol = self.contents[ep.name].get("volume", 0)
 
             # Add simulated amount
-            sim_added = int(simulated_amounts.get(ep.id, 0))
+            sim_added = int(simulated_produced.get(ep.id, 0))
             amount += sim_added
 
             if amount > 0:
@@ -519,16 +544,24 @@ class PlanetPin(models.Model):
         if self.contents:
             for name, item in self.contents.items():
                 if name not in end_product_names:
-                    # Subtract simulated consumption? Let's just focus on production for now as requested.
+                    t_id = item.get("type_id")
                     amount = item.get("amount", 0)
-                    resources.append(
-                        {
-                            "name": name,
-                            "type_id": item.get("type_id"),
-                            "amount": amount,
-                            "volume": item.get("volume", 0),
-                        }
-                    )
+                    consumed = int(simulated_consumed.get(t_id, 0))
+                    remaining = max(0, amount - consumed)
+                    if remaining > 0:
+                        unit_vol = (
+                            item.get("volume", 0) / amount
+                            if amount > 0
+                            else float(item.get("volume", 0))
+                        )
+                        resources.append(
+                            {
+                                "name": name,
+                                "type_id": t_id,
+                                "amount": remaining,
+                                "volume": round(remaining * unit_vol, 2),
+                            }
+                        )
 
         return {"produced": produced, "resources": resources}
 
@@ -615,9 +648,11 @@ class PlanetPin(models.Model):
         if self.is_extractor:
             return "Expired" if self.is_expired else "Running"
         if self.is_factory:
-            if self.schematic_id:
-                return "Configured"
-            return "Idle"
+            if not self.schematic_id:
+                return "Idle"
+            if not self.planet.extractors and self.planet.is_factory_depleted:
+                return "Out of Resources"
+            return "Running"
         return "Online"
 
     @property
