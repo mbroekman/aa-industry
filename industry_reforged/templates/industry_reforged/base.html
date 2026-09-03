@@ -126,6 +126,25 @@
                     }
                 });
             });
+
+            // Global Bootstrap tab & pill persistence across page reloads
+            document.addEventListener('shown.bs.tab', function (event) {
+                const target = event.target.getAttribute('data-bs-target') || event.target.getAttribute('href');
+                if (target && target.startsWith('#')) {
+                    sessionStorage.setItem('activeTab_' + window.location.pathname, target);
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, null, target);
+                    }
+                }
+            });
+
+            const initialTab = window.location.hash || sessionStorage.getItem('activeTab_' + window.location.pathname);
+            if (initialTab && initialTab.startsWith('#')) {
+                const triggerEl = document.querySelector(`button[data-bs-target="${initialTab}"], a[data-bs-target="${initialTab}"], a[href="${initialTab}"]`);
+                if (triggerEl && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+                }
+            }
         });
 
         window.addEventListener('pageshow', function (event) {

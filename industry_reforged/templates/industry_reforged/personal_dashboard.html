@@ -935,6 +935,7 @@
 
     // PI Dashboard View Logic
     function showPlanets(characterId) {
+        sessionStorage.setItem('pi_selected_character_' + window.location.pathname, characterId);
         document.getElementById('pi-view-characters').classList.add('d-none');
         document.querySelectorAll('.pi-planets-container').forEach(el => el.classList.add('d-none'));
         const container = document.getElementById('pi-view-planets-' + characterId);
@@ -944,9 +945,18 @@
     }
 
     function showCharacters() {
+        sessionStorage.removeItem('pi_selected_character_' + window.location.pathname);
         document.querySelectorAll('.pi-planets-container').forEach(el => el.classList.add('d-none'));
         document.getElementById('pi-view-characters').classList.remove('d-none');
     }
+
+    // Restore selected character view on load if still valid
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedCharId = sessionStorage.getItem('pi_selected_character_' + window.location.pathname);
+        if (savedCharId) {
+            showPlanets(savedCharId);
+        }
+    });
 
     function openPlanetModal(planetId) {
         const template = document.getElementById('planet-details-' + planetId);
