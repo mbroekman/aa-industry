@@ -168,6 +168,11 @@ def calculate_total(items: list[dict], tax_rate: float = 0.0) -> float:
 - [ ] No commented-out code or debug statements
 - [ ] No hardcoded credentials
 
+## Session Hygiene & Context Management
+
+- **Keep sessions small**: Focus each session on a single discrete task, feature, or plan step.
+- **Proactive session resets**: When a milestone/task is completed or when context accumulates significantly, proactively suggest resetting/starting a fresh session to maintain high accuracy and prevent degraded reasoning.
+
 ______________________________________________________________________
 
 **Remember:** Prioritize clarity and maintainability over cleverness. This is your core directive.
