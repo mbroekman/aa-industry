@@ -102,6 +102,10 @@ def create_order(request: WSGIRequest) -> HttpResponse:
             character=character,
             status="REQUESTED",
             total_price=total_price,
+            true_cost=sum(
+                detail.get("true_cost_per_unit", 0) * detail["quantity"]
+                for detail in item_details
+            ),
             payment_reference=ref,
             target_facility=default_facility,
         )

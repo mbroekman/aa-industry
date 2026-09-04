@@ -104,6 +104,8 @@
                                     <th>Order ID</th>
                                     <th>Character</th>
                                     <th>Total Price</th>
+                                    <th>True Cost</th>
+                                    <th>Margin</th>
                                     <th>Payment Ref</th>
                                     <th>{% translate "Status" %}</th>
                                     <th>Progress</th>
@@ -592,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
-                { "orderable": false, "targets": [6] }
+                { "orderable": false, "targets": [4, 8] }
             ]
         });
     }

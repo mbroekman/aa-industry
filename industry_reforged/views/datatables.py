@@ -64,14 +64,16 @@ def dt_director_orders(request):
 
     # Ordering
     # Column mapping for DataTables:
-    # 0: id, 1: character, 2: total_price, 3: payment_ref, 4: status, 5: progress, 6: action
+    # 0: id, 1: character, 2: total_price, 3: true_cost, 4: margin, 5: payment_ref, 6: status, 7: progress, 8: action
     order_map = {
         "0": "id",
         "1": "character__character_name",
         "2": "total_price",
-        "3": "payment_reference",
-        "4": "status",
-        "5": "created_at",  # Progress is calculated, fallback to created_at
+        "3": "true_cost",
+        "4": "created_at",  # margin is calculated, sort by creation
+        "5": "payment_reference",
+        "6": "status",
+        "7": "created_at",  # Progress is calculated, fallback to created_at
     }
 
     order_field = order_map.get(str(order_col), "created_at")
@@ -90,6 +92,12 @@ def dt_director_orders(request):
         if order.child_orders.exists():
             sub_orders_badge = f'<span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has {order.child_orders.count()} sub-orders"><i class="fas fa-sitemap"></i> +{order.child_orders.count()}</span>'
 
+        margin = 0.0
+        if order.true_cost and order.true_cost > 0:
+            margin = ((order.total_price - order.true_cost) / order.true_cost) * 100
+
+        margin_html = f'<span class="{"text-success" if margin >= 0 else "text-danger"}">{margin:.1f}%</span>'
+
         data.append(
             [
                 f"#{order.id} {sub_orders_badge}",
@@ -98,6 +106,11 @@ def dt_director_orders(request):
                     "industry_reforged/partials/dt_isk.html",
                     {"amount": order.total_price},
                 ),
+                render_to_string(
+                    "industry_reforged/partials/dt_isk.html",
+                    {"amount": order.true_cost},
+                ),
+                margin_html,
                 order.payment_reference or "-",
                 render_to_string(
                     "industry_reforged/partials/dt_order_status.html", {"order": order}

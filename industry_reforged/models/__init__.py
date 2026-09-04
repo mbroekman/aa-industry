@@ -1,5 +1,10 @@
 from .blueprints import BlueprintRequest, CorpBlueprint
-from .config import CorpMOTD, CorporationSyncConfig, CorporationWebhookConfig
+from .config import (
+    CorpMOTD,
+    CorporationPricingConfig,
+    CorporationSyncConfig,
+    CorporationWebhookConfig,
+)
 from .core import General, TaskExecutionLog
 from .facilities import IndustryFacility, IndustryFacilityRig, IndustryRig
 from .inventory import CorpInventory
@@ -65,6 +70,7 @@ __all__ = [
     "CorpWalletJournal",
     "CorporationSyncConfig",
     "CorporationWebhookConfig",
+    "CorporationPricingConfig",
     "CorpMOTD",
     "CorpInventory",
     "LedgerTransaction",

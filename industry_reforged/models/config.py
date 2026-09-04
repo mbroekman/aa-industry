@@ -95,3 +95,40 @@ class CorpMOTD(models.Model):
 
     def __str__(self):
         return f"MOTD for {self.corporation.corporation_name}"
+
+
+class CorporationPricingConfig(models.Model):
+    VALUATION_CHOICES = (
+        ("JITA_SELL", _("Jita Sell (Default)")),
+        ("JITA_BUY", _("Jita Buy")),
+        ("CORP_MANUAL", _("Corp Manual Price (Strict)")),
+    )
+
+    corporation = models.OneToOneField(
+        EveCorporationInfo,
+        on_delete=models.CASCADE,
+        related_name="industry_pricing_config",
+    )
+    material_valuation_method = models.CharField(
+        max_length=20,
+        choices=VALUATION_CHOICES,
+        default="JITA_SELL",
+        help_text=_(
+            "The method used to value raw materials in the BOM cost calculation."
+        ),
+    )
+    minimum_margin_floor = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        help_text=_(
+            "The minimum profit margin percentage allowed for an order (e.g., 0.00 for 0%, -5.00 for -5% max loss)."
+        ),
+    )
+
+    class Meta:
+        verbose_name = _("Corporation Pricing Configuration")
+        verbose_name_plural = _("Corporation Pricing Configurations")
+
+    def __str__(self):
+        return f"{self.corporation.corporation_name} Pricing Config"

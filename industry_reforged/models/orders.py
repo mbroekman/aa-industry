@@ -92,6 +92,12 @@ class MemberOrder(models.Model):
         max_length=20, choices=ORDER_STATUS_CHOICES, default="REQUESTED"
     )
     total_price = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    true_cost = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=0.00,
+        help_text=_("The calculated True Material Cost at the time of order creation."),
+    )
     upfront_payment = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
     amount_paid = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)

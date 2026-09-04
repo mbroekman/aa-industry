@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.10.0 (2026-09-04)
+
+### Feat
+
+- **pricing**: implement true material cost (BOM-based) pricing and minimum margin floor (TASK-125)
+
+### Docs
+
+- **docs**: update documentation for true material cost and alternative pricing methodology (doc-11, doc-12)
+
+### Chore
+
+- **chore**: finalize implementation and prepare for v0.10.0 release
+
 ## v0.9.0 (2026-09-04)
 
 ### Feat
