@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Feat
+
+- **ui**: add configurable page auto-refresh (5m, 10m, 15m, 25m, 30m) with countdown timer and active tab persistence across jobs and PI dashboards (TASK-120)
+
+### Fix
+
+- **perf**: eliminate N+1 database queries in PI rates and depletion calculations with in-memory schematics cache, preventing DB connection exhaustion (TASK-121)
+
 ## v0.8.4 (2026-09-03)
 
 ### Fix
