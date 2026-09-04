@@ -1,11 +1,12 @@
 ---
-id: DOC-5
-title: "taak12_implementatie"
+id: doc-5
+title: 'Implementation Plan: Link Claimed Tasks to EVE ESI Industry Jobs'
 type: guide
 created_date: '2026-08-06 17:53'
+updated_date: '2026-09-04 11:09'
 ---
 
-# TASK-12: Koppel geclaimde taken aan EVE ESI Industry Jobs
+# TASK-12: Link Claimed Tasks to EVE ESI Industry Jobs
 
 This plan outlines the implementation for linking accepted (claimed) production tasks in AA-Industry to actual EVE Online industry jobs (Character or Corporation jobs) running in structures, via a heuristic matcher.
 
