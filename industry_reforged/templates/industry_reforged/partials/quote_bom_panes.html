@@ -21,7 +21,7 @@
                                         <th class="text-end">{% trans "Required" %}</th>
                                         <th class="text-end">
                                             {% trans "Unit Cost" %}
-                                            <i class="fas fa-info-circle ms-1 text-muted" data-bs-toggle="tooltip" title="{% trans 'Base prices fetched live from Fuzzwork (Jita 5% Sell)' %}"></i>
+                                            <i class="fas fa-info-circle ms-1 text-muted" data-bs-toggle="tooltip" title="{% trans 'Base prices fetched live from ESI Market (Jita 5% Sell)' %}"></i>
                                         </th>
                                         <th class="text-end">{% trans "Total Cost" %}</th>
                                     </tr>
@@ -75,7 +75,7 @@
                                     <tr>
                                         <th colspan="5" class="text-end text-muted">
                                             {% trans "Original Jita Price (Est.):" %}
-                                            <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{% trans 'Live Jita 5% Sell Price fetched via Fuzzwork API' %}"></i>
+                                            <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{% trans 'Live Jita 5% Sell Price fetched via direct ESI market orders' %}"></i>
                                         </th>
                                         <th class="text-end text-muted numeric">{{ original_price|eve_isk }}</th>
                                     </tr>

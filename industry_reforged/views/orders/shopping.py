@@ -139,9 +139,9 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     if bom:
         mat_ids = list(bom.keys())
 
-        from ...utils.pricing_engine import get_fuzzwork_prices
+        from ...utils.pricing_engine import get_market_prices
 
-        prices = get_fuzzwork_prices(mat_ids)
+        prices = get_market_prices(mat_ids)
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price

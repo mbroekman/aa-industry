@@ -3,63 +3,48 @@ id: doc-9
 title: 'Proposal: Deprecating Fuzzwork API Dependency'
 type: specification
 created_date: '2026-08-25 16:36'
-updated_date: '2026-08-25 16:39'
+updated_date: '2026-09-04 13:39'
 ---
 
 # Proposal: Deprecating Fuzzwork API Dependency
 
-**Date:** August 25, 2026
+**Date:** August 25, 2026 (Updated: September 4, 2026)
 **Topic:** Alternatives for replacing the third-party Fuzzwork API dependency for market pricing and Bill of Materials (BOM) logic within the Industry Reforged tool.
+**Status:** Accepted & Implemented (Option 1 - Direct ESI API Integration via TASK-123)
 
 ## 1. Background
 
-Currently, the application relies on the Fuzzwork API (`https://market.fuzzwork.co.uk/aggregates/`) to fetch real-time "Jita 5% Sell" prices for materials (PI, Moon goo, Minerals, etc.) and to process Bill of Materials fallback options.
+Historically, the application relied on the third-party Fuzzwork API (`https://market.fuzzwork.co.uk/aggregates/`) to fetch real-time "Jita 5% Sell" prices for materials (PI, Moon goo, Minerals, etc.) and to process Bill of Materials fallback options.
 
-While Fuzzwork is highly convenient because it aggregates official EVE Online (ESI) market data and allows bulk querying, it introduces a third-party dependency. If Fuzzwork experiences downtime, our tool's pricing engine will fail or fall back to 0 ISK unless manual prices are set.
-
-This document outlines three viable options for removing the Fuzzwork dependency and transitioning to first-party (CCP ESI) or fully localized data.
+While Fuzzwork was convenient because it aggregated official EVE Online (ESI) market data and allowed bulk querying, it introduced an external third-party point of failure.
 
 ______________________________________________________________________
 
-## 2. Options for Replacement
+## 2. Decision & Implementation: Option 1 (Direct ESI API Integration)
 
-### Option 1: Direct ESI API Integration (First-Party)
+As part of **TASK-123**, **Option 1** was selected and implemented:
 
-Instead of relying on Fuzzwork's aggregated endpoint, we rewrite the `pricing_engine.py` to communicate directly with the official CCP ESI API (`/markets/10000002/orders/?type_id=XXX`).
+- **Direct ESI Client**: The `pricing_engine.py` communicates directly with the official CCP ESI API (`/markets/10000002/orders/?order_type=sell&type_id=XXX`).
+- **Jita 5% Sell Percentile**: Filters sell orders at Jita IV - Moon 4 Navy Assembly Plant (`location_id=60003760`), sorts by price ascending, and calculates the true volume-weighted 5th percentile price.
+- **Concurrent ThreadPoolExecutor**: Resolves the N-material network latency problem by querying missing material prices in parallel (max 15 threads) with HTTP connection pooling.
+- **Multi-tiered Caching**: 1-hour Django cache TTL for positive market prices, 60s TTL for transient empty results, and periodic Celery background pre-warming (`task_pull_market_data`).
+- **Resilient Fallback**: Automatically falls back to `EveMarketPrice` (daily adjusted/average prices from `django-eveuniverse`) if ESI is unreachable.
 
-- **Pros:**
-  - 100% official data straight from the source.
-  - No third-party dependencies whatsoever.
-  - We control the exact percentile calculation (e.g., 5% sell, 10% sell, lowest sell).
-- **Cons:**
-  - **Performance & Network Overhead:** Fuzzwork allows querying up to 100 items in a single HTTP request. The ESI API strictly requires **1 request per item type**. Calculating a quote for a blueprint with 40 distinct materials requires 40 individual ESI requests.
-  - **Implementation Cost:** Requires building local caching, asynchronous fetching, and mathematical aggregation logic (sorting and calculating percentiles) to prevent the user interface from slowing down.
+______________________________________________________________________
+
+## 3. Evaluated Options
+
+### Option 1: Direct ESI API Integration (Selected)
+
+- **Pros:** 100% first-party official data, exact percentile control, no third-party downtime risk.
+- **Cons:** Requires batching & threading for multi-item quotes (resolved via ThreadPoolExecutor + connection pooling).
 
 ### Option 2: Local Database (EVE Universe Daily Averages)
 
-The plugin is already built on top of `django-eveuniverse`. This package automatically synchronizes daily with the ESI API to fetch the official "Average Price" and "Adjusted Price" for every item in the game and stores it in the local database.
-
-- **Pros:**
-  - **Extremely Fast:** Zero network calls are required when loading a quote or evaluating prices; all data is fetched locally from the database.
-  - **Resilient:** Unaffected by temporary ESI or third-party outages during the day.
-- **Cons:**
-  - **Pricing Accuracy:** EVE Universe provides a daily "Market Average", not the precise live "Jita 5% Sell" price. In highly volatile markets, the payout prices may deviate from the actual immediate replacement costs in Jita.
+- **Pros:** Extremely fast, zero network calls during quotes.
+- **Cons:** Less accurate in fast-moving volatile markets (used as secondary fallback).
 
 ### Option 3: Manual Pricing Exclusivity
 
-We completely disable automated external pricing and enforce that Directors manually assign a base price for all raw materials via the `Corp Item Config` menu.
-
-- **Pros:**
-  - Complete financial control for the Corporation/Alliance.
-  - Predictable payouts and profit margins that do not fluctuate with external market spikes.
-- **Cons:**
-  - **High Maintenance:** Directors will bear the administrative burden of monitoring the market and manually updating prices whenever market shifts occur.
-
-______________________________________________________________________
-
-## 3. Recommendation
-
-If the primary goal is to completely remove the Fuzzwork dependency without sacrificing automation:
-
-1. **Short-Term / Low Effort:** Implement **Option 2**. It leverages the existing `django-eveuniverse` ecosystem. This is highly recommended if the corporation leadership is comfortable with using daily average prices rather than exact live Jita sell orders.
-1. **Long-Term / High Accuracy:** Implement **Option 1**. This is recommended if the "Jita 5% Sell" accuracy is strictly required. This will necessitate a moderate rewrite of the `pricing_engine.py` to include robust Celery tasks or localized caching to handle the increased volume of ESI requests without impacting user experience.
+- **Pros:** Complete fixed corporate financial control.
+- **Cons:** High administrative maintenance burden on Directors.

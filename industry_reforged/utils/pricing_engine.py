@@ -1,22 +1,126 @@
 # Standard Library
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from decimal import Decimal
 
 # Third Party
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from ..models import CorpPricingConfig, CorpTypeDiscount
 
 logger = logging.getLogger(__name__)
 
-FUZZWORK_API_URL = "https://market.fuzzwork.co.uk/aggregates/"
-JITA_STATION_ID = 60003760
+ESI_MARKET_ORDERS_URL = "https://esi.evetech.net/latest/markets/{region_id}/orders/"
+DEFAULT_REGION_ID = 10000002  # The Forge (Jita)
+DEFAULT_STATION_ID = 60003760  # Jita IV - Moon 4 - Caldari Navy Assembly Plant
+JITA_STATION_ID = DEFAULT_STATION_ID
 
 
-def get_fuzzwork_prices(type_ids):
+def calculate_percentile_price(orders, percentile=0.05, station_id=DEFAULT_STATION_ID):
     """
-    Fetch Jita prices for a list of type IDs from Fuzzwork API.
-    Returns a dict mapping type_id (int) to a float (sell min).
+    Calculate the volume-weighted percentile sell price from ESI market orders.
+    Matches standard Jita 5% Sell logic.
+
+    Args:
+        orders (list[dict]): List of market order dicts from ESI.
+        percentile (float): Percentile threshold (default 0.05 for 5%).
+        station_id (int): Primary station ID (default 60003760 for Jita 4-4).
+
+    Returns:
+        float: Calculated percentile price, or lowest sell price, or 0.0 if empty.
+    """
+    if not orders:
+        return 0.0
+
+    # Filter sell orders only (is_buy_order is False)
+    sell_orders = [o for o in orders if not o.get("is_buy_order", False)]
+    if not sell_orders:
+        return 0.0
+
+    # Prefer station orders (e.g. Jita 4-4)
+    station_orders = [o for o in sell_orders if o.get("location_id") == station_id]
+    target_orders = station_orders if station_orders else sell_orders
+
+    # Sort ascending by price
+    sorted_orders = sorted(target_orders, key=lambda x: float(x.get("price", 0.0)))
+    if not sorted_orders:
+        return 0.0
+
+    total_volume = sum(int(o.get("volume_remain", 0)) for o in sorted_orders)
+    if total_volume <= 0:
+        return float(sorted_orders[0].get("price", 0.0))
+
+    threshold_volume = total_volume * percentile
+    accumulated_volume = 0
+
+    for order in sorted_orders:
+        accumulated_volume += int(order.get("volume_remain", 0))
+        if accumulated_volume >= threshold_volume:
+            return float(order.get("price", 0.0))
+
+    return float(sorted_orders[-1].get("price", 0.0))
+
+
+def fetch_single_market_price(
+    type_id,
+    region_id=DEFAULT_REGION_ID,
+    station_id=DEFAULT_STATION_ID,
+    session=None,
+):
+    """
+    Fetch market orders for a single type_id from ESI and return the 5% percentile sell price.
+    Falls back to EveType average/adjusted price if ESI is unavailable or empty.
+    """
+    req_session = session if session is not None else requests.Session()
+    url = ESI_MARKET_ORDERS_URL.format(region_id=region_id)
+    params = {
+        "datasource": "tranquility",
+        "order_type": "sell",
+        "type_id": type_id,
+    }
+    headers = {
+        "User-Agent": "aa-industry-reforged / Direct ESI Market Client",
+        "Accept": "application/json",
+    }
+
+    try:
+        res = req_session.get(url, params=params, headers=headers, timeout=5)
+        if res.status_code == 200:
+            orders = res.json()
+            price = calculate_percentile_price(
+                orders, percentile=0.05, station_id=station_id
+            )
+            if price > 0.0:
+                return float(price)
+    except Exception as e:
+        logger.warning(f"ESI market order fetch failed for type_id {type_id}: {e}")
+
+    # Fallback to EveMarketPrice from django-eveuniverse if available
+    try:
+        # Third Party
+        from eveuniverse.models import EveMarketPrice
+
+        market_price = EveMarketPrice.objects.filter(eve_type_id=type_id).first()
+        if market_price:
+            for attr in ("average_price", "adjusted_price"):
+                val = getattr(market_price, attr, None)
+                if val is not None and float(val) > 0.0:
+                    return float(val)
+    except Exception:
+        pass
+
+    return 0.0
+
+
+def get_market_prices(
+    type_ids, region_id=DEFAULT_REGION_ID, station_id=DEFAULT_STATION_ID
+):
+    """
+    Fetch market prices (Jita 5% Sell) for a list of type IDs using direct CCP ESI API
+    with concurrent batching and caching.
+    Returns a dict mapping type_id (int) -> float.
     """
     if not type_ids:
         return {}
@@ -29,46 +133,56 @@ def get_fuzzwork_prices(type_ids):
 
     # Check cache first
     for tid in type_ids:
-        cached_price = cache.get(f"fw_price_{tid}")
+        int_tid = int(tid)
+        cache_key = f"esi_market_price_{region_id}_{int_tid}"
+        cached_price = cache.get(cache_key)
         if cached_price is not None:
-            prices[int(tid)] = cached_price
+            prices[int_tid] = cached_price
         else:
-            missing_ids.append(tid)
+            missing_ids.append(int_tid)
 
     if not missing_ids:
         return prices
 
-    # Fetch missing from Fuzzwork
-    chunk_size = 50
-    for i in range(0, len(missing_ids), chunk_size):
-        chunk = missing_ids[i : i + chunk_size]
-        str_ids = ",".join(map(str, chunk))
+    # Use ThreadPoolExecutor to fetch missing IDs concurrently with persistent session
+    session = requests.Session()
+    retries = Retry(total=2, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504])
+    adapter = HTTPAdapter(pool_connections=15, pool_maxsize=30, max_retries=retries)
+    session.mount("https://", adapter)
 
-        try:
-            # Shorten timeout to 5 seconds so the UI doesn't hang forever
-            res = requests.get(
-                f"{FUZZWORK_API_URL}?station={JITA_STATION_ID}&types={str_ids}",
-                timeout=5,
-            )
-            res.raise_for_status()
-            data = res.json()
+    max_workers = min(15, len(missing_ids))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_tid = {
+            executor.submit(
+                fetch_single_market_price,
+                tid,
+                region_id=region_id,
+                station_id=station_id,
+                session=session,
+            ): tid
+            for tid in missing_ids
+        }
+        for future in as_completed(future_to_tid):
+            tid = future_to_tid[future]
+            try:
+                price = future.result()
+            except Exception as e:
+                logger.error(f"Error fetching price for type_id {tid}: {e}")
+                price = 0.0
 
-            for type_id_str, type_data in data.items():
-                if "sell" in type_data and "min" in type_data["sell"]:
-                    val = float(
-                        type_data["sell"]["percentile"]
-                    )  # 5% percentile sell is usually more stable than min
-                    prices[int(type_id_str)] = val
-                    # Cache for 1 hour
-                    cache.set(f"fw_price_{type_id_str}", val, 3600)
-        except Exception as e:
-            logger.error(f"Failed to fetch Fuzzwork prices for {chunk}: {e}")
-            # Cache failure for a short time to prevent spamming failing API
-            for tid in chunk:
-                cache.set(f"fw_price_{tid}", 0.0, 60)
-                prices[int(tid)] = 0.0
+            prices[tid] = price
+            cache_key = f"esi_market_price_{region_id}_{tid}"
+            ttl = 3600 if price > 0.0 else 60
+            cache.set(cache_key, price, ttl)
 
     return prices
+
+
+def get_fuzzwork_prices(type_ids):
+    """
+    Deprecated alias for get_market_prices(). Maintained for backwards compatibility.
+    """
+    return get_market_prices(type_ids)
 
 
 def get_prices_with_overrides(type_ids, corporation=None):
@@ -76,7 +190,7 @@ def get_prices_with_overrides(type_ids, corporation=None):
     Fetch Jita prices for a list of type IDs, but apply any manual price
     overrides defined in CorpItemConfig for the given corporation.
     """
-    prices = get_fuzzwork_prices(type_ids)
+    prices = get_market_prices(type_ids)
 
     if corporation:
         from ..models import CorpItemConfig
@@ -96,7 +210,7 @@ def get_detailed_prices(type_ids, corporation=None):
     """
     Fetch Jita prices and return detailed breakdown with both original and final prices.
     """
-    prices = get_fuzzwork_prices(type_ids)
+    prices = get_market_prices(type_ids)
     detailed = {}
     for tid in type_ids:
         val = prices.get(tid, 0.0)

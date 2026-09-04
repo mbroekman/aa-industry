@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Feat
+
+- **pricing**: replace third-party Fuzzwork API with direct CCP ESI market orders API (`/markets/10000002/orders/`), featuring volume-weighted Jita 5% percentile calculation, parallel ThreadPoolExecutor fetching, multi-tier caching, and EveMarketPrice fallback (TASK-123)
+
 ## v0.8.5 (2026-09-04)
 
 ### Feat

@@ -673,10 +673,10 @@ def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
     total_bom_price = 0
     sorted_bom = []
     if bom:
-        from ..utils.pricing_engine import get_fuzzwork_prices
+        from ..utils.pricing_engine import get_market_prices
 
         mat_ids = list(bom.keys())
-        prices = get_fuzzwork_prices(mat_ids)
+        prices = get_market_prices(mat_ids)
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price

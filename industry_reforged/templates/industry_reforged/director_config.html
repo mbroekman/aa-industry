@@ -96,7 +96,7 @@
                                             <span class="text-muted fst-italic">N/A</span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-end numeric text-warning fw-bold">{% if config.manual_price %}{{ config.manual_price|eve_isk }}{% else %}<span class="text-muted fw-normal"><em>Auto (Fuzzwork)</em></span>{% endif %}</td>
+                                    <td class="text-end numeric text-warning fw-bold">{% if config.manual_price %}{{ config.manual_price|eve_isk }}{% else %}<span class="text-muted fw-normal"><em>Auto (ESI Market)</em></span>{% endif %}</td>
                                     <td class="text-end numeric">{{ config.target_threshold|intcomma }}</td>
                                     <td class="text-center">{% if config.auto_produce %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
                                     <td class="text-center">
