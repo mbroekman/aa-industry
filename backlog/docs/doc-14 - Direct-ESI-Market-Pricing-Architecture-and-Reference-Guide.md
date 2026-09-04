@@ -29,15 +29,15 @@ ______________________________________________________________________
 ## 2. Architecture & Data Flow
 
 ```mermaid
-flowchart TD
-    A["Pricing Request: get_market_prices(type_ids)"] --> B{"Check Django Cache"}
+graph TD
+    A["Pricing Request: get_market_prices"] --> B{"Check Django Cache"}
     B -->|Cached| C["Return Cached Prices"]
     B -->|Missing Type IDs| D["ThreadPoolExecutor (Max 15 Workers)"]
     D --> E["Persistent requests.Session with Connection Pooling"]
-    E --> F["GET /markets/10000002/orders/?datasource=tranquility&order_type=sell&type_id=X"]
-    F --> G["calculate_percentile_price() on Jita 4-4 (60003760)"]
+    E --> F["GET CCP ESI Market Orders (/markets/10000002/orders/)"]
+    F --> G["calculate_percentile_price on Jita 4-4 (60003760)"]
     G --> H["Store in Cache (TTL 1 hour)"]
-    F -->|Timeout or Empty Book| I["Fallback: EveMarketPrice (EVE Universe SDE)"]
+    F -->|Timeout or Empty Book| I["Fallback: EveMarketPrice (SDE)"]
     H --> J["Return Combined Prices Map"]
     I --> J
 ```
