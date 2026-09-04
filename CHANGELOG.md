@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## Unreleased
+## v0.8.5 (2026-09-04)
 
 ### Feat
 
@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fix
 
 - **perf**: eliminate N+1 database queries in PI rates and depletion calculations with in-memory schematics cache, preventing DB connection exhaustion (TASK-121)
+
+### Docs
+
+- **docs**: translate backlog documentation to English (TASK-122)
+
+### Chore
+
+- **chore**: relocate agent skills to global system level (`~/.gemini/config/skills/`)
 
 ## v0.8.4 (2026-09-03)
 
