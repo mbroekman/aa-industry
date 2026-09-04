@@ -172,6 +172,7 @@ def calculate_total(items: list[dict], tax_rate: float = 0.0) -> float:
 
 - **Keep sessions small**: Focus each session on a single discrete task, feature, or plan step.
 - **Proactive session resets**: When a milestone/task is completed or when context accumulates significantly, proactively suggest resetting/starting a fresh session to maintain high accuracy and prevent degraded reasoning.
+- **Mandatory task creation for session continuity**: Always create a detailed Backlog task before performing any action. Include investigation findings, changes needed, and acceptance criteria in the task so any new session can immediately read up and resume seamlessly.
 
 ______________________________________________________________________
 
