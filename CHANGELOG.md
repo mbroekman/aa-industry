@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.10.1 (2026-09-04)
+
+### Fix
+
+- **ui**: expose CorporationPricingConfig configuration form in director dashboard so it is accessible to users
+
 ## v0.10.0 (2026-09-04)
 
 ### Feat

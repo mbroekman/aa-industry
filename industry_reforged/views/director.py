@@ -710,7 +710,12 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     item_configs = CorpItemConfig.objects.all().select_related(
         "corporation", "item_type"
     )
+    from ..models import CorporationPricingConfig
+
     pricing_configs = CorpPricingConfig.objects.all().select_related("corporation")
+    corp_pricing_configs = CorporationPricingConfig.objects.all().select_related(
+        "corporation"
+    )
     type_discounts = CorpTypeDiscount.objects.all().select_related(
         "config__corporation", "eve_type"
     )
@@ -726,6 +731,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "title": "Configurations",
         "configs": item_configs,
         "pricing_configs": pricing_configs,
+        "corp_pricing_configs": corp_pricing_configs,
         "type_discounts": type_discounts,
         "tax_configs": tax_configs,
         "task_logs": task_logs,
@@ -907,6 +913,44 @@ def director_config_pricing_edit(
                 _("Edit Corporation Pricing")
                 if config_id
                 else _("Add Corporation Pricing")
+            ),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#pricing",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_pricing_method_edit(
+    request: WSGIRequest, config_id: int = None
+) -> HttpResponse:
+    from ..forms import CorporationPricingConfigForm
+    from ..models import CorporationPricingConfig
+
+    if config_id:
+        instance = get_object_or_404(CorporationPricingConfig, id=config_id)
+    else:
+        instance = CorporationPricingConfig()
+
+    if request.method == "POST":
+        form = CorporationPricingConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Corporation pricing method saved."))
+            return redirect(reverse("industry_reforged:director_config") + "#pricing")
+    else:
+        form = CorporationPricingConfigForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": (
+                _("Edit Pricing Method & Margin")
+                if config_id
+                else _("Add Pricing Method & Margin")
             ),
             "form": form,
             "back_url": "industry_reforged:director_config",

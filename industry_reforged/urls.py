@@ -206,6 +206,16 @@ urlpatterns = [
         name="director_config_pricing_edit",
     ),
     path(
+        "director/config/pricing-method/add/",
+        director.director_config_pricing_method_edit,
+        name="director_config_pricing_method_add",
+    ),
+    path(
+        "director/config/pricing-method/<int:config_id>/edit/",
+        director.director_config_pricing_method_edit,
+        name="director_config_pricing_method_edit",
+    ),
+    path(
         "director/config/tax/add/",
         director.director_config_tax_edit,
         name="director_config_tax_add",
