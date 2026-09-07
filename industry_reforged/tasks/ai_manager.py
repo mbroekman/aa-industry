@@ -61,14 +61,19 @@ def evaluate_baskets(basket_id=None):
             min_margin = b_item.basket.min_profit_margin
 
             # 1. Availability Check
-            current_stock = check_availability(eve_type, target_market=target_market)
+            current_stock, in_flight = check_availability(
+                eve_type,
+                target_market=target_market,
+                corporation_id=b_item.basket.corporation.corporation_id,
+            )
+            effective_stock = current_stock + in_flight
 
-            if current_stock >= b_item.target_stock_level:
+            if effective_stock >= b_item.target_stock_level:
                 AIMarketLog.objects.create(
                     basket_item=b_item,
                     action_taken="Skipped",
                     stock_level=current_stock,
-                    reason=f"Current stock ({current_stock}) is above target ({b_item.target_stock_level}).",
+                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) is above target ({b_item.target_stock_level}).",
                 )
                 continue
 
@@ -88,7 +93,7 @@ def evaluate_baskets(basket_id=None):
 
             # 3. Action: Create Production Task
             # Calculate shortage and round up to next batch size if needed
-            shortage = b_item.target_stock_level - current_stock
+            shortage = b_item.target_stock_level - effective_stock
             batches = (shortage + b_item.batch_size - 1) // b_item.batch_size
             order_qty = max(shortage, batches * b_item.batch_size)
             if order_qty > 0:
@@ -101,7 +106,7 @@ def evaluate_baskets(basket_id=None):
                     action_taken="Ordered",
                     margin=margin,
                     stock_level=current_stock,
-                    reason=f"Stock low ({current_stock}). Margin OK ({margin:.1f}%). Ordered {order_qty}. (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
+                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}). Margin OK ({margin:.1f}%). Ordered {order_qty}. (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
                 )
 
             # Send Notification (Mocking a print/log for now as exact webhook setup isn't known)
@@ -281,12 +286,20 @@ def scan_market_opportunities(
                             target_stock_level=target_stock,
                             batch_size=batch_size,
                         )
+                        from ..utils.ai_engine import check_availability
+
+                        current_stock, in_flight = check_availability(
+                            eve_type,
+                            target_market=target_hub_id,
+                            corporation_id=corporation_id,
+                        )
+
                         AIMarketLog.objects.create(
                             basket_item=b_item,
                             action_taken="Auto-Added by Scanner",
                             margin=margin,
-                            stock_level=0,
-                            reason=f"Scanner '{scanner.name}' found opportunity with margin {margin:.1f}% (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f}) and velocity {velocity:.1f}. Target stock set for {scanner.target_stock_days} days.",
+                            stock_level=current_stock,
+                            reason=f"Scanner '{scanner.name}' found opportunity with margin {margin:.1f}% (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f}). Current corp stock: {current_stock}, in-flight: {in_flight}.",
                         )
                         auto_added_count += 1
 

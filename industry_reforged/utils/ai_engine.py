@@ -105,13 +105,17 @@ def calculate_profitability(eve_type, target_market=None):
         return 0.0, 0.0, 0.0
 
 
-def check_availability(eve_type, target_market=None):
+def check_availability(eve_type, target_market=None, corporation_id=None):
     """
     Calculates how many units of this item we already have in inventory or in-flight (ProductionTask).
     If target_market is passed, only filters for that specific location.
+    If corporation_id is passed, filters inventory by that corporation.
+    Returns (total_inventory, in_flight).
     """
     # Check corp inventory
     inventory_qs = CorpInventory.objects.filter(item_type=eve_type)
+    if corporation_id:
+        inventory_qs = inventory_qs.filter(corporation_id=corporation_id)
     if target_market:
         inventory_qs = inventory_qs.filter(location_id=target_market)
 
@@ -123,4 +127,4 @@ def check_availability(eve_type, target_market=None):
     )
     in_flight = sum(task.quantity for task in tasks_qs)
 
-    return total_inventory + in_flight
+    return total_inventory, in_flight
