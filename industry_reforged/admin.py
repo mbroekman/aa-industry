@@ -4,6 +4,9 @@
 from django.contrib import admin
 
 from .models import (
+    AIMarketLog,
+    Basket,
+    BasketItem,
     CharacterIndustryJob,
     CorpInventory,
     CorpMOTD,
@@ -91,4 +94,39 @@ class CorporationWebhookConfigAdmin(admin.ModelAdmin):
         "jobs_webhook",
         "wallets_webhook",
         "inventory_webhook",
+        "ai_jobs_webhook",
+    )
+
+
+class BasketItemInline(admin.TabularInline):
+    model = BasketItem
+    extra = 1
+
+
+@admin.register(Basket)
+class BasketAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "corporation",
+        "is_active",
+        "target_region_id",
+        "min_profit_margin",
+    )
+    list_filter = ("is_active", "corporation")
+    search_fields = ("name", "corporation__corporation_name")
+    inlines = [BasketItemInline]
+
+
+@admin.register(AIMarketLog)
+class AIMarketLogAdmin(admin.ModelAdmin):
+    list_display = ("timestamp", "basket_item", "action_taken", "margin", "stock_level")
+    list_filter = ("action_taken",)
+    search_fields = ("reason", "basket_item__eve_type__name")
+    readonly_fields = (
+        "timestamp",
+        "basket_item",
+        "action_taken",
+        "margin",
+        "stock_level",
+        "reason",
     )

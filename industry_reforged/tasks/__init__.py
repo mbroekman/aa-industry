@@ -1,5 +1,10 @@
 """Tasks package"""
 
+from .ai_manager import (
+    evaluate_baskets,
+    run_all_active_scanners,
+    scan_market_opportunities,
+)
 from .blueprints import task_sync_corp_blueprints
 from .facilities import (
     sync_facility_rigs,
@@ -40,4 +45,7 @@ __all__ = [
     "update_corporation_jobs",
     "task_pull_market_data",
     "task_bom_explosion",
+    "evaluate_baskets",
+    "scan_market_opportunities",
+    "run_all_active_scanners",
 ]

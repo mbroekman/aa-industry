@@ -234,6 +234,36 @@ def register_blueprint_library_menu():
     return BlueprintLibraryMenuItem()
 
 
+class AIMarketManagerMenuItem(MenuItemHook):
+    """Menu entry for AI Market Manager"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("AI Market Manager"),
+            "fas fa-robot fa-fw",
+            "industry_reforged:ai_manager_dashboard",
+            navactive=[
+                "industry_reforged:ai_manager_dashboard",
+                "industry_reforged:ai_audit_log",
+                "industry_reforged:opportunity_scanner",
+            ],
+        )
+
+    def render(self, request):
+        if request.user.has_perm(
+            "industry_reforged.director_access"
+        ) or request.user.has_perm("industry_reforged.corp_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_ai_market_manager_menu():
+    """Register the AI market manager menu item"""
+    return AIMarketManagerMenuItem()
+
+
 @hooks.register("url_hook")
 def register_urls():
     """Register app urls"""

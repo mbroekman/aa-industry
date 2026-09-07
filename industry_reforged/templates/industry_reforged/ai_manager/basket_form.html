@@ -1,0 +1,130 @@
+{% extends 'industry_reforged/base.html' %}
+{% load i18n %}
+{% load django_bootstrap5 %}
+
+{% block details %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="page-header">
+            <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="text-decoration-none">{% translate "AI Market Manager" %}</a> /
+            {{ title }}
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 mb-4 h-100">
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="fas fa-edit text-primary me-2"></i> {{ title }}</h3>
+            </div>
+
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {% bootstrap_field form.name %}
+                            {% bootstrap_field form.corporation %}
+                        </div>
+                        <div class="col-md-6">
+                            {% bootstrap_field form.target_region_id %}
+                            {% bootstrap_field form.target_hub_id %}
+                            {% bootstrap_field form.min_profit_margin %}
+                            {% bootstrap_field form.run_interval_hours %}
+                            {% bootstrap_field form.is_active %}
+                        </div>
+                    </div>
+
+                    <h4 class="mb-3">{% translate "Basket Items" %}</h4>
+
+                    <div id="items-formset">
+                        {{ formset.management_form }}
+
+                        {% for item_form in formset %}
+                            <div class="row align-items-center mb-2 formset-row border p-2 rounded bg-light">
+                                <div class="col-md-4">
+                                    {% bootstrap_field item_form.item_name show_label=False %}
+                                    {{ item_form.eve_type }}
+                                </div>
+                                <div class="col-md-3">
+                                    {% bootstrap_field item_form.target_stock_level show_label=False %}
+                                </div>
+                                <div class="col-md-3">
+                                    {% bootstrap_field item_form.batch_size show_label=False %}
+                                </div>
+                                <div class="col-md-2 d-flex justify-content-end align-items-center">
+                                    {% if item_form.instance.pk %}
+                                        {{ item_form.id }}
+                                    {% endif %}
+                                    {% if formset.can_delete %}
+                                        {% bootstrap_field item_form.DELETE layout="inline" %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Empty form template for JavaScript -->
+                    <div id="empty-form-template" style="display: none;">
+                        <div class="row align-items-center mb-2 formset-row border p-2 rounded bg-light">
+                            <div class="col-md-4">
+                                {% bootstrap_field formset.empty_form.item_name show_label=False %}
+                                {{ formset.empty_form.eve_type }}
+                            </div>
+                            <div class="col-md-3">
+                                {% bootstrap_field formset.empty_form.target_stock_level show_label=False %}
+                            </div>
+                            <div class="col-md-3">
+                                {% bootstrap_field formset.empty_form.batch_size show_label=False %}
+                            </div>
+                            <div class="col-md-2 d-flex justify-content-end align-items-center">
+                                {% if formset.can_delete %}
+                                    {% bootstrap_field formset.empty_form.DELETE layout="inline" %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 mt-2">
+                        <button type="button" class="btn btn-sm btn-secondary" id="add-item-btn">
+                            <i class="fas fa-plus"></i> {% translate "Add another item" %}
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {% translate "Save Configuration" %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Formset Add Logic
+        const addItemBtn = document.getElementById('add-item-btn');
+        if (addItemBtn) {
+            addItemBtn.addEventListener('click', function() {
+                const formsetContainer = document.getElementById('items-formset');
+                // The id might be id_items-TOTAL_FORMS, check formset prefix
+                const prefix = '{{ formset.prefix }}';
+                const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+
+                if (totalForms) {
+                    const formCount = parseInt(totalForms.value);
+
+                    const template = document.getElementById('empty-form-template').innerHTML;
+                    const compiled = template.replace(/__prefix__/g, formCount);
+
+                    formsetContainer.insertAdjacentHTML('beforeend', compiled);
+                    totalForms.value = formCount + 1;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

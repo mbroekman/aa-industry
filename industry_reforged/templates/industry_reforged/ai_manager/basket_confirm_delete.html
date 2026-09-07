@@ -1,0 +1,23 @@
+{% extends 'industry_reforged/base.html' %}
+{% load i18n %}
+
+{% block details %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 mb-4 h-100 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h3 class="card-title mb-0"><i class="fas fa-exclamation-triangle me-2"></i> {% translate "Delete Basket" %}</h3>
+            </div>
+            <div class="card-body p-4 text-center">
+                <h4 class="mb-4">{% blocktranslate with name=basket.name %}Are you sure you want to delete the basket "{{ name }}"?{% endblocktranslate %}</h4>
+                <p class="text-muted">{% translate "This will also delete all items within this basket. This action cannot be undone." %}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="btn btn-outline-secondary me-2">{% translate "Cancel" %}</a>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> {% translate "Confirm Delete" %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

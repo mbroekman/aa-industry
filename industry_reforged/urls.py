@@ -5,6 +5,7 @@ from django.urls import path
 
 # AA Industry App
 from industry_reforged.views import (
+    ai_manager,
     api,
     blueprints,
     dashboard,
@@ -19,6 +20,54 @@ app_name: str = "industry_reforged"  # pylint: disable=invalid-name
 
 urlpatterns = [
     path("", dashboard.index, name="index"),
+    path(
+        "ai-manager/",
+        ai_manager.ai_market_manager_dashboard,
+        name="ai_manager_dashboard",
+    ),
+    path("ai-manager/audit/", ai_manager.ai_audit_log, name="ai_audit_log"),
+    path(
+        "ai-manager/opportunities/",
+        ai_manager.opportunity_scanner,
+        name="opportunity_scanner",
+    ),
+    path("ai-manager/config/add/", ai_manager.basket_create, name="basket_create"),
+    path(
+        "ai-manager/config/<int:pk>/edit/", ai_manager.basket_edit, name="basket_edit"
+    ),
+    path(
+        "ai-manager/config/<int:pk>/delete/",
+        ai_manager.basket_delete,
+        name="basket_delete",
+    ),
+    path("ai-manager/config/<int:pk>/run/", ai_manager.basket_run, name="basket_run"),
+    path(
+        "ai-manager/config/<int:pk>/logs/", ai_manager.basket_logs, name="basket_logs"
+    ),
+    path("ai-manager/scanner/add/", ai_manager.scanner_create, name="scanner_create"),
+    path(
+        "ai-manager/scanner/<int:pk>/edit/",
+        ai_manager.scanner_edit,
+        name="scanner_edit",
+    ),
+    path(
+        "ai-manager/scanner/<int:pk>/delete/",
+        ai_manager.scanner_delete,
+        name="scanner_delete",
+    ),
+    path(
+        "ai-manager/scanner/<int:pk>/run/", ai_manager.scanner_run, name="scanner_run"
+    ),
+    path(
+        "ai-manager/scanner/<int:pk>/logs/",
+        ai_manager.scanner_logs,
+        name="scanner_logs",
+    ),
+    path(
+        "ai-manager/scanner/<int:pk>/missing-bpos/",
+        ai_manager.scanner_missing_bpos,
+        name="scanner_missing_bpos",
+    ),
     path("personal/", dashboard.personal_dashboard, name="personal_dashboard"),
     path("corporate/", dashboard.corporate_dashboard, name="corporate_dashboard"),
     path("add-personal-token/", api.add_personal_token, name="add_personal_token"),

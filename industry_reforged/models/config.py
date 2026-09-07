@@ -70,6 +70,11 @@ class CorporationWebhookConfig(models.Model):
     blueprint_requests_webhook = models.URLField(
         blank=True, null=True, help_text=_("Webhook URL for new Blueprint Requests.")
     )
+    ai_jobs_webhook = models.URLField(
+        blank=True,
+        null=True,
+        help_text=_("Webhook URL for new AI-generated Production Tasks."),
+    )
 
     class Meta:
         verbose_name = _("Discord Webhook Configuration")

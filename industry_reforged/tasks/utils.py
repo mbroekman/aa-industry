@@ -6,6 +6,9 @@ import time
 import traceback
 from functools import wraps
 
+# Third Party
+from celery import shared_task
+
 # Django
 from django.utils import timezone
 
@@ -172,3 +175,96 @@ def _get_security_space(system_id):
         return "LOWSEC"
     else:
         return "NULLSEC_WH"
+
+
+# Third Party
+
+
+@shared_task(name="industry_reforged.tasks.resolve_unknown_locations")
+def resolve_unknown_locations(location_ids):
+    """Resolve names for unknown locations via ESI."""
+    if not location_ids:
+        return
+
+    # Third Party
+    import requests
+
+    # Alliance Auth
+    from esi.models import Token
+
+    from ..models.facilities import KnownLocation
+
+    token = Token.objects.filter(scopes__name="esi-universe.read_structures.v1").first()
+
+    # Filter to only IDs that actually need resolution
+    needs_resolution = []
+    loc_objects = {}
+
+    for loc_id in location_ids:
+        loc, created = KnownLocation.objects.get_or_create(location_id=loc_id)
+        if created or loc.name == "" or loc.name.startswith("Unknown"):
+            needs_resolution.append(loc_id)
+            loc_objects[loc_id] = loc
+
+    if not needs_resolution:
+        return
+
+    # Step 1: Bulk resolve using /universe/names/ (handles solar systems, stations, etc)
+    unresolved_ids = set(needs_resolution)
+
+    # ESI /universe/names/ endpoint only accepts int32. Large structure IDs will cause a 400 error for the whole chunk.
+    int32_max = 2147483647
+    public_ids = [i for i in needs_resolution if i <= int32_max]
+
+    try:
+        if public_ids:
+            # Split into chunks of 1000 (ESI limit)
+            for i in range(0, len(public_ids), 1000):
+                chunk = public_ids[i : i + 1000]
+                resp = requests.post(
+                    "https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
+                    json=chunk,
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    results = resp.json()
+                    for res in results:
+                        loc_id = res.get("id")
+                        if loc_id in loc_objects:
+                            loc = loc_objects[loc_id]
+                            loc.name = res.get("name")
+                            loc.save()
+                            unresolved_ids.discard(loc_id)
+                else:
+                    logger.error(
+                        f"ESI names endpoint failed with {resp.status_code}: {resp.text}"
+                    )
+    except Exception as e:
+        logger.error(f"Error bulk resolving names: {e}")
+
+    # Step 2: Fallback to /universe/structures/ for player structures
+    if token and unresolved_ids:
+        headers = {"Authorization": f"Bearer {token.valid_access_token()}"}
+        for loc_id in list(unresolved_ids):
+            # Check if it even falls in the structure ID range to save useless API calls
+            if loc_id > 1000000000000:
+                try:
+                    resp = requests.get(
+                        f"https://esi.evetech.net/latest/universe/structures/{loc_id}/?datasource=tranquility",
+                        headers=headers,
+                        timeout=5,
+                    )
+                    if resp.status_code == 200:
+                        loc = loc_objects[loc_id]
+                        loc.name = resp.json().get("name")
+                        loc.save()
+                        unresolved_ids.discard(loc_id)
+                except Exception as e:
+                    logger.error(f"Failed to fetch structure name for {loc_id}: {e}")
+
+    # Step 3: Set fallback names for anything that couldn't be resolved
+    for loc_id in unresolved_ids:
+        loc = loc_objects[loc_id]
+        if loc.name == "" or loc.name.startswith("Unknown"):
+            loc.name = f"Unknown Location ({loc_id})"
+            loc.save()

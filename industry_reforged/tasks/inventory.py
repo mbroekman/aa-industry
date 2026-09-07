@@ -61,7 +61,7 @@ def task_sync_corp_inventory():
 
             def get_root_location(loc_id):
                 visited = set()
-                while loc_id not in facility_ids and loc_id in item_locations:
+                while loc_id in item_locations:
                     if loc_id in visited:
                         break  # Prevent infinite loop in case of circular references
                     visited.add(loc_id)
@@ -70,9 +70,12 @@ def task_sync_corp_inventory():
 
             # Filter assets matching location_id (including nested)
             filtered_assets = []
+            all_root_locations = set()
+
             for asset in assets:
                 loc_id = getattr(asset, "location_id")
                 root_loc_id = get_root_location(loc_id)
+                all_root_locations.add(root_loc_id)
 
                 # Check if this asset is in a configured facility
                 if root_loc_id in facility_ids:
@@ -88,6 +91,24 @@ def task_sync_corp_inventory():
                             "location_id": root_loc_id,
                         }
                     )
+
+            if all_root_locations:
+                from ..models.facilities import KnownLocation
+                from .utils import resolve_unknown_locations
+
+                valid_loc_ids = list(all_root_locations)
+                for loc_id in valid_loc_ids:
+                    loc, _ = KnownLocation.objects.get_or_create(location_id=loc_id)
+                    loc.corporations.add(corp)
+
+                # Remove association for locations where the corp no longer has assets
+                locations_to_remove = corp.known_locations.exclude(
+                    location_id__in=valid_loc_ids
+                )
+                if locations_to_remove.exists():
+                    corp.known_locations.remove(*locations_to_remove)
+
+                resolve_unknown_locations.delay(valid_loc_ids)
 
             # Update CorpInventory (only for items not manually overridden)
             # Reset all non-manual overridden quantities for this corp to 0

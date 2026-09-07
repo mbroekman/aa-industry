@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.11.0 (2026-09-07)
+
+### Feat
+
+- **ai**: implement Discord Webhook notifications for newly generated AI tasks
+- **ai**: configure AI Manager to use `final_price` adjusting for overrides when calculating profitability margins
+
+### Fix
+
+- **ai**: correct state of generated ProductionTasks to `UNCLAIMED` allowing jobs to properly show up in task lists
+- **pricing**: exclude Blueprint/Reaction Formula costs (Activity 5) from `calculate_bom_cost()` recursive materials logic, preventing massive artificial inflation of true material cost floors for Quote calculations
+
 ## v0.10.1 (2026-09-04)
 
 ### Fix

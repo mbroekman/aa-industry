@@ -1,0 +1,232 @@
+{% extends 'industry_reforged/base.html' %}
+{% load i18n %}
+{% load humanize %}
+
+{% block details %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="page-header">{% translate "AI Market Manager Dashboard" %}</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 mb-4 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0"><i class="fas fa-robot text-primary me-2"></i> {% translate "Active Baskets" %}</h3>
+                <div>
+                    <a href="{% url 'industry_reforged:basket_create' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus"></i> {% translate "New Basket" %}
+                    </a>
+                    <a href="{% url 'industry_reforged:ai_audit_log' %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-history"></i> {% translate "Audit Log" %}
+                    </a>
+                    <a href="{% url 'industry_reforged:opportunity_scanner' %}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-search-dollar"></i> {% translate "Opportunity Scanner" %}
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+                {% if baskets %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th>{% translate "Name" %}</th>
+                                <th>{% translate "Corporation" %}</th>
+                                <th>{% translate "Target Location" %}</th>
+                                <th>{% translate "Items" %}</th>
+                                <th>{% translate "Interval" %}</th>
+                                <th>{% translate "Status" %}</th>
+                                <th>{% translate "Actions" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for basket in baskets %}
+                            <tr>
+                                <td>{{ basket.name }}</td>
+                                <td>{{ basket.corporation.corporation_name }}</td>
+                                <td>
+                                    {% if basket.target_hub %}
+                                        <i class="fas fa-building text-info me-1" title="Hub"></i> {{ basket.target_hub.name }}
+                                    {% elif basket.target_region_id %}
+                                        <i class="fas fa-map text-warning me-1" title="Region"></i> {{ basket.target_region_id }}
+                                    {% else %}
+                                        <span class="text-muted">{% translate "Global" %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ basket.items.count }}</td>
+                                <td>{{ basket.run_interval_hours }}h</td>
+                                <td>
+                                    {% if basket.is_active %}
+                                    <span class="badge bg-success mb-1">{% translate "Active" %}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary mb-1">{% translate "Inactive" %}</span>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">
+                                        {% if basket.is_running %}
+                                            <i class="fas fa-spinner fa-spin text-primary"></i> <span class="text-primary fw-bold">{% translate "Running..." %}</span>
+                                        {% elif basket.last_run %}
+                                            <i class="fas fa-clock"></i> {{ basket.last_run|timesince }} {% translate "ago" %}
+                                        {% else %}
+                                            {% translate "Never run" %}
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'industry_reforged:basket_run' basket.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success" title="{% translate 'Run Now' %}" {% if basket.is_running %}disabled{% endif %}><i class="fas fa-play"></i></button>
+                                    </form>
+                                    <a href="{% url 'industry_reforged:basket_edit' basket.pk %}" class="btn btn-sm btn-primary" title="{% translate 'Edit' %}"><i class="fas fa-edit"></i></a>
+                                    <a href="{% url 'industry_reforged:basket_delete' basket.pk %}" class="btn btn-sm btn-danger" title="{% translate 'Delete' %}"><i class="fas fa-trash"></i></a>
+                                    <a href="{% url 'industry_reforged:basket_logs' basket.pk %}" class="btn btn-sm btn-outline-info" title="{% translate 'Logs' %}"><i class="fas fa-file-alt"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">{% translate "No baskets configured. Create one to get started." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-search-dollar me-2"></i> {% translate "Opportunity Scanners" %}</h5>
+                    <div class="d-flex align-items-center">
+                        <select id="auto-refresh-select" class="form-select form-select-sm me-3" style="width: auto;">
+                            <option value="0">{% translate "Auto-refresh: Off" %}</option>
+                            <option value="15">{% translate "Auto-refresh: 15s" %}</option>
+                            <option value="30">{% translate "Auto-refresh: 30s" %}</option>
+                            <option value="60">{% translate "Auto-refresh: 1m" %}</option>
+                        </select>
+                        <a href="{% url 'industry_reforged:scanner_create' %}" class="btn btn-sm btn-light">
+                            <i class="fas fa-plus"></i> {% translate "New Scanner" %}
+                        </a>
+                    </div>
+                </div>
+                {% if scanners %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th>{% translate "Name" %}</th>
+                                <th>{% translate "Corporation" %}</th>
+                                <th>{% translate "Target Location" %}</th>
+                                <th>{% translate "Min Margin" %}</th>
+                                <th>{% translate "Status" %}</th>
+                                <th>{% translate "Actions" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for scanner in scanners %}
+                            <tr>
+                                <td>{{ scanner.name }}</td>
+                                <td>{{ scanner.corporation.corporation_name }}</td>
+                                <td>
+                                    {% if scanner.target_hub %}
+                                        <i class="fas fa-building text-info me-1" title="Hub"></i> {{ scanner.target_hub.name }}
+                                    {% elif scanner.target_region_id %}
+                                        <i class="fas fa-map text-warning me-1" title="Region"></i> {{ scanner.target_region_id }}
+                                    {% else %}
+                                        <span class="text-muted">{% translate "Global" %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ scanner.min_profit_margin }}%</td>
+                                <td>
+                                    {% if scanner.is_active %}
+                                    <span class="badge bg-success mb-1">{% translate "Active" %}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary mb-1">{% translate "Inactive" %}</span>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">
+                                        {% if scanner.is_running %}
+                                            <i class="fas fa-spinner fa-spin text-primary"></i> <span class="text-primary fw-bold">{% translate "Running..." %}</span>
+                                        {% elif scanner.last_run %}
+                                            <i class="fas fa-clock"></i> {{ scanner.last_run|timesince }} {% translate "ago" %}
+                                        {% else %}
+                                            {% translate "Never run" %}
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'industry_reforged:scanner_run' scanner.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success" title="{% translate 'Run Now' %}" {% if scanner.is_running %}disabled{% endif %}><i class="fas fa-play"></i></button>
+                                    </form>
+                                    <a href="{% url 'industry_reforged:scanner_edit' scanner.pk %}" class="btn btn-sm btn-primary" title="{% translate 'Edit' %}"><i class="fas fa-edit"></i></a>
+                                    <a href="{% url 'industry_reforged:scanner_delete' scanner.pk %}" class="btn btn-sm btn-danger" title="{% translate 'Delete' %}"><i class="fas fa-trash"></i></a>
+                                    <a href="{% url 'industry_reforged:scanner_logs' scanner.pk %}" class="btn btn-sm btn-outline-info" title="{% translate 'Logs' %}">
+                                        <i class="fas fa-file-alt"></i>
+                                    </a>
+                                    {% if scanner.missing_opportunities.count > 0 %}
+                                    <a href="{% url 'industry_reforged:scanner_missing_bpos' scanner.pk %}" class="btn btn-sm btn-outline-warning" title="{% translate 'Missing Blueprints' %}">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">{% translate "No scanners configured. Create one to get started." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const select = document.getElementById('auto-refresh-select');
+        let refreshTimeout;
+
+        // Restore previous selection
+        const savedValue = localStorage.getItem('industry_scanner_refresh');
+        if (savedValue) {
+            select.value = savedValue;
+        }
+
+        function setRefresh() {
+            clearTimeout(refreshTimeout);
+            const seconds = parseInt(select.value, 10);
+            if (seconds > 0) {
+                refreshTimeout = setTimeout(() => {
+                    window.location.reload();
+                }, seconds * 1000);
+            }
+        }
+
+        select.addEventListener('change', function() {
+            localStorage.setItem('industry_scanner_refresh', this.value);
+            setRefresh();
+        });
+
+        // Initial setup
+        setRefresh();
+
+        // If a scanner is running and refresh is off, auto-enable 15s refresh temporarily
+        const isRunning = document.querySelector('.fa-spinner');
+        if (isRunning && select.value === "0") {
+            select.value = "15";
+            setRefresh();
+        }
+    });
+</script>
+{% endblock %}

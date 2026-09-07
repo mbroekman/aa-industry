@@ -1,3 +1,4 @@
+from .ai_manager import AIMarketLog, Basket, BasketItem
 from .blueprints import BlueprintRequest, CorpBlueprint
 from .config import (
     CorpMOTD,
@@ -74,4 +75,7 @@ __all__ = [
     "CorpMOTD",
     "CorpInventory",
     "LedgerTransaction",
+    "Basket",
+    "BasketItem",
+    "AIMarketLog",
 ]

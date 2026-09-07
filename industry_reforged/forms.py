@@ -9,6 +9,8 @@ from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
 from .models import (
+    Basket,
+    BasketItem,
     CorpItemConfig,
     CorporationPricingConfig,
     CorpPricingConfig,
@@ -358,3 +360,422 @@ class CorporationPricingConfigForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["corporation"].disabled = True
+
+
+class BasketForm(forms.ModelForm):
+    target_hub_id = forms.ChoiceField(
+        required=False,
+        label=_("Target Hub (Structure ID)"),
+        help_text=_("Select a structure where your corporation has assets"),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    class Meta:
+        model = Basket
+        fields = [
+            "name",
+            "corporation",
+            "is_active",
+            "target_region_id",
+            "min_profit_margin",
+            "run_interval_hours",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "corporation": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "target_region_id": forms.NumberInput(attrs={"class": "form-control"}),
+            "min_profit_margin": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "run_interval_hours": forms.NumberInput(
+                attrs={"class": "form-control", "min": "1"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user_corps = kwargs.pop("user_corps", None)
+        super().__init__(*args, **kwargs)
+        if user_corps is not None:
+            self.fields["corporation"].queryset = user_corps
+
+            # Populate target_hub_id choices based on KnownLocations
+            from .models.facilities import KnownLocation
+
+            locations = (
+                KnownLocation.objects.filter(corporations__in=user_corps)
+                .distinct()
+                .order_by("name")
+            )
+
+            choices = [("", "---------")]
+
+            for loc in locations:
+                name = (
+                    loc.name
+                    if loc.name
+                    else f"Unknown Structure/Station ({loc.location_id})"
+                )
+                choices.append((loc.location_id, name))
+
+            # If the instance has a target_hub_id not in the choices, we should still include it
+            if self.instance and self.instance.pk and self.instance.target_hub_id:
+                if not any(
+                    str(c[0]) == str(self.instance.target_hub_id) for c in choices
+                ):
+                    name = (
+                        self.instance.target_hub.name
+                        if self.instance.target_hub
+                        else f"Unknown ({self.instance.target_hub_id})"
+                    )
+                    choices.append((self.instance.target_hub_id, name))
+
+            self.fields["target_hub_id"].choices = choices
+
+        if self.instance and self.instance.pk and self.instance.target_hub_id:
+            self.fields["target_hub_id"].initial = self.instance.target_hub_id
+
+    def clean(self):
+        cleaned_data = super().clean()
+        target_hub_id = cleaned_data.get("target_hub_id")
+
+        if target_hub_id:
+            try:
+                target_hub_id = int(target_hub_id)
+            except (ValueError, TypeError):
+                target_hub_id = None
+
+        if target_hub_id:
+            # Third Party
+            import requests
+
+            from .models.facilities import IndustryFacility
+
+            facility = IndustryFacility.objects.filter(
+                facility_id=target_hub_id
+            ).first()
+            if not facility:
+                # Try to fetch from ESI or KnownLocations
+                name = f"Unknown Facility ({target_hub_id})"
+
+                from .models.facilities import KnownLocation
+
+                known_loc = KnownLocation.objects.filter(
+                    location_id=target_hub_id
+                ).first()
+                if known_loc and known_loc.name:
+                    name = known_loc.name
+
+                type_id = None
+                solar_system_id = None
+
+                if target_hub_id < 100000000:
+                    # It's a station
+                    try:
+                        resp = requests.get(
+                            f"https://esi.evetech.net/latest/universe/stations/{target_hub_id}/?datasource=tranquility",
+                            timeout=5,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            name = data.get("name", name)
+                            type_id = data.get("type_id")
+                            solar_system_id = data.get("system_id")
+                    except Exception:
+                        pass
+                else:
+                    # It's a structure
+                    try:
+                        resp = requests.get(
+                            f"https://esi.evetech.net/latest/universe/structures/{target_hub_id}/?datasource=tranquility",
+                            timeout=5,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            name = data.get("name", name)
+                            type_id = data.get("type_id")
+                            solar_system_id = data.get("solar_system_id")
+                    except Exception:
+                        pass
+
+                facility = IndustryFacility.objects.create(
+                    facility_id=target_hub_id,
+                    name=name,
+                    type_id=type_id,
+                    solar_system_id=solar_system_id,
+                )
+
+            self.instance.target_hub = facility
+        else:
+            self.instance.target_hub = None
+
+        return cleaned_data
+
+
+class BasketItemForm(forms.ModelForm):
+    item_name = forms.CharField(
+        max_length=100,
+        help_text=_("Exact name of the item (e.g. Tritanium)"),
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Tritanium"}
+        ),
+        required=True,
+    )
+
+    class Meta:
+        model = BasketItem
+        fields = ["eve_type", "item_name", "target_stock_level", "batch_size"]
+        widgets = {
+            "eve_type": forms.HiddenInput(),
+            "target_stock_level": forms.NumberInput(attrs={"class": "form-control"}),
+            "batch_size": forms.NumberInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # If we already have an eve_type, populate the item_name field
+        if self.instance and self.instance.pk and self.instance.eve_type_id:
+            self.initial["item_name"] = self.instance.eve_type.name
+
+        # eve_type is hidden, it will be resolved from item_name in clean()
+        self.fields["eve_type"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item_name = cleaned_data.get("item_name")
+        if item_name and not cleaned_data.get("DELETE"):
+            try:
+                eve_type = resolve_eve_type(item_name)
+                cleaned_data["eve_type"] = eve_type
+            except ValidationError as e:
+                self.add_error("item_name", e)
+        return cleaned_data
+
+
+BasketItemFormSet = inlineformset_factory(
+    Basket,
+    BasketItem,
+    form=BasketItemForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class OpportunityScannerForm(forms.ModelForm):
+    COMMON_REGIONS = [
+        ("", "---------"),
+        (10000002, "The Forge (Jita)"),
+        (10000043, "Domain (Amarr)"),
+        (10000032, "Sinq Laison (Dodixie)"),
+        (10000030, "Heimatar (Rens)"),
+        (10000042, "Metropolis (Hek)"),
+        (10000060, "Delve"),
+    ]
+
+    CATEGORY_CHOICES = [
+        (6, "Ships"),
+        (7, "Modules"),
+        (8, "Charges"),
+        (18, "Drones"),
+        (22, "Deployables"),
+        (66, "Rigs"),
+        (87, "Fighters"),
+        (32, "Subsystems"),
+        (20, "Implants"),
+        (16, "Skills"),
+        (43, "Missions"),
+        (17, "Commodities"),
+    ]
+
+    region_id = forms.ChoiceField(
+        required=False,
+        choices=COMMON_REGIONS,
+        label=_("Target Region"),
+        help_text=_("Select a region if you want to scan a specific region's market."),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    target_hub_id = forms.ChoiceField(
+        required=False,
+        label=_("Target Hub (Structure ID)"),
+        help_text=_("Select a structure where your corporation has assets"),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    categories = forms.MultipleChoiceField(
+        choices=CATEGORY_CHOICES,
+        required=True,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "8"}),
+        help_text=_("Hold Ctrl (Windows) or Cmd (Mac) to select multiple categories."),
+    )
+
+    class Meta:
+        from .models.ai_manager import OpportunityScanner
+
+        model = OpportunityScanner
+        fields = [
+            "name",
+            "corporation",
+            "is_active",
+            "min_profit_margin",
+            "min_velocity",
+            "auto_add_basket",
+            "target_stock_days",
+            "run_interval_hours",
+            "scan_missing_blueprints",
+        ]
+        widgets = {
+            "scan_missing_blueprints": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "run_interval_hours": forms.NumberInput(
+                attrs={"class": "form-control", "min": "1"}
+            ),
+            "auto_add_basket": forms.Select(attrs={"class": "form-select"}),
+            "target_stock_days": forms.NumberInput(
+                attrs={"class": "form-control", "min": "1"}
+            ),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "corporation": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "min_profit_margin": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "min_velocity": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user_corps = kwargs.pop("user_corps", None)
+        super().__init__(*args, **kwargs)
+        if user_corps is not None:
+            self.fields["corporation"].queryset = user_corps
+
+            # Populate target_hub_id choices based on KnownLocations
+            from .models.facilities import KnownLocation
+
+            locations = (
+                KnownLocation.objects.filter(corporations__in=user_corps)
+                .distinct()
+                .order_by("name")
+            )
+            choices = [("", "---------")]
+            for loc in locations:
+                name = (
+                    loc.name
+                    if loc.name
+                    else f"Unknown Structure/Station ({loc.location_id})"
+                )
+                choices.append((loc.location_id, name))
+
+            if self.instance and self.instance.pk and self.instance.target_hub_id:
+                if not any(
+                    str(c[0]) == str(self.instance.target_hub_id) for c in choices
+                ):
+                    name = (
+                        self.instance.target_hub.name
+                        if self.instance.target_hub
+                        else f"Unknown ({self.instance.target_hub_id})"
+                    )
+                    choices.append((self.instance.target_hub_id, name))
+
+            self.fields["target_hub_id"].choices = choices
+
+            # Filter auto_add_basket
+            from .models.ai_manager import Basket
+
+            self.fields["auto_add_basket"].queryset = Basket.objects.filter(
+                corporation__in=user_corps
+            )
+
+        if self.instance and self.instance.pk:
+            if self.instance.target_hub_id:
+                self.fields["target_hub_id"].initial = self.instance.target_hub_id
+            if self.instance.target_region_id:
+                self.fields["region_id"].initial = self.instance.target_region_id
+            if self.instance.categories:
+                self.fields["categories"].initial = self.instance.categories
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        region_id = cleaned_data.get("region_id")
+        target_hub_id = cleaned_data.get("target_hub_id")
+
+        if not region_id and not target_hub_id:
+            raise ValidationError(
+                _("You must select either a Target Region or a Target Hub.")
+            )
+
+        if region_id:
+            try:
+                region_id = int(region_id)
+            except (ValueError, TypeError):
+                self.add_error("region_id", _("Invalid region ID."))
+
+        if target_hub_id:
+            try:
+                target_hub_id = int(target_hub_id)
+            except (ValueError, TypeError):
+                target_hub_id = None
+
+        if target_hub_id:
+            # Third Party
+            import requests
+
+            from .models.facilities import IndustryFacility
+
+            facility = IndustryFacility.objects.filter(
+                facility_id=target_hub_id
+            ).first()
+            if not facility:
+                name = f"Unknown Facility ({target_hub_id})"
+                from .models.facilities import KnownLocation
+
+                known_loc = KnownLocation.objects.filter(
+                    location_id=target_hub_id
+                ).first()
+                if known_loc and known_loc.name:
+                    name = known_loc.name
+
+                type_id = None
+                solar_system_id = None
+                if target_hub_id < 100000000:
+                    try:
+                        resp = requests.get(
+                            f"https://esi.evetech.net/latest/universe/stations/{target_hub_id}/?datasource=tranquility",
+                            timeout=5,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            name = data.get("name", name)
+                            type_id = data.get("type_id")
+                            solar_system_id = data.get("system_id")
+                    except Exception:
+                        pass
+
+                corporation = cleaned_data.get("corporation")
+                facility = IndustryFacility.objects.create(
+                    facility_id=target_hub_id,
+                    name=name,
+                    corporation=corporation,
+                    type_id=type_id,
+                    solar_system_id=solar_system_id,
+                )
+
+            cleaned_data["target_hub_id"] = target_hub_id
+            self.instance.target_hub = facility
+        else:
+            self.instance.target_hub = None
+
+        if region_id:
+            self.instance.target_region_id = region_id
+        else:
+            self.instance.target_region_id = None
+
+        categories = cleaned_data.get("categories")
+        if categories:
+            self.instance.categories = [int(c) for c in categories]
+
+        return cleaned_data

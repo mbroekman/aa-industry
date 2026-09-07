@@ -1,0 +1,122 @@
+{% extends 'industry_reforged/base.html' %}
+{% load i18n %}
+{% load humanize %}
+
+{% block details %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="page-header">
+            <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="text-decoration-none">{% translate "AI Market Manager" %}</a> /
+            {% translate "Opportunity Scanner" %}
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+
+    <!-- Scanner Sidebar -->
+    <div class="col-md-3">
+        <div class="card border-0 mb-4 h-100">
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="fas fa-search-dollar text-success me-2"></i> {% translate "Scanners" %}</h3>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="text-muted">{% translate "Opportunity Scanners are configured on the AI Manager Dashboard." %}</p>
+                <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="btn btn-outline-primary w-100 mb-3">
+                    <i class="fas fa-arrow-left me-1"></i> {% translate "Go to Dashboard" %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanned Opportunities List -->
+    <div class="col-md-9">
+
+        <div class="card border-0 mb-4 h-100">
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="fas fa-list text-primary me-2"></i> {% translate "Discovered Opportunities" %}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped m-0" id="opportunitiesTable">
+                        <thead>
+                            <tr>
+                                <th>{% translate "Item" %}</th>
+                                <th>{% translate "Corporation" %}</th>
+                                <th>{% translate "Target / Region" %}</th>
+                                <th class="text-end">{% translate "ADV (30d)" %}</th>
+                                <th class="text-end">{% translate "Est. Margin" %}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for opp in opportunities %}
+                            <tr>
+                                <td class="align-middle">
+                                    <img src="https://images.evetech.net/types/{{ opp.eve_type.id }}/icon?size=32" class="rounded me-2" alt="{{ opp.eve_type.name }}">
+                                    <strong>{{ opp.eve_type.name }}</strong>
+                                </td>
+                                <td class="align-middle">{{ opp.corporation.corporation_name }}</td>
+                                <td class="align-middle">
+                                    {% if opp.target_hub %}
+                                        <i class="fas fa-building text-info me-1" title="Specific Structure"></i> {{ opp.target_hub.name }}
+                                        <br><small class="text-muted">
+                                    {% endif %}
+                                    {% for key, val in region_map.items %}
+                                        {% if key == opp.region_id|stringformat:"s" or key == opp.region_id %}
+                                            {{ val }}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if opp.target_hub %}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle text-end">{{ opp.velocity|floatformat:1|intcomma }} / {% translate "day" %}</td>
+                                <td class="align-middle text-end text-success fw-bold">{{ opp.margin|floatformat:1 }}%</td>
+                                <td class="align-middle text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="copyToClipboard('{{ opp.eve_type.name }}')" title="Copy Name to add to Basket">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted p-4">
+                                    <i class="fas fa-box-open fa-3x mb-3 mt-2"></i><br>
+                                    {% translate "No opportunities found. Run a scan to discover new items!" %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_javascript %}
+<script>
+    $(document).ready(function() {
+        $('#opportunitiesTable').DataTable({
+            "order": [[4, "desc"], [3, "desc"]], // Sort by margin then velocity
+            "pageLength": 25,
+            "language": {
+                "emptyTable": "{% translate 'No opportunities found.' %}"
+            }
+        });
+    });
+
+    function copyToClipboard(text) {
+        var tempInput = document.createElement("input");
+        tempInput.style = "position: absolute; left: -1000px; top: -1000px";
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        alert("Copied " + text + " to clipboard. You can now paste it when adding a Basket Item.");
+    }
+</script>
+{% endblock %}

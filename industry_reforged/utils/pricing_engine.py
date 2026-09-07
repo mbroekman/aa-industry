@@ -343,9 +343,11 @@ def calculate_bom_cost(parsed_items, corporation=None):
     # 1. Determine material valuation method
     valuation_method = "JITA_SELL"
     if corporation:
-        from ..models import CorpPricingConfig
+        from ..models import CorporationPricingConfig
 
-        config = CorpPricingConfig.objects.filter(corporation=corporation).first()
+        config = CorporationPricingConfig.objects.filter(
+            corporation=corporation
+        ).first()
         if config:
             valuation_method = config.material_valuation_method
 
@@ -373,6 +375,9 @@ def calculate_bom_cost(parsed_items, corporation=None):
         )
 
         def _flatten(node):
+            if node.get("activity_id") == 5:
+                # Do not include Blueprint copies (BPOs) as a raw material cost
+                return
             if not node.get("sub_materials"):
                 tid = node["type_id"]
                 qty = node["quantity"]

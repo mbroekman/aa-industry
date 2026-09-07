@@ -115,3 +115,24 @@ class IndustryFacilityRig(models.Model):
 
     def __str__(self):
         return f"{self.rig.name} at {self.facility.name}"
+
+
+class KnownLocation(models.Model):
+    """
+    Stores all unique locations where configured corporations have assets.
+    Provides names for locations outside of configured IndustryFacilities.
+    """
+
+    location_id = models.BigIntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+    corporations = models.ManyToManyField(
+        "eveonline.EveCorporationInfo", related_name="known_locations"
+    )
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Known Location")
+        verbose_name_plural = _("Known Locations")
+
+    def __str__(self):
+        return f"{self.name} ({self.location_id})"

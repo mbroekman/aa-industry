@@ -2,6 +2,7 @@
 
 # Standard Library
 import logging
+import math
 
 # Third Party
 from celery import shared_task
@@ -392,7 +393,7 @@ def link_orphaned_jobs_to_tasks():
         ):
             portion_size = task.item_type.portion_size
 
-        required_runs = int(task.quantity / portion_size)
+        required_runs = math.ceil(task.quantity / portion_size)
         if required_runs == 0:
             required_runs = 1
 

@@ -295,6 +295,9 @@
                                                                     <div class="mt-1 small">
                                                                         <span class="badge bg-dark border border-secondary" title="EVE Online delivery progress">
                                                                             <i class="fas fa-industry"></i> EVE Delivered: {{ task.eve_delivered_qty }} / {{ task.quantity }}
+                                                                            {% if task.eve_active_qty > 0 %}
+                                                                            <span class="text-info ms-1">({{ task.eve_active_qty }} in progress)</span>
+                                                                            {% endif %}
                                                                             {% if task.eve_overdelivered_qty > 0 %}
                                                                             <span class="text-success">(+{{ task.eve_overdelivered_qty }} extra)</span>
                                                                             {% endif %}
@@ -391,6 +394,9 @@
                                                                         <div class="mt-1 small">
                                                                             <span class="badge bg-dark border border-secondary" title="EVE Online delivery progress">
                                                                                 <i class="fas fa-industry"></i> EVE Delivered: {{ task.eve_delivered_qty }} / {{ task.quantity }}
+                                                                                {% if task.eve_active_qty > 0 %}
+                                                                                <span class="text-info ms-1">({{ task.eve_active_qty }} in progress)</span>
+                                                                                {% endif %}
                                                                                 {% if task.eve_overdelivered_qty > 0 %}
                                                                                 <span class="text-success">(+{{ task.eve_overdelivered_qty }} extra)</span>
                                                                                 {% endif %}

@@ -196,9 +196,22 @@ CELERYBEAT_SCHEDULE["industry_notify_pi_extractors"] = {
     "task": "industry_reforged.tasks.task_notify_expired_extractors",
     "schedule": crontab(minute="15,45"),  # Twice an hour
 }
+
+CELERYBEAT_SCHEDULE["industry_evaluate_ai_baskets"] = {
+    "task": "industry_reforged.tasks.evaluate_baskets",
+    "schedule": crontab(minute="0"),  # Every hour
+}
 ```
 
 After updating `local.py`, be sure to restart your Celery worker and Celery Beat services.
+
+### 7. AI Market Manager
+
+The AI Market Manager can automatically evaluate item profitability and create Production Tasks for your corporation based on minimum margin floors.
+To utilize this feature:
+1. Define **Baskets** in the Admin panel and add **Basket Items**.
+2. Configure your `CorporationPricingConfig` to set the `minimum_margin_floor`.
+3. Optionally, configure an `ai_jobs_webhook` in your `CorporationWebhookConfig` to receive Discord notifications when new jobs are automatically generated.
 
 ## License
 Copyright (c) 2026 Maddog Broekman. All rights reserved.

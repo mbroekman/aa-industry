@@ -96,6 +96,7 @@ The command center for the industrial backbone of the corporation.
 All business and pricing rules are managed strictly via the **Director Control Panel -> Configurations** tab in the frontend. This allows you to set rules for all allied corporations without requiring Django Admin access:
 
 - **Global Pricing**: Configure the default corporate discount percentage and the builder reward percentage per corporation.
+- **Minimum Margin Floor**: Define the minimum acceptable margin over the True Material Cost (the recursively calculated raw material cost) for item quotes and AI generated jobs.
 - **Type Discounts**: Specify granular discounts per item category (e.g., ships vs. modules) for specific corporations.
 - **Item Configurations**: Manually override the Jita buy/sell price for specific items (highly useful for unique Faction items with erratic market histories).
 - **System Taxes**: Define the standard Industry Tax and Broker Fee percentages applicable to your corporate production calculations.
@@ -106,6 +107,15 @@ All business and pricing rules are managed strictly via the **Director Control P
 - Add your webhook URLs via the Django Admin Panel (`Discord Webhook Configurations`).
   - **Orders Webhook**: A general webhook for announcements when a member places a **New Order** or when a **Quote is provided**.
   - **Directors Webhook**: A specific webhook for Director-only action alerts, such as when a new quote needs to be calculated or when an order is **Ready for Delivery**.
+  - **AI Jobs Webhook**: Notifies the channel when the AI Market Manager automatically generates new Production Tasks based on your configured Baskets.
+
+### 3.7 AI Market Manager
+
+The AI Market Manager automates the generation of Production Tasks by evaluating the market profitability of configured items.
+
+- **Baskets & Items**: Define Baskets and Basket Items via the Django Admin Panel to group items you want the AI to evaluate.
+- **Profitability Calculation**: The system compares the Jita Sell price (adjusting for manual overrides) against the True Material Cost of the item. If the potential profit exceeds the `minimum_margin_floor` set in your Corporate Pricing Configuration, a Production Task is automatically generated.
+- **Automation**: The AI evaluation runs in the background (via Celery `industry_evaluate_ai_baskets`) and newly generated tasks appear on the Industrialist Job Market.
 
 ______________________________________________________________________
 
