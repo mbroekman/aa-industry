@@ -197,6 +197,11 @@ CELERYBEAT_SCHEDULE["industry_notify_pi_extractors"] = {
     "schedule": crontab(minute="15,45"),  # Twice an hour
 }
 
+CELERYBEAT_SCHEDULE["industry_update_facilities"] = {
+    "task": "industry_reforged.tasks.update_industry_facilities",
+    "schedule": crontab(minute="0", hour="*/4"),  # Every 4 hours
+}
+
 CELERYBEAT_SCHEDULE["industry_evaluate_ai_baskets"] = {
     "task": "industry_reforged.tasks.evaluate_baskets",
     "schedule": crontab(minute="0"),  # Every hour
