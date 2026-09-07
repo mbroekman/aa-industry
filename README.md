@@ -203,7 +203,12 @@ CELERYBEAT_SCHEDULE["industry_update_facilities"] = {
 }
 
 CELERYBEAT_SCHEDULE["industry_evaluate_ai_baskets"] = {
-    "task": "industry_reforged.tasks.evaluate_baskets",
+    "task": "industry_reforged.tasks.run_all_active_baskets",
+    "schedule": crontab(minute="0"),  # Every hour
+}
+
+CELERYBEAT_SCHEDULE["industry_evaluate_ai_scanners"] = {
+    "task": "industry_reforged.tasks.run_all_active_scanners",
     "schedule": crontab(minute="0"),  # Every hour
 }
 ```
