@@ -34,6 +34,8 @@ def index(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.basic_access")
 def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     """Personal Dashboard View"""
+    # Keep session alive on auto-refresh
+    request.session.modified = True
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
@@ -164,6 +166,8 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
 @permission_required("industry_reforged.corp_access")
 def corporate_dashboard(request: WSGIRequest) -> HttpResponse:
     """Corporate Dashboard View"""
+    # Keep session alive on auto-refresh
+    request.session.modified = True
 
     active_jobs = []
     history_jobs = []

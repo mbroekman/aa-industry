@@ -22,6 +22,9 @@ from ..tasks.ai_manager import scan_market_opportunities
 @permission_required("industry_reforged.add_basket")
 def ai_market_manager_dashboard(request):
     """Main dashboard for the AI Market Manager showing all Baskets and Scanners."""
+    # Keep session alive on auto-refresh
+    request.session.modified = True
+
     user_corps = get_user_corps(request.user)
     baskets = (
         Basket.objects.filter(corporation__in=user_corps)
