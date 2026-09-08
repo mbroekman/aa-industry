@@ -39,22 +39,51 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    jobs_qs = CharacterIndustryJob.objects.filter(
-        character_id__in=user_characters
+    active_statuses = ["active", "paused", "ready"]
+    manufacturing_activities = [1, 9]
+    research_activities = [3, 4, 5, 8]
+
+    # Fetch ACTIVE jobs
+    active_char_jobs_qs = CharacterIndustryJob.objects.filter(
+        character_id__in=user_characters, status__in=active_statuses
     ).select_related("blueprint_type", "product_type", "character")
-    jobs = list(jobs_qs)
-    for j in jobs:
+    active_jobs_list = list(active_char_jobs_qs)
+    for j in active_jobs_list:
         j.job_type = "Personal"
 
-    corp_jobs_qs = CorporationIndustryJob.objects.filter(
-        installer_id__in=user_characters
+    active_corp_jobs_qs = CorporationIndustryJob.objects.filter(
+        installer_id__in=user_characters, status__in=active_statuses
     ).select_related("blueprint_type", "product_type", "installer")
-    corp_jobs = list(corp_jobs_qs)
-    for j in corp_jobs:
+    active_corp_jobs_list = list(active_corp_jobs_qs)
+    for j in active_corp_jobs_list:
         j.character = j.installer
         j.job_type = "Corp"
 
-    jobs.extend(corp_jobs)
+    active_jobs_list.extend(active_corp_jobs_list)
+
+    # Fetch HISTORY jobs (limit 250 each)
+    history_char_jobs_qs = (
+        CharacterIndustryJob.objects.filter(character_id__in=user_characters)
+        .exclude(status__in=active_statuses)
+        .select_related("blueprint_type", "product_type", "character")
+        .order_by("-end_date")[:250]
+    )
+    history_jobs_list = list(history_char_jobs_qs)
+    for j in history_jobs_list:
+        j.job_type = "Personal"
+
+    history_corp_jobs_qs = (
+        CorporationIndustryJob.objects.filter(installer_id__in=user_characters)
+        .exclude(status__in=active_statuses)
+        .select_related("blueprint_type", "product_type", "installer")
+        .order_by("-end_date")[:250]
+    )
+    history_corp_jobs_list = list(history_corp_jobs_qs)
+    for j in history_corp_jobs_list:
+        j.character = j.installer
+        j.job_type = "Corp"
+
+    history_jobs_list.extend(history_corp_jobs_list)
 
     # Sort descending by end_date, putting jobs without end_date at the end
     # Standard Library
@@ -66,33 +95,21 @@ def personal_dashboard(request: WSGIRequest) -> HttpResponse:
     def get_sort_key(j):
         return j.end_date or timezone.make_aware(datetime.datetime.min)
 
-    jobs.sort(key=get_sort_key, reverse=True)
-
-    active_statuses = ["active", "paused", "ready"]
-
-    manufacturing_activities = [1, 9]
-    research_activities = [3, 4, 5, 8]
+    active_jobs_list.sort(key=get_sort_key, reverse=True)
+    history_jobs_list.sort(key=get_sort_key, reverse=True)
 
     active_jobs = [
-        j
-        for j in jobs
-        if j.status in active_statuses and j.activity_id in manufacturing_activities
+        j for j in active_jobs_list if j.activity_id in manufacturing_activities
     ]
     history_jobs = [
-        j
-        for j in jobs
-        if j.status not in active_statuses and j.activity_id in manufacturing_activities
+        j for j in history_jobs_list if j.activity_id in manufacturing_activities
     ]
 
     active_research_jobs = [
-        j
-        for j in jobs
-        if j.status in active_statuses and j.activity_id in research_activities
+        j for j in active_jobs_list if j.activity_id in research_activities
     ]
     history_research_jobs = [
-        j
-        for j in jobs
-        if j.status not in active_statuses and j.activity_id in research_activities
+        j for j in history_jobs_list if j.activity_id in research_activities
     ]
 
     planets = list(
