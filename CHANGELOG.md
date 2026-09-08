@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v0.12.2 (2026-09-08)
+
+### Fix
+
+- prevent memory exhaustion from historical jobs in dashboard
+
 ## v0.12.1 (2026-09-08)
 
 ### Fix
