@@ -1,0 +1,40 @@
+# Django 5 AI Agent Rules
+
+**Core Directive:** Write modern, robust, and highly optimized Django 5 code. Prioritize maintainability, ORM efficiency, and strict typing.
+
+## 1. Task Management (`backlog-md`)
+*   **Mandatory Use:** ALWAYS execute the `backlog-md` tool to read, register, or update tasks before modifying any code.
+*   **No Orphans:** Never write code for features, refactors, or bugs that are not explicitly tracked in the backlog.
+
+## 2. Environment & Tooling
+*   **Package Management:** Use `uv` exclusively. Manage dependencies via `pyproject.toml`.
+*   **Linting & Formatting:** Use `Ruff` (max line length 88, strict PEP 8).
+*   **Typing:** Use `mypy` strictly. Type-hint all function signatures. Use `django-stubs` for correct ORM typing.
+
+## 3. Django Architecture
+*   **Fat Models, Thin Views:** Keep views strictly for HTTP request/response handling and routing.
+*   **Business Logic:** Place heavy logic in model methods, custom Managers/QuerySets, or a dedicated `services.py` layer.
+*   **Django 5 Features:** Utilize modern Django 5 features (e.g., database-computed defaults, unified `choices`, async views where beneficial).
+
+## 4. ORM & Database Performance
+*   **Zero N+1 Queries:** You MUST avoid N+1 query issues. ALWAYS use `select_related()` for `ForeignKey`/`OneToOneField` and `prefetch_related()` for `ManyToManyField` or reverse relations.
+*   **Efficiency:** Use `.only()` or `.defer()` when querying tables with large text/JSON columns if those columns are not needed.
+*   **Transactions:** Use `transaction.atomic()` for operations that modify multiple database records.
+
+## 5. Testing (`pytest`)
+*   **Framework:** Use `pytest` and `pytest-django` exclusively. Do not use Django's built-in `TestCase` classes.
+*   **Fixtures:** Use `pytest` fixtures for setup. Use `@pytest.mark.django_db` for tests requiring database access.
+*   **Mocking:** Mock all external API calls and third-party integrations.
+*   **Coverage:** Write tests for every new model, service, and endpoint.
+
+## 6. Security & Configuration
+*   **Secrets:** NEVER hardcode secrets, passwords, or API keys. Read them via environment variables using `django-environ`.
+*   **Validation:** Always validate user input strictly via Forms or Serializers.
+*   **Admin:** Register new models in `admin.py` using `ModelAdmin` classes with optimized `list_display`, `search_fields`, and `list_select_related`.
+
+## 7. Pre-Commit Checklist
+Before marking a task as done:
+1. Is the code fully type-hinted and does `mypy` pass?
+2. Are N+1 query risks mitigated?
+3. Are `pytest` tests written and passing?
+4. Is `backlog-md` updated?
