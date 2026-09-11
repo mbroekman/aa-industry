@@ -211,9 +211,47 @@ CELERYBEAT_SCHEDULE["industry_evaluate_ai_scanners"] = {
     "task": "industry_reforged.tasks.run_all_active_scanners",
     "schedule": crontab(minute="0"),  # Every hour
 }
+
+CELERYBEAT_SCHEDULE["industry_sync_all_rigs"] = {
+    "task": "industry_reforged.tasks.task_sync_all_rigs",
+    "schedule": crontab(minute="0", hour="*/6"),  # Every 6 hours
+}
+
+CELERYBEAT_SCHEDULE["industry_link_orphaned_jobs"] = {
+    "task": "industry_reforged.tasks.link_orphaned_jobs_to_tasks",
+    "schedule": crontab(minute="*/30"),
+}
 ```
 
 After updating `local.py`, be sure to restart your Celery worker and Celery Beat services.
+
+> **Note: First-run after fresh install**
+>
+> Celery Beat only triggers tasks at their configured schedule intervals — it does **not** run tasks immediately on first start. After a fresh install the **System Health** tab (`/industry/director/config/#health`) will appear empty until each task has run at least once.
+>
+> As of v0.12.3, `manage.py migrate` automatically queues all main tasks once when no prior run history exists (via Django's `post_migrate` signal). As long as a Celery worker is running, the health tab will populate within minutes of completing the initial migration.
+>
+> If you need to trigger tasks manually (e.g. after a Celery restart), run:
+>
+> ```bash
+> python manage.py shell -c "
+> from industry_reforged.tasks.jobs import update_character_jobs, update_corporation_jobs
+> from industry_reforged.tasks.blueprints import task_sync_corp_blueprints
+> from industry_reforged.tasks.inventory import task_sync_corp_inventory
+> from industry_reforged.tasks.wallets import task_sync_corp_wallets
+> from industry_reforged.tasks.facilities import update_industry_facilities
+>
+> update_character_jobs.delay()
+> update_corporation_jobs.delay()
+> task_sync_corp_blueprints.delay()
+> task_sync_corp_inventory.delay()
+> task_sync_corp_wallets.delay()
+> update_industry_facilities.delay()
+> print('All tasks queued!')
+> "
+> ```
+
+
 
 ### 7. AI Market Manager
 

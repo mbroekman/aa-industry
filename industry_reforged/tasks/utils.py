@@ -181,10 +181,10 @@ def _get_security_space(system_id):
 
 
 @shared_task(name="industry_reforged.tasks.resolve_unknown_locations")
-def resolve_unknown_locations(location_ids):
+def resolve_unknown_locations(location_ids=None):
     """Resolve names for unknown locations via ESI."""
-    if not location_ids:
-        return
+    # Django
+    from django.db.models import Q
 
     # Third Party
     import requests
@@ -193,6 +193,16 @@ def resolve_unknown_locations(location_ids):
     from esi.models import Token
 
     from ..models.facilities import KnownLocation
+
+    if location_ids is None:
+        location_ids = list(
+            KnownLocation.objects.filter(
+                Q(name="") | Q(name__startswith="Unknown")
+            ).values_list("location_id", flat=True)[:1000]
+        )
+
+    if not location_ids:
+        return
 
     token = Token.objects.filter(scopes__name="esi-universe.read_structures.v1").first()
 
