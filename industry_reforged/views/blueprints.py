@@ -101,7 +101,8 @@ def request_blueprint(request: WSGIRequest, item_id: int) -> HttpResponse:
 
             messages.success(
                 request,
-                _(f"Request for {blueprint.eve_type.name} submitted successfully."),
+                _("Request for %(name)s submitted successfully.")
+                % {"name": blueprint.eve_type.name},
             )
         except ValueError:
             messages.error(request, _("Invalid input for quantity or runs."))
@@ -123,7 +124,9 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
             bp_req.save()
 
             messages.success(
-                request, _(f"Request #{bp_req.id} updated to {new_status}.")
+                request,
+                _("Request #%(req_id)s updated to %(status)s.")
+                % {"req_id": bp_req.id, "status": new_status},
             )
 
             # If accepted, spawn a ProductionTask for copying (activity_id 5 is copying usually, assuming 5 based on EVE)

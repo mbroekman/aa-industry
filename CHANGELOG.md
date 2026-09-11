@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Feat
+
+- **director**: allow CP users to delete any production task (including basket-generated jobs) individually and in bulk
+- **industrialist**: add delete action and bulk delete for CP users on available and active jobs
+- **i18n**: fully update and compile Dutch translations (`nl`) covering all features through v0.12.x (AI Market Manager, Basket management, Opportunity Scanners, Blueprints, Ledgers, etc.)
+
 ## v0.12.2 (2026-09-08)
 
 ### Fix

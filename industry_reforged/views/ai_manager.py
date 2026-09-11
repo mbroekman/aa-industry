@@ -23,7 +23,8 @@ from ..tasks.ai_manager import scan_market_opportunities
 def ai_market_manager_dashboard(request):
     """Main dashboard for the AI Market Manager showing all Baskets and Scanners."""
     # Keep session alive on auto-refresh
-    request.session.modified = True
+    if hasattr(request, "session"):
+        request.session.modified = True
 
     user_corps = get_user_corps(request.user)
     baskets = (
@@ -154,8 +155,9 @@ def scanner_run(request, pk):
         messages.success(
             request,
             _(
-                f"Scan '{scanner.name}' started in the background. Please check the Opportunities page later."
-            ),
+                "Scan '%(name)s' started in the background. Please check the Opportunities page later."
+            )
+            % {"name": scanner.name},
         )
         return redirect("industry_reforged:ai_manager_dashboard")
     return redirect("industry_reforged:ai_manager_dashboard")
@@ -300,7 +302,9 @@ def basket_run(request, pk):
 
         evaluate_baskets.delay(basket.id)
         messages.success(
-            request, _(f"Basket '{basket.name}' evaluation started in the background.")
+            request,
+            _("Basket '%(name)s' evaluation started in the background.")
+            % {"name": basket.name},
         )
         return redirect("industry_reforged:ai_manager_dashboard")
     return redirect("industry_reforged:ai_manager_dashboard")

@@ -9,8 +9,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-04 21:55+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2026-09-11 14:41\n"
+"Last-Translator: Alliance Auth Developer <nl-i18n@allianceauth.org>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -39,10 +39,9 @@ msgid "Director CP"
 msgstr "Directeur CP"
 
 #: industry_reforged/auth_hooks.py:153
-#, fuzzy
 #| msgid "Industry Reforged"
 msgid "Industry Leaderboard"
-msgstr "Industry Reforged"
+msgstr "Industrie Ranglijst"
 
 #: industry_reforged/forms.py:26
 msgid "Item name cannot be empty."
@@ -237,9 +236,12 @@ msgid "Corporation Industry Jobs"
 msgstr "Bedrijfsindustrie Taken"
 
 #: industry_reforged/models/orders.py:23
-msgid "Default discount percentage applied to Jita prices (e.g. 10.0 for 10 percent off)"
+msgid ""
+"Default discount percentage applied to Jita prices (e.g. 10.0 for 10 percent"
+" off)"
 msgstr ""
-"Standaard korting percentage toegepast op Jita prijzen (bijv. 10.0 voor 10 percent korting)"
+"Standaard korting percentage toegepast op Jita prijzen (bijv. 10.0 voor 10 "
+"percent korting)"
 
 #: industry_reforged/models/orders.py:29
 msgid ""
@@ -696,10 +698,9 @@ msgid "Add Tax Config"
 msgstr "Belastingconfiguratie Toevoegen"
 
 #: industry_reforged/templates/industry_reforged/director_config.html:177
-#, fuzzy
 #| msgid "Industry Reforged"
 msgid "Industry Tax Rate"
-msgstr "Industry Reforged"
+msgstr "Industriebelastingtarief"
 
 #: industry_reforged/templates/industry_reforged/director_config.html:178
 msgid "Broker Fee Rate"
@@ -2213,3 +2214,1138 @@ msgid ""
 msgstr ""
 "Sub-component %(name)s succesvol opgesplitst in Onderliggende Bestelling "
 "#%(child_id)s."
+
+#: industry_reforged/forms.py:339
+msgid "Deficit Warning Threshold (%)"
+msgstr "Drempelwaarde Tekortwaarschuwing (%)"
+
+#: industry_reforged/forms.py:450 industry_reforged/forms.py:654
+msgid "Target Hub (Structure ID)"
+msgstr "Doelhub (Structuur ID)"
+
+#: industry_reforged/forms.py:451 industry_reforged/forms.py:655
+msgid "Select a structure where your corporation has assets"
+msgstr "Selecteer een structuur waar je bedrijf bezittingen heeft"
+
+#: industry_reforged/forms.py:572
+msgid "Exact name of the item (e.g. Tritanium)"
+msgstr "Exacte naam van het item (bijv. Tritanium)"
+
+#: industry_reforged/forms.py:647
+msgid "Target Region"
+msgstr "Doelregio"
+
+#: industry_reforged/forms.py:648
+msgid "Select a region if you want to scan a specific region's market."
+msgstr ""
+"Selecteer een regio als je de markt van een specifieke regio wilt scannen."
+
+#: industry_reforged/forms.py:663
+msgid "Hold Ctrl (Windows) or Cmd (Mac) to select multiple categories."
+msgstr ""
+"Houd Ctrl (Windows) of Cmd (Mac) ingedrukt om meerdere categorieën te "
+"selecteren."
+
+#: industry_reforged/forms.py:737
+msgid "You must select either a Target Region or a Target Hub."
+msgstr "Je moet een Doelregio of een Doelhub selecteren."
+
+#: industry_reforged/forms.py:744
+msgid "Invalid region ID."
+msgstr "Ongeldig regio ID."
+
+#: industry_reforged/auth_hooks.py:219
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:9
+msgid "Corp Blueprint Library"
+msgstr "Bedrijfsblauwdrukken Bibliotheek"
+
+#: industry_reforged/auth_hooks.py:243
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:9
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_form.html:9
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:9
+msgid "AI Market Manager"
+msgstr "AI Marktbeheerder"
+
+#: industry_reforged/views/director.py:209
+msgid "No valid tasks found to delete."
+msgstr "Geen geldige taken gevonden om te verwijderen."
+
+#: industry_reforged/views/director.py:211
+msgid "No tasks selected for deletion."
+msgstr "Geen taken geselecteerd voor verwijdering."
+
+#: industry_reforged/views/director.py:985
+msgid "Corporation pricing method saved."
+msgstr "Bedrijfsprijsmethode opgeslagen."
+
+#: industry_reforged/views/director.py:995
+msgid "Edit Pricing Method & Margin"
+msgstr "Prijsmethode & Marge Bewerken"
+
+#: industry_reforged/views/director.py:997
+msgid "Add Pricing Method & Margin"
+msgstr "Prijsmethode & Marge Toevoegen"
+
+#: industry_reforged/views/director.py:1091
+msgid "Syncing Industry Rigs from SDE in the background."
+msgstr "Industrie Rigs van SDE worden op de achtergrond gesynchroniseerd."
+
+#: industry_reforged/views/api.py:123
+msgid ""
+"Corporate Blueprint sync has been queued in the background. Please refresh "
+"in a few minutes."
+msgstr ""
+"Synchronisatie van bedrijfsblauwdrukken is in de wachtrij geplaatst. "
+"Vernieuw de pagina over een paar minuten."
+
+#: industry_reforged/views/blueprints.py:63
+msgid "Quantity and Runs must be at least 1."
+msgstr "Aantal en Runs moeten ten minste 1 zijn."
+
+#: industry_reforged/views/blueprints.py:108
+msgid "Invalid input for quantity or runs."
+msgstr "Ongeldige invoer voor aantal of runs."
+
+#: industry_reforged/views/blueprints.py:158
+msgid "Invalid status update."
+msgstr "Ongeldige statusupdate."
+
+#: industry_reforged/views/ai_manager.py:95
+msgid "Opportunity Scanner created successfully."
+msgstr "Opportuniteitsscanner succesvol aangemaakt."
+
+#: industry_reforged/views/ai_manager.py:100
+msgid "Create Opportunity Scanner"
+msgstr "Opportuniteitsscanner Aanmaken"
+
+#: industry_reforged/views/ai_manager.py:116
+msgid "Opportunity Scanner updated successfully."
+msgstr "Opportuniteitsscanner succesvol bijgewerkt."
+
+#: industry_reforged/views/ai_manager.py:121
+msgid "Edit Opportunity Scanner"
+msgstr "Opportuniteitsscanner Bewerken"
+
+#: industry_reforged/views/ai_manager.py:131
+msgid "Scanner deleted successfully."
+msgstr "Scanner succesvol verwijderd."
+
+#: industry_reforged/views/ai_manager.py:191
+msgid "Basket created successfully."
+msgstr "Winkelmand succesvol aangemaakt."
+
+#: industry_reforged/views/ai_manager.py:201
+msgid "Create Basket"
+msgstr "Winkelmand Aanmaken"
+
+#: industry_reforged/views/ai_manager.py:218
+msgid "Basket updated successfully."
+msgstr "Winkelmand succesvol bijgewerkt."
+
+#: industry_reforged/views/ai_manager.py:227
+msgid "Edit Basket"
+msgstr "Winkelmand Bewerken"
+
+#: industry_reforged/views/ai_manager.py:241
+msgid "Basket deleted successfully."
+msgstr "Winkelmand succesvol verwijderd."
+
+#: industry_reforged/views/ai_manager.py:259
+#: industry_reforged/views/ai_manager.py:280
+msgid "You do not have permission to view this scanner."
+msgstr "Je hebt geen toestemming om deze scanner te bekijken."
+
+#: industry_reforged/views/ai_manager.py:327
+msgid "Basket Logs: "
+msgstr "Winkelmand Logboeken: "
+
+#: industry_reforged/models/jobs.py:198
+msgid "Task Job Link"
+msgstr "Taak-Industrietaak Koppeling"
+
+#: industry_reforged/models/jobs.py:199
+msgid "Task Job Links"
+msgstr "Taak-Industrietaak Koppelingen"
+
+#: industry_reforged/models/wallet.py:109
+msgid "Income (Member Payment)"
+msgstr "Inkomsten (Ledenbetaling)"
+
+#: industry_reforged/models/wallet.py:110
+msgid "Payout (Builder Batch)"
+msgstr "Uitbetaling (Bouwersbatch)"
+
+#: industry_reforged/models/wallet.py:111
+msgid "Procurement (Buy Order)"
+msgstr "Inkoop (Aankooporder)"
+
+#: industry_reforged/models/wallet.py:150
+msgid "Ledger Transaction"
+msgstr "Grootboektransactie"
+
+#: industry_reforged/models/wallet.py:151
+msgid "Ledger Transactions"
+msgstr "Grootboektransacties"
+
+#: industry_reforged/models/config.py:71
+msgid "Webhook URL for new Blueprint Requests."
+msgstr "Webhook URL voor nieuwe Blauwdrukaanvragen."
+
+#: industry_reforged/models/config.py:76
+msgid "Webhook URL for new AI-generated Production Tasks."
+msgstr "Webhook URL voor nieuwe AI-gegenereerde Productietaken."
+
+#: industry_reforged/models/config.py:107
+msgid "Jita Sell (Default)"
+msgstr "Jita Sell (Standaard)"
+
+#: industry_reforged/models/config.py:108
+msgid "Jita Buy"
+msgstr "Jita Buy"
+
+#: industry_reforged/models/config.py:109
+msgid "Corp Manual Price (Strict)"
+msgstr "Bedrijf Handmatige Prijs (Strikt)"
+
+#: industry_reforged/models/config.py:121
+msgid "The method used to value raw materials in the BOM cost calculation."
+msgstr ""
+"De methode die wordt gebruikt om grondstoffen te waarderen in de stuklijst "
+"(BOM) kostenberekening."
+
+#: industry_reforged/models/config.py:129
+msgid ""
+"The minimum profit margin percentage allowed for an order (e.g., 0.00 for "
+"0%, -5.00 for -5% max loss)."
+msgstr ""
+"Het minimaal toegestane winstmargepercentage voor een bestelling (bijv. 0.00"
+" voor 0%, -5.00 voor maximaal -5% verlies)."
+
+#: industry_reforged/models/config.py:135
+msgid "Corporation Pricing Configuration"
+msgstr "Bedrijfsprijzen Configuratie"
+
+#: industry_reforged/models/config.py:136
+msgid "Corporation Pricing Configurations"
+msgstr "Bedrijfsprijzen Configuraties"
+
+#: industry_reforged/models/blueprints.py:31
+msgid "Corp Blueprint"
+msgstr "Bedrijfsblauwdruk"
+
+#: industry_reforged/models/blueprints.py:32
+msgid "Corp Blueprints"
+msgstr "Bedrijfsblauwdrukken"
+
+#: industry_reforged/models/blueprints.py:44
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:219
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:867
+msgid "Pending"
+msgstr "In afwachting"
+
+#: industry_reforged/models/blueprints.py:46
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:221
+msgid "Processed"
+msgstr "Verwerkt"
+
+#: industry_reforged/models/blueprints.py:48
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:223
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:35
+msgid "Cancelled"
+msgstr "Geannuleerd"
+
+#: industry_reforged/models/blueprints.py:60
+msgid "Number of copies requested"
+msgstr "Aantal aangevraagde kopieën"
+
+#: industry_reforged/models/blueprints.py:63
+msgid "Runs per copy requested"
+msgstr "Aantal runs per aangevraagde kopie"
+
+#: industry_reforged/models/blueprints.py:78
+msgid "Blueprint Request"
+msgstr "Blauwdrukaanvraag"
+
+#: industry_reforged/models/blueprints.py:79
+msgid "Blueprint Requests"
+msgstr "Blauwdrukaanvragen"
+
+#: industry_reforged/models/orders.py:99
+msgid "The calculated True Material Cost at the time of order creation."
+msgstr ""
+"De berekende Echte Materiaalkosten op het moment van bestelling creatie."
+
+#: industry_reforged/models/facilities.py:134
+msgid "Known Location"
+msgstr "Bekende Locatie"
+
+#: industry_reforged/models/facilities.py:135
+msgid "Known Locations"
+msgstr "Bekende Locaties"
+
+#: industry_reforged/models/ai_manager.py:17
+msgid "Name of the basket"
+msgstr "Naam van de winkelmand"
+
+#: industry_reforged/models/ai_manager.py:22
+msgid "Whether this basket is currently active"
+msgstr "Of deze winkelmand momenteel actief is"
+
+#: industry_reforged/models/ai_manager.py:27
+msgid "ESI Region ID for region-based market checking."
+msgstr "ESI Regio ID voor marktcontrole op basis van regio."
+
+#: industry_reforged/models/ai_manager.py:34
+msgid "Specific facility (hub) to monitor."
+msgstr "Specifieke faciliteit (hub) om te monitoren."
+
+#: industry_reforged/models/ai_manager.py:38
+msgid "Minimum acceptable profit margin % for building this basket."
+msgstr ""
+"Minimaal acceptabele winstmarge % voor het bouwen van deze winkelmand."
+
+#: industry_reforged/models/ai_manager.py:42
+msgid "How often (in hours) should this basket run automatically."
+msgstr ""
+"Hoe vaak (in uren) deze winkelmand automatisch moet worden uitgevoerd."
+
+#: industry_reforged/models/ai_manager.py:45
+msgid "The last time this basket was evaluated."
+msgstr "Het laatste tijdstip waarop deze winkelmand is geëvalueerd."
+
+#: industry_reforged/models/ai_manager.py:49
+msgid "Whether the basket is currently being evaluated in the background."
+msgstr "Of de winkelmand momenteel op de achtergrond wordt geëvalueerd."
+
+#: industry_reforged/models/ai_manager.py:58
+msgid "Basket"
+msgstr "Winkelmand"
+
+#: industry_reforged/models/ai_manager.py:59
+msgid "Baskets"
+msgstr "Winkelmanden"
+
+#: industry_reforged/models/ai_manager.py:71
+msgid "The minimum quantity the market should always have available."
+msgstr "De minimale hoeveelheid die altijd beschikbaar moet zijn op de markt."
+
+#: industry_reforged/models/ai_manager.py:74
+msgid "The default batch size to order when stock is low."
+msgstr "De standaard batchgrootte om te bestellen bij lage voorraad."
+
+#: industry_reforged/models/ai_manager.py:78
+msgid "Basket Item"
+msgstr "Winkelmanditem"
+
+#: industry_reforged/models/ai_manager.py:79
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_form.html:40
+msgid "Basket Items"
+msgstr "Winkelmanditems"
+
+#: industry_reforged/models/ai_manager.py:92
+msgid "e.g., 'Ordered', 'Skipped'"
+msgstr "bijv. 'Ordered', 'Skipped'"
+
+#: industry_reforged/models/ai_manager.py:97
+msgid "Calculated profit margin at the time of check"
+msgstr "Berekende winstmarge op het moment van controle"
+
+#: industry_reforged/models/ai_manager.py:102
+msgid "Calculated current stock at the time of check"
+msgstr "Berekende huidige voorraad op het moment van controle"
+
+#: industry_reforged/models/ai_manager.py:104
+msgid "Reasoning for the action taken"
+msgstr "Reden voor de ondernomen actie"
+
+#: industry_reforged/models/ai_manager.py:108
+msgid "AI Market Log"
+msgstr "AI Marktlogboek"
+
+#: industry_reforged/models/ai_manager.py:109
+msgid "AI Market Logs"
+msgstr "AI Marktlogboeken"
+
+#: industry_reforged/models/ai_manager.py:125
+#: industry_reforged/models/ai_manager.py:160
+msgid "ESI Region ID"
+msgstr "ESI Regio ID"
+
+#: industry_reforged/models/ai_manager.py:132
+msgid "Specific facility if scanned for a hub."
+msgstr "Specifieke faciliteit indien gescand voor een hub."
+
+#: industry_reforged/models/ai_manager.py:134
+msgid "Average Daily Volume (ADV)"
+msgstr "Gemiddeld Dagelijks Volume (ADV)"
+
+#: industry_reforged/models/ai_manager.py:135
+msgid "Estimated profit margin %"
+msgstr "Geschatte winstmarge %"
+
+#: industry_reforged/models/ai_manager.py:139
+msgid "Market Opportunity"
+msgstr "Marktkans"
+
+#: industry_reforged/models/ai_manager.py:140
+msgid "Market Opportunities"
+msgstr "Marktkansen"
+
+#: industry_reforged/models/ai_manager.py:152
+msgid "Name of the scanner"
+msgstr "Naam van de scanner"
+
+#: industry_reforged/models/ai_manager.py:167
+msgid "Specific facility if scanning a hub"
+msgstr "Specifieke faciliteit bij scannen van een hub"
+
+#: industry_reforged/models/ai_manager.py:172
+msgid "List of category IDs to scan"
+msgstr "Lijst van categorie-IDs om te scannen"
+
+#: industry_reforged/models/ai_manager.py:179
+msgid "Automatically add profitable items to this basket."
+msgstr "Voeg winstgevende items automatisch toe aan deze winkelmand."
+
+#: industry_reforged/models/ai_manager.py:183
+msgid ""
+"If auto-adding, how many days of stock to maintain based on daily velocity."
+msgstr ""
+"Indien automatisch toevoegen, hoeveel dagen voorraad aanhouden op basis van "
+"dagelijkse omloopsnelheid."
+
+#: industry_reforged/models/ai_manager.py:189
+msgid "Whether the scanner is currently running in the background."
+msgstr "Of de scanner momenteel op de achtergrond draait."
+
+#: industry_reforged/models/ai_manager.py:194
+msgid "How often (in hours) should this scanner run automatically."
+msgstr "Hoe vaak (in uren) deze scanner automatisch moet worden uitgevoerd."
+
+#: industry_reforged/models/ai_manager.py:197
+msgid "The last time this scanner was executed."
+msgstr "Het laatste tijdstip waarop deze scanner is uitgevoerd."
+
+#: industry_reforged/models/ai_manager.py:201
+msgid ""
+"Also scan for profitable items that the corporation does NOT own blueprints "
+"for."
+msgstr ""
+"Scan ook op winstgevende items waarvoor het bedrijf GEEN blauwdrukken bezit."
+
+#: industry_reforged/models/ai_manager.py:210
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:10
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:25
+msgid "Opportunity Scanner"
+msgstr "Opportuniteitsscanner"
+
+#: industry_reforged/models/ai_manager.py:211
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:104
+msgid "Opportunity Scanners"
+msgstr "Opportuniteitsscanners"
+
+#: industry_reforged/models/pi.py:29
+msgid "Warn if extraction is below this percentage of consumption"
+msgstr "Waarschuwen als extractie onder dit percentage van het verbruik ligt"
+
+#: industry_reforged/models/pi.py:724
+msgid "Cycle time in seconds"
+msgstr "Cyclustijd in seconden"
+
+#: industry_reforged/models/pi.py:727
+msgid "PI Schematic"
+msgstr "PI Schema"
+
+#: industry_reforged/models/pi.py:728
+msgid "PI Schematics"
+msgstr "PI Schema's"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:228
+msgid "Sync Corp Blueprints"
+msgstr "Synchroniseer Bedrijfsblauwdrukken"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:235
+msgid "Date"
+msgstr "Datum"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:236
+msgid "Requester"
+msgstr "Aanvrager"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:241
+msgid "Notes"
+msgstr "Notities"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:340
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:345
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:520
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:591
+msgid "Copy to clipboard"
+msgstr "Kopiëren naar klembord"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:400
+msgid "Payouts"
+msgstr "Uitbetalingen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:401
+msgid "Received"
+msgstr "Ontvangen"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html:402
+msgid "Pending (To be paid)"
+msgstr "In afwachting (Te betalen)"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:59
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:19
+msgid "Corp Stock"
+msgstr "Bedrijfsvoorraad"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:76
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:40
+msgid "Sufficient stock"
+msgstr "Voldoende voorraad"
+
+#: industry_reforged/templates/industry_reforged/shopping_list.html:78
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:42
+msgid "Insufficient stock"
+msgstr "Onvoldoende voorraad"
+
+#: industry_reforged/templates/industry_reforged/create_order.html:27
+msgid "Quantity (Multiplier)"
+msgstr "Aantal (Vermenigvuldiger)"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:298
+msgid "Upfront Payment Required:"
+msgstr "Aanbetaling Vereist:"
+
+#: industry_reforged/templates/industry_reforged/view_quote.html:480
+msgid "Upfront Required"
+msgstr "Aanbetaling Vereist"
+
+#: industry_reforged/templates/industry_reforged/corporate_dashboard.html:33
+msgid "Paused"
+msgstr "Gepauzeerd"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:132
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:254
+msgid "Delete Selected"
+msgstr "Geselecteerde Verwijderen"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:191
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:371
+msgid "Are you sure you want to delete this job?"
+msgstr "Weet je zeker dat je deze taak wilt verwijderen?"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:194
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:373
+msgid "Delete Job"
+msgstr "Taak Verwijderen"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:266
+msgid "Legend:"
+msgstr "Legenda:"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:267
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:268
+msgid "Complete"
+msgstr "Voltooien"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:267
+msgid "Complete single task"
+msgstr "Enkele taak voltooien"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:268
+msgid "Complete task and auto-complete all sub-tasks"
+msgstr "Taak voltooien en automatisch alle subtaken voltooien"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:484
+msgid "Search item..."
+msgstr "Zoek item..."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:495
+msgid "Claimed"
+msgstr "Geclaimd"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:498
+msgid "Available corporation stock"
+msgstr "Beschikbare bedrijfsvoorraad"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:498
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_logs.html:26
+msgid "Stock"
+msgstr "Voorraad"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:499
+msgid "EVE Jobs"
+msgstr "EVE Taken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:567
+msgid "To Build"
+msgstr "Te Bouwen"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:568
+msgid "In Progress"
+msgstr "In Behandeling"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:658
+msgid "Corporate Jobs Overview"
+msgstr "Overzicht Bedrijfstaken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:665
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:741
+msgid "Other"
+msgstr "Overig"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:734
+msgid "My Corporate Jobs"
+msgstr "Mijn Bedrijfstaken"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:815
+msgid "My Payouts & Payment Summary"
+msgstr "Mijn Uitbetalingen & Betalingsoverzicht"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:819
+msgid "Paid"
+msgstr "Betaald"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:820
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:870
+msgid "Unpaid"
+msgstr "Onbetaald"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:834
+msgid "Payout Value"
+msgstr "Uitbetalingswaarde"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:835
+msgid "Payment ID"
+msgstr "Betalings-ID"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:836
+msgid "Payment Date"
+msgstr "Betalingsdatum"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:859
+msgid "Unbatched"
+msgstr "Niet gebatcht"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:1243
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:1277
+msgid "Please select at least one task to delete."
+msgstr "Selecteer ten minste één taak om te verwijderen."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:1248
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:1282
+msgid "Are you sure you want to permanently delete the selected tasks?"
+msgstr ""
+"Weet je zeker dat je de geselecteerde taken permanent wilt verwijderen?"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:157
+msgid "No corporate pricing configurations found."
+msgstr "Geen bedrijfsprijzen configuraties gevonden."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:169
+msgid "Pricing Method & Margin"
+msgstr "Prijsmethode & Marge"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:170
+msgid "Configure Method"
+msgstr "Methode Configureren"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:178
+msgid "Valuation Method"
+msgstr "Waarderingsmethode"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:179
+msgid "Minimum Margin Floor"
+msgstr "Minimale Margelimiet"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:190
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:83
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:167
+msgid "Edit"
+msgstr "Bewerken"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:195
+msgid "No pricing method configurations found."
+msgstr "Geen prijsmethode configuraties gevonden."
+
+#: industry_reforged/templates/industry_reforged/director_config.html:255
+msgid "Discount %"
+msgstr "Korting %"
+
+#: industry_reforged/templates/industry_reforged/director_config.html:372
+msgid "Sync Rigs from SDE"
+msgstr "Synchroniseer Rigs van SDE"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_logs.html:14
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_missing_bpos.html:14
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:26
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:14
+msgid "Back to Dashboard"
+msgstr "Terug naar Dashboard"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_logs.html:23
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:23
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:27
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:81
+msgid "Timestamp"
+msgstr "Tijdstip"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_logs.html:27
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_missing_bpos.html:27
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:84
+msgid "Margin"
+msgstr "Marge"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_logs.html:28
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:86
+msgid "Reason"
+msgstr "Reden"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_logs.html:59
+msgid "No logs found for this basket."
+msgstr "Geen logboeken gevonden voor deze winkelmand."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:21
+msgid "Scanners"
+msgstr "Scanners"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:24
+msgid "Opportunity Scanners are configured on the AI Manager Dashboard."
+msgstr ""
+"Opportuniteitsscanners worden geconfigureerd op het AI Marktbeheerder "
+"Dashboard."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:26
+msgid "Go to Dashboard"
+msgstr "Ga naar Dashboard"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:37
+msgid "Discovered Opportunities"
+msgstr "Ontdekte Marktkansen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:46
+msgid "Target / Region"
+msgstr "Doel / Regio"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:47
+msgid "ADV (30d)"
+msgstr "ADV (30d)"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:48
+msgid "Est. Margin"
+msgstr "Gesch. Marge"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:74
+msgid "day"
+msgstr "dag"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:86
+msgid "No opportunities found. Run a scan to discover new items!"
+msgstr ""
+"Geen marktkansen gevonden. Voer een scan uit om nieuwe items te ontdekken!"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/opportunities.html:106
+msgid "No opportunities found."
+msgstr "Geen marktkansen gevonden."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_missing_bpos.html:19
+msgid ""
+"These items met your scanner's minimum margin and velocity requirements, but"
+" your corporation does NOT own the blueprint for them."
+msgstr ""
+"Deze items voldeden aan de minimale marge- en omloopsnelheidseisen van je "
+"scanner, maar je bedrijf bezit hier GEEN blauwdruk voor."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_missing_bpos.html:28
+msgid "Velocity (30d)"
+msgstr "Omloopsnelheid (30d)"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_missing_bpos.html:29
+msgid "Found At"
+msgstr "Gevonden Op"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_missing_bpos.html:53
+msgid "No missing blueprints found for this scanner."
+msgstr "Geen ontbrekende blauwdrukken gevonden voor deze scanner."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_form.html:92
+msgid "Add another item"
+msgstr "Nog een item toevoegen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_confirm_delete.html:9
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:10
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_confirm_delete.html:10
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:11
+msgid "AI Manager"
+msgstr "AI Manager"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_confirm_delete.html:11
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_confirm_delete.html:15
+msgid "Delete Scanner"
+msgstr "Scanner Verwijderen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_confirm_delete.html:26
+msgid "Are you sure you want to delete this Opportunity Scanner?"
+msgstr "Weet je zeker dat je deze Opportuniteitsscanner wilt verwijderen?"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_confirm_delete.html:29
+msgid ""
+"This will only delete the scanner configuration. Market Opportunities "
+"previously found by this scanner will not be deleted."
+msgstr ""
+"Dit verwijdert alleen de scannerconfiguratie. Marktkansen die eerder door "
+"deze scanner zijn gevonden, worden niet verwijderd."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:24
+msgid "Scanner Configuration"
+msgstr "Scannerconfiguratie"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:72
+msgid "AI Automation Actions"
+msgstr "AI Automatiseringsacties"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:77
+msgid ""
+"Enable this to also scan for profitable items in these categories that your "
+"corporation does NOT own blueprints for. This will take longer to run, but "
+"generates a Missing BPO report."
+msgstr ""
+"Schakel dit in om ook te scannen naar winstgevende items in deze categorieën"
+" waar je bedrijf GEEN blauwdrukken voor bezit. Dit duurt langer om uit te "
+"voeren, maar genereert een rapport van ontbrekende BPO's."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:84
+msgid "Automatically create Basket Items for opportunities."
+msgstr "Maak automatisch winkelmanditems aan voor marktkansen."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:88
+msgid "Target stock = daily velocity * days."
+msgstr "Doelvoorraad = dagelijkse omloopsnelheid * dagen."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:92
+msgid "How often this scanner should run automatically."
+msgstr "Hoe vaak deze scanner automatisch moet worden uitgevoerd."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:98
+msgid "Save Scanner"
+msgstr "Scanner Opslaan"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:108
+msgid "About Opportunity Scanners"
+msgstr "Over Opportuniteitsscanners"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:111
+msgid ""
+"Opportunity Scanners allow you to define persistent scan profiles to quickly"
+" find profitable items."
+msgstr ""
+"Met Opportuniteitsscanners kun je permanente scanprofielen definiëren om "
+"snel winstgevende items te vinden."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:112
+msgid ""
+"You must select EITHER a Target Region OR a Target Hub. If you select a Hub,"
+" it will use the Hub's system and region context."
+msgstr ""
+"Je moet OFWEL een Doelregio OFWEL een Doelhub selecteren. Als je een Hub "
+"selecteert, gebruikt deze de zonnestelsel- en regiocontext van de Hub."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:113
+msgid ""
+"Saved scanners can be manually executed at any time from the AI Manager "
+"Dashboard using the 'Run' button."
+msgstr ""
+"Opgeslagen scanners kunnen op elk gewenst moment handmatig worden uitgevoerd"
+" vanaf het AI Marktbeheerder Dashboard via de knop 'Uitvoeren'."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:24
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:29
+msgid "Items Scanned"
+msgstr "Items Gescand"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:25
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:30
+msgid "Opportunities"
+msgstr "Marktkansen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:26
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:31
+msgid "Auto-Added"
+msgstr "Autom. Toegevoegd"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:27
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:32
+msgid "Details"
+msgstr "Details"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/scanner_logs.html:57
+msgid "No logs found for this scanner."
+msgstr "Geen logboeken gevonden voor deze scanner."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:10
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:22
+msgid "Audit Log"
+msgstr "Auditlogboek"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:19
+msgid "Recent Scanner Executions"
+msgstr "Recente Scanner Uitvoeringen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:28
+msgid "Scanner"
+msgstr "Scanner"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:62
+msgid "No scanners have been executed yet."
+msgstr "Er zijn nog geen scanners uitgevoerd."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:73
+msgid "Recent Decisions"
+msgstr "Recente Beslissingen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:85
+msgid "Stock Level"
+msgstr "Voorraadniveau"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/audit_log.html:116
+msgid "No logs available yet."
+msgstr "Nog geen logboeken beschikbaar."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:8
+msgid "AI Market Manager Dashboard"
+msgstr "AI Marktbeheerder Dashboard"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:16
+msgid "Active Baskets"
+msgstr "Actieve Winkelmanden"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:19
+msgid "New Basket"
+msgstr "Nieuwe Winkelmand"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:38
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:124
+msgid "Target Location"
+msgstr "Doellocatie"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:39
+msgid "Items"
+msgstr "Items"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:40
+msgid "Interval"
+msgstr "Interval"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:56
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:141
+msgid "Global"
+msgstr "Globaal"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:65
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:149
+msgid "Inactive"
+msgstr "Inactief"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:70
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:154
+msgid "Running..."
+msgstr "Actief..."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:72
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:156
+msgid "ago"
+msgstr "geleden"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:74
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:158
+msgid "Never run"
+msgstr "Nooit uitgevoerd"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:81
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:165
+msgid "Run Now"
+msgstr "Nu Uitvoeren"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:85
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:169
+msgid "Logs"
+msgstr "Logboeken"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:93
+msgid "No baskets configured. Create one to get started."
+msgstr "Geen winkelmanden geconfigureerd. Maak er een aan om te beginnen."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:107
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:6
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:45
+msgid "Auto-refresh: Off"
+msgstr "Automatisch vernieuwen: Uit"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:108
+msgid "Auto-refresh: 15s"
+msgstr "Automatisch vernieuwen: 15s"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:109
+msgid "Auto-refresh: 30s"
+msgstr "Automatisch vernieuwen: 30s"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:110
+msgid "Auto-refresh: 1m"
+msgstr "Automatisch vernieuwen: 1m"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:113
+msgid "New Scanner"
+msgstr "Nieuwe Scanner"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:125
+msgid "Min Margin"
+msgstr "Min Marge"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:173
+msgid "Missing Blueprints"
+msgstr "Ontbrekende Blauwdrukken"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/dashboard.html:184
+msgid "No scanners configured. Create one to get started."
+msgstr "Geen scanners geconfigureerd. Maak er een aan om te beginnen."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_confirm_delete.html:9
+msgid "Delete Basket"
+msgstr "Winkelmand Verwijderen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_confirm_delete.html:13
+msgid ""
+"This will also delete all items within this basket. This action cannot be "
+"undone."
+msgstr ""
+"Dit verwijdert ook alle items in deze winkelmand. Deze actie kan niet "
+"ongedaan worden gemaakt."
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_confirm_delete.html:17
+msgid "Confirm Delete"
+msgstr "Verwijdering Bevestigen"
+
+#: industry_reforged/templates/industry_reforged/ai_manager/basket_confirm_delete.html:12
+msgid "Are you sure you want to delete the basket \"{{ name }}\"?"
+msgstr "Weet je zeker dat je de winkelmand \"{{ name }}\" wilt verwijderen?"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:15
+msgid "Available Blueprints"
+msgstr "Beschikbare Blauwdrukken"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:19
+msgid "Filter by Type:"
+msgstr "Filteren op type:"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:21
+msgid "All Types"
+msgstr "Alle types"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:53
+msgid "Request Copy of"
+msgstr "Vraag kopie aan van"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:58
+msgid "Quantity (Number of Copies)"
+msgstr "Aantal (Aantal Kopieën)"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:62
+msgid "Runs per Copy"
+msgstr "Runs per Kopie"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:66
+msgid "Notes (Optional)"
+msgstr "Notities (Optioneel)"
+
+#: industry_reforged/templates/industry_reforged/blueprints/library.html:72
+msgid "Submit Request"
+msgstr "Aanvraag Indienen"
+
+#: industry_reforged/templates/industry_reforged/partials/dt_blueprint_req_actions.html:6
+msgid "Accept"
+msgstr "Accepteren"
+
+#: industry_reforged/templates/industry_reforged/partials/dt_blueprint_req_actions.html:17
+msgid "Mark as Processed"
+msgstr "Markeren als Verwerkt"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:4
+msgid "Page Auto-refresh"
+msgstr "Pagina Automatisch Vernieuwen"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:9
+msgid "Auto-refresh Interval"
+msgstr "Interval Automatisch Vernieuwen"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:10
+msgid "Off"
+msgstr "Uit"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:12
+msgid "5 minutes"
+msgstr "5 minuten"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:13
+msgid "10 minutes"
+msgstr "10 minuten"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:14
+msgid "15 minutes"
+msgstr "15 minuten"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:15
+msgid "25 minutes"
+msgstr "25 minuten"
+
+#: industry_reforged/templates/industry_reforged/partials/autorefresh_control.html:16
+msgid "30 minutes"
+msgstr "30 minuten"
+
+#: industry_reforged/templates/industry_reforged/partials/dt_blueprint_actions.html:3
+msgid "Request Copy"
+msgstr "Kopie Aanvragen"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:24
+msgid "Base prices fetched live from ESI Market (Jita 5% Sell)"
+msgstr "Basisprijzen live opgehaald van ESI Markt (Jita 5% Sell)"
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html:78
+msgid "Live Jita 5% Sell Price fetched via direct ESI market orders"
+msgstr "Live Jita 5% Sell-prijs opgehaald via directe ESI marktorders"
+
+#: industry_reforged/views/director.py:178
+msgid "Production Task for %(item_name)s deleted."
+msgstr "Productietaak voor %(item_name)s verwijderd."
+
+#: industry_reforged/views/director.py:205
+msgid "Successfully deleted %(count)s production task(s)."
+msgstr "Succesvol %(count)s productieta(a)k(en) verwijderd."
+
+#: industry_reforged/views/director.py:871
+msgid "Threshold for %(division)s updated to %(threshold)s ISK."
+msgstr "Drempelwaarde voor %(division)s bijgewerkt naar %(threshold)s ISK."
+
+#: industry_reforged/views/blueprints.py:104
+msgid "Request for %(name)s submitted successfully."
+msgstr "Aanvraag voor %(name)s succesvol ingediend."
+
+#: industry_reforged/views/blueprints.py:128
+msgid "Request #%(req_id)s updated to %(status)s."
+msgstr "Aanvraag #%(req_id)s bijgewerkt naar %(status)s."
+
+#: industry_reforged/views/ai_manager.py:157
+msgid ""
+"Scan '%(name)s' started in the background. Please check the Opportunities "
+"page later."
+msgstr ""
+"Scan '%(name)s' gestart op de achtergrond. Controleer de Marktkansen pagina "
+"later."
+
+#: industry_reforged/views/ai_manager.py:306
+msgid "Basket '%(name)s' evaluation started in the background."
+msgstr "Winkelmand '%(name)s' evaluatie gestart op de achtergrond."

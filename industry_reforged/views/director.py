@@ -868,7 +868,11 @@ def update_wallet_threshold(request: WSGIRequest, division_id: int) -> HttpRespo
             division.save()
             messages.success(
                 request,
-                _(f"Threshold for {division.name} updated to {new_threshold:,} ISK."),
+                _("Threshold for %(division)s updated to %(threshold)s ISK.")
+                % {
+                    "division": division.name,
+                    "threshold": f"{new_threshold:,}",
+                },
             )
         except ValueError:
             messages.error(request, _("Invalid threshold value provided."))
