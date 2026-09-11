@@ -362,6 +362,88 @@ class CorporationPricingConfigForm(forms.ModelForm):
             self.fields["corporation"].disabled = True
 
 
+def get_target_hub_choices(user_corps=None, current_target_hub=None):
+    """
+    Populates target_hub_id choices for BasketForm and OpportunityScannerForm.
+    Combines configured IndustryFacility records and KnownLocation records.
+    """
+    # Django
+    from django.db.models import Q
+
+    # Alliance Auth
+    from allianceauth.eveonline.models import EveCorporationInfo
+
+    from .models.facilities import IndustryFacility, KnownLocation
+
+    choices = [("", "---------")]
+    hub_map = {}
+
+    # 1. Fetch configured IndustryFacility records
+    facility_qs = IndustryFacility.objects.all()
+    if user_corps is not None and user_corps.exists():
+        corp_ids = list(user_corps.values_list("corporation_id", flat=True))
+        alliance_ids = list(
+            user_corps.exclude(alliance__isnull=True).values_list(
+                "alliance__alliance_id", flat=True
+            )
+        )
+        alliance_corp_ids = []
+        if alliance_ids:
+            alliance_corp_ids = list(
+                EveCorporationInfo.objects.filter(
+                    alliance__alliance_id__in=alliance_ids
+                ).values_list("corporation_id", flat=True)
+            )
+
+        allowed_owners = set(corp_ids + alliance_corp_ids)
+        filtered_qs = facility_qs.filter(
+            Q(owner_id__in=allowed_owners)
+            | Q(owner_id__isnull=True)
+            | Q(owner_id__lt=100000000)  # NPC stations / corporations
+            | Q(is_production_facility=True)
+        )
+        if filtered_qs.exists():
+            facility_qs = filtered_qs
+
+    for fac in facility_qs:
+        name = fac.name if fac.name else f"Facility ({fac.facility_id})"
+        hub_map[fac.facility_id] = name
+
+    # 2. Fetch KnownLocation records (asset locations)
+    if user_corps is not None and user_corps.exists():
+        loc_qs = KnownLocation.objects.filter(corporations__in=user_corps).distinct()
+    else:
+        loc_qs = KnownLocation.objects.all()
+
+    for loc in loc_qs:
+        if loc.location_id not in hub_map:
+            name = (
+                loc.name
+                if loc.name
+                else f"Unknown Structure/Station ({loc.location_id})"
+            )
+            hub_map[loc.location_id] = name
+
+    # 3. Ensure current_target_hub is present if passed
+    if current_target_hub:
+        fac_id = getattr(current_target_hub, "facility_id", None) or getattr(
+            current_target_hub, "pk", None
+        )
+        if fac_id and fac_id not in hub_map:
+            name = (
+                current_target_hub.name
+                if getattr(current_target_hub, "name", None)
+                else f"Unknown ({fac_id})"
+            )
+            hub_map[fac_id] = name
+
+    sorted_hubs = sorted(hub_map.items(), key=lambda x: str(x[1]).lower())
+    for fac_id, name in sorted_hubs:
+        choices.append((fac_id, name))
+
+    return choices
+
+
 class BasketForm(forms.ModelForm):
     target_hub_id = forms.ChoiceField(
         required=False,
@@ -399,38 +481,10 @@ class BasketForm(forms.ModelForm):
         if user_corps is not None:
             self.fields["corporation"].queryset = user_corps
 
-            # Populate target_hub_id choices based on KnownLocations
-            from .models.facilities import KnownLocation
-
-            locations = (
-                KnownLocation.objects.filter(corporations__in=user_corps)
-                .distinct()
-                .order_by("name")
-            )
-
-            choices = [("", "---------")]
-
-            for loc in locations:
-                name = (
-                    loc.name
-                    if loc.name
-                    else f"Unknown Structure/Station ({loc.location_id})"
-                )
-                choices.append((loc.location_id, name))
-
-            # If the instance has a target_hub_id not in the choices, we should still include it
-            if self.instance and self.instance.pk and self.instance.target_hub_id:
-                if not any(
-                    str(c[0]) == str(self.instance.target_hub_id) for c in choices
-                ):
-                    name = (
-                        self.instance.target_hub.name
-                        if self.instance.target_hub
-                        else f"Unknown ({self.instance.target_hub_id})"
-                    )
-                    choices.append((self.instance.target_hub_id, name))
-
-            self.fields["target_hub_id"].choices = choices
+        self.fields["target_hub_id"].choices = get_target_hub_choices(
+            user_corps=user_corps,
+            current_target_hub=getattr(self.instance, "target_hub", None),
+        )
 
         if self.instance and self.instance.pk and self.instance.target_hub_id:
             self.fields["target_hub_id"].initial = self.instance.target_hub_id
@@ -652,42 +706,17 @@ class OpportunityScannerForm(forms.ModelForm):
         if user_corps is not None:
             self.fields["corporation"].queryset = user_corps
 
-            # Populate target_hub_id choices based on KnownLocations
-            from .models.facilities import KnownLocation
-
-            locations = (
-                KnownLocation.objects.filter(corporations__in=user_corps)
-                .distinct()
-                .order_by("name")
-            )
-            choices = [("", "---------")]
-            for loc in locations:
-                name = (
-                    loc.name
-                    if loc.name
-                    else f"Unknown Structure/Station ({loc.location_id})"
-                )
-                choices.append((loc.location_id, name))
-
-            if self.instance and self.instance.pk and self.instance.target_hub_id:
-                if not any(
-                    str(c[0]) == str(self.instance.target_hub_id) for c in choices
-                ):
-                    name = (
-                        self.instance.target_hub.name
-                        if self.instance.target_hub
-                        else f"Unknown ({self.instance.target_hub_id})"
-                    )
-                    choices.append((self.instance.target_hub_id, name))
-
-            self.fields["target_hub_id"].choices = choices
-
             # Filter auto_add_basket
             from .models.ai_manager import Basket
 
             self.fields["auto_add_basket"].queryset = Basket.objects.filter(
                 corporation__in=user_corps
             )
+
+        self.fields["target_hub_id"].choices = get_target_hub_choices(
+            user_corps=user_corps,
+            current_target_hub=getattr(self.instance, "target_hub", None),
+        )
 
         if self.instance and self.instance.pk:
             if self.instance.target_hub_id:
