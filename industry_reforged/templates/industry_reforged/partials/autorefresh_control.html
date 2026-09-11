@@ -4,7 +4,6 @@
         <button class="btn btn-outline-info btn-sm dropdown-toggle d-flex align-items-center shadow-sm" type="button" id="autoRefreshDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="{% translate 'Page Auto-refresh' %}">
             <i class="fas fa-sync-alt me-1.5" id="auto-refresh-icon"></i>
             <span id="auto-refresh-label" class="fw-semibold">{% translate "Auto-refresh: Off" %}</span>
-            <span class="badge bg-light text-dark ms-2 fw-bold d-none" id="auto-refresh-timer"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow border-secondary" aria-labelledby="autoRefreshDropdown">
             <li><h6 class="dropdown-header text-info"><i class="fas fa-clock me-1"></i> {% translate "Auto-refresh Interval" %}</h6></li>
@@ -23,20 +22,12 @@
 (function() {
     const STORAGE_KEY = 'industry_autorefresh_interval_' + window.location.pathname.replace(/\/+$/, '');
     let intervalSeconds = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-    let remainingSeconds = intervalSeconds;
-    let timerId = null;
+    let timeoutId = null;
 
     const btnEl = document.getElementById('autoRefreshDropdown');
     const labelEl = document.getElementById('auto-refresh-label');
-    const timerEl = document.getElementById('auto-refresh-timer');
     const iconEl = document.getElementById('auto-refresh-icon');
     const items = document.querySelectorAll('#autorefresh-container .dropdown-item');
-
-    function formatTime(sec) {
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        return `${m}:${s < 10 ? '0' : ''}${s}`;
-    }
 
     function updateUI() {
         items.forEach(item => {
@@ -52,55 +43,44 @@
             btnEl.classList.remove('btn-success', 'text-white');
             btnEl.classList.add('btn-outline-info');
             labelEl.textContent = '{% translate "Auto-refresh: Off" %}';
-            timerEl.classList.add('d-none');
             iconEl.classList.remove('fa-spin');
         } else {
             const mins = Math.floor(intervalSeconds / 60);
             btnEl.classList.remove('btn-outline-info');
             btnEl.classList.add('btn-success', 'text-white');
             labelEl.textContent = `Auto-refresh: ${mins}m`;
-            timerEl.textContent = formatTime(remainingSeconds);
-            timerEl.classList.remove('d-none');
         }
     }
 
-    function tick() {
-        if (intervalSeconds <= 0) return;
-
+    function doReload() {
         // Check if any modal is currently open
         const hasOpenModal = document.querySelector('.modal.show') !== null;
         if (hasOpenModal) {
-            timerEl.textContent = 'Paused';
+            // Postpone reload by 5 seconds if modal is open
+            timeoutId = setTimeout(doReload, 5000);
             return;
         }
 
-        remainingSeconds--;
-        if (remainingSeconds <= 0) {
-            // Save tab state if any
-            const activeTab = document.querySelector('.nav-tabs .nav-link.active, .nav-pills .nav-link.active');
-            if (activeTab && activeTab.id) {
-                sessionStorage.setItem('industry_active_tab', activeTab.id);
-            }
-            window.location.reload();
-            return;
+        // Save tab state if any
+        const activeTab = document.querySelector('.nav-tabs .nav-link.active, .nav-pills .nav-link.active');
+        if (activeTab && activeTab.id) {
+            sessionStorage.setItem('industry_active_tab', activeTab.id);
         }
-
-        timerEl.textContent = formatTime(remainingSeconds);
+        window.location.reload();
     }
 
     function setIntervalVal(val) {
         intervalSeconds = val;
-        remainingSeconds = val;
         localStorage.setItem(STORAGE_KEY, val);
         updateUI();
 
-        if (timerId) {
-            clearInterval(timerId);
-            timerId = null;
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
         }
 
         if (intervalSeconds > 0) {
-            timerId = setInterval(tick, 1000);
+            timeoutId = setTimeout(doReload, intervalSeconds * 1000);
         }
     }
 

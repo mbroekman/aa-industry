@@ -122,6 +122,16 @@
                                                 class="btn btn-sm btn-success"><i class="fas fa-hand-holding-usd"></i>
                                                 {% trans "Claim Selected" %}</button>
                                         </form>
+                                        {% if perms.industry_reforged.corp_access %}
+                                        <div class="vr bg-secondary mx-1"></div>
+                                        <form method="post" action="{% url 'industry_reforged:bulk_delete_tasks' %}"
+                                            id="bulkDeleteUnclaimedForm" class="d-flex align-items-center gap-1 mb-0">
+                                            {% csrf_token %}
+                                            <button type="button" onclick="submitBulkDeleteUnclaimed()"
+                                                class="btn btn-sm btn-outline-danger"><i class="fas fa-trash-alt"></i>
+                                                {% trans "Delete Selected" %}</button>
+                                        </form>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="card-body p-0">
@@ -164,15 +174,29 @@
                                                         {{ task.builder_reward|eve_isk }}
                                                     </td>
                                                     <td class="text-end">
-                                                        {% if not task.bom_parent_id %}
-                                                        <form method="post"
-                                                            action="{% url 'industry_reforged:claim_task' task.id %}"
-                                                            class="d-inline">
-                                                            {% csrf_token %}
-                                                            <button type="submit"
-                                                                class="btn btn-sm btn-success">{% trans "Claim" %}</button>
-                                                        </form>
-                                                        {% endif %}
+                                                        <div class="d-flex justify-content-end gap-1">
+                                                            {% if not task.bom_parent_id %}
+                                                            <form method="post"
+                                                                action="{% url 'industry_reforged:claim_task' task.id %}"
+                                                                class="d-inline">
+                                                                {% csrf_token %}
+                                                                <button type="submit"
+                                                                    class="btn btn-sm btn-success">{% trans "Claim" %}</button>
+                                                            </form>
+                                                            {% endif %}
+                                                            {% if perms.industry_reforged.corp_access %}
+                                                            <form method="post"
+                                                                action="{% url 'industry_reforged:delete_production_task' task.id %}"
+                                                                class="d-inline ms-1"
+                                                                onsubmit="return confirm('{% trans "Are you sure you want to delete this job?" %}');">
+                                                                {% csrf_token %}
+                                                                <button type="submit"
+                                                                    class="btn btn-sm btn-outline-danger" title="{% trans "Delete Job" %}">
+                                                                    <i class="fas fa-trash-alt"></i>
+                                                                </button>
+                                                            </form>
+                                                            {% endif %}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -221,6 +245,15 @@
                                             <button type="button" onclick="submitBulkUnclaim()"
                                                 class="btn btn-sm btn-outline-danger"><i class="fas fa-undo"></i> {% trans "Unclaim Selected" %}</button>
                                         </form>
+                                        {% if perms.industry_reforged.corp_access %}
+                                        <div class="vr bg-secondary mx-1"></div>
+                                        <form method="post" action="{% url 'industry_reforged:bulk_delete_tasks' %}"
+                                            id="bulkDeleteActiveForm" class="d-flex align-items-center mb-0">
+                                            {% csrf_token %}
+                                            <button type="button" onclick="submitBulkDeleteActive()"
+                                                class="btn btn-sm btn-outline-danger"><i class="fas fa-trash-alt"></i> {% trans "Delete Selected" %}</button>
+                                        </form>
+                                        {% endif %}
                                         <div class="vr bg-secondary mx-1"></div>
                                         <div class="dt-search-placeholder" data-table-target="#active-production-table"></div>
                                     </div>
@@ -331,6 +364,17 @@
                                                                     <button type="submit" class="btn btn-sm {% if task.incomplete_children_count > 0 %}btn-warning{% else %}btn-primary{% endif %}"><i
                                                                             class="fas fa-check"></i> Complete</button>
                                                                 </form>
+                                                                {% if perms.industry_reforged.corp_access %}
+                                                                <form method="post"
+                                                                    action="{% url 'industry_reforged:delete_production_task' task.id %}"
+                                                                    class="d-inline ms-1"
+                                                                    onsubmit="return confirm('{% trans "Are you sure you want to delete this job?" %}');">
+                                                                    {% csrf_token %}
+                                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="{% trans "Delete Job" %}">
+                                                                        <i class="fas fa-trash-alt"></i>
+                                                                    </button>
+                                                                </form>
+                                                                {% endif %}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -1182,6 +1226,74 @@
             });
 
             modal.show();
+        }
+
+        function submitBulkDeleteUnclaimed() {
+            var checkboxes = document.getElementsByClassName('unclaimed-checkbox');
+            var selectedIds = [];
+            for (var i = 0, n = checkboxes.length; i < n; i++) {
+                if (checkboxes[i].checked) {
+                    selectedIds.push(checkboxes[i].value);
+                }
+            }
+
+            if (selectedIds.length === 0) {
+                var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
+                document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
+                document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to delete.' %}";
+                errorModal.show();
+                return;
+            }
+
+            if (!confirm("{% trans 'Are you sure you want to permanently delete the selected tasks?' %}")) {
+                return;
+            }
+
+            var form = document.getElementById('bulkDeleteUnclaimedForm');
+            form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
+            selectedIds.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'task_ids';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            form.submit();
+        }
+
+        function submitBulkDeleteActive() {
+            var checkboxes = document.querySelectorAll('.active-checkbox');
+            var selectedIds = [];
+            for (var i = 0, n = checkboxes.length; i < n; i++) {
+                if (checkboxes[i].checked) {
+                    selectedIds.push(checkboxes[i].value);
+                }
+            }
+
+            if (selectedIds.length === 0) {
+                var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
+                document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
+                document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to delete.' %}";
+                errorModal.show();
+                return;
+            }
+
+            if (!confirm("{% trans 'Are you sure you want to permanently delete the selected tasks?' %}")) {
+                return;
+            }
+
+            var form = document.getElementById('bulkDeleteActiveForm');
+            form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
+            selectedIds.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'task_ids';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            form.submit();
         }
 
         $(document).ready(function () {
