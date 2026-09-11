@@ -22,14 +22,12 @@ def task_sync_corp_inventory():
 
     from ..models import CorpInventory, CorporationSyncConfig, IndustryFacility
 
-    # Get all configured industry facilities
+    # Get all configured industry facilities with inventory sync enabled
     facility_ids = set(
         IndustryFacility.objects.filter(sync_inventory=True).values_list(
             "facility_id", flat=True
         )
     )
-    if not facility_ids:
-        return
 
     # Fetch inventory for all corps that have a sync config
     sync_configs = CorporationSyncConfig.objects.all()
@@ -68,29 +66,12 @@ def task_sync_corp_inventory():
                     loc_id = item_locations[loc_id]
                 return loc_id
 
-            # Filter assets matching location_id (including nested)
-            filtered_assets = []
+            # Discover all unique root locations from corporate assets
             all_root_locations = set()
-
             for asset in assets:
                 loc_id = getattr(asset, "location_id")
                 root_loc_id = get_root_location(loc_id)
                 all_root_locations.add(root_loc_id)
-
-                # Check if this asset is in a configured facility
-                if root_loc_id in facility_ids:
-                    type_id = getattr(asset, "type_id")
-                    quantity = getattr(
-                        asset, "quantity", 1
-                    )  # single items don't always have quantity field
-                    ensure_eve_type(type_id)
-                    filtered_assets.append(
-                        {
-                            "type_id": type_id,
-                            "quantity": quantity,
-                            "location_id": root_loc_id,
-                        }
-                    )
 
             if all_root_locations:
                 from ..models.facilities import KnownLocation
@@ -110,33 +91,54 @@ def task_sync_corp_inventory():
 
                 resolve_unknown_locations.delay(valid_loc_ids)
 
-            # Update CorpInventory (only for items not manually overridden)
-            # Reset all non-manual overridden quantities for this corp to 0
-            # so that items that are no longer there are properly zeroed out.
-            CorpInventory.objects.filter(
-                corporation=corp, manual_override=False
-            ).update(quantity=0)
+            # Only sync inventory if there are configured facilities with sync_inventory=True
+            if facility_ids:
+                filtered_assets = []
+                for asset in assets:
+                    loc_id = getattr(asset, "location_id")
+                    root_loc_id = get_root_location(loc_id)
 
-            if filtered_assets:
+                    # Check if this asset is in a configured facility
+                    if root_loc_id in facility_ids:
+                        type_id = getattr(asset, "type_id")
+                        quantity = getattr(
+                            asset, "quantity", 1
+                        )  # single items don't always have quantity field
+                        ensure_eve_type(type_id)
+                        filtered_assets.append(
+                            {
+                                "type_id": type_id,
+                                "quantity": quantity,
+                                "location_id": root_loc_id,
+                            }
+                        )
 
-                # Group by type and location
-                # Standard Library
-                from collections import defaultdict
+                # Update CorpInventory (only for items not manually overridden)
+                # Reset all non-manual overridden quantities for this corp to 0
+                # so that items that are no longer there are properly zeroed out.
+                CorpInventory.objects.filter(
+                    corporation=corp, manual_override=False
+                ).update(quantity=0)
 
-                grouped = defaultdict(int)
-                for fa in filtered_assets:
-                    grouped[(fa["type_id"], fa["location_id"])] += fa["quantity"]
+                if filtered_assets:
+                    # Group by type and location
+                    # Standard Library
+                    from collections import defaultdict
 
-                for (type_id, loc_id), qty in grouped.items():
-                    inv, created = CorpInventory.objects.get_or_create(
-                        corporation=corp,
-                        item_type_id=type_id,
-                        location_id=loc_id,
-                        defaults={"quantity": qty},
-                    )
-                    if not inv.manual_override:
-                        inv.quantity = qty
-                        inv.save()
+                    grouped = defaultdict(int)
+                    for fa in filtered_assets:
+                        grouped[(fa["type_id"], fa["location_id"])] += fa["quantity"]
+
+                    for (type_id, loc_id), qty in grouped.items():
+                        inv, created = CorpInventory.objects.get_or_create(
+                            corporation=corp,
+                            item_type_id=type_id,
+                            location_id=loc_id,
+                            defaults={"quantity": qty},
+                        )
+                        if not inv.manual_override:
+                            inv.quantity = qty
+                            inv.save()
 
             # Check low stock thresholds
             # Standard Library

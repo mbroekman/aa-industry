@@ -65,3 +65,41 @@ class TestInventoryTasks:
 
         task_sync_corp_inventory()
         assert mock_esi.client.Assets.GetCorporationsCorporationIdAssets.called
+
+    @patch("industry_reforged.tasks.utils.resolve_unknown_locations")
+    @patch("industry_reforged.tasks.inventory.esi")
+    @patch("industry_reforged.tasks.inventory.Token.objects.filter")
+    def test_task_sync_corp_inventory_without_configured_facilities(
+        self, mock_filter, mock_esi, mock_resolve
+    ):
+        user = UserFactory()
+        corp = EveCorporationInfoFactory(corporation_id=123)
+        char = EveCharacterFactory(corporation_id=123)
+        CorporationSyncConfig.objects.create(corporation=corp, sync_character=char)
+        # Ensure no facilities have sync_inventory=True
+        IndustryFacility.objects.all().delete()
+
+        token = Token.objects.create(
+            character_id=char.character_id, user=user, access_token="test_token"
+        )
+        mock_filter.return_value.first.return_value = token
+
+        mock_esi.client.Assets.GetCorporationsCorporationIdAssets.return_value.results.return_value = [
+            MagicMock(
+                location_id=1045667241057,
+                type_id=10,
+                quantity=100,
+                item_id=1001,
+                is_singleton=False,
+            )
+        ]
+
+        task_sync_corp_inventory()
+        assert mock_esi.client.Assets.GetCorporationsCorporationIdAssets.called
+
+        from industry_reforged.models.facilities import KnownLocation
+
+        loc = KnownLocation.objects.filter(location_id=1045667241057).first()
+        assert loc is not None
+        assert corp in loc.corporations.all()
+        assert mock_resolve.delay.called

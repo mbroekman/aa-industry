@@ -46,8 +46,14 @@ def update_industry_facilities():
         )
 
     # Also collect location_ids from Corporate Assets
+    from esi.exceptions import HTTPNotModified
+    from ..models.facilities import KnownLocation
 
-    configs = CorporationSyncConfig.objects.select_related("sync_character").all()
+    configs = CorporationSyncConfig.objects.select_related(
+        "sync_character", "corporation"
+    ).all()
+    corp_root_locations = {}
+
     for config in configs:
         token = EveToken.objects.filter(
             character_id=config.sync_character.character_id,
@@ -57,13 +63,35 @@ def update_industry_facilities():
             try:
                 assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=config.corporation.corporation_id, token=token
-                ).results()
+                ).results(use_etag=False)
+
+                item_locations = {}
                 for asset in assets:
-                    if getattr(asset, "location_type", "") in [
-                        "station",
-                        "other",
-                    ] and getattr(asset, "location_id", None):
-                        facility_ids.add(asset.location_id)
+                    item_id = getattr(asset, "item_id", getattr(asset, "id", None))
+                    if item_id:
+                        item_locations[item_id] = getattr(asset, "location_id", None)
+
+                def get_root_location(loc_id):
+                    visited = set()
+                    while loc_id in item_locations:
+                        if loc_id in visited:
+                            break
+                        visited.add(loc_id)
+                        loc_id = item_locations[loc_id]
+                    return loc_id
+
+                corp_roots = set()
+                for asset in assets:
+                    loc_id = getattr(asset, "location_id", None)
+                    if loc_id:
+                        root_loc = get_root_location(loc_id)
+                        if root_loc:
+                            facility_ids.add(root_loc)
+                            corp_roots.add(root_loc)
+
+                corp_root_locations[config.corporation] = corp_roots
+            except HTTPNotModified:
+                pass
             except Exception as e:
                 logger.error(f"Failed to fetch assets for facility resolution: {e}")
 
@@ -83,14 +111,27 @@ def update_industry_facilities():
                 for s in structures:
                     if getattr(s, "structure_id", None):
                         facility_ids.add(s.structure_id)
+            except HTTPNotModified:
+                pass
             except Exception as e:
                 logger.error(f"Failed to fetch structures for facility resolution: {e}")
+
+    # Ensure all corporate root locations are registered in KnownLocation and linked to the corp
+    for corp, roots in corp_root_locations.items():
+        for loc_id in roots:
+            loc, _ = KnownLocation.objects.get_or_create(location_id=loc_id)
+            loc.corporations.add(corp)
 
     if not facility_ids:
         return
 
-    # Identify missing ones
-    existing = set(IndustryFacility.objects.values_list("facility_id", flat=True))
+    # Identify missing ones or facilities with generic/unresolved names
+    existing = set(
+        IndustryFacility.objects.exclude(name="")
+        .exclude(name__startswith="Structure ")
+        .exclude(name__startswith="Station ")
+        .values_list("facility_id", flat=True)
+    )
     missing = facility_ids - existing
 
     if not missing:
@@ -118,18 +159,20 @@ def update_industry_facilities():
                 if st_resp.status_code == 200:
                     data = st_resp.json()
                     sys_id = data.get("system_id", None)
-                    IndustryFacility.objects.create(
+                    name = data.get("name", f"Station {loc_id}")
+                    IndustryFacility.objects.update_or_create(
                         facility_id=loc_id,
-                        name=data.get("name", f"Station {loc_id}"),
-                        owner_id=data.get("owner", None),
-                        solar_system_id=sys_id,
-                        type_id=data.get("type_id", None),
-                        security_space=_get_security_space(sys_id),
-                        is_production_facility=False,
+                        defaults={
+                            "name": name,
+                            "owner_id": data.get("owner", None),
+                            "solar_system_id": sys_id,
+                            "type_id": data.get("type_id", None),
+                            "security_space": _get_security_space(sys_id),
+                        },
                     )
+                    KnownLocation.objects.filter(location_id=loc_id).update(name=name)
             else:
                 # Upwell Structure
-
                 for token in valid_tokens:
                     access_token = token.valid_access_token()
                     headers = {
@@ -143,16 +186,18 @@ def update_industry_facilities():
                     if str_resp.status_code == 200:
                         data = str_resp.json()
                         sys_id = data.get("solar_system_id", None)
-                        IndustryFacility.objects.create(
+                        name = data.get("name", f"Structure {loc_id}")
+                        IndustryFacility.objects.update_or_create(
                             facility_id=loc_id,
-                            name=data.get("name", f"Structure {loc_id}"),
-                            owner_id=data.get("owner_id", None),
-                            solar_system_id=sys_id,
-                            type_id=data.get("type_id", None),
-                            security_space=_get_security_space(sys_id),
-                            is_production_facility=False,
+                            defaults={
+                                "name": name,
+                                "owner_id": data.get("owner_id", None),
+                                "solar_system_id": sys_id,
+                                "type_id": data.get("type_id", None),
+                                "security_space": _get_security_space(sys_id),
+                            },
                         )
-
+                        KnownLocation.objects.filter(location_id=loc_id).update(name=name)
                         break
         except Exception as e:
             logger.error(f"Error resolving facility {loc_id}: {e}")

@@ -84,6 +84,25 @@ def get_corporate_structures_for_dropdown(corporation):
             )
             known_facility_ids.add(fac.facility_id)
 
+    # Third, include any KnownLocation associated with this corporation
+    from ..models.facilities import KnownLocation
+
+    for loc in KnownLocation.objects.filter(corporations=corporation):
+        if (
+            loc.location_id not in known_facility_ids
+            and loc.location_id not in production_facility_ids
+        ):
+            structures.append(
+                {
+                    "id": loc.location_id,
+                    "name": loc.name,
+                    "type_id": "",
+                    "system_id": "",
+                }
+            )
+            known_facility_ids.add(loc.location_id)
+
+    structures.sort(key=lambda s: s["name"].lower())
     return structures
 
 

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **industrialist**: add delete action and bulk delete for CP users on available and active jobs
 - **i18n**: fully update and compile Dutch translations (`nl`) covering all features through v0.12.x (AI Market Manager, Basket management, Opportunity Scanners, Blueprints, Ledgers, etc.)
 
+### Fix
+
+- **facilities**: resolve Upwell structure locations from corporate assets container hierarchies into `IndustryFacility` and `KnownLocation`, ensuring alliance structures (such as C-N Keepstar) appear in facilities and hub dropdowns after a fresh install
+- **inventory**: prevent premature exit in `task_sync_corp_inventory` when no facility has `sync_inventory=True`, ensuring known locations are always discovered
+
 ## v0.12.2 (2026-09-08)
 
 ### Fix

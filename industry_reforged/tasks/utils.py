@@ -265,10 +265,25 @@ def resolve_unknown_locations(location_ids=None):
                         timeout=5,
                     )
                     if resp.status_code == 200:
+                        data = resp.json()
                         loc = loc_objects[loc_id]
-                        loc.name = resp.json().get("name")
+                        loc.name = data.get("name")
                         loc.save()
                         unresolved_ids.discard(loc_id)
+
+                        # Also populate/update IndustryFacility so structure is visible as facility
+                        from ..models.facilities import IndustryFacility
+                        sys_id = data.get("solar_system_id")
+                        IndustryFacility.objects.update_or_create(
+                            facility_id=loc_id,
+                            defaults={
+                                "name": data.get("name", f"Structure {loc_id}"),
+                                "owner_id": data.get("owner_id"),
+                                "solar_system_id": sys_id,
+                                "type_id": data.get("type_id"),
+                                "security_space": _get_security_space(sys_id),
+                            },
+                        )
                 except Exception as e:
                     logger.error(f"Failed to fetch structure name for {loc_id}: {e}")
 
