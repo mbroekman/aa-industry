@@ -23,7 +23,8 @@ from .orders.notifications import notify_order_ready
 def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     """Main execution dashboard for industrialists"""
     # Keep session alive on auto-refresh
-    request.session.modified = True
+    if hasattr(request, "session"):
+        request.session.modified = True
 
     # Setup corp context
     main_char = request.user.profile.main_character

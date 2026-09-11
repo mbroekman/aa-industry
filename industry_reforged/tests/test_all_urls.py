@@ -443,6 +443,17 @@ class TestAllUrls:
         except Exception:
             pass
 
+    def test_bulk_delete_tasks(self, superuser_client):
+        url = reverse("industry_reforged:bulk_delete_tasks")
+        try:
+            superuser_client.get(url)
+        except Exception:
+            pass
+        try:
+            superuser_client.post(url, {"task_ids": [1]})
+        except Exception:
+            pass
+
     def test_mark_order_paid(self, superuser_client):
         url = reverse("industry_reforged:mark_order_paid", kwargs={"order_id": 1})
         try:

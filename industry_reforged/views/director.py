@@ -164,15 +164,55 @@ def delete_buy_order(request: WSGIRequest, order_id: int) -> HttpResponse:
 @login_required
 @permission_required("industry_reforged.corp_access")
 def delete_production_task(request: WSGIRequest, task_id: int) -> HttpResponse:
-    """Delete a ProductionTask. Used by directors to clean up spawned restock jobs."""
+    """Delete a ProductionTask. Used by directors to clean up spawned restock jobs, basket jobs, or any production task."""
     if request.method == "POST":
         from ..models import ProductionTask
 
         task = get_object_or_404(ProductionTask, id=task_id)
         item_name = task.item_type.name
+        # Also clean up subtasks if present
+        task.bom_children.all().delete()
         task.delete()
-        messages.success(request, f"Production Task for {item_name} deleted.")
+        messages.success(
+            request,
+            _("Production Task for %(item_name)s deleted.")
+            % {"item_name": item_name},
+        )
 
+    referer = request.META.get("HTTP_REFERER")
+    if referer and ("industry" in referer):
+        return redirect(referer)
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=tasks")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def bulk_delete_tasks(request: WSGIRequest) -> HttpResponse:
+    """Bulk delete ProductionTasks. Only available to CP users/directors."""
+    if request.method == "POST":
+        from ..models import ProductionTask
+
+        task_ids = request.POST.getlist("task_ids")
+        if task_ids:
+            tasks = ProductionTask.objects.filter(id__in=task_ids)
+            count = tasks.count()
+            if count > 0:
+                # Also delete subtasks of these tasks
+                ProductionTask.objects.filter(bom_parent__in=tasks).delete()
+                tasks.delete()
+                messages.success(
+                    request,
+                    _("Successfully deleted %(count)s production task(s).")
+                    % {"count": count},
+                )
+            else:
+                messages.warning(request, _("No valid tasks found to delete."))
+        else:
+            messages.warning(request, _("No tasks selected for deletion."))
+
+    referer = request.META.get("HTTP_REFERER")
+    if referer and ("industry" in referer):
+        return redirect(referer)
     return redirect(reverse("industry_reforged:director_dashboard") + "?tab=tasks")
 
 
