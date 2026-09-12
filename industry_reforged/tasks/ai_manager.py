@@ -250,14 +250,32 @@ def scan_market_opportunities(
         # 3. Evaluate each candidate
         opportunities = []
         auto_added_count = 0
+        evaluation_details = []
         from ..models.ai_manager import AIMarketLog
 
         for eve_type in candidates:
             velocity = get_market_velocity(eve_type.id, region_id=region_id, days=30)
             margin, sell_price, build_cost = calculate_profitability(eve_type)
 
+            # Build evaluation record for audit log
+            eval_entry = {
+                "item": eve_type.name,
+                "type_id": eve_type.id,
+                "velocity": round(velocity, 2),
+                "min_velocity": min_velocity,
+                "margin": round(margin, 1),
+                "min_margin": min_profit_margin,
+                "sell_price": round(sell_price, 2),
+                "build_cost": round(build_cost, 2),
+            }
+
             # We only care about positive velocity and positive margin based on thresholds
             if velocity >= min_velocity and margin >= min_profit_margin:
+                eval_entry["decision"] = "OPPORTUNITY"
+                eval_entry["reason"] = (
+                    f"ADV {velocity:.1f} ≥ {min_velocity} and margin {margin:.1f}% ≥ {min_profit_margin}%"
+                )
+
                 opportunities.append(
                     MarketOpportunity(
                         corporation_id=corporation_id,
@@ -302,6 +320,24 @@ def scan_market_opportunities(
                             reason=f"Scanner '{scanner.name}' found opportunity with margin {margin:.1f}% (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f}). Current corp stock: {current_stock}, in-flight: {in_flight}.",
                         )
                         auto_added_count += 1
+                        eval_entry["auto_added"] = True
+                        eval_entry["target_stock"] = target_stock
+                        eval_entry["batch_size"] = batch_size
+            else:
+                # Record why this item was rejected
+                reasons = []
+                if velocity < min_velocity:
+                    reasons.append(
+                        f"ADV {velocity:.1f} < {min_velocity}"
+                    )
+                if margin < min_profit_margin:
+                    reasons.append(
+                        f"Margin {margin:.1f}% < {min_profit_margin}%"
+                    )
+                eval_entry["decision"] = "SKIPPED"
+                eval_entry["reason"] = "; ".join(reasons)
+
+            evaluation_details.append(eval_entry)
 
         # 4. Evaluate missing BPOs if requested
         missing_bpo_count = 0
@@ -363,6 +399,7 @@ def scan_market_opportunities(
                 opportunities_found=len(opportunities),
                 items_auto_added=auto_added_count,
                 details=result_msg,
+                evaluation_details=evaluation_details,
             )
 
         return result_msg

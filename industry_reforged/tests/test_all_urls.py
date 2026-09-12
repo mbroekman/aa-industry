@@ -761,3 +761,10 @@ class TestAllUrls:
             superuser_client.post(url)
         except Exception:
             pass
+
+    def test_scanner_missing_bpos(self, superuser_client):
+        url = reverse("industry_reforged:scanner_missing_bpos", kwargs={"pk": 1})
+        try:
+            superuser_client.get(url)
+        except Exception:
+            pass

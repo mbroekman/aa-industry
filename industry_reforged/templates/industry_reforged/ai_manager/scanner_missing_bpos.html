@@ -8,7 +8,7 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="fas fa-exclamation-triangle me-2"></i> Missing Blueprints for {{ scanner.name }}
+                    <i class="fas fa-exclamation-triangle me-2"></i> {% translate "Missing Blueprints for" %} {{ scanner.name }}
                 </h5>
                 <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="btn btn-sm btn-light">
                     <i class="fas fa-arrow-left"></i> {% translate "Back to Dashboard" %}
@@ -20,29 +20,33 @@
                 </p>
                 {% if missing_bpos %}
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover align-middle">
+                        <table class="table table-striped table-hover align-middle" id="missingBposTable">
                             <thead class="table-light">
                                 <tr>
                                     <th>{% translate "Item" %}</th>
-                                    <th>{% translate "Margin" %}</th>
-                                    <th>{% translate "Velocity (30d)" %}</th>
+                                    <th class="text-end">{% translate "Velocity (30d)" %}</th>
+                                    <th class="text-end">{% translate "Margin" %}</th>
                                     <th>{% translate "Found At" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for bpo in missing_bpos %}
                                     <tr>
-                                        <td>
+                                        <td data-order="{{ bpo.eve_type.name }}">
                                             <div class="d-flex align-items-center">
                                                 <img src="https://images.evetech.net/types/{{ bpo.eve_type.id }}/icon?size=32" alt="{{ bpo.eve_type.name }}" class="me-2 rounded">
-                                                <span>{{ bpo.eve_type.name }}</span>
+                                                <strong>{{ bpo.eve_type.name }}</strong>
                                             </div>
                                         </td>
-                                        <td>
+                                        <td class="text-end" data-order="{{ bpo.velocity }}">
+                                            {{ bpo.velocity|floatformat:1|intcomma }} / {% translate "day" %}
+                                        </td>
+                                        <td class="text-end" data-order="{{ bpo.margin }}">
                                             <span class="badge bg-success">{{ bpo.margin|floatformat:1 }}%</span>
                                         </td>
-                                        <td>{{ bpo.velocity|floatformat:1 }}</td>
-                                        <td><small class="text-muted">{{ bpo.timestamp|date:"Y-m-d H:i" }}</small></td>
+                                        <td data-order="{{ bpo.timestamp|date:'c' }}">
+                                            <small class="text-muted">{{ bpo.timestamp|date:"Y-m-d H:i" }}</small>
+                                        </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -57,4 +61,22 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        if ($('#missingBposTable').length) {
+            $('#missingBposTable').DataTable({
+                "order": [[1, "desc"]], // Default sort by Velocity descending
+                "pageLength": 25,
+                "language": {
+                    "search": "{% translate 'Search:' %}",
+                    "emptyTable": "{% translate 'No missing blueprints found for this scanner.' %}"
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

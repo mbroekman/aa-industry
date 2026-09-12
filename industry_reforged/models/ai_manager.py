@@ -224,6 +224,13 @@ class OpportunityScannerLog(models.Model):
     opportunities_found = models.PositiveIntegerField(default=0)
     items_auto_added = models.PositiveIntegerField(default=0)
     details = models.TextField(blank=True, null=True)
+    evaluation_details = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_(
+            "Per-item evaluation breakdown: velocity, margin, prices, thresholds, and decision."
+        ),
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:

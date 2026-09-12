@@ -280,7 +280,7 @@ def scanner_missing_bpos(request, pk):
         messages.error(request, _("You do not have permission to view this scanner."))
         return redirect("industry_reforged:ai_manager_dashboard")
 
-    missing_bpos = scanner.missing_opportunities.all()
+    missing_bpos = scanner.missing_opportunities.select_related("eve_type").all()
 
     context = {
         "scanner": scanner,

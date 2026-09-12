@@ -20,6 +20,7 @@
                         <table class="table table-striped table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
+                                    <th></th>
                                     <th>{% translate "Timestamp" %}</th>
                                     <th>{% translate "Items Scanned" %}</th>
                                     <th>{% translate "Opportunities" %}</th>
@@ -29,7 +30,12 @@
                             </thead>
                             <tbody>
                                 {% for log in logs %}
-                                    <tr>
+                                    <tr class="{% if log.evaluation_details %}cursor-pointer{% endif %}" {% if log.evaluation_details %}data-bs-toggle="collapse" data-bs-target="#eval-{{ log.pk }}" aria-expanded="false"{% endif %}>
+                                        <td>
+                                            {% if log.evaluation_details %}
+                                                <i class="fas fa-chevron-right eval-toggle" id="toggle-{{ log.pk }}"></i>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ log.timestamp|date:"Y-m-d H:i" }}</td>
                                         <td>{{ log.items_scanned }}</td>
                                         <td>
@@ -48,6 +54,61 @@
                                         </td>
                                         <td><small>{{ log.details }}</small></td>
                                     </tr>
+                                    {% if log.evaluation_details %}
+                                    <tr class="collapse" id="eval-{{ log.pk }}">
+                                        <td colspan="6" class="p-0">
+                                            <div class="p-3 bg-light">
+                                                <h6 class="mb-2"><i class="fas fa-microscope me-1"></i> {% translate "Per-Item Evaluation" %}</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead class="table-dark">
+                                                            <tr>
+                                                                <th>{% translate "Item" %}</th>
+                                                                <th class="text-end">{% translate "ADV (30d)" %}</th>
+                                                                <th class="text-end">{% translate "Min ADV" %}</th>
+                                                                <th class="text-end">{% translate "Margin" %}</th>
+                                                                <th class="text-end">{% translate "Min Margin" %}</th>
+                                                                <th class="text-end">{% translate "Sell Price" %}</th>
+                                                                <th class="text-end">{% translate "Build Cost" %}</th>
+                                                                <th>{% translate "Decision" %}</th>
+                                                                <th>{% translate "Reason" %}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for entry in log.evaluation_details %}
+                                                            <tr class="{% if entry.decision == 'OPPORTUNITY' %}table-success{% else %}table-light{% endif %}">
+                                                                <td>
+                                                                    {% if entry.type_id %}
+                                                                    <img src="https://images.evetech.net/types/{{ entry.type_id }}/icon?size=32" class="rounded me-1" alt="{{ entry.item }}" style="width:20px;height:20px;">
+                                                                    {% endif %}
+                                                                    <strong>{{ entry.item }}</strong>
+                                                                    {% if entry.auto_added %}
+                                                                        <span class="badge bg-primary ms-1" title="{% translate 'Auto-added to basket' %}"><i class="fas fa-plus-circle"></i></span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td class="text-end">{{ entry.velocity }}</td>
+                                                                <td class="text-end text-muted">{{ entry.min_velocity }}</td>
+                                                                <td class="text-end {% if entry.decision == 'OPPORTUNITY' %}text-success fw-bold{% endif %}">{{ entry.margin }}%</td>
+                                                                <td class="text-end text-muted">{{ entry.min_margin }}%</td>
+                                                                <td class="text-end">{{ entry.sell_price|floatformat:2|intcomma }}</td>
+                                                                <td class="text-end">{{ entry.build_cost|floatformat:2|intcomma }}</td>
+                                                                <td>
+                                                                    {% if entry.decision == "OPPORTUNITY" %}
+                                                                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>{% translate "Pass" %}</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-secondary"><i class="fas fa-times me-1"></i>{% translate "Skip" %}</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td><small>{{ entry.reason }}</small></td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -61,4 +122,40 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .cursor-pointer:hover { background-color: rgba(0,0,0,0.03); }
+    .eval-toggle {
+        transition: transform 0.2s ease;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    tr[aria-expanded="true"] .eval-toggle {
+        transform: rotate(90deg);
+    }
+</style>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(row) {
+            var targetId = row.getAttribute('data-bs-target');
+            var collapseEl = document.querySelector(targetId);
+            if (collapseEl) {
+                collapseEl.addEventListener('show.bs.collapse', function() {
+                    row.setAttribute('aria-expanded', 'true');
+                });
+                collapseEl.addEventListener('hide.bs.collapse', function() {
+                    row.setAttribute('aria-expanded', 'false');
+                });
+            }
+        });
+    });
+</script>
 {% endblock %}
