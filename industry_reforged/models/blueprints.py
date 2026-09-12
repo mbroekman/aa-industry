@@ -36,7 +36,7 @@ class CorpBlueprint(models.Model):
 
     @property
     def is_original(self):
-        return self.quantity == -1 or self.quantity == -2 or self.runs == -1
+        return self.quantity == -1 or self.runs == -1
 
 
 class BlueprintRequest(models.Model):

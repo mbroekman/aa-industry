@@ -5,6 +5,9 @@
 ## 1. Task Management via `backlog-md` Tool
 
 * **Task Registration First:** Whenever you receive a new assignment, feature request, or bug report, you **MUST FIRST** execute the `backlog-md` tool to convert the request into actionable technical tasks before writing or modifying any code.
+* **Task Creation for Session Continuity:** Always create a detailed Backlog task before starting work. Record investigation findings, acceptance criteria, and plan steps in the task so fresh sessions can immediately read up on full context.
+* **Temporary Files Cleanup:** Always remove temporary debug or test scripts after use to keep the repository clean.
+* **Always Run Tests Before Completing:** You must at all times first run the tests to verify correctness before reporting any task or feature as done.
 * **Tool Workflow:**
     1. **Read:** Execute the tool to read the current backlog and determine the next priority.
     2. **Create:** Pass the parsed user request to the `backlog-md` tool to generate new tasks.

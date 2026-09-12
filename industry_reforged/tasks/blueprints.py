@@ -47,24 +47,38 @@ def _sync_corp_blueprints(config):
         corporation=config.corporation
     ).exists()
 
-    try:
-        req = esi.client.Corporation.GetCorporationsCorporationIdBlueprints(
-            corporation_id=corp_id, page=1, token=token
-        )
-        if db_is_empty:
-            req._clear_etag()
-            req._clear_cache()
+    all_blueprints_data = []
+    page = 1
+    while True:
+        try:
+            req = esi.client.Corporation.GetCorporationsCorporationIdBlueprints(
+                corporation_id=corp_id, page=page, token=token
+            )
+            if page == 1 and db_is_empty:
+                req._clear_etag()
+                req._clear_cache()
 
-        blueprints_data = req.results()
-    except HTTPNotModified:
-        return
-    except Exception as e:
-        logger.error(f"Failed to fetch blueprints for corp {corp_id}: {e}")
-        return
+            res = req.results()
+            if not res:
+                break
+            
+            all_blueprints_data.extend(res)
+
+            # Check if there are more pages
+            if len(res) < 1000:
+                break
+
+            page += 1
+        except HTTPNotModified:
+            # Only break if it's the first page; ESI might return NotModified
+            break
+        except Exception as e:
+            logger.error(f"Failed to fetch blueprints for corp {corp_id} on page {page}: {e}")
+            break
 
     seen_item_ids = set()
 
-    for bp in blueprints_data:
+    for bp in all_blueprints_data:
         item_id = getattr(bp, "item_id", None)
         type_id = getattr(bp, "type_id", None)
         location_id = getattr(bp, "location_id", None)

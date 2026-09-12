@@ -224,7 +224,7 @@ def scan_market_opportunities(
         # 1. Get all product types the corporation can build
         # First, get type IDs of all blueprints the corp owns
         corp_blueprints = CorpBlueprint.objects.filter(
-            corporation_id=corporation_id
+            corporation__corporation_id=corporation_id
         ).values_list("eve_type_id", flat=True)
 
         # Then get the product type IDs for these blueprints (Activity 1 = Manufacturing, 11 = Reactions output)
