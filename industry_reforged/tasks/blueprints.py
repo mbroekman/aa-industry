@@ -49,6 +49,7 @@ def _sync_corp_blueprints(config):
 
     all_blueprints_data = []
     page = 1
+    page_success = True
     while True:
         try:
             req = esi.client.Corporation.GetCorporationsCorporationIdBlueprints(
@@ -70,10 +71,13 @@ def _sync_corp_blueprints(config):
 
             page += 1
         except HTTPNotModified:
-            # Only break if it's the first page; ESI might return NotModified
+            if page == 1:
+                return
+            page_success = False
             break
         except Exception as e:
             logger.error(f"Failed to fetch blueprints for corp {corp_id} on page {page}: {e}")
+            page_success = False
             break
 
     seen_item_ids = set()
@@ -110,6 +114,7 @@ def _sync_corp_blueprints(config):
         )
 
     # Delete blueprints that no longer exist for this corp
-    CorpBlueprint.objects.filter(corporation=config.corporation).exclude(
-        item_id__in=seen_item_ids
-    ).delete()
+    if page_success:
+        CorpBlueprint.objects.filter(corporation=config.corporation).exclude(
+            item_id__in=seen_item_ids
+        ).delete()
