@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **i18n**: fully update and compile Dutch translations (`nl`) covering all features through v0.12.x (AI Market Manager, Basket management, Opportunity Scanners, Blueprints, Ledgers, etc.)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.12.2 (2026-09-08)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -36,6 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.12.1 (2026-09-08)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **ai**: configure AI Manager to use `final_price` adjusting for overrides when calculating profitability margins
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -66,6 +70,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.10.1 (2026-09-04)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -99,6 +104,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **ui**: add configurable page auto-refresh (5m, 10m, 15m, 25m, 30m) with countdown timer and active tab persistence across jobs and PI dashboards (TASK-120)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -116,6 +122,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.8.4 (2026-09-03)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -125,6 +132,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.8.3 (2026-09-03)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -144,6 +152,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **industry**: add factory depletion timers and end product visibility on launchpads (TASK-112)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -175,6 +184,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.7 (2026-08-28)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -194,6 +204,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - blueprint library category filtering added
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -205,6 +216,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.3 (2026-08-27)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -214,6 +226,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.2 (2026-08-26)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -223,6 +236,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.1 (2026-08-26)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -237,6 +251,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - improve Build Steps remaining calculation and dashboard UI
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -246,6 +261,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.4.2 (2026-08-25)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -259,6 +275,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - split job linking to fix overdelivery and add expected output to dashboard (Fixes #36, Fixes #33)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -280,6 +297,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - display version number in header
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -293,6 +311,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.3.8 (2026-08-17)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -304,6 +323,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.3.6 (2026-08-15)
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -326,6 +346,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - add release 0.3.1 documentation for PI sync, translation, and job market bugfixes
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -363,6 +384,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - replace HTMX facility updates with server-side page reloads and add ME override management for corporate quotes
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -382,6 +404,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - add facility management and production task control improvements with updated documentation
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
@@ -406,6 +429,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - implement industrialist dashboard, production task system, and leaderboard with associated UI and management permissions.
 
 ### Fix
+- **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals

@@ -78,6 +78,7 @@ def evaluate_baskets(basket_id=None):
 
             # AI Forecast override
             # Third Party
+            import math
             import requests
 
             try:
@@ -96,9 +97,9 @@ def evaluate_baskets(basket_id=None):
                 if ai_resp.get("confidence_score", 0.0) == 0.5:
                     target_stock = b_item.target_stock_level
                 else:
-                    target_stock = ai_resp.get(
+                    target_stock = math.ceil(ai_resp.get(
                         "reorder_point", b_item.target_stock_level
-                    )
+                    ))
             except Exception:
                 target_stock = b_item.target_stock_level
 
