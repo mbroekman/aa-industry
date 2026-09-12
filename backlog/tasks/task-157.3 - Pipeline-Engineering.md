@@ -1,9 +1,10 @@
 ---
 id: TASK-157.3
 title: Pipeline Engineering
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-12 11:46'
+updated_date: '2026-09-12 12:08'
 labels: []
 dependencies: []
 parent_task_id: TASK-157
@@ -18,5 +19,11 @@ Implement features.py (including external context features like pings/prices) an
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Model trains successfully on historical data and saves artifact
+- [x] #1 Model trains successfully on historical data and saves artifact
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Implemented features.py and train.py for LightGBM pipeline.
+<!-- SECTION:NOTES:END -->

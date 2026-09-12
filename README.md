@@ -212,6 +212,11 @@ CELERYBEAT_SCHEDULE["industry_evaluate_ai_scanners"] = {
     "schedule": crontab(minute="0"),  # Every hour
 }
 
+CELERYBEAT_SCHEDULE["industry_sync_ml_market_data"] = {
+    "task": "industry_reforged.tasks.sync_market_data_to_ml_service",
+    "schedule": crontab(minute="0", hour="*/12"),  # Twice a day
+}
+
 CELERYBEAT_SCHEDULE["industry_sync_all_rigs"] = {
     "task": "industry_reforged.tasks.task_sync_all_rigs",
     "schedule": crontab(minute="0", hour="*/6"),  # Every 6 hours
@@ -253,9 +258,26 @@ After updating `local.py`, be sure to restart your Celery worker and Celery Beat
 
 
 
-### 7. AI Market Manager
+### 7. AI Market Manager & Forecasting Service
 
-The AI Market Manager can automatically evaluate item profitability and create Production Tasks for your corporation based on minimum margin floors.
+The AI Market Manager can automatically evaluate item profitability and create Production Tasks for your corporation based on minimum margin floors. It is backed by a dedicated **AI Forecasting Microservice** that predicts market demand using Machine Learning (LightGBM).
+
+#### Deploying the AI Forecasting Microservice
+Because Machine Learning models require specific data science libraries that are heavy on CPU and Memory, the AI forecasting engine runs as an isolated microservice.
+
+1. Navigate to the `ai-forecasting` directory inside the repository.
+2. Build the container image using Podman (or Docker):
+   ```bash
+   podman build -t aa-industry-ai-forecasting .
+   ```
+3. Run the container on port 8050:
+   ```bash
+   podman run -d --name ai-forecasting -p 127.0.0.1:8050:8000 aa-industry-ai-forecasting
+   ```
+
+*(Note: If the microservice is not running, the Market Manager will gracefully fall back to using static 30-day historical averages instead of AI predictions).*
+
+#### Using the Market Manager
 To utilize this feature:
 1. Define **Baskets** in the Admin panel and add **Basket Items**.
 2. Configure your `CorporationPricingConfig` to set the `minimum_margin_floor`.

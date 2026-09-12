@@ -128,3 +128,40 @@ def check_availability(eve_type, target_market=None, corporation_id=None):
     in_flight = sum(task.quantity for task in tasks_qs)
 
     return total_inventory, in_flight
+
+
+def get_market_stock(type_id, region_id, location_id):
+    """
+    Fetches public market orders for a given type_id in a region.
+    Filters for sell orders at the specified location_id (hub).
+    Returns the total volume_remain of these orders.
+    """
+    if not region_id or not location_id:
+        return 0
+
+    url = f"https://esi.evetech.net/latest/markets/{region_id}/orders/"
+    params = {
+        "datasource": "tranquility",
+        "order_type": "sell",
+        "type_id": type_id,
+    }
+    headers = {
+        "User-Agent": "aa-industry-reforged / Direct ESI Market Client",
+        "Accept": "application/json",
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        if response.status_code == 200:
+            orders = response.json()
+            # Filter for the specific location_id
+            stock = sum(
+                int(o.get("volume_remain", 0)) 
+                for o in orders 
+                if o.get("location_id") == location_id
+            )
+            return stock
+    except Exception as e:
+        logger.warning(f"Failed to fetch market stock for {type_id} in region {region_id}: {e}")
+
+    return 0

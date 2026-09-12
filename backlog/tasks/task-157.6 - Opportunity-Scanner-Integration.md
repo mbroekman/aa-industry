@@ -1,9 +1,10 @@
 ---
 id: TASK-157.6
 title: Opportunity Scanner Integration
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-12 11:49'
+updated_date: '2026-09-12 12:11'
 labels: []
 dependencies: []
 parent_task_id: TASK-157
@@ -18,5 +19,11 @@ Update the Opportunity Scanner to query the FastAPI /forecast endpoint for deman
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Scanner UI shows AI-backed velocity/confidence and correctly sorts opportunities based on the AI predictions
+- [x] #1 Scanner UI shows AI-backed velocity/confidence and correctly sorts opportunities based on the AI predictions
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Updated MarketOpportunity model, updated scanner logic in tasks/ai_manager.py to use /forecast, and added AI columns to opportunities.html.
+<!-- SECTION:NOTES:END -->

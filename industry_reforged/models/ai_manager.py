@@ -132,6 +132,8 @@ class MarketOpportunity(models.Model):
         help_text=_("Specific facility if scanned for a hub."),
     )
     velocity = models.FloatField(help_text=_("Average Daily Volume (ADV)"))
+    forecasted_velocity = models.FloatField(null=True, blank=True, help_text=_("AI Forecasted Daily Volume"))
+    ai_confidence_score = models.FloatField(null=True, blank=True, help_text=_("AI Confidence Score (0-1)"))
     margin = models.FloatField(help_text=_("Estimated profit margin %"))
     last_updated = models.DateTimeField(auto_now=True)
 

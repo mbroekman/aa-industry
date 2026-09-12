@@ -64,7 +64,8 @@
                                                         <thead class="table-dark">
                                                             <tr>
                                                                 <th>{% translate "Item" %}</th>
-                                                                <th class="text-end">{% translate "ADV (30d)" %}</th>
+                                                                <th class="text-end" title="{% translate 'Average Daily Volume (historical 30 days)' %}">{% translate "ADV (30d)" %}</th>
+                                                                <th class="text-end text-info" title="{% translate 'AI Forecasted Daily Volume' %}"><i class="fas fa-robot"></i> {% translate "AI Forecast" %}</th>
                                                                 <th class="text-end">{% translate "Min ADV" %}</th>
                                                                 <th class="text-end">{% translate "Margin" %}</th>
                                                                 <th class="text-end">{% translate "Min Margin" %}</th>
@@ -87,6 +88,13 @@
                                                                     {% endif %}
                                                                 </td>
                                                                 <td class="text-end">{{ entry.velocity }}</td>
+                                                                <td class="text-end text-info fw-bold">
+                                                                    {% if entry.forecasted_velocity %}
+                                                                        {{ entry.forecasted_velocity }}
+                                                                    {% else %}
+                                                                        -
+                                                                    {% endif %}
+                                                                </td>
                                                                 <td class="text-end text-muted">{{ entry.min_velocity }}</td>
                                                                 <td class="text-end {% if entry.decision == 'OPPORTUNITY' %}text-success fw-bold{% endif %}">{{ entry.margin }}%</td>
                                                                 <td class="text-end text-muted">{{ entry.min_margin }}%</td>

@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ai-forecasting"
+version = "0.1.0"
+description = "AI Demand Forecasting Service"
+authors = ["Admin <admin@example.com>"]
+readme = "README.md"
+packages = [{include = "ai_forecasting"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110.0"
+uvicorn = {extras = ["standard"], version = "^0.27.1"}
+sqlalchemy = "^2.0.28"
+pandas = "^2.2.1"
+lightgbm = "^4.3.0"
+scikit-learn = "^1.4.1"
+joblib = "^1.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

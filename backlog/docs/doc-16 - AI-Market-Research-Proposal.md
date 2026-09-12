@@ -61,13 +61,21 @@ The existing Opportunity Scanner will be enhanced to utilize the AI service:
 *   Instead of relying on naive `velocity` metrics, the scanner will query the `/forecast` endpoint for new items.
 *   If the AI model predicts a sustained high demand (despite external factors), the opportunity will be marked as "High Confidence", providing Directors with more reliable market discovery insights.
 
-## 4. Implementation Steps
+## 4. Implementation Status (Completed)
 
-1.  **Project & Docker Setup**: Initialize the new codebase (Poetry) and setup the Docker image for FastAPI.
-2.  **API Data Ingestion**: Setup schemas (Pydantic) and endpoints to receive and store data from Alliance Auth.
-3.  **Pipeline Engineering**: Implement `features.py` (including external context features) and `train.py` with test datasets.
-4.  **Engine Development**: Implement ROP calculations using blueprint build times and flexible margins.
-5.  **Integration in `aa-industry`**:
-    *   Write an Auth Celery task to periodically push data to `/ingest` and trigger `/retrain`.
-    *   Adapt the `evaluate_baskets` module to call `/forecast` instead of using static target levels.
-    *   Update the Opportunity Scanner logic to query the AI model for forecasted demand instead of using naive velocity, and display confidence metrics in the scanner UI.
+This proposal has been fully implemented. Key highlights of the live system:
+
+1.  **Deployment (Podman)**: The AI service runs as a standalone FastAPI container using Podman (replacing Docker as per user preference).
+2.  **Hybrid Data Ingestion & Multi-Hub Aggregation**: The `sync_market_data_to_ml_service` Celery task pushes a combined dataset of:
+    *   **Internal Demand**: Historical `OrderItem` data from completed `MemberOrder`s.
+    *   **External Demand**: 90 days of ESI Market History. The ingestion process identifies all unique combinations of `(type_id, target_region_id)` from active `BasketItem`s. 
+    *   **Aggregation**: The AI pipeline groups the ingested data by `date` and `type_id` and aggregates the volume (`.resample('D').sum()`). This seamlessly merges demand across multiple trade hubs (e.g., Jita and Amarr) into a unified global demand forecast for that item.
+3.  **Audit Logs & Transparency**:
+    *   The **System Health** tab tracks the success of the data ingestion runs (task: `AI Market Manager: Sync Market Data`).
+    *   The **Audit Log** for Opportunity Scanners explicitly shows the `AI Forecasted ADV` in its own column and lists it in the decision reasons.
+    *   The **Recent Decisions** log for basket evaluations explicitly tags actions influenced by the AI with `(AI Voorspelling)`.
+4.  **Auto-Retraining**: The system automatically triggers the `/retrain` endpoint in the AI container after every data push (twice a day).
+5.  **Opportunity Scanner Fallback Strategy**:
+    *   Because the AI database only fetches data for active baskets (to prevent database bloat), the Opportunity Scanner frequently tests candidate blueprints that the AI has no historical data for.
+    *   When the scanner queries the `/forecast` endpoint for an unknown item, the AI returns a `confidence_score` of `0.5`. 
+    *   The scanner detects this and gracefully falls back to the static 30-day historical `velocity` metric. Once an opportunity is auto-added to a basket, it gets picked up by the next sync and the AI takes over.
