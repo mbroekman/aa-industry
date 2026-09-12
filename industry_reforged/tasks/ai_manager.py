@@ -212,6 +212,8 @@ def scan_market_opportunities(
     from ..models import CorpBlueprint
     from ..models.ai_manager import BasketItem, MarketOpportunity
     from ..utils.ai_engine import calculate_profitability, get_market_velocity
+    
+    region_id = region_id or 10000002
 
     logger.info(
         f"Scanning opportunities for corp {corporation_id}, region {region_id}, categories {categories}"
