@@ -10,7 +10,7 @@ dependencies: []
 references:
   - backlog/docs/doc-12 - Proposal-Alternative-Cost-Calculation-Methodology.md
 type: feature
-ordinal: 115000
+ordinal: 212000
 ---
 
 ## Description

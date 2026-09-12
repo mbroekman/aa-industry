@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Feat
 
+- **ai**: implemented the standalone AI Demand Forecasting Service (LightGBM) with integrated REST API
+- **ai**: implemented data ingestion for ESI Market transactions, OpTimer Pings, and Doctrines to predict future alliance demand
+- **ai**: integrated ai-forecasting predictions into the Opportunity Scanner and Basket Engine to automatically recommend production based on upcoming doctrines and market trends
 - **director**: allow CP users to delete any production task (including basket-generated jobs) individually and in bulk
 - **industrialist**: add delete action and bulk delete for CP users on available and active jobs
 - **i18n**: fully update and compile Dutch translations (`nl`) covering all features through v0.12.x (AI Market Manager, Basket management, Opportunity Scanners, Blueprints, Ledgers, etc.)

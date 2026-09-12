@@ -1,13 +1,13 @@
 ---
 id: TASK-18
-title: Bugfixes release 0.3.1 (Job Market, PI Sync, Translations)
+title: 'Bugfixes release 0.3.1 (Job Market, PI Sync, Translations)'
 status: Done
 assignee: []
 created_date: '2026-08-05 16:00'
 updated_date: '2026-08-05 16:48'
 labels: []
 dependencies: []
-ordinal: 19000
+ordinal: 319000
 ---
 
 ## Description

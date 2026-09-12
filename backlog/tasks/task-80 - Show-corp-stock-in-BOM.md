@@ -2,12 +2,12 @@
 id: TASK-80
 title: Show corp stock in BOM
 status: Done
-assignee:
+assignee: []
 created_date: '2026-08-22 11:59'
 updated_date: '2026-08-22 12:44'
 labels: []
 dependencies: []
-ordinal: 70000
+ordinal: 257000
 ---
 
 ## Description

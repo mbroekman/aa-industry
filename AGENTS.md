@@ -49,6 +49,7 @@ Before finalizing output, verify:
 3. Ruff formatting is applied.
 4. No hardcoded credentials, debug prints, or commented-out code exist.
 5. If a new `@shared_task` was added: the README `CELERYBEAT_SCHEDULE` block is updated in the **same commit**.
+6. **Documentation Updates (MANDATORY)**: Always proactively update `CHANGELOG.md` and any relevant user manuals (e.g., `user_manual_en.md`) or architecture docs in `backlog/docs/` after completing features or bug fixes, **before** closing the task.
 
 ## 7. Project-Specific Conventions
 

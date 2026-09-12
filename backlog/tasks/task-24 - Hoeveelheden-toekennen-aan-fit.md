@@ -7,7 +7,7 @@ created_date: '2026-08-06 17:51'
 updated_date: '2026-08-06 17:51'
 labels: []
 dependencies: []
-ordinal: 25000
+ordinal: 313000
 ---
 
 # Task 24: Hoeveelheden toekennen aan een fit

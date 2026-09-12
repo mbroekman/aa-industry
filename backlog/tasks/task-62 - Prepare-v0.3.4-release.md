@@ -5,9 +5,10 @@ status: Done
 assignee: []
 created_date: '2026-08-11 09:05'
 updated_date: '2026-08-11 09:05'
-labels: ['release']
+labels:
+  - release
 dependencies: []
-ordinal: 62000
+ordinal: 273000
 ---
 
 ## Description

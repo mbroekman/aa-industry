@@ -2,12 +2,12 @@
 id: TASK-99
 title: Blueprint Request System
 status: Done
-assignee:
+assignee: []
 created_date: '2026-08-27 09:38'
 updated_date: '2026-08-27 13:22'
 labels: []
 dependencies: []
-ordinal: 89000
+ordinal: 238000
 ---
 
 ## Description

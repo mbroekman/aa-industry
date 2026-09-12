@@ -7,7 +7,7 @@ created_date: '2026-08-17 12:00'
 updated_date: '2026-08-17 12:00'
 labels: []
 dependencies: []
-ordinal: 75000
+ordinal: 261000
 ---
 
 # Fix ESI sync status deduplication ignoring delivered jobs

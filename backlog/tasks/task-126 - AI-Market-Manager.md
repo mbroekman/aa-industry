@@ -11,7 +11,7 @@ dependencies: []
 references:
   - backlog/docs/doc-10 - Feature-Proposal-AI-Market-Manager.md
 type: feature
-ordinal: 116000
+ordinal: 211000
 ---
 
 ## Description

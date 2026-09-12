@@ -7,7 +7,7 @@ created_date: '2026-08-17 12:00'
 updated_date: '2026-08-17 12:00'
 labels: []
 dependencies: []
-ordinal: 76000
+ordinal: 262000
 ---
 
 # Hotfix ESI sync cache 304 skipping cleanup

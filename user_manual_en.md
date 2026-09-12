@@ -111,11 +111,12 @@ All business and pricing rules are managed strictly via the **Director Control P
 
 ### 3.7 AI Market Manager
 
-The AI Market Manager automates the generation of Production Tasks by evaluating the market profitability of configured items.
+The AI Market Manager automates the generation of Production Tasks by evaluating the market profitability and predicting future demand using an integrated AI Forecasting Service (LightGBM).
 
 - **Baskets & Items**: Define Baskets and Basket Items via the Django Admin Panel to group items you want the AI to evaluate.
 - **Profitability Calculation**: The system compares the Jita Sell price (adjusting for manual overrides) against the True Material Cost of the item. If the potential profit exceeds the `minimum_margin_floor` set in your Corporate Pricing Configuration, a Production Task is automatically generated.
-- **Automation**: The AI evaluation runs in the background (via Celery `industry_evaluate_ai_baskets`) and newly generated tasks appear on the Industrialist Job Market.
+- **Demand Forecasting**: The AI service ingests 90 days of ESI Market transaction data, along with external signals from Alliance Auth's **OpTimer module (Fleet Pings and Doctrines)**. It combines historical sales volume, price trends, and upcoming fleet deployments to predict the exact quantities needed over the next 7 days.
+- **Automation**: The AI evaluation runs in the background (via Celery `industry_evaluate_ai_baskets`). Newly generated tasks automatically include the AI's predicted `qty_to_build` and appear on the Industrialist Job Market.
 
 ______________________________________________________________________
 

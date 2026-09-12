@@ -7,7 +7,7 @@ created_date: '2026-08-16 12:00'
 updated_date: '2026-08-16 12:00'
 labels: []
 dependencies: []
-ordinal: 70000
+ordinal: 263000
 ---
 
 # Add My EVE Jobs tab to Industrialist Dashboard

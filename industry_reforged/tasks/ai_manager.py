@@ -67,32 +67,38 @@ def evaluate_baskets(basket_id=None):
                 target_market=target_market,
                 corporation_id=b_item.basket.corporation.corporation_id,
             )
-            
+
             market_stock = 0
             if b_item.basket.target_region_id and target_market:
                 market_stock = get_market_stock(
-                    eve_type.id, 
-                    b_item.basket.target_region_id, 
-                    target_market
+                    eve_type.id, b_item.basket.target_region_id, target_market
                 )
 
             effective_stock = current_stock + in_flight + market_stock
 
             # AI Forecast override
+            # Third Party
             import requests
+
             try:
-                ai_resp = requests.post("http://127.0.0.1:8050/forecast", json={
-                    "type_id": eve_type.id,
-                    "current_stock": current_stock,
-                    "in_production": in_flight,
-                    "lead_time_days": 3,
-                    "safety_factor": 0.2
-                }, timeout=3).json()
-                
+                ai_resp = requests.post(
+                    "http://127.0.0.1:8050/forecast",
+                    json={
+                        "type_id": eve_type.id,
+                        "current_stock": current_stock,
+                        "in_production": in_flight,
+                        "lead_time_days": 3,
+                        "safety_factor": 0.2,
+                    },
+                    timeout=3,
+                ).json()
+
                 if ai_resp.get("confidence_score", 0.0) == 0.5:
                     target_stock = b_item.target_stock_level
                 else:
-                    target_stock = ai_resp.get("reorder_point", b_item.target_stock_level)
+                    target_stock = ai_resp.get(
+                        "reorder_point", b_item.target_stock_level
+                    )
             except Exception:
                 target_stock = b_item.target_stock_level
 
@@ -283,28 +289,36 @@ def scan_market_opportunities(
 
         for eve_type in candidates:
             velocity = get_market_velocity(eve_type.id, region_id=region_id, days=30)
-            
+
             # AI Forecast
+            # Third Party
             import requests
+
             try:
-                ai_resp = requests.post("http://127.0.0.1:8050/forecast", json={
-                    "type_id": eve_type.id,
-                    "current_stock": 0,
-                    "in_production": 0,
-                    "lead_time_days": 1,
-                    "safety_factor": 0.0
-                }, timeout=3).json()
-                
+                ai_resp = requests.post(
+                    "http://127.0.0.1:8050/forecast",
+                    json={
+                        "type_id": eve_type.id,
+                        "current_stock": 0,
+                        "in_production": 0,
+                        "lead_time_days": 1,
+                        "safety_factor": 0.0,
+                    },
+                    timeout=3,
+                ).json()
+
                 ai_confidence_score = ai_resp.get("confidence_score", 0.0)
                 # If confidence is 0.5, the model had no data for this item, fall back to historical velocity
                 if ai_confidence_score == 0.5:
                     forecasted_velocity = velocity
                 else:
-                    forecasted_velocity = ai_resp.get("predicted_daily_demand", velocity)
+                    forecasted_velocity = ai_resp.get(
+                        "predicted_daily_demand", velocity
+                    )
             except Exception:
                 forecasted_velocity = velocity
                 ai_confidence_score = 0.0
-                
+
             margin, sell_price, build_cost = calculate_profitability(eve_type)
 
             # Build evaluation record for audit log
@@ -385,9 +399,7 @@ def scan_market_opportunities(
                         f"AI Forecasted ADV {forecasted_velocity:.1f} < {min_velocity}"
                     )
                 if margin < min_profit_margin:
-                    reasons.append(
-                        f"Margin {margin:.1f}% < {min_profit_margin}%"
-                    )
+                    reasons.append(f"Margin {margin:.1f}% < {min_profit_margin}%")
                 eval_entry["decision"] = "SKIPPED"
                 eval_entry["reason"] = "; ".join(reasons)
 
@@ -522,40 +534,46 @@ def run_all_active_baskets():
                 evaluate_baskets.delay(basket.id)
                 count += 1
 
+
 @shared_task(name="industry_reforged.tasks.sync_market_data_to_ml_service")
 @log_task_execution("AI Market Manager: Sync Market Data")
 def sync_market_data_to_ml_service():
     """Periodically pushes market data to AI Forecasting Service and triggers retrain."""
     # Standard Library
-    import requests
     from collections import defaultdict
     from datetime import timedelta
-    
+
+    # Third Party
+    import requests
+
     # Django
     from django.utils import timezone
-    
+
+    from ..models.ai_manager import BasketItem
+
     # App
     from ..models.orders import OrderItem
-    from ..models.ai_manager import BasketItem
-    
+
     try:
         transactions = []
         prices_dict = {}
-        
+
         # 1. Internal Corp Demand (Member Orders)
         recent_date = timezone.now() - timedelta(days=180)
         order_items = OrderItem.objects.filter(
             order__status__in=["DELIVERED", "ACCEPTED", "IN_PRODUCTION", "READY"],
-            order__updated_at__gte=recent_date
+            order__updated_at__gte=recent_date,
         ).select_related("order")
 
-        daily_volumes = defaultdict(lambda: defaultdict(lambda: {"volume": 0, "total_price": 0.0}))
-        
+        daily_volumes = defaultdict(
+            lambda: defaultdict(lambda: {"volume": 0, "total_price": 0.0})
+        )
+
         for item in order_items:
             # We use updated_at to estimate the transaction date
             date_str = item.order.updated_at.strftime("%Y-%m-%d")
             type_id = item.item_type_id
-            
+
             daily_volumes[date_str][type_id]["volume"] += item.quantity
             daily_volumes[date_str][type_id]["total_price"] += float(item.line_total)
 
@@ -563,28 +581,32 @@ def sync_market_data_to_ml_service():
             for type_id, data in types.items():
                 if data["volume"] > 0:
                     avg_price = data["total_price"] / data["volume"]
-                    transactions.append({
-                        "date": date_str,
-                        "type_id": type_id,
-                        "volume_sold": data["volume"],
-                        "avg_price": round(avg_price, 2)
-                    })
+                    transactions.append(
+                        {
+                            "date": date_str,
+                            "type_id": type_id,
+                            "volume_sold": data["volume"],
+                            "avg_price": round(avg_price, 2),
+                        }
+                    )
                     prices_dict[type_id] = round(avg_price, 2)
-                    
+
         # 2. External ESI Market Data (for all active BasketItems)
-        basket_items = BasketItem.objects.filter(basket__is_active=True).select_related("basket")
+        basket_items = BasketItem.objects.filter(basket__is_active=True).select_related(
+            "basket"
+        )
         esi_url = "https://esi.evetech.net/latest/markets/{region_id}/history/"
         cutoff_date = (timezone.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-        
+
         fetched_pairs = set()
         for b_item in basket_items:
             type_id = b_item.eve_type_id
-            region_id = b_item.basket.target_region_id or 10000002 # Default Jita
+            region_id = b_item.basket.target_region_id or 10000002  # Default Jita
 
             if (type_id, region_id) in fetched_pairs:
                 continue
             fetched_pairs.add((type_id, region_id))
-                
+
             url = esi_url.format(region_id=region_id)
             try:
                 resp = requests.get(url, params={"type_id": type_id}, timeout=10)
@@ -594,35 +616,78 @@ def sync_market_data_to_ml_service():
                     history = sorted(history, key=lambda x: x["date"])
                     for day in history:
                         if day["date"] >= cutoff_date:
-                            transactions.append({
-                                "date": day["date"],
-                                "type_id": type_id,
-                                "volume_sold": day["volume"],
-                                "avg_price": day["average"]
-                            })
+                            transactions.append(
+                                {
+                                    "date": day["date"],
+                                    "type_id": type_id,
+                                    "volume_sold": day["volume"],
+                                    "avg_price": day["average"],
+                                }
+                            )
                             prices_dict[type_id] = day["average"]
-                    fetched_types.add(type_id)
             except Exception as e:
                 logger.warning(f"Failed to fetch ESI history for type {type_id}: {e}")
 
-        # 3. Push to ML Service
+        # 3. Pings and Doctrines
+        pings = []
+        doctrines = []
+        try:
+            # Third Party
+            from eveuniverse.models import EveType
+
+            # Alliance Auth
+            from allianceauth.optimer.models import OpTimer
+
+            recent_ops = OpTimer.objects.filter(start__gte=recent_date)
+            for op in recent_ops:
+                op_date_str = op.start.strftime("%Y-%m-%d")
+                pings.append({"date": op_date_str, "is_ping": 1})
+
+                if op.doctrine:
+                    words = op.doctrine.split()
+                    matched_type = None
+                    for word in words:
+                        if len(word) > 3:
+                            matched_type = EveType.objects.filter(
+                                name__icontains=word, eve_group__eve_category_id=6
+                            ).first()
+                            if matched_type:
+                                break
+
+                    if matched_type:
+                        doctrines.append(
+                            {
+                                "date": op_date_str,
+                                "type_id": matched_type.id,
+                                "is_doctrine": 1,
+                            }
+                        )
+        except ImportError:
+            pass
+
+        # 4. Push to ML Service
         prices = [{"type_id": t_id, "price": p} for t_id, p in prices_dict.items()]
         payload = {
             "transactions": transactions,
-            "prices": prices
+            "prices": prices,
+            "pings": pings,
+            "doctrines": doctrines,
         }
-        
+
         # Post to ingest endpoint
-        ingest_resp = requests.post("http://127.0.0.1:8050/ingest", json=payload, timeout=30)
+        ingest_resp = requests.post(
+            "http://127.0.0.1:8050/ingest", json=payload, timeout=30
+        )
         ingest_resp.raise_for_status()
-        
+
         # Post to retrain endpoint
         retrain_resp = requests.post("http://127.0.0.1:8050/retrain", timeout=30)
         retrain_resp.raise_for_status()
-        
-        logger.info(f"Successfully synced {len(transactions)} transactions to ML service and triggered retrain.")
+
+        logger.info(
+            f"Successfully synced {len(transactions)} transactions to ML service and triggered retrain."
+        )
         return f"Ingested {len(transactions)} transactions."
     except Exception as e:
         logger.error(f"Failed to sync market data to ML service: {e}")
         return f"Failed: {e}"
-

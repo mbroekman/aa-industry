@@ -5,9 +5,11 @@ status: Done
 assignee: []
 created_date: '2026-08-13'
 updated_date: '2026-08-13'
-labels: ['feature', 'ui']
+labels:
+  - feature
+  - ui
 dependencies: []
-ordinal: 66000
+ordinal: 272000
 ---
 
 ## Description
