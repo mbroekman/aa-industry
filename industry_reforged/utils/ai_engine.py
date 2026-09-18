@@ -132,36 +132,78 @@ def check_availability(eve_type, target_market=None, corporation_id=None):
 
 def get_market_stock(type_id, region_id, location_id):
     """
-    Fetches public market orders for a given type_id in a region.
-    Filters for sell orders at the specified location_id (hub).
-    Returns the total volume_remain of these orders.
+    Fetches public market orders for a given type_id in a region,
+    OR authenticated structure market orders if location_id is an Upwell Structure.
     """
     if not region_id or not location_id:
         return 0
 
-    url = f"https://esi.evetech.net/latest/markets/{region_id}/orders/"
-    params = {
-        "datasource": "tranquility",
-        "order_type": "sell",
-        "type_id": type_id,
-    }
     headers = {
         "User-Agent": "aa-industry-reforged / Direct ESI Market Client",
         "Accept": "application/json",
     }
-    
-    try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        if response.status_code == 200:
-            orders = response.json()
-            # Filter for the specific location_id
-            stock = sum(
-                int(o.get("volume_remain", 0)) 
-                for o in orders 
-                if o.get("location_id") == location_id
-            )
+
+    # Upwell structures have IDs > 1,000,000,000,000
+    if location_id >= 1000000000000:
+        url = f"https://esi.evetech.net/latest/markets/structures/{location_id}/"
+        # Need a token with structure_markets scope
+        from esi.models import Token
+        token = Token.objects.filter(scopes__name="esi-markets.structure_markets.v1").first()
+        
+        if not token:
+            logger.warning(f"No token with esi-markets.structure_markets.v1 to fetch market for structure {location_id}")
+            return 0
+        
+        headers["Authorization"] = f"Bearer {token.valid_access_token()}"
+        params = {"datasource": "tranquility", "page": 1}
+        stock = 0
+        
+        try:
+            while True:
+                response = requests.get(url, params=params, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    orders = response.json()
+                    if not orders:
+                        break
+                    
+                    # Filter for specific type_id and sell orders only
+                    stock += sum(
+                        int(o.get("volume_remain", 0)) 
+                        for o in orders 
+                        if o.get("type_id") == type_id and not o.get("is_buy_order", False)
+                    )
+                    
+                    # Pagination check
+                    x_pages = int(response.headers.get("X-Pages", 1))
+                    if params["page"] >= x_pages:
+                        break
+                    params["page"] += 1
+                else:
+                    logger.warning(f"Failed to fetch market stock for structure {location_id}: HTTP {response.status_code} - {response.text}")
+                    break
             return stock
-    except Exception as e:
-        logger.warning(f"Failed to fetch market stock for {type_id} in region {region_id}: {e}")
+        except Exception as e:
+            logger.warning(f"Error fetching structure market stock for {type_id} at {location_id}: {e}")
+            return 0
+    else:
+        # Public NPC station market
+        url = f"https://esi.evetech.net/latest/markets/{region_id}/orders/"
+        params = {
+            "datasource": "tranquility",
+            "order_type": "sell",
+            "type_id": type_id,
+        }
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            if response.status_code == 200:
+                orders = response.json()
+                stock = sum(
+                    int(o.get("volume_remain", 0)) 
+                    for o in orders 
+                    if o.get("location_id") == location_id
+                )
+                return stock
+        except Exception as e:
+            logger.warning(f"Failed to fetch public market stock for {type_id} in region {region_id}: {e}")
 
     return 0

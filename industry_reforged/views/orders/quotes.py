@@ -494,6 +494,7 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         quantity=quantity,
                         activity_id=node.get("activity_id", 1),
                         status="UNCLAIMED",
+                        origin="MEMBER_ORDER",
                         created_from_order=o,
                         gamification_value=line_total,
                         builder_reward=task_reward_value,

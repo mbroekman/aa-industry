@@ -177,6 +177,7 @@ def dt_director_tasks(request):
         qs = qs.filter(
             Q(item_type__name__icontains=search)
             | Q(assigned_to__character_name__icontains=search)
+            | Q(origin__icontains=search)
             | Q(id__icontains=search)
         )
 
@@ -184,14 +185,15 @@ def dt_director_tasks(request):
 
     # Ordering
     if task_type == "all":
-        # 0: type, 1: qty, 2: status, 3: priority, 4: assignee, 5: reward, 6: actions
+        # 0: type, 1: qty, 2: status, 3: origin, 4: priority, 5: assignee, 6: reward, 7: actions
         order_map = {
             "0": "item_type__name",
             "1": "quantity",
             "2": "status",
-            "3": "priority",
-            "4": "assigned_to__character_name",
-            "5": "builder_reward",
+            "3": "origin",
+            "4": "priority",
+            "5": "assigned_to__character_name",
+            "6": "builder_reward",
         }
     else:
         # Payout / Recent tasks
@@ -224,6 +226,9 @@ def dt_director_tasks(request):
                     task.quantity,
                     render_to_string(
                         "industry_reforged/partials/dt_task_status.html", {"task": task}
+                    ),
+                    render_to_string(
+                        "industry_reforged/partials/dt_task_origin.html", {"task": task}
                     ),
                     render_to_string(
                         "industry_reforged/partials/dt_task_priority.html",

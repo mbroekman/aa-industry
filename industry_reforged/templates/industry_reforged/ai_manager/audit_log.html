@@ -3,12 +3,16 @@
 {% load humanize %}
 
 {% block details %}
-<div class="row">
-    <div class="col-md-12">
-        <h2 class="page-header">
-            <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="text-decoration-none">{% translate "AI Market Manager" %}</a> /
-            {% translate "Audit Log" %}
-        </h2>
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% translate "Dashboard" %}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'industry_reforged:ai_manager_dashboard' %}">{% translate "AI Market Manager" %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% translate "Audit Log" %}</li>
+            </ol>
+        </nav>
+        <h2>{% translate "Audit Log" %}</h2>
     </div>
 </div>
 
@@ -75,7 +79,7 @@
             <div class="card-body p-4">
                 {% if logs %}
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped">
+                    <table class="table table-hover table-striped" id="audit-log-table">
                         <thead>
                             <tr>
                                 <th>{% translate "Timestamp" %}</th>
@@ -119,4 +123,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        $('#audit-log-table').DataTable({
+            "order": [[ 0, "desc" ]],
+            "pageLength": 25,
+            "columnDefs": [
+                { "orderable": false, "targets": [5] } // Reason is usually long, sorting by it isn't very helpful
+            ]
+        });
+    });
+</script>
 {% endblock %}

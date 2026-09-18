@@ -4,13 +4,21 @@
 
 {% block details %}
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3>{% trans "Industrialist Dashboard" %}</h3>
-            <div class="d-flex align-items-center">
-                <a href="{% url 'industry_reforged:industrialist_leaderboard' %}" class="btn btn-success"><i
-                        class="fas fa-trophy"></i> {% trans "Leaderboards & History" %}</a>
-                {% include 'industry_reforged/partials/autorefresh_control.html' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Industrialist Dashboard" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Industrialist Dashboard" %}</h2>
+                <div class="d-flex align-items-center">
+                    <a href="{% url 'industry_reforged:industrialist_leaderboard' %}" class="btn btn-success me-2"><i
+                            class="fas fa-trophy"></i> {% trans "Leaderboards & History" %}</a>
+                    {% include 'industry_reforged/partials/autorefresh_control.html' %}
+                </div>
             </div>
         </div>
     </div>
@@ -142,6 +150,7 @@
                                                     <th style="width: 40px;" class="text-center"><input type="checkbox"
                                                             onclick="toggleSelectAllUnclaimed(this)"></th>
                                                     <th>{% trans "Item" %}</th>
+                                                    <th>Origin</th>
                                                     <th class="text-end">{% trans "Qty" %}</th>
                                                     <th class="text-end">{% trans "Reward Value" %}</th>
                                                     <th class="text-end">{% trans "Action" %}</th>
@@ -169,6 +178,7 @@
                                                             </div>
                                                         </div>
                                                     </td>
+                                                    <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
                                                     <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">
                                                         {{ task.builder_reward|eve_isk }}
@@ -187,8 +197,9 @@
                                                             {% if perms.industry_reforged.corp_access %}
                                                             <form method="post"
                                                                 action="{% url 'industry_reforged:delete_production_task' task.id %}"
-                                                                class="d-inline ms-1"
-                                                                onsubmit="return confirm('{% trans "Are you sure you want to delete this job?" %}');">
+                                                                class="d-inline ms-1 require-confirmation"
+                                                                data-action-msg='{% trans "Are you sure you want to delete this job?" %}'
+                                                                data-btn-class="btn-danger">
                                                                 {% csrf_token %}
                                                                 <button type="submit"
                                                                     class="btn btn-sm btn-outline-danger" title="{% trans "Delete Job" %}">
@@ -276,6 +287,7 @@
                                                                 type="checkbox" onclick="toggleSelectAllActive(this)">
                                                         </th>
                                                         <th>{% trans "Item" %}</th>
+                                                        <th>Origin</th>
                                                         <th class="text-end">{% trans "Qty" %}</th>
                                                         <th>{% trans "Claimed By" %}</th>
                                                         <th class="text-end">{% trans "Reward" %}</th>
@@ -340,6 +352,7 @@
                                                                 </div>
                                                             </div>
                                                         </td>
+                                                        <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                         <td class="text-end numeric">{{ task.quantity }}</td>
                                                         <td>{{ task.assigned_to.character_name }}</td>
                                                         <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">{{ task.builder_reward|eve_isk }}</td>
@@ -367,8 +380,9 @@
                                                                 {% if perms.industry_reforged.corp_access %}
                                                                 <form method="post"
                                                                     action="{% url 'industry_reforged:delete_production_task' task.id %}"
-                                                                    class="d-inline ms-1"
-                                                                    onsubmit="return confirm('{% trans "Are you sure you want to delete this job?" %}');">
+                                                                    class="d-inline ms-1 require-confirmation"
+                                                                    data-action-msg='{% trans "Are you sure you want to delete this job?" %}'
+                                                                    data-btn-class="btn-danger">
                                                                     {% csrf_token %}
                                                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="{% trans "Delete Job" %}">
                                                                         <i class="fas fa-trash-alt"></i>
@@ -1245,21 +1259,21 @@
                 return;
             }
 
-            if (!confirm("{% trans 'Are you sure you want to permanently delete the selected tasks?' %}")) {
-                return;
-            }
+            window.showConfirmModal("{% trans 'Are you sure you want to permanently delete the selected tasks?' %}", function(confirmed) {
+                if (!confirmed) return;
 
-            var form = document.getElementById('bulkDeleteUnclaimedForm');
-            form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
-            selectedIds.forEach(function (id) {
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'task_ids';
-                input.value = id;
-                form.appendChild(input);
-            });
+                var form = document.getElementById('bulkDeleteUnclaimedForm');
+                form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
+                selectedIds.forEach(function (id) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'task_ids';
+                    input.value = id;
+                    form.appendChild(input);
+                });
 
-            form.submit();
+                form.submit();
+            }, 'btn-danger');
         }
 
         function submitBulkDeleteActive() {
@@ -1279,21 +1293,21 @@
                 return;
             }
 
-            if (!confirm("{% trans 'Are you sure you want to permanently delete the selected tasks?' %}")) {
-                return;
-            }
+            window.showConfirmModal("{% trans 'Are you sure you want to permanently delete the selected tasks?' %}", function(confirmed) {
+                if (!confirmed) return;
 
-            var form = document.getElementById('bulkDeleteActiveForm');
-            form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
-            selectedIds.forEach(function (id) {
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'task_ids';
-                input.value = id;
-                form.appendChild(input);
-            });
+                var form = document.getElementById('bulkDeleteActiveForm');
+                form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
+                selectedIds.forEach(function (id) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'task_ids';
+                    input.value = id;
+                    form.appendChild(input);
+                });
 
-            form.submit();
+                form.submit();
+            }, 'btn-danger');
         }
 
         $(document).ready(function () {
@@ -1316,7 +1330,7 @@
             try {
                 if ($('#active-production-table').length) {
                     var config1 = $.extend(true, {}, baseConfig);
-                    config1.columnDefs = [{ "orderable": false, "targets": [0, 5] }];
+                    config1.columnDefs = [{ "orderable": false, "targets": [0, 6] }];
                     $('#active-production-table').DataTable(config1);
                 }
             } catch (e) { console.error("Error init active production table:", e); }
@@ -1324,7 +1338,7 @@
             try {
                 if ($('#jobmarket-table').length) {
                     var config2 = $.extend(true, {}, baseConfig);
-                    config2.columnDefs = [{ "orderable": false, "targets": [0, 4] }];
+                    config2.columnDefs = [{ "orderable": false, "targets": [0, 5] }];
                     $('#jobmarket-table').DataTable(config2);
                 }
             } catch (e) { console.error("Error init jobmarket table:", e); }

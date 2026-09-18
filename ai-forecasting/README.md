@@ -36,7 +36,15 @@ If you prefer to run the service locally without Podman:
 
 ## Integration with aa-industry
 
-Once the service is running on `http://127.0.0.1:8050`, the Alliance Auth `aa-industry` app will automatically start communicating with it via background Celery tasks.
+Once the service is running, you must configure the Alliance Auth `aa-industry` app to point to it by adding the following setting to your `local.py`:
+
+```python
+INDUSTRY_REFORGED_AI_URL = "http://127.0.0.1:8050" 
+# NOTE: If you are running Alliance Auth in a container (e.g. Podman/Docker) and Uvicorn on the host, 
+# use "http://host.containers.internal:8050" instead.
+```
+
+If this setting is omitted, it defaults to `http://127.0.0.1:8050`. Once configured, the background Celery tasks will automatically start communicating with the service:
 
 - **Ingestion (`/ingest`)**: The `sync_market_data_to_ml_service` Celery task pushes transaction data here.
 - **Training (`/retrain`)**: Triggers the LightGBM model training on historical data.

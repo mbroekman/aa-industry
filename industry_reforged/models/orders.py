@@ -260,6 +260,14 @@ class ProductionTask(models.Model):
         ("LOW", "Low"),
     )
 
+    ORIGIN_CHOICES = (
+        ("MANUAL", "Manual"),
+        ("MEMBER_ORDER", "Member Order"),
+        ("BASKET", "Market Basket / AI"),
+        ("BOM", "BOM Component"),
+        ("BLUEPRINT", "Blueprint Request"),
+    )
+
     item_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     quantity = models.IntegerField(default=1)
     activity_id = models.IntegerField(default=1)
@@ -268,6 +276,9 @@ class ProductionTask(models.Model):
     )
     priority = models.CharField(
         max_length=10, choices=PRIORITY_CHOICES, default="NORMAL"
+    )
+    origin = models.CharField(
+        max_length=20, choices=ORIGIN_CHOICES, default="MANUAL"
     )
     hidden = models.BooleanField(
         default=False, help_text=_("Hide from standard Industrialist Job Market")

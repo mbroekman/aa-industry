@@ -5,8 +5,17 @@
 {% block details %}
 <div class="container-fluid">
     <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3>{% trans "Industrialist Leaderboards & History" %}</h3>
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:industrialist_dashboard' %}">{% trans "Industrialist Hub" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Industrialist Leaderboards & History" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Industrialist Leaderboards & History" %}</h2>
+            </div>
         </div>
     </div>
 

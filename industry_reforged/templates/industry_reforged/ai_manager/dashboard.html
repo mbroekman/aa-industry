@@ -3,9 +3,15 @@
 {% load humanize %}
 
 {% block details %}
-<div class="row">
-    <div class="col-md-12">
-        <h2 class="page-header">{% translate "AI Market Manager Dashboard" %}</h2>
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% translate "Dashboard" %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% translate "AI Market Manager Dashboard" %}</li>
+            </ol>
+        </nav>
+        <h2>{% translate "AI Market Manager Dashboard" %}</h2>
     </div>
 </div>
 

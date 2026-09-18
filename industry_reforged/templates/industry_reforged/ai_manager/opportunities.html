@@ -3,12 +3,16 @@
 {% load humanize %}
 
 {% block details %}
-<div class="row">
-    <div class="col-md-12">
-        <h2 class="page-header">
-            <a href="{% url 'industry_reforged:ai_manager_dashboard' %}" class="text-decoration-none">{% translate "AI Market Manager" %}</a> /
-            {% translate "Opportunity Scanner" %}
-        </h2>
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% translate "Dashboard" %}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'industry_reforged:ai_manager_dashboard' %}">{% translate "AI Market Manager" %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% translate "Opportunity Scanner" %}</li>
+            </ol>
+        </nav>
+        <h2>{% translate "Opportunity Scanner" %}</h2>
     </div>
 </div>
 

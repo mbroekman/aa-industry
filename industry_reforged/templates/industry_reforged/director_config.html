@@ -4,12 +4,21 @@
 
 {% block details %}
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3><i class="fas fa-cogs"></i> {% trans "Director Configurations" %}</h3>
-            <a href="{% url 'industry_reforged:director_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:director_dashboard' %}">{% trans "Director Control Panel" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Director Configurations" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Director Configurations" %}</h2>
+                <a href="{% url 'industry_reforged:director_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
+            </div>
+            <p class="text-muted mt-2">{% trans "Set corporate rules for production, material efficiency, and pricing overrides." %}</p>
         </div>
-        <p class="text-muted">{% trans "Set corporate rules for production, material efficiency, and pricing overrides." %}</p>
     </div>
 
     <div class="row mb-3">

@@ -46,6 +46,25 @@
                 <p class="text-muted small">{% translate "Communicating with EVE Online servers.<br>This may take a few moments." %}</p>
             </div>
         </div>
+
+        <!-- Generic Confirmation Modal -->
+        <div class="modal fade" id="actionModal" tabindex="-1" aria-labelledby="actionModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark border-secondary text-white">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title" id="actionModalLabel">{% translate "Confirm Action" %}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="actionModalMessage"></p>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+                        <button type="button" class="btn btn-primary" id="actionModalSubmitBtn">{% translate "Confirm" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
 
@@ -153,5 +172,79 @@
                 document.getElementById('industry-loading-overlay').style.display = 'none';
             }
         });
+
+        // Global Form Confirmation Logic
+        let confirmModal;
+        let formToSubmit = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const modalEl = document.getElementById('actionModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                confirmModal = new bootstrap.Modal(modalEl);
+            }
+        });
+
+        document.body.addEventListener('submit', function(e) {
+            if (e.target.matches('.require-confirmation')) {
+                e.preventDefault();
+                formToSubmit = e.target;
+                const msg = formToSubmit.getAttribute('data-action-msg') || "{% trans 'Are you sure?' %}";
+                document.getElementById('actionModalMessage').textContent = msg;
+
+                const btnClass = formToSubmit.getAttribute('data-btn-class') || 'btn-primary';
+                const submitBtn = document.getElementById('actionModalSubmitBtn');
+                submitBtn.className = 'btn ' + btnClass;
+
+                if (confirmModal) {
+                    confirmModal.show();
+                } else {
+                    if (confirm(msg)) {
+                        formToSubmit.submit();
+                    }
+                }
+            }
+        });
+
+        const globalSubmitBtn = document.getElementById('actionModalSubmitBtn');
+        if (globalSubmitBtn) {
+            globalSubmitBtn.addEventListener('click', function() {
+                if (formToSubmit) {
+                    formToSubmit.submit();
+                }
+            });
+        }
+
+        // Global JS Confirm Logic helper
+        window.showConfirmModal = function(msg, confirmCallback, btnClass) {
+            if (confirmModal) {
+                document.getElementById('actionModalMessage').textContent = msg;
+                const submitBtn = document.getElementById('actionModalSubmitBtn');
+                submitBtn.className = 'btn ' + (btnClass || 'btn-primary');
+                
+                // Remove previous event listeners
+                const newBtn = submitBtn.cloneNode(true);
+                submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+                
+                newBtn.addEventListener('click', function() {
+                    confirmModal.hide();
+                    confirmCallback(true);
+                });
+                
+                const modalEl = document.getElementById('actionModal');
+                const onHidden = function() {
+                    modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                };
+                modalEl.addEventListener('hidden.bs.modal', onHidden);
+                
+                confirmModal.show();
+            } else {
+                if (confirm(msg)) {
+                    confirmCallback(true);
+                } else {
+                    confirmCallback(false);
+                }
+            }
+        };
+
     </script>
 {% endblock %}

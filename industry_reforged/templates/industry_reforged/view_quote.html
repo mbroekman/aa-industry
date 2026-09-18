@@ -30,30 +30,39 @@
     }
 </style>
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3>{% trans "Order #" %}<span class="numeric">{{ order.id }}</span></h3>
-            <div>
-                {% if order.status == 'REQUESTED' %}
-                    {% if perms.industry_reforged.corp_access %}
-                        <span class="text-warning fw-bold me-3"><i class="fas fa-exclamation-triangle"></i> {% trans "Requires Quote" %}</span>
-                    {% else %}
-                        <span class="text-muted fst-italic me-3">{% trans "Pending Quote from Director" %}</span>
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:orders_dashboard' %}">{% trans "My Orders" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Order #" %}{{ order.id }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Order #" %}<span class="numeric">{{ order.id }}</span></h2>
+                <div>
+                    {% if order.status == 'REQUESTED' %}
+                        {% if perms.industry_reforged.corp_access %}
+                            <span class="text-warning fw-bold me-3"><i class="fas fa-exclamation-triangle"></i> {% trans "Requires Quote" %}</span>
+                        {% else %}
+                            <span class="text-muted fst-italic me-3">{% trans "Pending Quote from Director" %}</span>
+                        {% endif %}
+                    {% elif order.status == 'QUOTED' %}
+                        {% if is_owner %}
+                            <a href="{% url 'industry_reforged:reject_quote' order.id %}" class="btn btn-outline-danger me-2"><i class="fas fa-times"></i> {% trans "Reject" %}</a>
+                            <a href="{% url 'industry_reforged:accept_quote' order.id %}" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Accept Quote" %}</a>
+                        {% else %}
+                            <span class="text-muted fst-italic me-3">{% trans "Pending Acceptance by User" %}</span>
+                        {% endif %}
                     {% endif %}
-                {% elif order.status == 'QUOTED' %}
-                    {% if is_owner %}
-                        <a href="{% url 'industry_reforged:reject_quote' order.id %}" class="btn btn-outline-danger me-2"><i class="fas fa-times"></i> {% trans "Reject" %}</a>
-                        <a href="{% url 'industry_reforged:accept_quote' order.id %}" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Accept Quote" %}</a>
-                    {% else %}
-                        <span class="text-muted fst-italic me-3">{% trans "Pending Acceptance by User" %}</span>
+                    {% if order.status == 'REQUESTED' or order.status == 'QUOTED' %}
+                        {% if is_owner or perms.industry_reforged.corp_access %}
+                            <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteOrderModal"><i class="fas fa-trash"></i> {% trans "Delete Order" %}</button>
+                        {% endif %}
                     {% endif %}
-                {% endif %}
-                {% if order.status == 'REQUESTED' or order.status == 'QUOTED' %}
-                    {% if is_owner or perms.industry_reforged.corp_access %}
-                        <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteOrderModal"><i class="fas fa-trash"></i> {% trans "Delete Order" %}</button>
-                    {% endif %}
-                {% endif %}
-                <a href="{% url 'industry_reforged:orders_dashboard' %}" onclick="history.back(); return false;" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
+                    <a href="{% url 'industry_reforged:orders_dashboard' %}" onclick="history.back(); return false;" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
+                </div>
             </div>
         </div>
     </div>

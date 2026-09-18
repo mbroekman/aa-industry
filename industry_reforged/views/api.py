@@ -40,6 +40,7 @@ def add_personal_token(request: WSGIRequest, token) -> HttpResponse:
         "esi-corporations.read_divisions.v1",
         "esi-corporations.read_blueprints.v1",
         "esi-wallet.read_corporation_wallets.v1",
+        "esi-markets.structure_markets.v1",
     ]
 )
 def add_corporate_token(request: WSGIRequest, token) -> HttpResponse:

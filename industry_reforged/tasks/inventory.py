@@ -230,6 +230,7 @@ def task_sync_corp_inventory():
                                             item_type=config.item_type,
                                             quantity=deficit,
                                             status="UNCLAIMED",
+                                            origin="BOM",
                                             gamification_value=line_total,
                                             builder_reward=task_reward,
                                         )

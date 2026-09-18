@@ -3,10 +3,19 @@
 
 {% block details %}
 <div class="container-fluid">
-    <div class="row mb-3">
+    <div class="row mb-4">
         <div class="col-12">
-            <h3>{% trans "Create New Order" %}</h3>
-            <a href="{% url 'industry_reforged:orders_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back to Orders" %}</a>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:orders_dashboard' %}">{% trans "My Orders" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Create New Order" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Create New Order" %}</h2>
+                <a href="{% url 'industry_reforged:orders_dashboard' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> {% trans "Back to Orders" %}</a>
+            </div>
         </div>
     </div>
 

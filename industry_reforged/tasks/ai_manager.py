@@ -69,9 +69,22 @@ def evaluate_baskets(basket_id=None):
             )
 
             market_stock = 0
-            if b_item.basket.target_region_id and target_market:
+            if target_market:
+                region_id = b_item.basket.target_region_id
+                if not region_id and b_item.basket.target_hub and b_item.basket.target_hub.solar_system_id:
+                    from eveuniverse.models import EveSolarSystem
+
+                    try:
+                        solar_system = EveSolarSystem.objects.select_related(
+                            "eve_constellation__eve_region"
+                        ).get(pk=b_item.basket.target_hub.solar_system_id)
+                        if solar_system and solar_system.eve_constellation:
+                            region_id = solar_system.eve_constellation.eve_region_id
+                    except Exception:
+                        pass
+                region_id = region_id or 10000002
                 market_stock = get_market_stock(
-                    eve_type.id, b_item.basket.target_region_id, target_market
+                    eve_type.id, region_id, target_market
                 )
 
             effective_stock = current_stock + in_flight + market_stock
@@ -81,9 +94,12 @@ def evaluate_baskets(basket_id=None):
             import math
             import requests
 
+            is_ai_prediction = False
             try:
+                from django.conf import settings
+                ai_url = getattr(settings, 'INDUSTRY_REFORGED_AI_URL', 'http://127.0.0.1:8050')
                 ai_resp = requests.post(
-                    "http://127.0.0.1:8050/forecast",
+                    f"{ai_url.rstrip('/')}/forecast",
                     json={
                         "type_id": eve_type.id,
                         "current_stock": current_stock,
@@ -100,15 +116,19 @@ def evaluate_baskets(basket_id=None):
                     target_stock = math.ceil(ai_resp.get(
                         "reorder_point", b_item.target_stock_level
                     ))
-            except Exception:
+                    is_ai_prediction = True
+            except Exception as e:
+                logger.warning(f"Failed to fetch AI forecast for {eve_type.name} (ID: {eve_type.id}). Error: {e}")
                 target_stock = b_item.target_stock_level
+
+            source_str = "AI Voorspelling" if is_ai_prediction else "Statisch Target"
 
             if effective_stock >= target_stock:
                 AIMarketLog.objects.create(
                     basket_item=b_item,
                     action_taken="Skipped",
                     stock_level=current_stock,
-                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}) is above target ({target_stock}) (AI Voorspelling).",
+                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}) is above target ({target_stock}) ({source_str}).",
                 )
                 continue
 
@@ -133,7 +153,7 @@ def evaluate_baskets(basket_id=None):
             order_qty = max(shortage, batches * b_item.batch_size)
             if order_qty > 0:
                 ProductionTask.objects.create(
-                    item_type=eve_type, quantity=order_qty, status="UNCLAIMED"
+                    item_type=eve_type, quantity=order_qty, status="UNCLAIMED", origin="BASKET"
                 )
 
                 AIMarketLog.objects.create(
@@ -141,7 +161,7 @@ def evaluate_baskets(basket_id=None):
                     action_taken="Ordered",
                     margin=margin,
                     stock_level=current_stock,
-                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}). Target {target_stock} (AI Voorspelling). Margin OK ({margin:.1f}%). Ordered {order_qty}. (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
+                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}). Target {target_stock} ({source_str}). Margin OK ({margin:.1f}%). Ordered {order_qty}. (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
                 )
 
             # Send Notification (Mocking a print/log for now as exact webhook setup isn't known)
@@ -213,8 +233,31 @@ def scan_market_opportunities(
     from ..models import CorpBlueprint
     from ..models.ai_manager import BasketItem, MarketOpportunity
     from ..utils.ai_engine import calculate_profitability, get_market_velocity
-    
+
+    if not region_id and target_hub_id:
+        from ..models.facilities import IndustryFacility
+
+        hub = IndustryFacility.objects.filter(facility_id=target_hub_id).first()
+        if hub and hub.solar_system_id:
+            from eveuniverse.models import EveSolarSystem
+
+            try:
+                solar_system = EveSolarSystem.objects.select_related(
+                    "eve_constellation__eve_region"
+                ).get(pk=hub.solar_system_id)
+                if solar_system and solar_system.eve_constellation:
+                    region_id = solar_system.eve_constellation.eve_region_id
+            except Exception:
+                pass
+
     region_id = region_id or 10000002
+
+    from allianceauth.eveonline.models import EveCorporationInfo
+    try:
+        corp_info = EveCorporationInfo.objects.get(corporation_id=corporation_id)
+    except EveCorporationInfo.DoesNotExist:
+        logger.error(f"Corp {corporation_id} not found in EveCorporationInfo.")
+        return "Error: Corp not found"
 
     logger.info(
         f"Scanning opportunities for corp {corporation_id}, region {region_id}, categories {categories}"
@@ -249,7 +292,7 @@ def scan_market_opportunities(
         # 2. Exclude items already in a Basket
         existing_basket_items = set(
             BasketItem.objects.filter(
-                basket__corporation_id=corporation_id
+                basket__corporation=corp_info
             ).values_list("eve_type_id", flat=True)
         )
         candidates = [
@@ -298,8 +341,10 @@ def scan_market_opportunities(
             import requests
 
             try:
+                from django.conf import settings
+                ai_url = getattr(settings, 'INDUSTRY_REFORGED_AI_URL', 'http://127.0.0.1:8050')
                 ai_resp = requests.post(
-                    "http://127.0.0.1:8050/forecast",
+                    f"{ai_url.rstrip('/')}/forecast",
                     json={
                         "type_id": eve_type.id,
                         "current_stock": 0,
@@ -318,7 +363,8 @@ def scan_market_opportunities(
                     forecasted_velocity = ai_resp.get(
                         "predicted_daily_demand", velocity
                     )
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to fetch AI forecast for {eve_type.name} (ID: {eve_type.id}). Error: {e}")
                 forecasted_velocity = velocity
                 ai_confidence_score = 0.0
 
@@ -347,7 +393,7 @@ def scan_market_opportunities(
 
                 opportunities.append(
                     MarketOpportunity(
-                        corporation_id=corporation_id,
+                        corporation=corp_info,
                         eve_type=eve_type,
                         region_id=region_id,
                         target_hub_id=target_hub_id,
@@ -360,9 +406,9 @@ def scan_market_opportunities(
 
                 # 3b. AI Auto-add Action
                 if scanner and scanner.auto_add_basket:
-                    target_stock = max(1, int(velocity * scanner.target_stock_days))
+                    target_stock = max(1, int(forecasted_velocity * scanner.target_stock_days))
                     batch_size = max(
-                        1, int(velocity * (scanner.target_stock_days / 2.0))
+                        1, int(forecasted_velocity * (scanner.target_stock_days / 2.0))
                     )
 
                     # Check if it already exists (just to be absolutely safe)
@@ -436,7 +482,7 @@ def scan_market_opportunities(
             # Delete old records for these specific types in this region/hub so we can recreate them
             type_ids = [opp.eve_type_id for opp in opportunities]
             qs = MarketOpportunity.objects.filter(
-                corporation_id=corporation_id,
+                corporation=corp_info,
                 region_id=region_id,
                 eve_type_id__in=type_ids,
             )
@@ -507,7 +553,7 @@ def run_all_active_scanners():
                 scanner.target_hub.facility_id if scanner.target_hub else None
             )
             scan_market_opportunities.delay(
-                scanner.corporation_id,
+                scanner.corporation.corporation_id,
                 scanner.target_region_id,
                 scanner.categories,
                 target_hub_id=target_hub_id,
@@ -667,6 +713,8 @@ def sync_market_data_to_ml_service():
                         )
         except ImportError:
             pass
+        except Exception as e:
+            logger.warning(f"Could not load OpTimer data: {e}")
 
         # 4. Push to ML Service
         prices = [{"type_id": t_id, "price": p} for t_id, p in prices_dict.items()]
@@ -678,19 +726,28 @@ def sync_market_data_to_ml_service():
         }
 
         # Post to ingest endpoint
-        ingest_resp = requests.post(
-            "http://127.0.0.1:8050/ingest", json=payload, timeout=30
-        )
-        ingest_resp.raise_for_status()
+        try:
+            from django.conf import settings
+            ai_url = getattr(settings, 'INDUSTRY_REFORGED_AI_URL', 'http://127.0.0.1:8050')
 
-        # Post to retrain endpoint
-        retrain_resp = requests.post("http://127.0.0.1:8050/retrain", timeout=30)
-        retrain_resp.raise_for_status()
+            ingest_resp = requests.post(
+                f"{ai_url.rstrip('/')}/ingest", json=payload, timeout=30
+            )
+            ingest_resp.raise_for_status()
 
-        logger.info(
-            f"Successfully synced {len(transactions)} transactions to ML service and triggered retrain."
-        )
-        return f"Ingested {len(transactions)} transactions."
+            # Trigger retrain async so we don't block
+            retrain_resp = requests.post(f"{ai_url.rstrip('/')}/retrain", timeout=30)
+            retrain_resp.raise_for_status()
+
+            logger.info(
+                f"Successfully synced {len(transactions)} transactions to ML service and triggered retrain."
+            )
+            logger.info("Successfully pushed market data to AI model.")
+            return f"Ingested {len(transactions)} transactions."
+        except Exception as e:
+            logger.warning(f"Failed to push market data to AI model: {e}")
+            return f"Failed: {e}"
+
     except Exception as e:
         logger.error(f"Failed to sync market data to ML service: {e}")
         return f"Failed: {e}"

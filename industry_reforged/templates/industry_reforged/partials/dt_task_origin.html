@@ -1,0 +1,13 @@
+{% load i18n %}
+
+{% if task.origin == "BASKET" %}
+<span class="badge bg-info text-dark" title="{% trans 'AI Market Manager' %}"><i class="fas fa-robot"></i> AI Basket</span>
+{% elif task.origin == "MEMBER_ORDER" %}
+<span class="badge bg-primary" title="{% trans 'Member Order' %}"><i class="fas fa-shopping-cart"></i> Order</span>
+{% elif task.origin == "BOM" %}
+<span class="badge bg-secondary" title="{% trans 'BOM Component' %}"><i class="fas fa-cogs"></i> Component</span>
+{% elif task.origin == "BLUEPRINT" %}
+<span class="badge bg-warning text-dark" title="{% trans 'Blueprint Request' %}"><i class="fas fa-copy"></i> Blueprint</span>
+{% else %}
+<span class="badge bg-secondary" title="{% trans 'Manual' %}"><i class="fas fa-user-edit"></i> Manual</span>
+{% endif %}

@@ -4,16 +4,24 @@
 
 {% block details %}
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3><i class="fas fa-chess-king"></i> {% trans "Director Control Panel" %}</h3>
-            <div>
-                <a href="{% url 'industry_reforged:director_inventory' %}" class="btn btn-primary"><i class="fas fa-boxes"></i>
-                    Inventory Analytics</a>
-                <a href="{% url 'industry_reforged:director_wallets' %}" class="btn btn-primary"><i class="fas fa-wallet"></i>
-                    Wallets</a>
-                <a href="{% url 'industry_reforged:director_config' %}" class="btn btn-success"><i class="fas fa-cogs"></i>
-                    Configurations</a>
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Director Control Panel" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Director Control Panel" %}</h2>
+                <div>
+                    <a href="{% url 'industry_reforged:director_inventory' %}" class="btn btn-primary"><i class="fas fa-boxes"></i>
+                        Inventory Analytics</a>
+                    <a href="{% url 'industry_reforged:director_wallets' %}" class="btn btn-primary"><i class="fas fa-wallet"></i>
+                        Wallets</a>
+                    <a href="{% url 'industry_reforged:director_config' %}" class="btn btn-success"><i class="fas fa-cogs"></i>
+                        Configurations</a>
+                </div>
             </div>
         </div>
     </div>
@@ -199,6 +207,7 @@
                                     <th>{% translate "Item" %}</th>
                                     <th>{% translate "Quantity" %}</th>
                                     <th>{% translate "Status" %}</th>
+                                    <th>Origin</th>
                                     <th>Priority</th>
                                     <th>{% trans "Claimed By" %}</th>
                                     <th class="text-end">Reward</th>
@@ -428,24 +437,7 @@
     </div>
 </div>
 
-<!-- Generic Confirmation Modal -->
-<div class="modal fade" id="actionModal" tabindex="-1" aria-labelledby="actionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content bg-dark border-secondary text-white">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title" id="actionModalLabel">{% trans "Confirm Action" %}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="actionModalMessage"></p>
-            </div>
-            <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                <button type="button" class="btn btn-primary" id="actionModalSubmitBtn">{% trans "Confirm" %}</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Payment Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
@@ -480,13 +472,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let formToSubmit = null;
-    let confirmModal = null;
-
-    if (typeof bootstrap !== 'undefined') {
-        confirmModal = new bootstrap.Modal(document.getElementById('actionModal'));
-    }
-
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     let hash = window.location.hash;
@@ -520,32 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    document.body.addEventListener('submit', function(e) {
-        if (e.target.matches('.require-confirmation')) {
-            e.preventDefault();
-            formToSubmit = e.target;
-            const msg = formToSubmit.getAttribute('data-action-msg') || "Are you sure?";
-            document.getElementById('actionModalMessage').textContent = msg;
 
-            const btnClass = formToSubmit.getAttribute('data-btn-class') || 'btn-primary';
-            const submitBtn = document.getElementById('actionModalSubmitBtn');
-            submitBtn.className = 'btn ' + btnClass;
-
-            if (confirmModal) {
-                confirmModal.show();
-            } else {
-                if (confirm(msg)) {
-                    formToSubmit.submit();
-                }
-            }
-        }
-    });
-
-    document.getElementById('actionModalSubmitBtn').addEventListener('click', function() {
-        if(formToSubmit) {
-            formToSubmit.submit();
-        }
-    });
 
     document.body.addEventListener('click', function(e) {
         const btn = e.target.closest('.payment-modal-btn');
@@ -614,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
-                { "orderable": false, "targets": [6] }
+                { "orderable": false, "targets": [7] }
             ]
         });
     }

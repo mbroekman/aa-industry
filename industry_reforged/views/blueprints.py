@@ -138,6 +138,7 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
                     activity_id=5,  # Copying
                     created_from_blueprint_request=bp_req,
                     priority="NORMAL",
+                    origin="BLUEPRINT",
                 )
 
             # Send DM to requester

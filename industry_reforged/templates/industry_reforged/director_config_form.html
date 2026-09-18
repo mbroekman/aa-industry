@@ -3,10 +3,20 @@
 
 {% block details %}
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h3><i class="fas fa-edit"></i> {{ title }}</h3>
-            <a href="{% url back_url %}{{ back_hash|default:'' }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:director_dashboard' %}">{% trans "Director Control Panel" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:director_config' %}">{% trans "Configurations" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{{ title }}</h2>
+                <a href="{% url back_url %}{{ back_hash|default:'' }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {% trans "Back" %}</a>
+            </div>
         </div>
     </div>
 

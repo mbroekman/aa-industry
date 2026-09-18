@@ -616,6 +616,7 @@ def spawn_restock_job(request: WSGIRequest, type_id: int) -> HttpResponse:
                     item_type=eve_type,
                     quantity=quantity,
                     status="UNCLAIMED",
+                    origin="MANUAL",
                     gamification_value=line_total,
                     builder_reward=task_reward,
                 )
