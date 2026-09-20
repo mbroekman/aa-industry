@@ -13,16 +13,23 @@ ordinal: 166000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Replace the stub in sync_market_data_to_ml_service with actual data extraction from Django models to feed the LightGBM model.
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
-- [ ] #1 - [ ] Extract relevant transaction/price data from Django\n- [ ] Post JSON payload to /ingest\n- [ ] Trigger /retrain
+
+- [ ] #1 - [ ] Extract relevant transaction/price data from Django\\n- [ ] Post JSON payload to /ingest\\n- [ ] Trigger /retrain
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Implemented internal MemberOrder extraction and external ESI Market History extraction for the AI forecasting service.
+
 <!-- SECTION:NOTES:END -->

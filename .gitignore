@@ -21,4 +21,5 @@ tmp_env/
 /*test*.py
 /append_task.py
 /make_migrations.py
-\n.venv-precommit/
+.venv-precommit/
+.temp_venv/

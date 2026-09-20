@@ -13,16 +13,23 @@ ordinal: 347000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Voeg een Origin kolom toe aan de jobs in de interface om te zien waar ze vandaan komen (BASKET, MANUAL, etc.).
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
-- [ ] #1 Origin field added to ProductionTask model\nOrigin populated on creation\nOrigin visible and filterable in datatables UI
+
+- [ ] #1 Origin field added to ProductionTask model\\nOrigin populated on creation\\nOrigin visible and filterable in datatables UI
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Created Origin column for ProductionTask. Added BASKET, MANUAL, MEMBER_ORDER, BOM, BLUEPRINT tags to all backend generation points. Updated datatables.py to return origin and allow search. Updated Director and Industrialist dashboards to render the Origin column.
+
 <!-- SECTION:NOTES:END -->

@@ -34,29 +34,29 @@ class TestAITargetHubChoices:
             alliance=alliance,
             member_count=5,
         )
-        other_corp = EveCorporationInfo.objects.create(
+        EveCorporationInfo.objects.create(
             corporation_id=9999,
             corporation_name="Other Corp",
             member_count=1,
         )
 
         # Create facilities
-        fac1 = IndustryFacility.objects.create(
+        IndustryFacility.objects.create(
             facility_id=101,
             name="Corp1 Hub",
             owner_id=corp1.corporation_id,
         )
-        fac2 = IndustryFacility.objects.create(
+        IndustryFacility.objects.create(
             facility_id=102,
             name="Alliance Hub",
             owner_id=corp2.corporation_id,
         )
-        npc_fac = IndustryFacility.objects.create(
+        IndustryFacility.objects.create(
             facility_id=600001,
             name="Jita IV - 4",
             owner_id=1000002,  # NPC
         )
-        unowned_prod_fac = IndustryFacility.objects.create(
+        IndustryFacility.objects.create(
             facility_id=103,
             name="Public Production Plant",
             owner_id=None,
@@ -82,20 +82,24 @@ class TestAITargetHubChoices:
 
         # Test BasketForm integration
         b_form = BasketForm(user_corps=user_corps)
-        b_choice_ids = [c[0] for c in b_form.fields["target_hub_id"].choices if c[0] != ""]
+        b_choice_ids = [
+            c[0] for c in b_form.fields["target_hub_id"].choices if c[0] != ""
+        ]
         assert 101 in b_choice_ids
         assert 102 in b_choice_ids
         assert 600001 in b_choice_ids
 
         # Test OpportunityScannerForm integration
         s_form = OpportunityScannerForm(user_corps=user_corps)
-        s_choice_ids = [c[0] for c in s_form.fields["target_hub_id"].choices if c[0] != ""]
+        s_choice_ids = [
+            c[0] for c in s_form.fields["target_hub_id"].choices if c[0] != ""
+        ]
         assert 101 in s_choice_ids
         assert 102 in s_choice_ids
 
     def test_target_hub_choices_no_duplicates(self):
         # When an ID is both in IndustryFacility and KnownLocation
-        fac = IndustryFacility.objects.create(
+        IndustryFacility.objects.create(
             facility_id=201,
             name="Shared Facility",
             owner_id=None,

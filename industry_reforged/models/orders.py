@@ -277,9 +277,7 @@ class ProductionTask(models.Model):
     priority = models.CharField(
         max_length=10, choices=PRIORITY_CHOICES, default="NORMAL"
     )
-    origin = models.CharField(
-        max_length=20, choices=ORIGIN_CHOICES, default="MANUAL"
-    )
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default="MANUAL")
     hidden = models.BooleanField(
         default=False, help_text=_("Hide from standard Industrialist Job Market")
     )

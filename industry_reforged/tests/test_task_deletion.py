@@ -5,26 +5,26 @@ import pytest
 from django.contrib.auth.models import Permission
 from django.urls import reverse
 
-# Eve Models
-from eveuniverse.models import EveType
-
 # AA Industry App
 from industry_reforged.models import ProductionTask
 from industry_reforged.tests.factories import (
     EveCharacterFactory,
     EveCorporationInfoFactory,
     EveTypeFactory,
-    ProductionTaskFactory,
     UserFactory,
 )
+
+# Eve Models
 
 
 @pytest.fixture(autouse=True)
 def mock_static(monkeypatch):
+    # Django
     from django.contrib.staticfiles.storage import staticfiles_storage
 
     monkeypatch.setattr(staticfiles_storage, "url", lambda name: f"/static/{name}")
     try:
+        # Third Party
         from sri.templatetags import sri
 
         monkeypatch.setattr(
@@ -79,7 +79,9 @@ class TestTaskDeletion:
         )
         assert ProductionTask.objects.filter(id=task.id).exists()
 
-        url = reverse("industry_reforged:delete_production_task", kwargs={"task_id": task.id})
+        url = reverse(
+            "industry_reforged:delete_production_task", kwargs={"task_id": task.id}
+        )
         response = client.post(url)
         assert response.status_code == 302
         assert not ProductionTask.objects.filter(id=task.id).exists()
@@ -96,7 +98,10 @@ class TestTaskDeletion:
         assert ProductionTask.objects.filter(id=parent_task.id).exists()
         assert ProductionTask.objects.filter(id=child_task.id).exists()
 
-        url = reverse("industry_reforged:delete_production_task", kwargs={"task_id": parent_task.id})
+        url = reverse(
+            "industry_reforged:delete_production_task",
+            kwargs={"task_id": parent_task.id},
+        )
         response = client.post(url)
         assert response.status_code == 302
         assert not ProductionTask.objects.filter(id=parent_task.id).exists()
@@ -105,21 +110,35 @@ class TestTaskDeletion:
     def test_cp_user_bulk_delete_tasks(self, client, cp_user):
         client.force_login(cp_user, backend="django.contrib.auth.backends.ModelBackend")
         item_type = EveTypeFactory()
-        task1 = ProductionTask.objects.create(item_type=item_type, quantity=2, status="UNCLAIMED")
-        task2 = ProductionTask.objects.create(item_type=item_type, quantity=4, status="UNCLAIMED")
-        task3 = ProductionTask.objects.create(item_type=item_type, quantity=6, status="IN_PRODUCTION")
+        task1 = ProductionTask.objects.create(
+            item_type=item_type, quantity=2, status="UNCLAIMED"
+        )
+        task2 = ProductionTask.objects.create(
+            item_type=item_type, quantity=4, status="UNCLAIMED"
+        )
+        task3 = ProductionTask.objects.create(
+            item_type=item_type, quantity=6, status="IN_PRODUCTION"
+        )
 
         url = reverse("industry_reforged:bulk_delete_tasks")
         response = client.post(url, {"task_ids": [task1.id, task2.id, task3.id]})
         assert response.status_code == 302
-        assert not ProductionTask.objects.filter(id__in=[task1.id, task2.id, task3.id]).exists()
+        assert not ProductionTask.objects.filter(
+            id__in=[task1.id, task2.id, task3.id]
+        ).exists()
 
     def test_non_cp_user_cannot_delete_task(self, client, non_cp_user):
-        client.force_login(non_cp_user, backend="django.contrib.auth.backends.ModelBackend")
+        client.force_login(
+            non_cp_user, backend="django.contrib.auth.backends.ModelBackend"
+        )
         item_type = EveTypeFactory()
-        task = ProductionTask.objects.create(item_type=item_type, quantity=1, status="UNCLAIMED")
+        task = ProductionTask.objects.create(
+            item_type=item_type, quantity=1, status="UNCLAIMED"
+        )
 
-        url = reverse("industry_reforged:delete_production_task", kwargs={"task_id": task.id})
+        url = reverse(
+            "industry_reforged:delete_production_task", kwargs={"task_id": task.id}
+        )
         response = client.post(url)
         assert response.status_code == 302  # redirected due to permission_required
         assert ProductionTask.objects.filter(id=task.id).exists()

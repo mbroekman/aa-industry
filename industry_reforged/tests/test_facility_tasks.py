@@ -124,6 +124,7 @@ class TestFacilityTasks:
 
         update_industry_facilities()
 
+        # AA Industry App
         from industry_reforged.models.facilities import (
             IndustryFacility,
             KnownLocation,

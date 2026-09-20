@@ -183,11 +183,11 @@ def _get_security_space(system_id):
 @shared_task(name="industry_reforged.tasks.resolve_unknown_locations")
 def resolve_unknown_locations(location_ids=None):
     """Resolve names for unknown locations via ESI."""
-    # Django
-    from django.db.models import Q
-
     # Third Party
     import requests
+
+    # Django
+    from django.db.models import Q
 
     # Alliance Auth
     from esi.models import Token
@@ -273,6 +273,7 @@ def resolve_unknown_locations(location_ids=None):
 
                         # Also populate/update IndustryFacility so structure is visible as facility
                         from ..models.facilities import IndustryFacility
+
                         sys_id = data.get("solar_system_id")
                         IndustryFacility.objects.update_or_create(
                             facility_id=loc_id,

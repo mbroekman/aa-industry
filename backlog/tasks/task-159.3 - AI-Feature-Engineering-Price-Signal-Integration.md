@@ -13,14 +13,19 @@ ordinal: 165000
 ---
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [x] #1 Update pipeline/features.py to calculate price trends
 - [x] #2 Join Ping/Doctrine boolean flags in dataset
 - [x] #3 Retrain LightGBM model
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Updated features.py to calculate price trends and join ping/doctrine flags. Added new features to train.py.
+
 <!-- SECTION:NOTES:END -->

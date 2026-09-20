@@ -175,11 +175,10 @@ def delete_production_task(request: WSGIRequest, task_id: int) -> HttpResponse:
         task.delete()
         messages.success(
             request,
-            _("Production Task for %(item_name)s deleted.")
-            % {"item_name": item_name},
+            _("Production Task for %(item_name)s deleted.") % {"item_name": item_name},
         )
 
-    referer = request.META.get("HTTP_REFERER")
+    referer = request.headers.get("referer")
     if referer and ("industry" in referer):
         return redirect(referer)
     return redirect(reverse("industry_reforged:director_dashboard") + "?tab=tasks")
@@ -210,7 +209,7 @@ def bulk_delete_tasks(request: WSGIRequest) -> HttpResponse:
         else:
             messages.warning(request, _("No tasks selected for deletion."))
 
-    referer = request.META.get("HTTP_REFERER")
+    referer = request.headers.get("referer")
     if referer and ("industry" in referer):
         return redirect(referer)
     return redirect(reverse("industry_reforged:director_dashboard") + "?tab=tasks")

@@ -220,22 +220,22 @@
                 document.getElementById('actionModalMessage').textContent = msg;
                 const submitBtn = document.getElementById('actionModalSubmitBtn');
                 submitBtn.className = 'btn ' + (btnClass || 'btn-primary');
-                
+
                 // Remove previous event listeners
                 const newBtn = submitBtn.cloneNode(true);
                 submitBtn.parentNode.replaceChild(newBtn, submitBtn);
-                
+
                 newBtn.addEventListener('click', function() {
                     confirmModal.hide();
                     confirmCallback(true);
                 });
-                
+
                 const modalEl = document.getElementById('actionModal');
                 const onHidden = function() {
                     modalEl.removeEventListener('hidden.bs.modal', onHidden);
                 };
                 modalEl.addEventListener('hidden.bs.modal', onHidden);
-                
+
                 confirmModal.show();
             } else {
                 if (confirm(msg)) {

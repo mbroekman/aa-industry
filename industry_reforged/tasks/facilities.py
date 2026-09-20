@@ -46,7 +46,9 @@ def update_industry_facilities():
         )
 
     # Also collect location_ids from Corporate Assets
+    # Alliance Auth
     from esi.exceptions import HTTPNotModified
+
     from ..models.facilities import KnownLocation
 
     configs = CorporationSyncConfig.objects.select_related(
@@ -197,7 +199,9 @@ def update_industry_facilities():
                                 "security_space": _get_security_space(sys_id),
                             },
                         )
-                        KnownLocation.objects.filter(location_id=loc_id).update(name=name)
+                        KnownLocation.objects.filter(location_id=loc_id).update(
+                            name=name
+                        )
                         break
         except Exception as e:
             logger.error(f"Error resolving facility {loc_id}: {e}")

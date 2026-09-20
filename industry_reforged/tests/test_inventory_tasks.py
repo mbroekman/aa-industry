@@ -97,6 +97,7 @@ class TestInventoryTasks:
         task_sync_corp_inventory()
         assert mock_esi.client.Assets.GetCorporationsCorporationIdAssets.called
 
+        # AA Industry App
         from industry_reforged.models.facilities import KnownLocation
 
         loc = KnownLocation.objects.filter(location_id=1045667241057).first()

@@ -62,7 +62,7 @@ def _sync_corp_blueprints(config):
             res = req.results()
             if not res:
                 break
-            
+
             all_blueprints_data.extend(res)
 
             # Check if there are more pages
@@ -76,7 +76,9 @@ def _sync_corp_blueprints(config):
             page_success = False
             break
         except Exception as e:
-            logger.error(f"Failed to fetch blueprints for corp {corp_id} on page {page}: {e}")
+            logger.error(
+                f"Failed to fetch blueprints for corp {corp_id} on page {page}: {e}"
+            )
             page_success = False
             break
 

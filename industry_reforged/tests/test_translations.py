@@ -1,7 +1,10 @@
+# Standard Library
 import gettext
 from pathlib import Path
-import pytest
-from django.utils.translation import activate, deactivate, gettext as _
+
+# Django
+from django.utils.translation import activate, deactivate
+from django.utils.translation import gettext as _
 
 
 class TestDutchTranslations:

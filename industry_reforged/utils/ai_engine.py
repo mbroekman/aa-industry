@@ -147,17 +147,23 @@ def get_market_stock(type_id, region_id, location_id):
     if location_id >= 1000000000000:
         url = f"https://esi.evetech.net/latest/markets/structures/{location_id}/"
         # Need a token with structure_markets scope
+        # Alliance Auth
         from esi.models import Token
-        token = Token.objects.filter(scopes__name="esi-markets.structure_markets.v1").first()
-        
+
+        token = Token.objects.filter(
+            scopes__name="esi-markets.structure_markets.v1"
+        ).first()
+
         if not token:
-            logger.warning(f"No token with esi-markets.structure_markets.v1 to fetch market for structure {location_id}")
+            logger.warning(
+                f"No token with esi-markets.structure_markets.v1 to fetch market for structure {location_id}"
+            )
             return 0
-        
+
         headers["Authorization"] = f"Bearer {token.valid_access_token()}"
         params = {"datasource": "tranquility", "page": 1}
         stock = 0
-        
+
         try:
             while True:
                 response = requests.get(url, params=params, headers=headers, timeout=10)
@@ -165,25 +171,30 @@ def get_market_stock(type_id, region_id, location_id):
                     orders = response.json()
                     if not orders:
                         break
-                    
+
                     # Filter for specific type_id and sell orders only
                     stock += sum(
-                        int(o.get("volume_remain", 0)) 
-                        for o in orders 
-                        if o.get("type_id") == type_id and not o.get("is_buy_order", False)
+                        int(o.get("volume_remain", 0))
+                        for o in orders
+                        if o.get("type_id") == type_id
+                        and not o.get("is_buy_order", False)
                     )
-                    
+
                     # Pagination check
                     x_pages = int(response.headers.get("X-Pages", 1))
                     if params["page"] >= x_pages:
                         break
                     params["page"] += 1
                 else:
-                    logger.warning(f"Failed to fetch market stock for structure {location_id}: HTTP {response.status_code} - {response.text}")
+                    logger.warning(
+                        f"Failed to fetch market stock for structure {location_id}: HTTP {response.status_code} - {response.text}"
+                    )
                     break
             return stock
         except Exception as e:
-            logger.warning(f"Error fetching structure market stock for {type_id} at {location_id}: {e}")
+            logger.warning(
+                f"Error fetching structure market stock for {type_id} at {location_id}: {e}"
+            )
             return 0
     else:
         # Public NPC station market
@@ -198,12 +209,14 @@ def get_market_stock(type_id, region_id, location_id):
             if response.status_code == 200:
                 orders = response.json()
                 stock = sum(
-                    int(o.get("volume_remain", 0)) 
-                    for o in orders 
+                    int(o.get("volume_remain", 0))
+                    for o in orders
                     if o.get("location_id") == location_id
                 )
                 return stock
         except Exception as e:
-            logger.warning(f"Failed to fetch public market stock for {type_id} in region {region_id}: {e}")
+            logger.warning(
+                f"Failed to fetch public market stock for {type_id} in region {region_id}: {e}"
+            )
 
     return 0

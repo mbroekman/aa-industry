@@ -13,16 +13,23 @@ ordinal: 195000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Run active basket evaluation and check for ProductionTask entries
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [x] #1 Active basket evaluation runs without errors; at least one ProductionTask created for active basket
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Verified via automated test test_evaluate_baskets_recreates_deleted_tasks_when_criteria_met.
+
 <!-- SECTION:NOTES:END -->

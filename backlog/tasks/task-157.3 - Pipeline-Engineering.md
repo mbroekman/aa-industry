@@ -14,16 +14,23 @@ ordinal: 171000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Implement features.py (including external context features like pings/prices) and train.py with test datasets using LightGBM.
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [x] #1 Model trains successfully on historical data and saves artifact
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Implemented features.py and train.py for LightGBM pipeline.
+
 <!-- SECTION:NOTES:END -->

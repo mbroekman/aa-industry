@@ -17,22 +17,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **i18n**: fully update and compile Dutch translations (`nl`) covering all features through v0.12.x (AI Market Manager, Basket management, Opportunity Scanners, Blueprints, Ledgers, etc.)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **facilities**: resolve Upwell structure locations from corporate assets container hierarchies into `IndustryFacility` and `KnownLocation`, ensuring alliance structures (such as C-N Keepstar) appear in facilities and hub dropdowns after a fresh install
+
 - **inventory**: prevent premature exit in `task_sync_corp_inventory` when no facility has `sync_inventory=True`, ensuring known locations are always discovered
 
 ## v0.12.2 (2026-09-08)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - prevent memory exhaustion from historical jobs in dashboard
@@ -40,10 +51,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.12.1 (2026-09-08)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **views**: prevent session timeout during auto-refresh
@@ -62,22 +78,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **ai**: configure AI Manager to use `final_price` adjusting for overrides when calculating profitability margins
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **ai**: correct state of generated ProductionTasks to `UNCLAIMED` allowing jobs to properly show up in task lists
+
 - **pricing**: exclude Blueprint/Reaction Formula costs (Activity 5) from `calculate_bom_cost()` recursive materials logic, preventing massive artificial inflation of true material cost floors for Quote calculations
 
 ## v0.10.1 (2026-09-04)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **ui**: expose CorporationPricingConfig configuration form in director dashboard so it is accessible to users
@@ -109,10 +136,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **ui**: add configurable page auto-refresh (5m, 10m, 15m, 25m, 30m) with countdown timer and active tab persistence across jobs and PI dashboards (TASK-120)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **perf**: eliminate N+1 database queries in PI rates and depletion calculations with in-memory schematics cache, preventing DB connection exhaustion (TASK-121)
@@ -128,10 +160,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.8.4 (2026-09-03)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **industry**: automatically bootstrap PI schematics from SDE during PI sync or dashboard view if table is empty (TASK-119)
@@ -139,16 +176,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.8.3 (2026-09-03)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **industry**: resolve PI factory depletion baseline calculation using pin cycle start timestamp (TASK-118)
+
 - **industry**: prevent extraction planets with active extractors from incorrectly displaying "Out of Resources" (TASK-118)
+
 - **industry**: add dynamic resource consumption deduction on storage and launchpad pins (TASK-117)
+
 - **industry**: add accurate factory running, depleted, and idle status badges on dashboard and modals (TASK-117)
+
 - **industry**: remove flawed cycle start check causing running factory planets to show as stopped (TASK-116)
 
 ## v0.8.1 (2026-09-01)
@@ -160,13 +206,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - **industry**: add factory depletion timers and end product visibility on launchpads (TASK-112)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **industry**: resolve simulated PI production distribution loss (prevent integer truncation "7 items bug") and zero amounts
+
 - **industry**: exclude locally supplied inputs from factory depletion time calculation to prevent premature simulation halting
 
 ## v0.8.0 (2026-08-31)
@@ -193,10 +245,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.7 (2026-08-28)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - prevent material overcount on dashboard and rename menu item
@@ -214,23 +271,35 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - blueprint library category filtering added
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - correctly show requested runs on accepted blueprint requests
+
 - fixed invalid image URLs for blueprint originals and copies
+
 - replaced me/te columns with badges in blueprint datatables
 
 ## v0.5.3 (2026-08-27)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - resolve ESI cache issue on empty db and properly read pydantic models
@@ -238,10 +307,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.2 (2026-08-26)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - round calculated remaining materials to whole numbers
@@ -249,10 +323,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.5.1 (2026-08-26)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - sync version in __init__.py for build system
@@ -265,10 +344,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - improve Build Steps remaining calculation and dashboard UI
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - hide expected_output in UI when equal to runs
@@ -276,10 +360,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.4.2 (2026-08-25)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - mapped ESI reaction activity ID (9) to SDE reaction activity ID (11) for accurate expected output calculation
@@ -291,13 +380,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - split job linking to fix overdelivery and add expected output to dashboard (Fixes #36, Fixes #33)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - ensure active and ready jobs bypass claim date filter (Fixes #37)
+
 - include eve_delivered in completed column for build steps
 
 ## v0.4.0 (2026-08-25)
@@ -314,10 +409,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - display version number in header
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - allow over-delivery on task claims and accurately track EVE delivered runs
@@ -329,10 +429,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.3.8 (2026-08-17)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - Ensure ESI aggressive cleanup triggers correctly on 0 jobs and handles 304 cache properly
@@ -342,10 +447,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## v0.3.6 (2026-08-15)
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - add datatables countdowns and implement numeric sorting for ISK values
@@ -366,23 +476,39 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - add release 0.3.1 documentation for PI sync, translation, and job market bugfixes
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - restore job market rollup filtering, fix claim UI, and resolve DataTables pagination visibility for v0.3.4 release
+
 - improve faction blueprint ME detection by verifying market group status and invention activity in bom_engine.py
+
 - correct remaining calculation and activity filtering for industrialist dashboard and standardize backlog task frontmatter
+
 - **director**: Fix ImportError for EveCharacter in generate_payout_batch
+
 - **tasks**: Fix CharacterOwnership reverse accessor for EveCharacter
+
 - **models**: Export TaskJobLink to fix celery import error
+
 - **ui**: Fix SafeString escaping for global alert in auth hooks
+
 - **tasks**: Fix EveCorporationInfo import in wallet task
+
 - **bom**: Use EveIndustryActivityDuration instead of EveIndustryActivity
+
 - default ME to 0 for faction blueprints and reactions without skipping overrides
+
 - resolve TypeError in get_blueprint_me where ME value could be None
+
 - isolate task tree folding logic per table to prevent incorrect indentations in job market
 
 ### Refactor
@@ -405,10 +531,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - replace HTMX facility updates with server-side page reloads and add ME override management for corporate quotes
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - improve PI notification planet names and update wipe_industry_data command to include payout batches
@@ -426,10 +557,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - add facility management and production task control improvements with updated documentation
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - **ui**: remove character selection, add datatables to dashboard, and improve fit parsing regex
@@ -452,14 +588,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - implement industrialist dashboard, production task system, and leaderboard with associated UI and management permissions.
 
 ### Fix
+
 - **blueprints**: prevent ESI sync task from deleting all corporate blueprints when encountering a 304 Not Modified response
+
 - **ai**: round up AI forecasted target stock to nearest integer to prevent generation of 0-quantity ProductionTasks
+
 - **ai**: correct Opportunity Scanner database query for missing blueprints to use actual corporation id
+
 - **blueprints**: implement missing pagination when fetching corporate blueprints from ESI API
+
 - **blueprints**: fix is_original property to correctly classify BPCs as copies instead of originals
 
 - resolve PI product naming mismatches in tasks and address UI collapse/expand stability, plus bump version and add diagnostic scripts
+
 - add duplicate validation for config/discount forms and update discount table display
+
 - resolve display bugs in order quotes by adding original price calculation and updating UI elements
 
 ### Refactor

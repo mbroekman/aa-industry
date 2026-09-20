@@ -12,6 +12,7 @@ class IndustryConfig(AppConfig):
     verbose_name = "Industry Reforged"
 
     def ready(self):
+        # Django
         from django.db.models.signals import post_migrate
 
         post_migrate.connect(_queue_initial_tasks, sender=self)
@@ -19,6 +20,7 @@ class IndustryConfig(AppConfig):
 
 def _queue_initial_tasks(sender, **kwargs):
     """Queue all main tasks once after a fresh install (no prior runs recorded)."""
+    # Standard Library
     import logging
 
     logger = logging.getLogger(__name__)

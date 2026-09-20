@@ -68,13 +68,17 @@ class TestJobsTasks:
 @pytest.mark.django_db
 class TestResolveUnknownLocations:
     def test_resolve_unknown_locations_empty_db_no_args(self):
+        # AA Industry App
         from industry_reforged.tasks.utils import resolve_unknown_locations
 
         # Calling without arguments on empty DB must succeed without error
         resolve_unknown_locations()
 
     @patch("requests.post")
-    def test_resolve_unknown_locations_resolves_db_records_when_no_args(self, mock_post):
+    def test_resolve_unknown_locations_resolves_db_records_when_no_args(
+        self, mock_post
+    ):
+        # AA Industry App
         from industry_reforged.models.facilities import KnownLocation
         from industry_reforged.tasks.utils import resolve_unknown_locations
 
@@ -84,7 +88,9 @@ class TestResolveUnknownLocations:
         ]
 
         loc_unknown = KnownLocation.objects.create(location_id=10001, name="")
-        loc_known = KnownLocation.objects.create(location_id=10002, name="Known Station")
+        loc_known = KnownLocation.objects.create(
+            location_id=10002, name="Known Station"
+        )
 
         resolve_unknown_locations()
 
@@ -95,6 +101,7 @@ class TestResolveUnknownLocations:
 
     @patch("requests.post")
     def test_resolve_unknown_locations_with_explicit_args(self, mock_post):
+        # AA Industry App
         from industry_reforged.models.facilities import KnownLocation
         from industry_reforged.tasks.utils import resolve_unknown_locations
 
@@ -107,4 +114,3 @@ class TestResolveUnknownLocations:
 
         loc = KnownLocation.objects.get(location_id=20001)
         assert loc.name == "Custom Resolved Station"
-
