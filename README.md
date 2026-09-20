@@ -91,16 +91,23 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
 
 ### AI Demand Forecasting Service (Optional but Recommended)
 
-To utilize the AI Market Manager and AI-driven Opportunity Scanners, you must deploy the standalone AI Forecasting service (FastAPI + LightGBM).
+To utilize the AI Market Manager and AI-driven Opportunity Scanners, you must deploy the standalone AI Forecasting service (FastAPI + LightGBM). Because this is a separate microservice, it is not included in the standard `pip install`. You must retrieve it from the GitHub repository.
 
-1. **Build and Run the Podman Container**
-   Inside the `ai-forecasting` directory of this repository:
+1. **Download the AI Service Source Code**
+   Clone the repository to your server to get the necessary files:
+   ```bash
+   git clone https://github.com/mbroekman/aa-industry.git
+   cd aa-industry/ai-forecasting
+   ```
+
+2. **Build and Run the Podman Container**
+   Inside the `ai-forecasting` directory, build and start the container:
    ```bash
    podman build -t ai-forecasting .
    podman run -d -p 8050:8050 --name ai-forecasting ai-forecasting
    ```
 
-2. **Configure Alliance Auth**
+3. **Configure Alliance Auth**
    Add the following to your `myauth/settings/local.py` so the `aa-industry` app can communicate with the AI engine:
    ```python
    INDUSTRY_REFORGED_AI_URL = "http://127.0.0.1:8050"
