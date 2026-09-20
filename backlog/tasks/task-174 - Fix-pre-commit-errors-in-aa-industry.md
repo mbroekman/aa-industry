@@ -13,16 +13,23 @@ ordinal: 350000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Fix formatting/linting errors reported by pre-commit in aa-industry on github.
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [ ] #1 Pre-commit passes locally
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 Resolved all flake8 and pylint errors by cleaning up unused imports and unused variables. pre-commit now passes locally.
+
 <!-- SECTION:NOTES:END -->

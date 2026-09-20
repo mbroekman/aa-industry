@@ -13,16 +13,23 @@ ordinal: 351000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
 Remove the temporary virtual environment from the git index and workspace
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
+
 <!-- AC:BEGIN -->
+
 - [ ] #1 .temp_venv removed from git status
+
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
+
 .temp_venv removed from index and added to .gitignore
+
 <!-- SECTION:NOTES:END -->
