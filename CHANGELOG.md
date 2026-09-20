@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## v0.13.0 (2026-09-20)
+
 ### Feat
 
 - **ai**: implemented the standalone AI Demand Forecasting Service (LightGBM) with integrated REST API
