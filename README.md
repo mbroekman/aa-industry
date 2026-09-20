@@ -89,6 +89,26 @@ Before installing this plugin, ensure your Alliance Auth instance meets the foll
    sudo systemctl restart myauth-celery
    ```
 
+### AI Demand Forecasting Service (Optional but Recommended)
+
+To utilize the AI Market Manager and AI-driven Opportunity Scanners, you must deploy the standalone AI Forecasting service (FastAPI + LightGBM).
+
+1. **Build and Run the Podman Container**
+   Inside the `ai-forecasting` directory of this repository:
+   ```bash
+   podman build -t ai-forecasting .
+   podman run -d -p 8050:8050 --name ai-forecasting ai-forecasting
+   ```
+
+2. **Configure Alliance Auth**
+   Add the following to your `myauth/settings/local.py` so the `aa-industry` app can communicate with the AI engine:
+   ```python
+   INDUSTRY_REFORGED_AI_URL = "http://127.0.0.1:8050"
+   # Note: If Alliance Auth runs in a container, use "http://host.containers.internal:8050"
+   ```
+
+*For more details on running this without Podman using Poetry, see the `ai-forecasting/README.md` file.*
+
 ## Configuration & Usage
 
 ### 1. Load EveUniverse Data
