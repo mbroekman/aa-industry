@@ -282,17 +282,13 @@ After updating `local.py`, be sure to restart your Celery worker and Celery Beat
 The AI Market Manager can automatically evaluate item profitability and create Production Tasks for your corporation based on minimum margin floors. It is backed by a dedicated **AI Forecasting Microservice** that predicts market demand using Machine Learning (LightGBM).
 
 #### Deploying the AI Forecasting Microservice
-Because Machine Learning models require specific data science libraries that are heavy on CPU and Memory, the AI forecasting engine runs as an isolated microservice.
+Because Machine Learning models require specific data science libraries that are heavy on CPU and Memory, the AI forecasting engine runs as an isolated microservice. 
 
-1. Navigate to the `ai-forecasting` directory inside the repository.
-2. Build the container image using Podman (or Docker):
-   ```bash
-   podman build -t aa-industry-ai-forecasting .
-   ```
-3. Run the container on port 8050:
-   ```bash
-   podman run -d --name ai-forecasting -p 127.0.0.1:8050:8000 aa-industry-ai-forecasting
-   ```
+Instead of building this manually, you can run the pre-built image from the GitHub Container Registry (as detailed in the Installation section):
+
+```bash
+podman run -d -p 8050:8050 --name ai-forecasting ghcr.io/mbroekman/aa-industry-ai-forecasting:latest
+```
 
 *(Note: If the microservice is not running, the Market Manager will gracefully fall back to using static 30-day historical averages instead of AI predictions).*
 
