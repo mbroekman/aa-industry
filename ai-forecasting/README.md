@@ -10,16 +10,17 @@ FastAPI service for predicting demand and triggering manufacturing orders using 
 
 ## Installation & Running (Podman)
 
-The easiest way to run the service is using Podman.
+The easiest way to run the service is using the pre-built Podman image from the GitHub Container Registry.
 
-1. Build the Podman image:
-   ```bash
-   podman build -t ai-forecasting .
-   ```
-2. Run the Podman container (runs on port 8050):
-   ```bash
-   podman run -p 8050:8050 ai-forecasting
-   ```
+```bash
+podman run -d -p 8050:8050 --name ai-forecasting ghcr.io/mbroekman/aa-industry-ai-forecasting:latest
+```
+
+If you wish to build the image manually:
+```bash
+podman build -t ai-forecasting .
+podman run -p 8050:8050 ai-forecasting
+```
 
 ## Local Development (Poetry)
 
