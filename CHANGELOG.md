@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## v0.13.1 (2026-09-27)
+
+### Fix
+
+- **ai**: Prevent application failure by handling cases where the AI Manager model is unavailable (TASK-177).
+- **orders**: Show the most expensive line item in order lists to make order identification easier (TASK-178).
+- **blueprints**: Fix Blueprint Library visibility by adding a State filter to correctly distinguish between BPOs and BPCs (TASK-179).
+- **pricing**: Corrected display formatting by removing percentage signs from absolute ME/TE values (TASK-180).
+- **bom**: Fix material calculation fallback behavior to correctly apply configured Material Efficiency (ME) values for T1 blueprints (TASK-181).
+
 ## v0.13.0 (2026-09-20)
 
 ### Feat
