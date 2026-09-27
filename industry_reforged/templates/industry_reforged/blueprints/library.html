@@ -25,11 +25,18 @@
         <div class="card-body">
             <div class="mb-3 d-flex align-items-center">
                 <label class="me-2">{% translate "Filter by Type:" %}</label>
-                <select id="group-filter" class="form-select w-auto d-inline-block">
+                <select id="group-filter" class="form-select w-auto d-inline-block me-3">
                     <option value="ALL">{% translate "All Types" %}</option>
                     {% for group in bp_groups %}
                         <option value="{{ group.id }}">{{ group.name|cut:" Blueprint"|cut:" Blueprints" }}</option>
                     {% endfor %}
+                </select>
+
+                <label class="me-2">{% translate "State:" %}</label>
+                <select id="state-filter" class="form-select w-auto d-inline-block">
+                    <option value="ALL">{% translate "All" %}</option>
+                    <option value="BPO">{% translate "BPO (Originals)" %}</option>
+                    <option value="BPC">{% translate "BPC (Copies)" %}</option>
                 </select>
             </div>
 
@@ -100,6 +107,7 @@
                     "url": "{% url 'industry_reforged:dt_blueprint_library' %}",
                     "data": function (d) {
                         d.group = $('#group-filter').val();
+                        d.state = $('#state-filter').val();
                     }
                 },
                 "autoWidth": false,
@@ -112,7 +120,7 @@
                 ]
             });
 
-            $('#group-filter').on('change', function() {
+            $('#group-filter, #state-filter').on('change', function() {
                 $('#blueprint-library-table').DataTable().draw();
             });
         }

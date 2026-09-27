@@ -64,16 +64,17 @@ def dt_director_orders(request):
 
     # Ordering
     # Column mapping for DataTables:
-    # 0: id, 1: character, 2: total_price, 3: true_cost, 4: margin, 5: payment_ref, 6: status, 7: progress, 8: action
+    # 0: id, 1: primary_item, 2: character, 3: total_price, 4: true_cost, 5: margin, 6: payment_ref, 7: status, 8: progress, 9: action
     order_map = {
         "0": "id",
-        "1": "character__character_name",
-        "2": "total_price",
-        "3": "true_cost",
-        "4": "created_at",  # margin is calculated, sort by creation
-        "5": "payment_reference",
-        "6": "status",
-        "7": "created_at",  # Progress is calculated, fallback to created_at
+        "1": "id",
+        "2": "character__character_name",
+        "3": "total_price",
+        "4": "true_cost",
+        "5": "created_at",  # margin is calculated, sort by creation
+        "6": "payment_reference",
+        "7": "status",
+        "8": "created_at",  # Progress is calculated, fallback to created_at
     }
 
     order_field = order_map.get(str(order_col), "created_at")
@@ -98,9 +99,14 @@ def dt_director_orders(request):
 
         margin_html = f'<span class="{"text-success" if margin >= 0 else "text-danger"}">{margin:.1f}%</span>'
 
+        primary_item = "-"
+        if order.most_expensive_item:
+            primary_item = f"{order.most_expensive_item.quantity}x {order.most_expensive_item.item_type.name}"
+
         data.append(
             [
                 f"#{order.id} {sub_orders_badge}",
+                primary_item,
                 order.character.character_name if order.character else "Unknown",
                 render_to_string(
                     "industry_reforged/partials/dt_isk.html",
@@ -653,6 +659,12 @@ def dt_blueprint_library(request):
     group_filter = request.GET.get("group", "ALL")
     if group_filter != "ALL":
         qs = qs.filter(eve_type__eve_group_id=group_filter)
+
+    state_filter = request.GET.get("state", "ALL")
+    if state_filter == "BPO":
+        qs = qs.filter(Q(quantity=-1) | Q(runs=-1))
+    elif state_filter == "BPC":
+        qs = qs.exclude(Q(quantity=-1) | Q(runs=-1))
 
     total_records = qs.count()
 

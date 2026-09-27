@@ -177,9 +177,6 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
 
         if is_invented:
             default_me = default_t2
-        elif bp_prod.eve_type.eve_market_group_id is None:
-            # Faction, storyline, or other non-researchable BPCs are not on the market
-            default_me = 0
         else:
             has_me_research = EveIndustryActivityDuration.objects.filter(
                 eve_type_id=bp_prod.eve_type_id, activity_id=4

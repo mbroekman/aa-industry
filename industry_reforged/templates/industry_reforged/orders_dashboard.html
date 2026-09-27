@@ -38,6 +38,7 @@
                                 <th style="width: 40px;" class="text-center"><input type="checkbox" id="selectAllOrders" onclick="toggleSelectAll(this)"></th>
                                 {% endif %}
                                 <th>{% trans "Order ID" %}</th>
+                                <th>{% trans "Primary Item" %}</th>
                                 <th>{% trans "Character" %}</th>
                                 <th>{% trans "Status" %}</th>
                                 <th class="text-end">{% trans "Total Price" %}</th>
@@ -58,6 +59,13 @@
                                     <span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has sub-orders">
                                         <i class="fas fa-sitemap"></i> +{{ order.child_orders.count }}
                                     </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.most_expensive_item %}
+                                        {{ order.most_expensive_item.quantity }}x {{ order.most_expensive_item.item_type.name }}
+                                    {% else %}
+                                        -
                                     {% endif %}
                                 </td>
                                 <td>{{ order.character.character_name }}</td>

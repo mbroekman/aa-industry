@@ -3,6 +3,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
+import requests
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
@@ -25,6 +27,17 @@ def ai_market_manager_dashboard(request):
     # Keep session alive on auto-refresh
     if hasattr(request, "session"):
         request.session.modified = True
+
+    # Check AI Forecasting Service Availability
+    ai_url = getattr(settings, "INDUSTRY_REFORGED_AI_URL", "http://127.0.0.1:8050")
+    try:
+        resp = requests.get(f"{ai_url.rstrip('/')}/", timeout=2)
+        resp.raise_for_status()
+    except requests.exceptions.RequestException:
+        messages.error(
+            request,
+            _("AI Forecasting model is not available. Please check if the ai-forecasting service is running.")
+        )
 
     user_corps = get_user_corps(request.user)
     baskets = (

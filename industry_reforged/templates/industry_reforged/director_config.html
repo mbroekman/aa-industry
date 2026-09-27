@@ -100,7 +100,7 @@
                                     </td>
                                     <td class="text-end numeric">
                                         {% if config.has_blueprint %}
-                                            ME: {{ config.manual_me }}%<br>TE: {{ config.manual_te }}%<br>Runs: {% if config.max_runs == 0 %}BPO{% else %}{{ config.max_runs }}{% endif %}
+                                            ME: {{ config.manual_me }}<br>TE: {{ config.manual_te }}<br>Runs: {% if config.max_runs == 0 %}BPO{% else %}{{ config.max_runs }}{% endif %}
                                         {% else %}
                                             <span class="text-muted fst-italic">N/A</span>
                                         {% endif %}
@@ -156,7 +156,7 @@
                                     <td class="fw-bold">{{ p.corporation.corporation_name }}</td>
                                     <td class="text-end text-success fw-bold">{% if p.default_discount_percent > 0 %}{{ p.default_discount_percent }}% OFF{% else %}0%{% endif %}</td>
                                     <td class="text-end text-warning fw-bold">{{ p.builder_reward_percent }}%</td>
-                                    <td class="text-end">{{ p.default_t1_me }}% / {{ p.default_t2_me }}%</td>
+                                    <td class="text-end">{{ p.default_t1_me }} / {{ p.default_t2_me }}</td>
                                     <td class="text-end">
                                         <a href="{% url 'industry_reforged:director_config_pricing_edit' p.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                     </td>

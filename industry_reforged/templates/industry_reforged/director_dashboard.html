@@ -110,6 +110,7 @@
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
+                                    <th>Primary Item</th>
                                     <th>Character</th>
                                     <th>Total Price</th>
                                     <th>True Cost</th>
@@ -554,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
-                { "orderable": false, "targets": [4, 8] }
+                { "orderable": false, "targets": [1, 5, 9] }
             ]
         });
     }

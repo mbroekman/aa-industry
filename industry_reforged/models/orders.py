@@ -165,6 +165,14 @@ class MemberOrder(models.Model):
         completed_tasks = self.production_tasks.filter(status="COMPLETED").count()
         return int((completed_tasks / total_tasks) * 100)
 
+    @property
+    def most_expensive_item(self):
+        """Returns the OrderItem with the highest line_total for this order."""
+        items = list(self.items.all())
+        if not items:
+            return None
+        return max(items, key=lambda i: i.line_total)
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
