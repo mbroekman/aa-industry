@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fix
+
+- **ai**: Ensure `check_availability` accounts for active and ready unlinked `CorporationIndustryJob` instances to prevent AI Market Manager from over-ordering when jobs are running natively (TASK-2).
+
 ## v0.13.1 (2026-09-27)
 
 ### Fix
