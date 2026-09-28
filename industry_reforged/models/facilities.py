@@ -37,6 +37,11 @@ class IndustryFacility(models.Model):
         help_text=_("Whether this is the default facility for the corporation."),
     )
 
+    is_default_reaction = models.BooleanField(
+        default=False,
+        help_text=_("Whether this is the default facility for reactions."),
+    )
+
     class Meta:
         verbose_name = _("Industry Facility")
         verbose_name_plural = _("Industry Facilities")
@@ -49,6 +54,11 @@ class IndustryFacility(models.Model):
             # Unset default on all other facilities
             IndustryFacility.objects.filter(is_default=True).exclude(pk=self.pk).update(
                 is_default=False
+            )
+        if self.is_default_reaction:
+            # Unset default reaction on all other facilities
+            IndustryFacility.objects.filter(is_default_reaction=True).exclude(pk=self.pk).update(
+                is_default_reaction=False
             )
         super().save(*args, **kwargs)
 

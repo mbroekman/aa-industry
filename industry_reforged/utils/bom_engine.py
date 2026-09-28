@@ -263,7 +263,19 @@ def calculate_order_bom(order):
         if quantity <= 0:
             continue
 
+        materials, yield_qty, activity_id = get_sde_bom(type_id)
+        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
+
         target_facility = order.target_facility
+        if activity_id == 11:
+            from industry_reforged.models import IndustryFacility
+            reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
+            if reaction_fac:
+                target_facility = reaction_fac
+        elif target_facility is None:
+            from industry_reforged.models import IndustryFacility
+            target_facility = IndustryFacility.objects.filter(is_default=True).first()
+
         facility_me_multiplier = calculate_facility_me_multiplier(
             target_facility, item.item_type
         )
@@ -276,9 +288,6 @@ def calculate_order_bom(order):
             if me_override is not None
             else get_blueprint_me(item.item_type, corp_info, None)[0]
         )
-
-        materials, yield_qty, activity_id = get_sde_bom(type_id)
-        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
             mat_type_id = mat.get("typeid")
@@ -366,9 +375,21 @@ def calculate_tasks_bom(tasks, corp_info=None):
         quantity = task.quantity
         order = task.created_from_order if hasattr(task, "created_from_order") else None
 
+        materials, yield_qty, activity_id = get_sde_bom(type_id)
+        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
+
         target_facility = None
         if order and order.target_facility:
             target_facility = order.target_facility
+            
+        if activity_id == 11:
+            from industry_reforged.models import IndustryFacility
+            reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
+            if reaction_fac:
+                target_facility = reaction_fac
+        elif target_facility is None:
+            from industry_reforged.models import IndustryFacility
+            target_facility = IndustryFacility.objects.filter(is_default=True).first()
 
         facility_me_multiplier = calculate_facility_me_multiplier(
             target_facility, task.item_type
@@ -382,9 +403,6 @@ def calculate_tasks_bom(tasks, corp_info=None):
             if me_override is not None
             else get_blueprint_me(task.item_type, corp_info, None)[0]
         )
-
-        materials, yield_qty, activity_id = get_sde_bom(type_id)
-        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
 
         for mat in materials:
             mat_type_id = mat.get("typeid")
@@ -542,6 +560,16 @@ def get_recursive_bom_tree(
 
     try:
         product_type = EveType.objects.get(id=type_id)
+        
+        if activity_id == 11:
+            from industry_reforged.models import IndustryFacility
+            reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
+            if reaction_fac:
+                target_facility = reaction_fac
+        elif target_facility is None:
+            from industry_reforged.models import IndustryFacility
+            target_facility = IndustryFacility.objects.filter(is_default=True).first()
+
         facility_me_multiplier, hull_bonus, total_rig_bonus = (
             calculate_facility_me_multiplier(
                 target_facility, product_type, return_breakdown=True

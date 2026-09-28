@@ -253,7 +253,7 @@ class IndustryFacilityForm(forms.ModelForm):
 
     class Meta:
         model = IndustryFacility
-        fields = ["facility_id", "name", "type_id", "solar_system_id", "is_default"]
+        fields = ["facility_id", "name", "type_id", "solar_system_id", "is_default", "is_default_reaction"]
         help_texts = {
             "facility_id": _("The exact EVE Structure ID. Type manually."),
             "name": _("A friendly name for this facility."),
