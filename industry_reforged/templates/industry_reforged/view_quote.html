@@ -197,8 +197,13 @@
     <div class="card border-0 mb-4 bg-transparent">
         <div class="card-header p-0 border-bottom-0">
             <ul class="nav nav-tabs" id="order-tabs" role="tablist">
+                {% if order.status == 'REQUESTED' or order.status == 'QUOTED' %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab" aria-controls="details-pane" aria-selected="true">{% trans "Order Details" %}</button>
+                    <button class="nav-link active" id="pnl-tab" data-bs-toggle="tab" data-bs-target="#pnl-pane" type="button" role="tab" aria-controls="pnl-pane" aria-selected="true"><i class="fas fa-chart-line"></i> {% trans "Profit & Loss (Quote)" %}</button>
+                </li>
+                {% endif %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if order.status != 'REQUESTED' and order.status != 'QUOTED' %}active{% endif %}" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab" aria-controls="details-pane" aria-selected="{% if order.status != 'REQUESTED' and order.status != 'QUOTED' %}true{% else %}false{% endif %}">{% trans "Order Details" %}</button>
                 </li>
                 {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
                 <li class="nav-item" role="presentation">
@@ -218,8 +223,52 @@
         <div class="card-body p-0 mt-3">
             <div class="tab-content" id="order-tabsContent">
 
+                {% if order.status == 'REQUESTED' or order.status == 'QUOTED' %}
+                <!-- TAB: P&L -->
+                <div class="tab-pane fade show active" id="pnl-pane" role="tabpanel" aria-labelledby="pnl-tab" tabindex="0">
+                    <div class="row m-0">
+                        <div class="col-md-8 mb-4 px-1">
+                            <div class="card border-0 bg-dark">
+                                <div class="card-header border-bottom border-secondary">
+                                    <h3 class="card-title text-white"><i class="fas fa-chart-line"></i> {% trans "Profit & Loss (Quote Analysis)" %}</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-dark m-0 fs-5">
+                                            <tbody>
+                                                <tr>
+                                                    <td>{% trans "Jita Sell Value (Requested Items)" %}</td>
+                                                    <td class="text-end text-info numeric">{{ original_price|eve_isk }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>{% trans "Material Cost (BOM Jita Sell)" %}</td>
+                                                    <td class="text-end text-danger numeric">-{{ total_bom_price|eve_isk }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>{% trans "Estimated Build Cost" %}</td>
+                                                    <td class="text-end text-danger numeric">-{{ estimated_build_cost|eve_isk }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="border-top border-secondary fw-bold">{% trans "Suggested Price" %}</td>
+                                                    <td class="border-top border-secondary text-end text-warning fw-bold numeric">{{ order.total_price|eve_isk }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="fw-bold">{% trans "Profit Margin" %}</td>
+                                                    <td class="text-end {% if profit_margin < 0 %}text-danger{% else %}text-success{% endif %} fw-bold numeric">{{ profit_margin|eve_isk }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% include "industry_reforged/_order_details_sidebar.html" %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- TAB 1: ORDER DETAILS -->
-                <div class="tab-pane fade show active" id="details-pane" role="tabpanel" aria-labelledby="details-tab" tabindex="0">
+                <div class="tab-pane fade {% if order.status != 'REQUESTED' and order.status != 'QUOTED' %}show active{% endif %}" id="details-pane" role="tabpanel" aria-labelledby="details-tab" tabindex="0">
                     <div class="row m-0">
                         <div class="col-md-8 mb-4 px-1">
                             {% if order.items.exists %}
@@ -442,85 +491,7 @@
                             {% endif %}
 
                         </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card border-0 bg-dark h-100">
-                                <div class="card-header border-bottom border-secondary">
-                                    <h3 class="card-title text-white">{% trans "Order Details" %}</h3>
-                                </div>
-                                <div class="card-body">
-                                    <dl class="row">
-                                        <dt class="col-sm-4">{% trans "Status" %}</dt>
-                                        <dd class="col-sm-8">
-                                            <div>
-                                                {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">{% translate "Requested" %}</span>
-                                                {% elif order.status == 'QUOTED' %}<span class="badge bg-primary">{% translate "Quoted" %}</span>
-                                                {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">{% translate "Accepted" %}</span>
-                                                {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
-                                                {% elif order.status == 'READY' %}<span class="badge bg-primary">{% translate "Ready" %}</span>
-                                                {% elif order.status == 'DELIVERED' %}<span class="badge bg-success">{% translate "Delivered" %}</span>
-                                                {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">{% translate "Rejected" %}</span>
-                                                {% endif %}
-                                            </div>
-                                            {% if order.production_tasks.exists %}
-                                                <div class="progress mt-2"  title="{{ order.progress_percent }}% Completed">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                                <small class="text-muted numeric">{{ order.progress_percent }}% completed</small>
-                                            {% endif %}
-                                        </dd>
-
-                                        <dt class="col-sm-4">{% trans "Character" %}</dt>
-                                        <dd class="col-sm-8 mb-3">{{ order.character.character_name }}</dd>
-
-                                        <dt class="col-sm-4 text-muted"><i class="fas fa-calendar-plus"></i> {% trans "Created" %}</dt>
-                                        <dd class="col-sm-8 text-muted numeric">{{ order.created_at|date:"Y-m-d H:i" }}</dd>
-
-                                        {% if order.quoted_at %}
-                                        <dt class="col-sm-4 text-warning"><i class="fas fa-file-invoice-dollar"></i> {% trans "Quoted" %}</dt>
-                                        <dd class="col-sm-8 text-warning numeric">{{ order.quoted_at|date:"Y-m-d H:i" }}</dd>
-                                        {% endif %}
-
-                                        {% if order.accepted_at %}
-                                        <dt class="col-sm-4 text-success"><i class="fas fa-check-circle"></i> {% trans "Accepted" %}</dt>
-                                        <dd class="col-sm-8 text-success numeric">{{ order.accepted_at|date:"Y-m-d H:i" }}</dd>
-                                        {% endif %}
-
-                                        {% if order.upfront_payment > 0 %}
-                                        <dt class="col-sm-4 text-warning"><i class="fas fa-coins"></i> {% trans "Upfront Required" %}</dt>
-                                        <dd class="col-sm-8 text-warning numeric">{{ order.upfront_payment|eve_isk }}</dd>
-                                        {% endif %}
-
-                                        {% if order.status != 'REQUESTED' and order.status != 'REJECTED' %}
-                                        <div class="w-100 my-2 border-bottom border-secondary"></div>
-
-
-                                        <dt class="col-sm-4 text-info">{% trans "Amount Paid" %}</dt>
-                                        <dd class="col-sm-8 text-info numeric">{{ order.amount_paid|eve_isk }}</dd>
-
-                                        <dt class="col-sm-4 text-danger">{% trans "Remaining" %}</dt>
-                                        <dd class="col-sm-8 text-danger numeric">{{ order.remaining_balance|eve_isk }}</dd>
-                                        {% endif %}
-                                    </dl>
-
-                                    {% if order.notes %}
-                                    <div class="card bg-dark border-info mb-4 shadow">
-                                        <div class="card-header border-info bg-info bg-opacity-10 text-info fw-bold fs-5">
-                                            <i class="fas fa-comment-dots me-2"></i> {% trans "Order Notes / Quote" %}
-                                        </div>
-                                        <div class="card-body">
-                                            <div style="white-space: pre-wrap; font-family: inherit; font-size: 1.1rem; line-height: 1.5;" class="text-light">{{ order.notes }}</div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-
-                                    {% if order.fit %}
-                                    <hr style="border-color: rgba(255,255,255,0.1);">
-                                    <h5 class="text-warning">{% trans "Raw Fit" %}</h5>
-                                    <pre class="bg-dark p-2 text-white border border-secondary rounded" style="max-height: 200px; overflow-y: auto;"><code>{{ order.fit.raw_fit_text }}</code></pre>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
+                        {% include "industry_reforged/_order_details_sidebar.html" %}
                     </div> <!-- End Row -->
                 </div> <!-- End Tab 1 -->
 

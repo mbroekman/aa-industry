@@ -1,0 +1,78 @@
+<div class="col-md-4 mb-4">
+    <div class="card border-0 bg-dark h-100">
+        <div class="card-header border-bottom border-secondary">
+            <h3 class="card-title text-white">{% load i18n %}{% load industry_tags %}{% trans "Order Details" %}</h3>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-4">{% trans "Status" %}</dt>
+                <dd class="col-sm-8">
+                    <div>
+                        {% if order.status == 'REQUESTED' %}<span class="badge bg-secondary">{% translate "Requested" %}</span>
+                        {% elif order.status == 'QUOTED' %}<span class="badge bg-primary">{% translate "Quoted" %}</span>
+                        {% elif order.status == 'ACCEPTED' %}<span class="badge bg-primary">{% translate "Accepted" %}</span>
+                        {% elif order.status == 'IN_PRODUCTION' %}<span class="badge bg-warning">In Production</span>
+                        {% elif order.status == 'READY' %}<span class="badge bg-primary">{% translate "Ready" %}</span>
+                        {% elif order.status == 'DELIVERED' %}<span class="badge bg-success">{% translate "Delivered" %}</span>
+                        {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">{% translate "Rejected" %}</span>
+                        {% endif %}
+                    </div>
+                    {% if order.production_tasks.exists %}
+                        <div class="progress mt-2"  title="{{ order.progress_percent }}% Completed">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted numeric">{{ order.progress_percent }}% completed</small>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-4">{% trans "Character" %}</dt>
+                <dd class="col-sm-8 mb-3">{{ order.character.character_name }}</dd>
+
+                <dt class="col-sm-4 text-muted"><i class="fas fa-calendar-plus"></i> {% trans "Created" %}</dt>
+                <dd class="col-sm-8 text-muted numeric">{{ order.created_at|date:"Y-m-d H:i" }}</dd>
+
+                {% if order.quoted_at %}
+                <dt class="col-sm-4 text-warning"><i class="fas fa-file-invoice-dollar"></i> {% trans "Quoted" %}</dt>
+                <dd class="col-sm-8 text-warning numeric">{{ order.quoted_at|date:"Y-m-d H:i" }}</dd>
+                {% endif %}
+
+                {% if order.accepted_at %}
+                <dt class="col-sm-4 text-success"><i class="fas fa-check-circle"></i> {% trans "Accepted" %}</dt>
+                <dd class="col-sm-8 text-success numeric">{{ order.accepted_at|date:"Y-m-d H:i" }}</dd>
+                {% endif %}
+
+                {% if order.upfront_payment > 0 %}
+                <dt class="col-sm-4 text-warning"><i class="fas fa-coins"></i> {% trans "Upfront Required" %}</dt>
+                <dd class="col-sm-8 text-warning numeric">{{ order.upfront_payment|eve_isk }}</dd>
+                {% endif %}
+
+                {% if order.status != 'REQUESTED' and order.status != 'REJECTED' %}
+                <div class="w-100 my-2 border-bottom border-secondary"></div>
+
+                <dt class="col-sm-4 text-info">{% trans "Amount Paid" %}</dt>
+                <dd class="col-sm-8 text-info numeric">{{ order.amount_paid|eve_isk }}</dd>
+
+                <dt class="col-sm-4 text-danger">{% trans "Remaining" %}</dt>
+                <dd class="col-sm-8 text-danger numeric">{{ order.remaining_balance|eve_isk }}</dd>
+                {% endif %}
+            </dl>
+
+            {% if order.notes %}
+            <div class="card bg-dark border-info mb-4 shadow">
+                <div class="card-header border-info bg-info bg-opacity-10 text-info fw-bold fs-5">
+                    <i class="fas fa-comment-dots me-2"></i> {% trans "Order Notes / Quote" %}
+                </div>
+                <div class="card-body">
+                    <div style="white-space: pre-wrap; font-family: inherit; font-size: 1.1rem; line-height: 1.5;" class="text-light">{{ order.notes }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if order.fit %}
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            <h5 class="text-warning">{% trans "Raw Fit" %}</h5>
+            <pre class="bg-dark p-2 text-white border border-secondary rounded" style="max-height: 200px; overflow-y: auto;"><code>{{ order.fit.raw_fit_text }}</code></pre>
+            {% endif %}
+        </div>
+    </div>
+</div>

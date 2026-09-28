@@ -149,6 +149,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 }
             )
 
+    estimated_build_cost = total_bom_price
+    profit_margin = float(order.total_price) - estimated_build_cost
+
     is_privileged = request.user.has_perm(
         "industry_reforged.corp_access"
     ) or request.user.has_perm("industry_reforged.industrialist_access")
@@ -158,6 +161,8 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "display_child_orders": is_privileged,
         "bom_materials": bom_materials.values() if bom_materials else [],
         "total_bom_price": total_bom_price,
+        "estimated_build_cost": estimated_build_cost,
+        "profit_margin": profit_margin,
         "original_price": original_price,
         "savings": savings,
         "is_owner": order.character_id in user_characters,
