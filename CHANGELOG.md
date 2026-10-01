@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
+
+## v0.14.2 (2026-10-01)
+
+### Fix
+
+- **esi**: bypass ETag cache on paginated ESI requests to prevent early loop abortion and ensure full data synchronization (inventory, facilities, jobs)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
