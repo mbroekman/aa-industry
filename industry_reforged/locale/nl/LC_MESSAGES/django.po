@@ -656,7 +656,7 @@ msgid "Upfront payment required in PLEX"
 msgstr "Aanbetaling Vereist:"
 
 #: industry_reforged/models/orders.py:106
-msgid "If True, corp-level discounts are not applied to this order\'s items."
+msgid "If True, corp-level discounts are not applied to this order's items."
 msgstr "Indien waar, worden bedrijfskortingen niet toegepast op de items van deze bestelling."
 
 #: industry_reforged/models/orders.py:120
@@ -3750,15 +3750,6 @@ msgstr "Vooraf (PLEX)"
 
 msgid "Upfront Payment Required (PLEX):"
 msgstr "Vooruitbetaling vereist (PLEX):"
-
-msgid "Missing Blueprints"
-msgstr "Ontbrekende Blauwdrukken"
-
-msgid "Item"
-msgstr "Item"
-
-msgid "Status"
-msgstr "Status"
 
 msgid "Missing"
 msgstr "Ontbreekt"

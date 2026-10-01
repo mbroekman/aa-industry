@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## v0.14.1 (2026-10-01)
+
+### Fix
+
+- **i18n**: Fix invalid control sequences and duplicate message definitions in Dutch translation files causing GitHub Actions compilation failures (TASK-200).
+
 ## v0.14.0 (2026-10-01)
 
 ### Feat
