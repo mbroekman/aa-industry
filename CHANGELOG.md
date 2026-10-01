@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.14.3 (2026-10-01)
+
+### Fix
+
+- **ui**: update misleading empty inventory text to reference facilities instead of hangars
+
+
 ## v0.14.2 (2026-10-01)
 
 ### Fix
