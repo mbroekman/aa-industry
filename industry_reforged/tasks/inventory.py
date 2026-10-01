@@ -50,7 +50,7 @@ def task_sync_corp_inventory():
             while True:
                 assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=corp_id, token=token, page=page
-                ).results()
+                ).results(use_etag=False)
                 
                 if not assets_res:
                     break

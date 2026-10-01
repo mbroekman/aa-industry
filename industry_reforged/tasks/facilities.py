@@ -276,7 +276,7 @@ def sync_facility_rigs():
             while True:
                 assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=corp_id, token=token, page=page
-                ).results()
+                ).results(use_etag=False)
                 
                 if not assets_res:
                     break

@@ -187,7 +187,7 @@ def update_corporation_jobs():
                             token=token,
                             include_completed=include_completed,
                             page=page,
-                        ).results()
+                        ).results(use_etag=False)
                     )
 
                     if not jobs_res:
