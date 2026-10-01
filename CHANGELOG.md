@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## v0.14.0 (2026-10-01)
+
 ### Feat
 
 - **industry**: Add `is_default_reaction` facility configuration to allow setting a default structure for reactions (Activity 11). This ensures reaction calculations accurately include installed structure rigs and bonuses (TASK-3).
