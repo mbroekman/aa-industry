@@ -38,7 +38,7 @@ class TestBomEngineMore:
             1,
         )
 
-        mock_bp_me.return_value = (10, 1)
+        mock_bp_me.return_value = (10, 1, True)
 
         res = calculate_order_bom(order)
         assert len(res) == 2
@@ -57,7 +57,7 @@ class TestBomEngineMore:
             1,
             1,
         )
-        mock_bp_me.return_value = (10, 1)
+        mock_bp_me.return_value = (10, 1, True)
 
         res = calculate_tasks_bom([task1, task2])
         assert len(res) == 1
@@ -74,7 +74,7 @@ class TestBomEngineMore:
             return ([{"typeid": 34, "name": "Tritanium", "quantity": 50}], 1, 1)
 
         mock_get_sde.side_effect = sde_bom_side_effect
-        mock_bp_me.return_value = (10, 1)
+        mock_bp_me.return_value = (10, 1, True)
 
         tree = get_recursive_bom_tree(item_type.id, 1, 10, {}, 1.0)
         assert tree is not None

@@ -99,7 +99,12 @@ class MemberOrder(models.Model):
         help_text=_("The calculated True Material Cost at the time of order creation."),
     )
     upfront_payment = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    upfront_payment_plex = models.IntegerField(default=0, help_text=_("Upfront payment required in PLEX"))
     amount_paid = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
+    ignore_discounts = models.BooleanField(
+        default=False,
+        help_text=_("If True, corp-level discounts are not applied to this order's items.")
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     quoted_at = models.DateTimeField(null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
@@ -147,7 +152,13 @@ class MemberOrder(models.Model):
 
     @property
     def remaining_balance(self):
-        return max(0, self.total_price - self.amount_paid)
+        plex_isk_value = 0
+        if self.upfront_payment_plex > 0:
+            from ..utils.pricing_engine import get_market_prices
+            plex_price = get_market_prices([44992]).get(44992, 0.0)
+            plex_isk_value = self.upfront_payment_plex * float(plex_price)
+            
+        return max(0, float(self.total_price) - float(self.amount_paid) - plex_isk_value)
 
     @property
     def grand_total(self):

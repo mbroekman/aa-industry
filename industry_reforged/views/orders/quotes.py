@@ -57,7 +57,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     if order.status == "REQUESTED":
         parsed_items = {item.item_type: item.quantity for item in order.items.all()}
-        new_total, item_details = calculate_quote(parsed_items, corp_info)
+        new_total, item_details = calculate_quote(
+            parsed_items, corp_info, ignore_discounts=order.ignore_discounts
+        )
 
         for detail in item_details:
             order_item = order.items.filter(item_type=detail["eve_type"]).first()
@@ -86,8 +88,23 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             total_bom_price += data["total_price"]
 
     # Calculate original price from items before any discounts
-    original_price = sum(item.original_line_total for item in order.items.all())
+    order_items = list(order.items.all().select_related("item_type"))
+    original_price = sum(item.original_line_total for item in order_items)
     savings = float(original_price) - float(order.total_price)
+
+    # Annotate buy products
+    build_items = []
+    buy_items = []
+    from eveuniverse.models import EveIndustryActivityProduct
+    for item in order_items:
+        has_bp = EveIndustryActivityProduct.objects.filter(
+            product_eve_type=item.item_type, activity_id=1
+        ).exists()
+        item.is_buy_product = not has_bp
+        if item.is_buy_product:
+            buy_items.append(item)
+        else:
+            build_items.append(item)
 
     recursive_bom_tree = []
     if request.user.has_perm(
@@ -121,23 +138,23 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     # Fallback if empty
     if not products_me_dict:
-        for item in order.items.all():
+        for item in order_items:
             products_me_dict[item.item_type.id] = item.item_type.name
-
-    # Third Party
-    from eveuniverse.models import EveIndustryActivityProduct
 
     products_me = []
     for type_id, name in products_me_dict.items():
         eve_type = EveType.objects.filter(id=type_id).first()
         if eve_type:
-            me_val, max_runs = get_blueprint_me(eve_type, corp_info, order)
+            me_val, max_runs, has_corp_bp = get_blueprint_me(eve_type, corp_info, order)
             if me_val is None:
                 me_val = get_blueprint_me(eve_type, corp_info, None)[0]
 
             has_bp = EveIndustryActivityProduct.objects.filter(
                 product_eve_type=eve_type, activity_id=1
             ).exists()
+
+            if not has_bp:
+                continue
 
             products_me.append(
                 {
@@ -146,6 +163,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     "current_me": me_val,
                     "current_max_runs": max_runs,
                     "has_blueprint": has_bp,
+                    "missing_bp": not has_corp_bp,
                 }
             )
 
@@ -155,9 +173,16 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     is_privileged = request.user.has_perm(
         "industry_reforged.corp_access"
     ) or request.user.has_perm("industry_reforged.industrialist_access")
+    
+    from ...utils.pricing_engine import get_market_prices
+    plex_price = get_market_prices([44992]).get(44992, 0.0)
+
     context = {
         "title": f"Order #{order.id}",
         "order": order,
+        "order_items": order_items,
+        "build_items": build_items,
+        "buy_items": buy_items,
         "display_child_orders": is_privileged,
         "bom_materials": bom_materials.values() if bom_materials else [],
         "total_bom_price": total_bom_price,
@@ -169,6 +194,8 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "recursive_bom_tree": recursive_bom_tree,
         "facilities": facilities,
         "products_me": products_me,
+        "missing_bps": [p for p in products_me if p.get("missing_bp")],
+        "plex_price": plex_price,
     }
     return render(request, "industry_reforged/view_quote.html", context)
 
@@ -210,6 +237,16 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             order.total_price = new_total_decimal
             order.upfront_payment = upfront
+            
+            upfront_plex = int(request.POST.get("upfront_payment_plex", 0))
+            if upfront_plex < 0:
+                raise ValueError("PLEX payment cannot be negative")
+            order.upfront_payment_plex = upfront_plex
+            
+            if "ignore_discounts" in request.POST:
+                order.ignore_discounts = request.POST.get("ignore_discounts") == "on"
+            else:
+                order.ignore_discounts = False
 
             if old_total > 0 and old_total != order.total_price:
                 ratio = float(order.total_price) / float(old_total)
@@ -391,6 +428,10 @@ def update_quote_me_overrides(request: WSGIRequest, order_id: int) -> HttpRespon
             ).first()
 
         order.target_facility = facility
+        order.save()
+
+    if "ignore_discounts" in request.POST:
+        order.ignore_discounts = request.POST.get("ignore_discounts") == "on"
         order.save()
 
     # Save Blueprint ME Overrides

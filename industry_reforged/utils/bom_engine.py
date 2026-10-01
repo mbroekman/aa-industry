@@ -163,9 +163,19 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         product_eve_type_id=product_type.id, activity_id__in=[1, 11]
     ).first()
 
+    has_corp_bp = True
+    if bp_prod:
+        if corp_info:
+            from industry_reforged.models import CorpBlueprint
+            has_corp_bp = CorpBlueprint.objects.filter(
+                corporation=corp_info, eve_type_id=bp_prod.eve_type_id
+            ).exists()
+        else:
+            has_corp_bp = False
+
     default_me = default_t1
-    if not bp_prod or bp_prod.activity_id == 11:
-        # Reactions or non-industry items
+    if not bp_prod or bp_prod.activity_id == 11 or not has_corp_bp:
+        # Reactions, non-industry items, or missing corp blueprints
         default_me = 0
     else:
         # Third Party
@@ -195,7 +205,7 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         if bp_override and (bp_override.manual_me > 0 or bp_override.max_runs > 0):
             # If manual_me is 0 but max_runs > 0, fallback to default ME
             me_val = bp_override.manual_me if bp_override.manual_me > 0 else default_me
-            return me_val, bp_override.max_runs
+            return me_val, bp_override.max_runs, has_corp_bp
 
     # Then check for global corp config
     if corp_info:
@@ -204,9 +214,9 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         ).first()
         if corp_config and (corp_config.manual_me > 0 or corp_config.max_runs > 0):
             me_val = corp_config.manual_me if corp_config.manual_me > 0 else default_me
-            return me_val, corp_config.max_runs
+            return me_val, corp_config.max_runs, has_corp_bp
 
-    return default_me, 0
+    return default_me, 0, has_corp_bp
 
 
 def calculate_order_bom(order):
@@ -280,7 +290,7 @@ def calculate_order_bom(order):
             target_facility, item.item_type
         )
 
-        me_override, max_runs_override = get_blueprint_me(
+        me_override, max_runs_override, _ = get_blueprint_me(
             item.item_type, corp_info, order
         )
         product_me = (
@@ -395,7 +405,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
             target_facility, task.item_type
         )
 
-        me_override, max_runs_override = get_blueprint_me(
+        me_override, max_runs_override, _ = get_blueprint_me(
             task.item_type, corp_info, order
         )
         product_me = (
@@ -520,6 +530,7 @@ def get_recursive_bom_tree(
             "hull_bonus": 0.0,
             "rig_bonus": 0.0,
             "facility_name": target_facility.name if target_facility else "None",
+            "missing_bp": False,
         }
 
     if quantity == 0:
@@ -536,6 +547,7 @@ def get_recursive_bom_tree(
             "hull_bonus": 0.0,
             "rig_bonus": 0.0,
             "facility_name": target_facility.name if target_facility else "None",
+            "missing_bp": False,
         }
 
     # If the root item itself is excluded, treat it as a raw material (leaf node)
@@ -553,6 +565,7 @@ def get_recursive_bom_tree(
             "hull_bonus": 0.0,
             "rig_bonus": 0.0,
             "facility_name": target_facility.name if target_facility else "None",
+            "missing_bp": False,
         }
 
     # Third Party
@@ -581,9 +594,9 @@ def get_recursive_bom_tree(
         total_rig_bonus = 0.0
 
     if "product_type" in locals():
-        product_me, max_runs = get_blueprint_me(product_type, corp_info, order)
+        product_me, max_runs, has_corp_bp = get_blueprint_me(product_type, corp_info, order)
     else:
-        product_me, max_runs = 0, 0
+        product_me, max_runs, has_corp_bp = 0, 0, False
 
     runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
     sub_materials = []
@@ -725,6 +738,7 @@ def get_recursive_bom_tree(
             (total_rig_bonus * 100.0) if "total_rig_bonus" in locals() else 0.0
         ),
         "facility_name": target_facility.name if target_facility else "None",
+        "missing_bp": not has_corp_bp if "has_corp_bp" in locals() else False,
     }
 
 

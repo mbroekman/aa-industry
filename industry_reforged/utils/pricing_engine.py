@@ -115,6 +115,19 @@ def fetch_single_market_price(
     except Exception:
         pass
 
+    # Final fallback to fuzzwork if price is 0.0 (especially for items like PLEX missing from ESI)
+    try:
+        fuzz_url = f"https://market.fuzzwork.co.uk/aggregates/?station={station_id}&types={type_id}"
+        fuzz_res = req_session.get(fuzz_url, timeout=5)
+        if fuzz_res.status_code == 200:
+            fuzz_data = fuzz_res.json()
+            if str(type_id) in fuzz_data:
+                fuzz_price = fuzz_data[str(type_id)].get(order_type, {}).get("percentile")
+                if fuzz_price and float(fuzz_price) > 0.0:
+                    return float(fuzz_price)
+    except Exception as e:
+        logger.warning(f"Fuzzwork fallback failed for type_id {type_id}: {e}")
+
     return 0.0
 
 
@@ -238,7 +251,7 @@ def get_detailed_prices(type_ids, corporation=None):
     return detailed
 
 
-def calculate_quote(parsed_items, corporation=None):
+def calculate_quote(parsed_items, corporation=None, ignore_discounts=False):
     """
     Takes a dict of {EveType: quantity} and an optional EveCorporationInfo.
     Returns:
@@ -267,7 +280,7 @@ def calculate_quote(parsed_items, corporation=None):
         base_price = market_prices.get(eve_type.id, 0.0)
 
         discount_percent = 0.0
-        if config:
+        if config and not ignore_discounts:
             # Check specific type discount first
             from ..models import CorpTypeDiscount
 

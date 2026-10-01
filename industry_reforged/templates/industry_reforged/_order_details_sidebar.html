@@ -46,6 +46,13 @@
                 <dd class="col-sm-8 text-warning numeric">{{ order.upfront_payment|eve_isk }}</dd>
                 {% endif %}
 
+                {% if order.upfront_payment_plex > 0 %}
+                <dt class="col-sm-4 text-warning"><i class="fas fa-coins"></i> {% trans "Upfront (PLEX)" %}</dt>
+                <dd class="col-sm-8 text-warning mb-0">{{ order.upfront_payment_plex }} PLEX</dd>
+                <dt class="col-sm-4"></dt>
+                <dd class="col-sm-8 text-muted small mt-0 pt-0">{% trans "Current rate" %}: 1 PLEX = {{ plex_price|eve_isk_short }}</dd>
+                {% endif %}
+
                 {% if order.status != 'REQUESTED' and order.status != 'REJECTED' %}
                 <div class="w-100 my-2 border-bottom border-secondary"></div>
 

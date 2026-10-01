@@ -154,7 +154,7 @@
                             </div>
                         </div>
                         <div class="col-sm-3">
-                            <label class="form-label text-white mb-1 small">Target Production Facility</label>
+                            <label class="form-label text-white mb-1 small">{% trans "Target Production Facility" %}</label>
                             <select name="target_facility" id="id_target_facility" class="form-select bg-dark text-white border-secondary">
                                 <option value="">-- {% trans "Default / No Facility" %} --</option>
                                 {% for fac in facilities %}
@@ -163,17 +163,26 @@
                             </select>
                             <div class="form-text mt-1 text-muted d-flex align-items-center">
                                 {% trans "Page will reload on change" %}
-                                <div id="facility-loading" style="display:none;" class="spinner-border spinner-border-sm text-warning ms-2" role="status"></div>
                             </div>
                         </div>
                         <div class="col-sm-3">
-                            <label class="form-label text-white mb-1 small">Upfront Payment</label>
+                            <label class="form-label text-white mb-1 small">{% trans "Upfront Payment (ISK)" %}</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-secondary border-secondary text-white">ISK</span>
                                 <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary isk-format-input" id="quoteUpfront" name="upfront_payment" value="0.00" required>
                             </div>
                             <div class="form-text mt-1 text-muted">
-                                {% trans "Optional downpayment" %} <span id="quoteUpfront-helper" class="text-warning fw-bold ms-2"></span>
+                                {% trans "Optional ISK downpayment" %} <span id="quoteUpfront-helper" class="text-warning fw-bold ms-2"></span>
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label text-white mb-1 small">{% trans "Upfront Payment (PLEX)" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-coins text-warning"></i></span>
+                                <input type="number" step="1" class="form-control bg-dark text-white border-secondary" id="quoteUpfrontPlex" name="upfront_payment_plex" value="{{ order.upfront_payment_plex|default:'0' }}" required>
+                            </div>
+                            <div class="form-text mt-1 text-muted">
+                                1 PLEX = {{ plex_price|eve_isk_short }} <span id="quoteUpfrontPlex-helper" class="text-warning fw-bold ms-2"></span>
                             </div>
                         </div>
                         <div class="col-sm-3">
@@ -184,8 +193,12 @@
                             </div>
                         </div>
 
-                        <div class="col-12 mt-4 text-end">
-                            <button type="submit" class="btn btn-warning"><i class="fas fa-check-circle"></i> {% trans "Submit Quote" %}</button>
+                        <div class="col-12 mt-4 d-flex justify-content-between align-items-center">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="ignoreDiscounts" name="ignore_discounts" {% if order.ignore_discounts %}checked{% endif %}>
+                                <label class="form-check-label text-warning" for="ignoreDiscounts">{% trans "Disable Corp Discounts for this order" %}</label>
+                            </div>
+                            <button type="submit" class="btn btn-warning" id="submitQuoteBtn"><i class="fas fa-check-circle"></i> {% trans "Submit Quote" %}</button>
                         </div>
                     </form>
                 </div>
@@ -216,6 +229,14 @@
                 {% if perms.industry_reforged.corp_access %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="me-tab" data-bs-toggle="tab" data-bs-target="#me-pane" type="button" role="tab" aria-controls="me-pane" aria-selected="false">{% trans "ME & BPC Overrides" %}</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="missing-bp-tab" data-bs-toggle="tab" data-bs-target="#missing-bp-pane" type="button" role="tab" aria-controls="missing-bp-pane" aria-selected="false">
+                        {% trans "Missing Blueprints" %}
+                        {% if missing_bps|length > 0 %}
+                            <span class="badge bg-danger rounded-pill ms-2">{{ missing_bps|length }}</span>
+                        {% endif %}
+                    </button>
                 </li>
                 {% endif %}
             </ul>
@@ -250,11 +271,11 @@
                                                 </tr>
                                                 <tr>
                                                     <td class="border-top border-secondary fw-bold">{% trans "Suggested Price" %}</td>
-                                                    <td class="border-top border-secondary text-end text-warning fw-bold numeric">{{ order.total_price|eve_isk }}</td>
+                                                    <td class="border-top border-secondary text-end text-warning fw-bold numeric" id="pnlSuggestedPrice">{{ order.total_price|eve_isk }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td class="fw-bold">{% trans "Profit Margin" %}</td>
-                                                    <td class="text-end {% if profit_margin < 0 %}text-danger{% else %}text-success{% endif %} fw-bold numeric">{{ profit_margin|eve_isk }}</td>
+                                                    <td class="text-end {% if profit_margin < 0 %}text-danger{% else %}text-success{% endif %} fw-bold numeric" id="pnlProfitMargin">{{ profit_margin|eve_isk }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -271,7 +292,7 @@
                 <div class="tab-pane fade {% if order.status != 'REQUESTED' and order.status != 'QUOTED' %}show active{% endif %}" id="details-pane" role="tabpanel" aria-labelledby="details-tab" tabindex="0">
                     <div class="row m-0">
                         <div class="col-md-8 mb-4 px-1">
-                            {% if order.items.exists %}
+                            {% if order_items %}
                             <div class="card border-0">
                                 <div class="card-header">
                                     <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> {% trans "Itemized Invoice" %}</h3>
@@ -298,7 +319,13 @@
                                                 </tr>
                                             </thead>
                                         <tbody>
-                                            {% for item in order.items.all %}
+                                            {% if build_items %}
+                                            {% if buy_items %}
+                                            <tr>
+                                                <td colspan="6" class="bg-dark text-white fw-bold py-1 px-3 border-bottom border-secondary"><i class="fas fa-hammer me-1 text-warning"></i> {% trans "Manufactured Items" %}</td>
+                                            </tr>
+                                            {% endif %}
+                                            {% for item in build_items %}
                                             <tr>
                                                 {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
                                                 <td class="text-center align-middle">
@@ -332,9 +359,53 @@
                                                 </td>
                                                 <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
                                             </tr>
-                                            {% empty %}
-                                                <tr><td colspan="6" class="text-center">No items found.</td></tr>
                                             {% endfor %}
+                                            {% endif %}
+
+                                            {% if buy_items %}
+                                            <tr>
+                                                <td colspan="6" class="bg-dark text-white fw-bold py-1 px-3 border-bottom border-info border-top"><i class="fas fa-shopping-cart me-1 text-info"></i> {% trans "Buy Products (Jita Price)" %}</td>
+                                            </tr>
+                                            {% for item in buy_items %}
+                                            <tr>
+                                                {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                                <td class="text-center align-middle">
+                                                    <input class="form-check-input split-item-checkbox" type="checkbox" name="item_ids" value="{{ item.id }}">
+                                                </td>
+                                                {% endif %}
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
+                                                        <span>{{ item.item_type.name }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end numeric">
+                                                    <span id="qty_display_{{ item.id }}">{{ item.quantity }}</span>
+                                                    {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
+                                                    <input type="number" class="form-control form-control-sm d-none split-qty-input ms-auto" style="width: 80px;" name="split_qty_{{ item.id }}" id="split_qty_{{ item.id }}" value="{{ item.quantity }}" max="{{ item.quantity }}" min="1">
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end numeric">
+                                                    {% if item.discount_applied > 0 %}
+                                                        <span class="text-success">{{ item.discount_applied }}%</span>
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end numeric">
+                                                    {% if item.discount_applied > 0 %}
+                                                        <del class="text-muted small">{{ item.original_price_per_unit|eve_isk }}</del><br>
+                                                    {% endif %}
+                                                    {{ item.price_per_unit|eve_isk }}
+                                                </td>
+                                                <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                            {% endif %}
+                                            
+                                            {% if not build_items and not buy_items %}
+                                                <tr><td colspan="6" class="text-center">No items found.</td></tr>
+                                            {% endif %}
                                         </tbody>
                                         <tfoot>
                                             <tr>
@@ -355,6 +426,21 @@
                                             <tr>
                                                 <th colspan="4" class="text-end fs-5 text-warning">{% trans "Upfront Payment Required:" %}</th>
                                                 <th class="text-end fs-5 text-warning numeric">{{ order.upfront_payment|eve_isk }}</th>
+                                            </tr>
+                                            {% endif %}
+                                            {% if order.upfront_payment_plex > 0 %}
+                                            <tr>
+                                                <th colspan="4" class="text-end fs-5 text-warning">
+                                                    {% trans "Upfront Payment Required (PLEX):" %}
+                                                    <br><small class="text-muted fw-normal">{% trans "Current rate" %}: 1 PLEX = {{ plex_price|eve_isk_short }}</small>
+                                                </th>
+                                                <th class="text-end fs-5 text-warning align-middle">{{ order.upfront_payment_plex }} PLEX</th>
+                                            </tr>
+                                            {% endif %}
+                                            {% if order.upfront_payment > 0 or order.upfront_payment_plex > 0 %}
+                                            <tr>
+                                                <th colspan="4" class="text-end fs-4 text-info mt-2">{% trans "Remaining Balance on Delivery:" %}</th>
+                                                <th class="text-end fs-4 text-info mt-2 numeric">{{ order.remaining_balance|eve_isk }}</th>
                                             </tr>
                                             {% endif %}
                                         </tfoot>
@@ -532,6 +618,9 @@
                                                         <div class="d-flex align-items-center">
                                                             <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';" src="https://images.evetech.net/types/{{ p.type_id }}/icon?size=32" alt="{{ p.name }}" width="24" height="24" class="me-2 rounded">
                                                             <span>{{ p.name }}</span>
+                                                            {% if p.missing_bp and p.has_blueprint %}
+                                                            <span class="badge bg-danger ms-2" title="{% trans 'Corporation does not own this Blueprint' %}"><i class="fas fa-exclamation-triangle"></i></span>
+                                                            {% endif %}
                                                         </div>
                                                     </td>
                                                     <td>
@@ -574,6 +663,46 @@
                         </div>
                     </div>
                 </div> <!-- End Tab ME -->
+                
+                <!-- TAB: MISSING BLUEPRINTS -->
+                <div class="tab-pane fade" id="missing-bp-pane" role="tabpanel" aria-labelledby="missing-bp-tab" tabindex="0">
+                    <div class="row m-0">
+                        <div class="col-md-12 mb-4 px-1">
+                            <div class="card border-0 bg-dark">
+                                <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center">
+                                    <h3 class="card-title mb-0"><i class="fas fa-exclamation-triangle text-danger me-2"></i> {% trans "Missing Blueprints" %}</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-dark m-0 align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>{% trans "Item" %}</th>
+                                                    <th class="text-center" style="width:120px;">{% trans "Status" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for p in missing_bps %}
+                                                <tr>
+                                                    <td>
+                                                        <img src="https://images.evetech.net/types/{{ p.type_id }}/icon?size=32" class="rounded me-2" alt="icon">
+                                                        {{ p.name }}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-danger"><i class="fas fa-times"></i> {% trans "Missing" %}</span>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr><td colspan="2" class="text-center text-success p-3"><i class="fas fa-check-circle me-1"></i> {% trans "All required blueprints are available in the corporation." %}</td></tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Tab Missing BPs -->
                 {% endif %}
 
                 <div id="bom-panes-wrapper">
@@ -738,6 +867,20 @@
         </form>
     </div>
 </div>
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-body text-center p-4">
+                <h5 class="text-white mb-3" id="loadingModalText">{% trans "Processing..." %}</h5>
+                <div class="progress mb-3" style="height: 20px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning w-100" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <p class="text-muted small mb-0" id="loadingModalDesc">{% trans "Please wait while we update the quote." %}</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     function openSplitComponentModal(typeId, name, quantity) {
@@ -799,9 +942,14 @@
         });
 
         // Target facility change handler (compatible with Select2 and standard selects)
-        $('#id_target_facility').on('change', function() {
-            $('#facility-loading').show();
-            let facility = $(this).val();
+        function submitFacilityOrDiscountChange() {
+            var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            document.getElementById('loadingModalText').textContent = "{% trans 'Recalculating Quote...' %}";
+            document.getElementById('loadingModalDesc').textContent = "{% trans 'Applying new settings and fetching updated blueprint data.' %}";
+            loadingModal.show();
+
+            let facility = $('#id_target_facility').val();
+            let ignore = $('#ignoreDiscounts').is(':checked') ? 'on' : 'off';
             let form = document.createElement('form');
             form.method = 'POST';
             form.action = "{% url 'industry_reforged:update_quote_me_overrides' order.id %}";
@@ -818,9 +966,58 @@
             tf.value = facility;
             form.appendChild(tf);
 
+            let ign = document.createElement('input');
+            ign.type = 'hidden';
+            ign.name = 'ignore_discounts';
+            ign.value = ignore;
+            form.appendChild(ign);
+
             document.body.appendChild(form);
             form.submit();
+        }
+
+        $('#id_target_facility').on('change', submitFacilityOrDiscountChange);
+        $('#ignoreDiscounts').on('change', submitFacilityOrDiscountChange);
+
+        $('#quoteForm').on('submit', function() {
+            var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            document.getElementById('loadingModalText').textContent = "{% trans 'Submitting Quote...' %}";
+            document.getElementById('loadingModalDesc').textContent = "{% trans 'Saving quote details and updating order status.' %}";
+            loadingModal.show();
         });
+
+        // Dynamic P&L calculation
+        const buildCost = {{ estimated_build_cost|stringformat:".2f" }};
+        $('#quoteTotal').on('input', function() {
+            let newPrice = parseFloat($(this).val()) || 0;
+            let margin = newPrice - buildCost;
+            
+            let formatOpts = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+            $('#pnlSuggestedPrice').text(newPrice.toLocaleString('en-US', formatOpts) + ' ISK');
+            
+            let marginEl = $('#pnlProfitMargin');
+            marginEl.text(margin.toLocaleString('en-US', formatOpts) + ' ISK');
+            
+            if (margin < 0) {
+                marginEl.removeClass('text-success').addClass('text-danger');
+            } else {
+                marginEl.removeClass('text-danger').addClass('text-success');
+            }
+        });
+
+        // Dynamic PLEX ISK value
+        const plexPrice = {{ plex_price|stringformat:".2f" }};
+        $('#quoteUpfrontPlex').on('input', function() {
+            let plexQty = parseInt($(this).val()) || 0;
+            let totalIsk = plexQty * plexPrice;
+            
+            let helper = $('#quoteUpfrontPlex-helper');
+            if(totalIsk > 0) {
+                helper.text('(= ' + formatISK(totalIsk) + ' ISK)');
+            } else {
+                helper.text('');
+            }
+        }).trigger('input');
     });
 </script>
 {% endblock %}

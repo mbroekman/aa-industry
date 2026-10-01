@@ -37,9 +37,11 @@ graph TD
     E --> F["GET CCP ESI Market Orders (/markets/10000002/orders/)"]
     F --> G["calculate_percentile_price on Jita 4-4 (60003760)"]
     G --> H["Store in Cache (TTL 1 hour)"]
-    F -->|Timeout or Empty Book| I["Fallback: EveMarketPrice (SDE)"]
+    F -->|Timeout or Empty Book| I["Fallback 1: EveMarketPrice (SDE)"]
+    I -->|Missing/Zero| K["Fallback 2: Fuzzwork API"]
     H --> J["Return Combined Prices Map"]
     I --> J
+    K --> J
 ```
 
 ______________________________________________________________________
@@ -79,9 +81,12 @@ To remain well within CCP ESI error-rate limits and maximize responsiveness:
 1. **Failure / Zero Cache (L2):** If an item has 0 volume or transient network errors, cached for **60s TTL** to prevent spamming ESI.
 1. **Background Pre-Warming (L3):** Periodic Celery task `industry_reforged.tasks.task_pull_market_data` pre-fetches prices for standard minerals, PI, moon materials, and corporately configured items.
 
-### 3.4 Resilient Database Fallback
+### 3.4 Multi-Level Resilient Fallback
 
-If ESI is experiencing an outage or downtime, `fetch_single_market_price()` automatically falls back to the local database model `eveuniverse.models.EveMarketPrice` (which tracks CCP's daily average and adjusted prices synced by `django-eveuniverse`).
+If ESI is experiencing an outage, downtime, or fails to list specific items (such as PLEX returning empty order books on standard endpoints), `fetch_single_market_price()` utilizes a multi-level fallback mechanism:
+
+1. **Database Fallback:** It first falls back to the local database model `eveuniverse.models.EveMarketPrice` (which tracks CCP's daily average and adjusted prices synced by `django-eveuniverse`).
+2. **Fuzzwork API Fallback:** If the database price is 0 or unavailable, it makes a last-resort fetch to the legacy Fuzzwork API (`https://market.fuzzwork.co.uk/aggregates/`). This ensures PLEX and other Edge-case items always retain accurate pricing.
 
 ______________________________________________________________________
 

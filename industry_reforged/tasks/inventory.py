@@ -45,9 +45,22 @@ def task_sync_corp_inventory():
             continue
 
         try:
-            assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
-                corporation_id=corp_id, token=token
-            ).results()
+            assets = []
+            page = 1
+            while True:
+                assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
+                    corporation_id=corp_id, token=token, page=page
+                ).results()
+                
+                if not assets_res:
+                    break
+                    
+                assets.extend(assets_res)
+                
+                if len(assets_res) < 1000:
+                    break
+                    
+                page += 1
 
             # Build a map of item_id -> location_id to resolve nested containers
             item_locations = {}

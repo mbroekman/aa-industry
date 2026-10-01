@@ -63,9 +63,22 @@ def update_industry_facilities():
         ).first()
         if token:
             try:
-                assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
-                    corporation_id=config.corporation.corporation_id, token=token
-                ).results(use_etag=False)
+                assets = []
+                page = 1
+                while True:
+                    assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
+                        corporation_id=config.corporation.corporation_id, token=token, page=page
+                    ).results(use_etag=False)
+                    
+                    if not assets_res:
+                        break
+                        
+                    assets.extend(assets_res)
+                    
+                    if len(assets_res) < 1000:
+                        break
+                        
+                    page += 1
 
                 item_locations = {}
                 for asset in assets:
@@ -258,9 +271,22 @@ def sync_facility_rigs():
 
         try:
             logger.info(f"Fetching assets for corp {corp_id} to sync facility rigs...")
-            assets = esi.client.Assets.GetCorporationsCorporationIdAssets(
-                corporation_id=corp_id, token=token
-            ).results()
+            assets = []
+            page = 1
+            while True:
+                assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
+                    corporation_id=corp_id, token=token, page=page
+                ).results()
+                
+                if not assets_res:
+                    break
+                    
+                assets.extend(assets_res)
+                
+                if len(assets_res) < 1000:
+                    break
+                    
+                page += 1
 
             facilities = facilities_by_corp.get(corp_id, [])
             facility_ids = {f.facility_id: f for f in facilities}

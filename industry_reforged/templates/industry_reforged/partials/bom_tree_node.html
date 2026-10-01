@@ -31,6 +31,11 @@
                     <i class="fas fa-ban"></i> Excluded
                 </span>
             {% endif %}
+            {% if node.missing_bp and node.sub_materials %}
+                <span class="ms-2 badge bg-danger text-light border border-danger" title="{% trans 'Corporation does not own this Blueprint' %}">
+                    <i class="fas fa-exclamation-triangle"></i> {% trans "Missing Blueprint" %}
+                </span>
+            {% endif %}
         </div>
 
         {% if node.sub_materials %}

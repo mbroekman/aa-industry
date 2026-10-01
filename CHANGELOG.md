@@ -11,10 +11,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - **industry**: Add `is_default_reaction` facility configuration to allow setting a default structure for reactions (Activity 11). This ensures reaction calculations accurately include installed structure rigs and bonuses (TASK-3).
 - **orders**: Introduce a new 'Profit & Loss' default view for Quotes (REQUESTED and QUOTED status) to improve visibility of material cost, estimated build cost, and profit margins (TASK-4).
+- **orders**: Separate manufactured items and "Buy Products" (items without a manufacturing activity) in the Itemized Invoice view for clearer quote details (TASK-191).
+- **orders**: Add ability to disable corporation discounts on a per-order basis when providing a quote, dynamically updating the Profit & Loss margins (TASK-192).
+- **orders**: Allow specifying upfront payments in PLEX in addition to ISK, including dynamic display of the current Jita PLEX value (TASK-193).
+- **ui**: Replace static loading spinners with animated progress bars when opening orders, recalculating quotes, or submitting quotes to improve user experience (TASK-194).
+- **orders**: Display missing blueprints required for an order in a dedicated quote tab (TASK-196).
+- **orders**: Account for ISK and PLEX upfront payments in the remaining balance display on order details (TASK-198).
+- **orders**: Show current PLEX rate directly below upfront PLEX payment requirements (TASK-199).
 
 ### Fix
 
+- **bom**: Fix `ValueError: too many values to unpack (expected 2)` during order quote generation due to incorrect tuple unpacking in `bom_engine.py` (TASK-190).
 - **ai**: Ensure `check_availability` accounts for active and ready unlinked `CorporationIndustryJob` instances to prevent AI Market Manager from over-ordering when jobs are running natively (TASK-2).
+- **inventory**: Fix missing pagination when fetching corporate assets via ESI, ensuring complete stock synchronization for corporations with >1000 assets (TASK-197).
 
 
 ## v0.13.1 (2026-09-27)
