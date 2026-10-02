@@ -50,6 +50,7 @@ def _sync_corp_blueprints(config):
     all_blueprints_data = []
     page = 1
     page_success = True
+    previous_ids = set()
     while True:
         try:
             req = esi.client.Corporation.GetCorporationsCorporationIdBlueprints(
@@ -62,6 +63,12 @@ def _sync_corp_blueprints(config):
             res = req.results()
             if not res:
                 break
+
+            # Prevent infinite loop if ESI ignores pagination
+            current_ids = {getattr(b, "item_id") for b in res}
+            if current_ids and current_ids.issubset(previous_ids):
+                break
+            previous_ids.update(current_ids)
 
             all_blueprints_data.extend(res)
 

@@ -179,6 +179,7 @@ def update_corporation_jobs():
         for include_completed in [False, True]:
             page = 1
             page_success = True
+            previous_ids = set()
             while True:
                 try:
                     jobs_res = (
@@ -192,6 +193,12 @@ def update_corporation_jobs():
 
                     if not jobs_res:
                         break
+
+                    # Prevent infinite loop if ESI ignores pagination
+                    current_ids = {getattr(j, "job_id") for j in jobs_res}
+                    if current_ids and current_ids.issubset(previous_ids):
+                        break
+                    previous_ids.update(current_ids)
 
                     all_jobs.extend(jobs_res)
 

@@ -65,6 +65,7 @@ def update_industry_facilities():
             try:
                 assets = []
                 page = 1
+                previous_ids = set()
                 while True:
                     assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                         corporation_id=config.corporation.corporation_id, token=token, page=page
@@ -72,6 +73,12 @@ def update_industry_facilities():
                     
                     if not assets_res:
                         break
+                        
+                    # Prevent infinite loop if ESI ignores pagination
+                    current_ids = {getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res}
+                    if current_ids and current_ids.issubset(previous_ids):
+                        break
+                    previous_ids.update(current_ids)
                         
                     assets.extend(assets_res)
                     
@@ -273,6 +280,7 @@ def sync_facility_rigs():
             logger.info(f"Fetching assets for corp {corp_id} to sync facility rigs...")
             assets = []
             page = 1
+            previous_ids = set()
             while True:
                 assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=corp_id, token=token, page=page
@@ -280,6 +288,12 @@ def sync_facility_rigs():
                 
                 if not assets_res:
                     break
+                    
+                # Prevent infinite loop if ESI ignores pagination
+                current_ids = {getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res}
+                if current_ids and current_ids.issubset(previous_ids):
+                    break
+                previous_ids.update(current_ids)
                     
                 assets.extend(assets_res)
                 

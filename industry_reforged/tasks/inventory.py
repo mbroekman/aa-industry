@@ -47,6 +47,7 @@ def task_sync_corp_inventory():
         try:
             assets = []
             page = 1
+            previous_ids = set()
             while True:
                 assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=corp_id, token=token, page=page
@@ -54,6 +55,12 @@ def task_sync_corp_inventory():
                 
                 if not assets_res:
                     break
+                    
+                # Prevent infinite loop if ESI ignores pagination
+                current_ids = {getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res}
+                if current_ids and current_ids.issubset(previous_ids):
+                    break
+                previous_ids.update(current_ids)
                     
                 assets.extend(assets_res)
                 
