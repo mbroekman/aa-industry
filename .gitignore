@@ -56,3 +56,15 @@ node_modules/
 /*test*.py
 /append_task.py
 /make_migrations.py
+
+# Testing & Build files
+.pytest_cache/
+htmlcov/
+.coverage
+.tox/
+build/
+dist/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
