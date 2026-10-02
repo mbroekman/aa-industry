@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.14.4 (2026-10-02)
+
+### Fix
+
+- **esi**: resolve infinite loops and memory leaks in pagination caused by endpoints ignoring page parameters, by tracking previously seen IDs.
+- **chore**: unified .gitignore files to exclude build, test, and temporary files across repositories.
+
 ## v0.14.3 (2026-10-01)
 
 ### Fix
