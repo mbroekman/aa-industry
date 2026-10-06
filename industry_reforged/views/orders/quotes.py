@@ -208,13 +208,26 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             )
 
     missing_bps = []
-    for bp in bom_blueprints_list:
-        stock = bp.get("corp_stock", 0)
-        req = bp.get("quantity", 0)
-        if stock < req:
-            bp_copy = bp.copy()
-            bp_copy["shortage"] = req - stock
-            missing_bps.append(bp_copy)
+    if corp_info:
+        from ...models import CorpBlueprint
+        has_corp_bp_cache = {}
+        for bp in bom_blueprints_list:
+            stock = bp.get("corp_stock", 0)
+            req = bp.get("quantity", 0)
+            if stock < req:
+                bp_type_id = bp.get("type_id")
+                has_bpo = False
+                if bp_type_id:
+                    if bp_type_id not in has_corp_bp_cache:
+                        has_corp_bp_cache[bp_type_id] = CorpBlueprint.objects.filter(
+                            corporation=corp_info, eve_type_id=bp_type_id
+                        ).exists()
+                    has_bpo = has_corp_bp_cache[bp_type_id]
+                
+                bp_copy = bp.copy()
+                bp_copy["shortage"] = req - stock
+                bp_copy["has_bpo"] = has_bpo
+                missing_bps.append(bp_copy)
 
     estimated_build_cost = total_bom_price
     profit_margin = float(order.total_price) - estimated_build_cost

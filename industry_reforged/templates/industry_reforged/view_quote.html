@@ -740,7 +740,11 @@
                                                     <td class="text-end">{{ p.quantity }}</td>
                                                     <td class="text-end text-danger fw-bold">{{ p.shortage }}</td>
                                                     <td class="text-center">
-                                                        <span class="badge bg-danger"><i class="fas fa-times"></i> {% trans "Missing" %}</span>
+                                                        {% if p.has_bpo %}
+                                                            <span class="badge bg-warning text-dark"><i class="fas fa-copy"></i> {% trans "BPO Owned (Copies needed)" %}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-danger"><i class="fas fa-times"></i> {% trans "Missing" %}</span>
+                                                        {% endif %}
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
