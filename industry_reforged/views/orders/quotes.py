@@ -186,8 +186,15 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             ).first()
 
             is_invented = False
-            if bp_prod and bp_prod.eve_type_id in invented_blueprint_types:
-                is_invented = True
+            missing_bp = not has_corp_bp
+            if bp_prod:
+                if bp_prod.eve_type_id in invented_blueprint_types:
+                    is_invented = True
+                    missing_bp = False
+                else:
+                    bp_in_bom = next((bp for bp in bom_blueprints_list if bp.get("type_id") == bp_prod.eve_type_id), None)
+                    if bp_in_bom:
+                        missing_bp = bp_in_bom.get("corp_stock", 0) < bp_in_bom.get("quantity", 0)
 
             products_me.append(
                 {
@@ -196,7 +203,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     "current_me": me_val,
                     "current_max_runs": max_runs,
                     "has_blueprint": has_bp,
-                    "missing_bp": not has_corp_bp and not is_invented,
+                    "missing_bp": missing_bp,
                 }
             )
 
