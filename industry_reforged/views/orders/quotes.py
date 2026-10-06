@@ -151,6 +151,16 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             recursive_bom_tree = calculate_recursive_order_bom(order)
         extract_manufactured_types(recursive_bom_tree, products_me_dict)
 
+    invented_blueprint_types = set()
+    def extract_invented(nodes):
+        for node in nodes:
+            if node.get("activity_id") == 8:
+                invented_blueprint_types.add(node["type_id"])
+            if node.get("sub_materials"):
+                extract_invented(node["sub_materials"])
+    if recursive_bom_tree:
+        extract_invented(recursive_bom_tree)
+
     # Fallback if empty
     if not products_me_dict:
         for item in order_items:
@@ -171,6 +181,14 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             if not has_bp:
                 continue
 
+            bp_prod = EveIndustryActivityProduct.objects.filter(
+                product_eve_type_id=eve_type.id, activity_id__in=[1, 11]
+            ).first()
+
+            is_invented = False
+            if bp_prod and bp_prod.eve_type_id in invented_blueprint_types:
+                is_invented = True
+
             products_me.append(
                 {
                     "type_id": type_id,
@@ -178,9 +196,21 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     "current_me": me_val,
                     "current_max_runs": max_runs,
                     "has_blueprint": has_bp,
-                    "missing_bp": not has_corp_bp,
+                    "missing_bp": not has_corp_bp and not is_invented,
                 }
             )
+
+    missing_bps = [p for p in products_me if p.get("missing_bp")]
+    if corp_info:
+        from ...models import CorpBlueprint
+        for b_data in bom_blueprints_list:
+            bp_type_id = b_data.get("type_id")
+            if bp_type_id and not CorpBlueprint.objects.filter(corporation=corp_info, eve_type_id=bp_type_id).exists():
+                if not any(m["type_id"] == bp_type_id for m in missing_bps):
+                    missing_bps.append({
+                        "type_id": bp_type_id,
+                        "name": b_data["name"]
+                    })
 
     estimated_build_cost = total_bom_price
     profit_margin = float(order.total_price) - estimated_build_cost
@@ -210,7 +240,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "recursive_bom_tree": recursive_bom_tree,
         "facilities": facilities,
         "products_me": products_me,
-        "missing_bps": [p for p in products_me if p.get("missing_bp")],
+        "missing_bps": missing_bps,
         "plex_price": plex_price,
     }
     output_locations = []
