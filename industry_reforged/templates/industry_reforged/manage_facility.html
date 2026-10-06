@@ -99,6 +99,46 @@
 {% block extra_javascript %}
 {{ block.super }}
 <script>
+    function filterRigs() {
+        const typeIdInput = document.getElementById("id_type_id");
+        if (!typeIdInput) return;
+        const typeId = parseInt(typeIdInput.value);
+        
+        let allowedSize = "";
+        if ([35832, 35825, 35835].includes(typeId)) {
+            allowedSize = " M-";
+        } else if ([35833, 35826, 35836].includes(typeId)) {
+            allowedSize = " L-";
+        } else if ([35834, 35827].includes(typeId)) {
+            allowedSize = " XL-";
+        }
+        
+        const rigSelects = document.querySelectorAll("select[id^='id_rigs-'][id$='-rig']");
+        
+        rigSelects.forEach(select => {
+            Array.from(select.options).forEach(opt => {
+                if (opt.value === "") return;
+                const text = opt.text;
+                if (allowedSize === "") {
+                    opt.disabled = false;
+                    opt.style.display = "";
+                } else {
+                    if (text.includes(allowedSize)) {
+                        opt.disabled = false;
+                        opt.style.display = "";
+                    } else {
+                        opt.disabled = true;
+                        opt.style.display = "none";
+                    }
+                }
+            });
+            
+            if (select.selectedIndex > 0 && select.options[select.selectedIndex].disabled) {
+                select.value = "";
+            }
+        });
+    }
+
     function updateSecuritySpace(systemId) {
         if (!systemId) return;
         fetch(`https://esi.evetech.net/latest/universe/systems/${systemId}/?datasource=tranquility`)
@@ -124,6 +164,13 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
+        filterRigs();
+        
+        const typeIdInput = document.getElementById("id_type_id");
+        if (typeIdInput) {
+            typeIdInput.addEventListener("change", filterRigs);
+            typeIdInput.addEventListener("input", filterRigs);
+        }
         const select = document.getElementById("corp-structure-select");
         if (select) {
             select.addEventListener("change", function(e) {
@@ -136,6 +183,7 @@
                     const systemId = opt.getAttribute("data-system") || "";
                     document.getElementById("id_solar_system_id").value = systemId;
                     updateSecuritySpace(systemId);
+                    filterRigs();
                 }
             });
         }
@@ -178,6 +226,7 @@
 
                 formsetContainer.insertAdjacentHTML('beforeend', compiled);
                 totalForms.value = formCount + 1;
+                filterRigs();
             });
         }
     });

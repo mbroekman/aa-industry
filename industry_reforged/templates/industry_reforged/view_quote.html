@@ -185,7 +185,27 @@
                                 1 PLEX = {{ plex_price|eve_isk_short }} <span id="quoteUpfrontPlex-helper" class="text-warning fw-bold ms-2"></span>
                             </div>
                         </div>
-                        <div class="col-sm-3">
+                        <div class="col-sm-3 mt-3">
+                            <label class="form-label text-white mb-1 small">{% trans "Output Location" %}</label>
+                            <select name="output_location" id="id_output_location" class="form-select bg-dark text-white border-secondary">
+                                <option value="">-- {% trans "Select Location" %} --</option>
+                                {% for loc in output_locations %}
+                                <option value="{{ loc.id }}" {% if order.output_location_id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="input-group mt-2">
+                                <input type="text" id="new_output_location_input" class="form-control bg-dark text-white border-secondary form-control-sm" placeholder="{% trans 'Or new location...' %}">
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="addNewLocation()"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-sm-3 mt-3">
+                            <label class="form-label text-white mb-1 small">{% trans "Output Container Name" %}</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="output_container_input" name="output_container" value="{{ order.output_container|default:'' }}">
+                            <div class="form-text mt-1 text-muted">
+                                {% trans "Suggested:" %} <a href="javascript:void(0);" onclick="useSuggestedContainer()" class="text-info text-decoration-none">Order #{{ order.id }} - {{ order.character.character_name }}</a>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 mt-3">
                             <label class="form-label text-white mb-1 small">{% translate "Note" %}</label>
                             <input type="text" class="form-control bg-dark text-white border-secondary" name="note" placeholder="e.g. 50% upfront required">
                             <div class="form-text mt-1 text-muted">
@@ -206,6 +226,25 @@
         </div>
     </div>
     {% endif %}
+
+    <script>
+    function addNewLocation() {
+        var input = document.getElementById('new_output_location_input');
+        var select = document.getElementById('id_output_location');
+        var val = input.value.trim();
+        if(val) {
+            var opt = document.createElement('option');
+            opt.value = 'new_' + val;
+            opt.innerHTML = val + ' (New)';
+            opt.selected = true;
+            select.appendChild(opt);
+            input.value = '';
+        }
+    }
+    function useSuggestedContainer() {
+        document.getElementById('output_container_input').value = "Order #{{ order.id }} - {{ order.character.character_name }}";
+    }
+    </script>
 
     <div class="card border-0 mb-4 bg-transparent">
         <div class="card-header p-0 border-bottom-0">
@@ -556,6 +595,14 @@
                                                 <tr>
                                                     <th colspan="4" class="text-end fs-5">{% trans "Target Facility:" %}</th>
                                                     <th class="text-end fs-5 text-info">{% if child.target_facility %}{{ child.target_facility.name }}{% else %}{% trans "Default" %}{% endif %}</th>
+                                                </tr>
+                                                <tr>
+                                                    <th colspan="4" class="text-end fs-5">{% trans "Output Location:" %}</th>
+                                                    <th class="text-end fs-5 text-info">{% if child.output_location %}{{ child.output_location.name }}{% else %}-{% endif %}</th>
+                                                </tr>
+                                                <tr>
+                                                    <th colspan="4" class="text-end fs-5">{% trans "Output Container:" %}</th>
+                                                    <th class="text-end fs-5 text-info">{% if child.output_container %}{{ child.output_container }}{% else %}-{% endif %}</th>
                                                 </tr>
                                                 <tr>
                                                     <th colspan="4" class="text-end fs-5">{% trans "Child Order Total:" %}</th>

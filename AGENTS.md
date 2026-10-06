@@ -13,6 +13,7 @@
   1. **Create:** Pass the parsed user request to the `backlog-md` tool to generate new tasks.
   1. **Update:** Use the tool to update the status of a task to Work-In-Progress (WIP) before starting development.
   1. **Complete:** Use the tool to mark a task as Done **only** after all code is written, tested, type-checked, and linted.
+- **Directory Context (CRITICAL):** All `backlog` CLI commands **MUST** be executed with the working directory set to the `aa-industry` folder (e.g., `cd aa-industry` or using `Cwd` in the tool) so tasks are correctly placed in the `aa-industry` app backlog, rather than the root project backlog.
 - **Strict Compliance:** **NEVER** execute code changes for a feature, refactor, or bugfix that has not been formally registered and tracked via the `backlog-md` tool.
 
 ## 2. Tooling & Environment

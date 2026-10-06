@@ -485,8 +485,12 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
         if task:
 
             def has_owned_ancestor(t, char):
+                visited = set()
                 current = t.bom_parent
                 while current:
+                    if current.id in visited:
+                        break
+                    visited.add(current.id)
                     if current.assigned_to == char:
                         return True
                     current = current.bom_parent
@@ -595,8 +599,12 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
             count = 0
 
             def has_owned_ancestor(t, char):
+                visited = set()
                 current = t.bom_parent
                 while current:
+                    if current.id in visited:
+                        break
+                    visited.add(current.id)
                     if current.assigned_to == char:
                         return True
                     current = current.bom_parent

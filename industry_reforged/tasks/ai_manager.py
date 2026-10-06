@@ -46,6 +46,7 @@ def evaluate_baskets(basket_id=None):
             "eve_type", "basket", "basket__corporation"
         )
         new_jobs_by_corp = {}
+        ai_market_logs = []
 
         logger.info(
             f"AI Market Manager starting evaluation for {active_items.count()} basket items."
@@ -135,11 +136,13 @@ def evaluate_baskets(basket_id=None):
             source_str = "AI Voorspelling" if is_ai_prediction else "Statisch Target"
 
             if effective_stock >= target_stock:
-                AIMarketLog.objects.create(
-                    basket_item=b_item,
-                    action_taken="Skipped",
-                    stock_level=current_stock,
-                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}) is above target ({target_stock}) ({source_str}).",
+                ai_market_logs.append(
+                    AIMarketLog(
+                        basket_item=b_item,
+                        action_taken="Skipped",
+                        stock_level=current_stock,
+                        reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}) is above target ({target_stock}) ({source_str}).",
+                    )
                 )
                 continue
 
@@ -148,12 +151,14 @@ def evaluate_baskets(basket_id=None):
                 eve_type, target_market=target_market
             )
             if margin < min_margin:
-                AIMarketLog.objects.create(
-                    basket_item=b_item,
-                    action_taken="Skipped",
-                    margin=margin,
-                    stock_level=current_stock,
-                    reason=f"Margin ({margin:.1f}%) is below minimum ({min_margin:.1f}%). (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
+                ai_market_logs.append(
+                    AIMarketLog(
+                        basket_item=b_item,
+                        action_taken="Skipped",
+                        margin=margin,
+                        stock_level=current_stock,
+                        reason=f"Margin ({margin:.1f}%) is below minimum ({min_margin:.1f}%). (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
+                    )
                 )
                 continue
 
@@ -170,12 +175,14 @@ def evaluate_baskets(basket_id=None):
                     origin="BASKET",
                 )
 
-                AIMarketLog.objects.create(
-                    basket_item=b_item,
-                    action_taken="Ordered",
-                    margin=margin,
-                    stock_level=current_stock,
-                    reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}). Target {target_stock} ({source_str}). Margin OK ({margin:.1f}%). Ordered {order_qty}. (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
+                ai_market_logs.append(
+                    AIMarketLog(
+                        basket_item=b_item,
+                        action_taken="Ordered",
+                        margin=margin,
+                        stock_level=current_stock,
+                        reason=f"Corp stock ({current_stock}) + in-flight ({in_flight}) + market ({market_stock}). Target {target_stock} ({source_str}). Margin OK ({margin:.1f}%). Ordered {order_qty}. (Sell: {sell_price:,.2f}, Build: {build_cost:,.2f})",
+                    )
                 )
 
             # Send Notification (Mocking a print/log for now as exact webhook setup isn't known)
@@ -192,6 +199,20 @@ def evaluate_baskets(basket_id=None):
                     "margin": margin,
                 }
             )
+
+        # Save all logs in bulk, ensuring no foreign key constraints are violated 
+        # if BasketItems were deleted during this long-running task
+        if ai_market_logs:
+            existing_bitem_ids = set(
+                BasketItem.objects.filter(
+                    id__in=[log.basket_item_id for log in ai_market_logs]
+                ).values_list("id", flat=True)
+            )
+            valid_logs = [
+                log for log in ai_market_logs if log.basket_item_id in existing_bitem_ids
+            ]
+            if valid_logs:
+                AIMarketLog.objects.bulk_create(valid_logs)
 
         # Send Webhooks
         for corp_id, jobs in new_jobs_by_corp.items():
@@ -481,11 +502,9 @@ def scan_market_opportunities(
 
         # 4. Evaluate missing BPOs if requested
         missing_bpo_count = 0
+        missing_bpos = []
         if scanner and scanner.scan_missing_blueprints:
             from ..models.ai_manager import MissingBlueprintOpportunity
-
-            # Clear old missing BPOs for this scanner
-            MissingBlueprintOpportunity.objects.filter(scanner=scanner).delete()
 
             for eve_type in missing:
                 velocity = get_market_velocity(
@@ -494,11 +513,13 @@ def scan_market_opportunities(
                 margin, sell_price, build_cost = calculate_profitability(eve_type)
 
                 if velocity >= min_velocity and margin >= min_profit_margin:
-                    MissingBlueprintOpportunity.objects.create(
-                        scanner=scanner,
-                        eve_type=eve_type,
-                        velocity=velocity,
-                        margin=margin,
+                    missing_bpos.append(
+                        MissingBlueprintOpportunity(
+                            scanner=scanner,
+                            eve_type=eve_type,
+                            velocity=velocity,
+                            margin=margin,
+                        )
                     )
                     missing_bpo_count += 1
 
@@ -527,20 +548,27 @@ def scan_market_opportunities(
 
         if scanner:
             # Django
+            from ..models.ai_manager import OpportunityScannerLog, OpportunityScanner
 
-            from ..models.ai_manager import OpportunityScannerLog
+            # Verify scanner still exists in case it was deleted while the scan was running
+            if OpportunityScanner.objects.filter(pk=scanner.id).exists():
+                if scanner.scan_missing_blueprints:
+                    from ..models.ai_manager import MissingBlueprintOpportunity
+                    MissingBlueprintOpportunity.objects.filter(scanner=scanner).delete()
+                    if missing_bpos:
+                        MissingBlueprintOpportunity.objects.bulk_create(missing_bpos)
 
-            scanner.last_run = timezone.now()
-            scanner.save(update_fields=["last_run"])
+                scanner.last_run = timezone.now()
+                scanner.save(update_fields=["last_run"])
 
-            OpportunityScannerLog.objects.create(
-                scanner=scanner,
-                items_scanned=len(candidates),
-                opportunities_found=len(opportunities),
-                items_auto_added=auto_added_count,
-                details=result_msg,
-                evaluation_details=evaluation_details,
-            )
+                OpportunityScannerLog.objects.create(
+                    scanner=scanner,
+                    items_scanned=len(candidates),
+                    opportunities_found=len(opportunities),
+                    items_auto_added=auto_added_count,
+                    details=result_msg,
+                    evaluation_details=evaluation_details,
+                )
 
         return result_msg
     finally:

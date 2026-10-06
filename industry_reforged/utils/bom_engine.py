@@ -622,9 +622,14 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
     if corp_stock is None:
         corp_stock = {}
 
-    def _flatten(node):
+    def _flatten(node, is_top_level=False):
         # We only aggregate leaf nodes (raw materials or components explicitly excluded from breakdown)
         if not node.get("sub_materials"):
+            if is_top_level:
+                # Top-level items that cannot be built (e.g. BUY items) should not be in the BOM materials
+                # because they are already listed on the order details.
+                return
+                
             type_id = node.get("type_id")
             if type_id not in bom:
                 bom[type_id] = {
@@ -638,10 +643,48 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
             bom[type_id]["base_quantity"] += node.get("base_quantity", node.get("quantity", 0))
         else:
             for sub in node.get("sub_materials", []):
-                _flatten(sub)
+                _flatten(sub, is_top_level=False)
 
     for tree in recursive_tree:
-        _flatten(tree)
+        _flatten(tree, is_top_level=True)
+
+    # Fetch group names for all unique types
+    type_ids = list(bom.keys())
+    if type_ids:
+        from eveuniverse.models import EveType
+        types = EveType.objects.filter(id__in=type_ids).select_related("eve_group")
+        
+        def get_custom_group(t):
+            if not t.eve_group:
+                return "Other"
+            cat_id = t.eve_group.eve_category_id
+            group_id = t.eve_group.id
+            group_name = t.eve_group.name
+            
+            if cat_id == 9:
+                return "Blueprints"
+            if cat_id == 43:
+                return "Planetary Commodities"
+            if group_id == 18:
+                return "Minerals"
+            if group_id == 429:
+                return "Moon Goo"
+            if group_id in [428, 427, 974]: # Intermediate, Composite, Hybrid Polymers
+                return "Reaction Materials"
+            if group_id in [711, 712, 1034]: # Gas clouds, Biochemical Silos
+                return "Gases"
+            if group_id == 423:
+                return "Ice Products"
+            if group_id == 754:
+                return "Salvage"
+            if group_id in [334, 913, 873]: # Construction Components, Advanced, Capital
+                return "Components"
+            
+            return group_name
+            
+        group_map = {t.id: get_custom_group(t) for t in types}
+        for type_id, data in bom.items():
+            data["group_name"] = group_map.get(type_id, "Unknown")
 
     return bom
 

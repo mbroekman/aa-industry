@@ -51,13 +51,13 @@ class IndustryFacility(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_default:
-            # Unset default on all other facilities
-            IndustryFacility.objects.filter(is_default=True).exclude(pk=self.pk).update(
+            # Unset default on all other facilities for this corp
+            IndustryFacility.objects.filter(owner_id=self.owner_id, is_default=True).exclude(pk=self.pk).update(
                 is_default=False
             )
         if self.is_default_reaction:
-            # Unset default reaction on all other facilities
-            IndustryFacility.objects.filter(is_default_reaction=True).exclude(pk=self.pk).update(
+            # Unset default reaction on all other facilities for this corp
+            IndustryFacility.objects.filter(owner_id=self.owner_id, is_default_reaction=True).exclude(pk=self.pk).update(
                 is_default_reaction=False
             )
         super().save(*args, **kwargs)

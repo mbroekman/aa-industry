@@ -139,16 +139,33 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     if bom:
         mat_ids = list(bom.keys())
 
-        from ...utils.pricing_engine import get_market_prices
+        from ...utils.pricing_engine import get_prices_with_overrides
+        
+        from eveuniverse.models import EveType
+        blueprint_ids = set(
+            EveType.objects.filter(
+                id__in=mat_ids, eve_group__eve_category_id=9
+            ).values_list("id", flat=True)
+        )
 
-        prices = get_market_prices(mat_ids)
+        prices = get_prices_with_overrides(mat_ids, corp_info)
+        
+        bom_materials_list = []
+        bom_blueprints_list = []
+        
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
+            
+            if mat_id in blueprint_ids:
+                bom_blueprints_list.append(data)
+            else:
+                bom_materials_list.append(data)
 
-        sorted_bom = sorted(bom.values(), key=lambda x: x["name"])
+        sorted_bom = sorted(bom_materials_list, key=lambda x: x["name"])
+        sorted_bps = sorted(bom_blueprints_list, key=lambda x: x["name"])
 
     context = {
         "title": _("Shopping List"),
@@ -157,6 +174,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         "custom_item_name": item_name,
         "custom_item_quantity": quantity,
         "bom_materials": sorted_bom,
+        "bom_blueprints": sorted_bps,
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": recursive_bom_tree,
     }

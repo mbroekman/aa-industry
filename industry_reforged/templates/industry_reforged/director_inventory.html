@@ -78,15 +78,53 @@
                                     <td class="text-end numeric">{{ inv.total_qty|intcomma }}</td>
                                     <td class="text-end numeric">{% if inv.target > 0 %}{{ inv.target|intcomma }}{% else %}-{% endif %}</td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-xs btn-outline-info" data-bs-toggle="modal" data-bs-target="#setTargetModal-{{ inv.item_type__id }}" title="Set Low Stock Target">
-                                            <i class="fas fa-bullseye"></i> Set Target
-                                        </button>
+                                        <a role="button" class="text-info mx-1" data-bs-toggle="modal" data-bs-target="#locationsModal-{{ inv.item_type__id }}" title="View Locations">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </a>
+
+                                        <a role="button" class="text-info mx-1" data-bs-toggle="modal" data-bs-target="#setTargetModal-{{ inv.item_type__id }}" title="Set Low Stock Target">
+                                            <i class="fas fa-bullseye"></i>
+                                        </a>
+
+                                        <!-- Locations Modal -->
+                                        <div class="modal fade" id="locationsModal-{{ inv.item_type__id }}" tabindex="-1" aria-labelledby="locationsModalLabel-{{ inv.item_type__id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content text-start">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="locationsModalLabel-{{ inv.item_type__id }}">Locations for {{ inv.item_type__name }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-0">
+                                                        <table class="table table-striped table-hover m-0">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th class="ps-3">Location</th>
+                                                                    <th class="text-end pe-3">Quantity</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for loc in inv.locations %}
+                                                                <tr>
+                                                                    <td class="ps-3">{{ loc.location_name }}</td>
+                                                                    <td class="text-end pe-3">{{ loc.quantity|intcomma }}</td>
+                                                                </tr>
+                                                                {% empty %}
+                                                                <tr>
+                                                                    <td colspan="2" class="text-center text-muted py-3">No locations found</td>
+                                                                </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         <!-- Set Target Modal -->
                                         <div class="modal fade" id="setTargetModal-{{ inv.item_type__id }}" tabindex="-1" aria-labelledby="setTargetModalLabel-{{ inv.item_type__id }}" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content text-start">
-                                                    <form method="post" action="{% url 'industry_reforged:update_inventory_target' inv.item_type__id %}">
+                                                    <form method="post" action="{% url 'industry_reforged:update_inventory_target' inv.item_type__id %}" class="show-loader">
                                                         {% csrf_token %}
                                                         <div class="modal-header">
                                                             <h5 class="modal-title" id="setTargetModalLabel-{{ inv.item_type__id }}">Set Target for {{ inv.item_type__name }}</h5>
@@ -131,7 +169,7 @@
                     {% if low_stock %}
                     <div class="alert alert-danger shadow-sm mb-4 d-flex justify-content-between align-items-center" style="border-left: 4px solid #dc3545;">
                         <h5 class="alert-heading text-danger mb-0"><i class="fas fa-exclamation-triangle"></i> Action Required: Restock Needed</h5>
-                        <a href="{% url 'industry_reforged:inventory_shopping_list' %}" class="btn btn-danger btn-sm">
+                        <a href="{% url 'industry_reforged:inventory_shopping_list' %}" class="btn btn-danger btn-sm show-loader">
                             <i class="fas fa-shopping-cart"></i> Generate Master Shopping List
                         </a>
                     </div>
@@ -163,7 +201,7 @@
                                 <td class="text-end numeric text-muted">{{ item.target|intcomma }}</td>
                                 <td class="text-end numeric"><strong class="text-danger">{{ item.deficit|intcomma }}</strong></td>
                                 <td class="text-end">
-                                    <form method="post" action="{% url 'industry_reforged:spawn_restock_job' item.item_type.id %}" class="d-inline">
+                                    <form method="post" action="{% url 'industry_reforged:spawn_restock_job' item.item_type.id %}" class="d-inline show-loader">
                                         {% csrf_token %}
                                         <input type="hidden" name="quantity" value="{{ item.deficit }}">
                                         {% if item.build_or_buy == "BUILD" %}

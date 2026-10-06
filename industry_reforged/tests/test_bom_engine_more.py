@@ -26,18 +26,22 @@ class TestBomEngineMore:
     @patch("industry_reforged.utils.bom_engine.get_blueprint_me")
     def test_calculate_order_bom(self, mock_bp_me, mock_get_sde):
         order = MemberOrderFactory(id=10)
-        item_type = EveTypeFactory(name="Test Ship")
+        item_type = EveTypeFactory(name="Test Ship", id=9999)
         OrderItemFactory(order=order, item_type=item_type, quantity=2)
 
-        mock_get_sde.return_value = (
-            [
-                {"typeid": 34, "name": "Tritanium", "quantity": 100},
-                {"typeid": 35, "name": "Pyerite", "quantity": 50},
-            ],
-            1,
-            1,
-        )
+        def mock_sde_side_effect(type_id):
+            if type_id == 9999:
+                return (
+                    [
+                        {"typeid": 34, "name": "Tritanium", "quantity": 100},
+                        {"typeid": 35, "name": "Pyerite", "quantity": 50},
+                    ],
+                    1,
+                    1,
+                )
+            return ([], 1, 1)
 
+        mock_get_sde.side_effect = mock_sde_side_effect
         mock_bp_me.return_value = (10, 1, True)
 
         res = calculate_order_bom(order)
@@ -48,15 +52,20 @@ class TestBomEngineMore:
     @patch("industry_reforged.utils.bom_engine.get_sde_bom")
     @patch("industry_reforged.utils.bom_engine.get_blueprint_me")
     def test_calculate_tasks_bom(self, mock_bp_me, mock_get_sde):
-        item_type = EveTypeFactory(name="Test Item")
+        item_type = EveTypeFactory(name="Test Item", id=9998)
         task1 = ProductionTaskFactory(item_type=item_type, quantity=3)
         task2 = ProductionTaskFactory(item_type=item_type, quantity=2)
 
-        mock_get_sde.return_value = (
-            [{"typeid": 34, "name": "Tritanium", "quantity": 10}],
-            1,
-            1,
-        )
+        def mock_sde_side_effect(type_id):
+            if type_id == 9998:
+                return (
+                    [{"typeid": 34, "name": "Tritanium", "quantity": 10}],
+                    1,
+                    1,
+                )
+            return ([], 1, 1)
+
+        mock_get_sde.side_effect = mock_sde_side_effect
         mock_bp_me.return_value = (10, 1, True)
 
         res = calculate_tasks_bom([task1, task2])

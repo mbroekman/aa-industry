@@ -74,8 +74,18 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     bom_materials = calculate_order_bom(order)
 
     total_bom_price = 0
+    bom_materials_list = []
+    bom_blueprints_list = []
+    
     if bom_materials:
         mat_ids = list(bom_materials.keys())
+
+        from eveuniverse.models import EveType
+        blueprint_ids = set(
+            EveType.objects.filter(
+                id__in=mat_ids, eve_group__eve_category_id=9
+            ).values_list("id", flat=True)
+        )
 
         prices = get_detailed_prices(mat_ids, corp_info)
         for mat_id, data in bom_materials.items():
@@ -86,6 +96,11 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             data["original_jita_price"] = price_info["original_jita_price"]
             data["total_price"] = price_info["final_price"] * data["quantity"]
             total_bom_price += data["total_price"]
+            
+            if mat_id in blueprint_ids:
+                bom_blueprints_list.append(data)
+            else:
+                bom_materials_list.append(data)
 
     # Calculate original price from items before any discounts
     order_items = list(order.items.all().select_related("item_type"))
@@ -184,7 +199,8 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "build_items": build_items,
         "buy_items": buy_items,
         "display_child_orders": is_privileged,
-        "bom_materials": bom_materials.values() if bom_materials else [],
+        "bom_materials": bom_materials_list,
+        "bom_blueprints": bom_blueprints_list,
         "total_bom_price": total_bom_price,
         "estimated_build_cost": estimated_build_cost,
         "profit_margin": profit_margin,
@@ -197,6 +213,17 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "missing_bps": [p for p in products_me if p.get("missing_bp")],
         "plex_price": plex_price,
     }
+    output_locations = []
+    if is_privileged:
+        from ...models.orders import OutputLocation
+        corp_info = request.user.profile.main_character.corporation_id
+        from allianceauth.eveonline.models import EveCorporationInfo
+        corp = EveCorporationInfo.objects.filter(corporation_id=corp_info).first()
+        if corp:
+            output_locations = OutputLocation.objects.filter(corporation=corp).order_by("name")
+    
+    context["output_locations"] = output_locations
+
     return render(request, "industry_reforged/view_quote.html", context)
 
 
@@ -247,6 +274,31 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 order.ignore_discounts = request.POST.get("ignore_discounts") == "on"
             else:
                 order.ignore_discounts = False
+
+            output_location_id = request.POST.get("output_location", "")
+            if output_location_id:
+                if output_location_id.startswith("new_"):
+                    # Create new location
+                    new_loc_name = output_location_id.replace("new_", "", 1).strip()
+                    if new_loc_name:
+                        from ...models.orders import OutputLocation
+                        corp_info = request.user.profile.main_character.corporation_id
+                        from allianceauth.eveonline.models import EveCorporationInfo
+                        corp = EveCorporationInfo.objects.filter(corporation_id=corp_info).first()
+                        if corp:
+                            new_loc, created = OutputLocation.objects.get_or_create(
+                                corporation=corp, name=new_loc_name
+                            )
+                            order.output_location = new_loc
+                else:
+                    from ...models.orders import OutputLocation
+                    loc = OutputLocation.objects.filter(id=output_location_id).first()
+                    if loc:
+                        order.output_location = loc
+
+            output_container = request.POST.get("output_container", "").strip()
+            if output_container:
+                order.output_container = output_container
 
             if old_total > 0 and old_total != order.total_price:
                 ratio = float(order.total_price) / float(old_total)
@@ -393,18 +445,35 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     from ...utils.pricing_engine import get_prices_with_overrides
 
     total_bom_price = 0
+    bom_materials_list = []
+    bom_blueprints_list = []
+    
     if bom_materials:
         mat_ids = list(bom_materials.keys())
+        
+        from eveuniverse.models import EveType
+        blueprint_ids = set(
+            EveType.objects.filter(
+                id__in=mat_ids, eve_group__eve_category_id=9
+            ).values_list("id", flat=True)
+        )
+        
         prices = get_prices_with_overrides(mat_ids, corp_info)
         for mat_id, data in bom_materials.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
+            
+            if mat_id in blueprint_ids:
+                bom_blueprints_list.append(data)
+            else:
+                bom_materials_list.append(data)
 
     context = {
         "order": order,
-        "bom_materials": bom_materials.values() if bom_materials else [],
+        "bom_materials": bom_materials_list,
+        "bom_blueprints": bom_blueprints_list,
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": recursive_bom_tree,
     }

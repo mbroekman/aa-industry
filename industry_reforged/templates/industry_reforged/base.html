@@ -113,29 +113,26 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Show overlay on clicking links with show-loader class
-            const loaderLinks = document.querySelectorAll('a.show-loader');
-            loaderLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    // Don't show if it's opening in a new tab
-                    if (this.target !== '_blank') {
-                        document.getElementById('industry-loading-overlay').style.display = 'flex';
-                    }
-                });
+            // Use event delegation for links so it works with dynamically added elements (like DataTables)
+            document.body.addEventListener('click', function(e) {
+                const link = e.target.closest('a.show-loader');
+                if (link && link.target !== '_blank' && !e.ctrlKey && !e.metaKey) {
+                    document.getElementById('industry-loading-overlay').style.display = 'flex';
+                }
             });
 
-            // Show overlay on submitting forms with show-loader class
-            const loaderForms = document.querySelectorAll('form.show-loader');
-            loaderForms.forEach(form => {
-                form.addEventListener('submit', function() {
+            // Use event delegation for forms
+            document.body.addEventListener('submit', function(e) {
+                if (e.target.matches('form.show-loader')) {
                     document.getElementById('industry-loading-overlay').style.display = 'flex';
-                });
+                }
             });
 
             // Show overlay when navigating to main dashboards from the sidebar/menu
             const dashboardLinks = document.querySelectorAll(
                 'a[href$="/industry/industrialist/"], ' +
                 'a[href$="/industry/director/"], ' +
+                'a[href$="/industry/director/inventory/"], ' +
                 'a[href$="/industry/corporate/"], ' +
                 'a[href$="/industry/personal/"], ' +
                 'a[href$="/industry/orders/"]'

@@ -7,7 +7,7 @@ from .config import (
     CorporationWebhookConfig,
 )
 from .core import General, TaskExecutionLog
-from .facilities import IndustryFacility, IndustryFacilityRig, IndustryRig
+from .facilities import IndustryFacility, IndustryFacilityRig, IndustryRig, KnownLocation
 from .inventory import CorpInventory
 from .jobs import CharacterIndustryJob, CorporationIndustryJob, TaskJobLink
 from .orders import (
@@ -46,6 +46,7 @@ __all__ = [
     "IndustryFacility",
     "IndustryRig",
     "IndustryFacilityRig",
+    "KnownLocation",
     "CharacterIndustryJob",
     "CorporationIndustryJob",
     "TaskJobLink",

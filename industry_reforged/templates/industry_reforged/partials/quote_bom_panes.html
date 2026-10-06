@@ -12,9 +12,10 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-striped m-0">
+                            <table class="table table-striped m-0" id="required-raw-materials-table">
                                 <thead>
                                     <tr>
+                                        <th>{% trans "Type" %}</th>
                                         <th>{% trans "Material" %}</th>
                                         <th class="text-end">{% trans "Corp Stock" %}</th>
                                         <th class="text-end">{% trans "Base (ME0)" %}</th>
@@ -28,34 +29,35 @@
                                 </thead>
                                 <tbody>
                                     {% for mat in bom_materials %}
-                                    <tr>
-                                        <td>
+                                    <tr {% if mat.corp_stock < mat.quantity %}data-shortage="true"{% endif %}>
+                                        <td>{{ mat.group_name }}</td>
+                                        <td data-order="{{ mat.name }}">
                                             <div class="d-flex align-items-center">
                                                 <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ mat.type_id }}/bp?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
                                                 <span>{{ mat.name }}</span>
                                             </div>
                                         </td>
-                                        <td class="text-end numeric">
+                                        <td class="text-end numeric" data-order="{{ mat.corp_stock|default:0 }}">
                                             {% if mat.corp_stock >= mat.quantity %}
                                                 <span class="text-success" data-bs-toggle="tooltip" title="{% trans 'Sufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
                                             {% else %}
                                                 <span class="text-danger" data-bs-toggle="tooltip" title="{% trans 'Insufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
                                             {% endif %}
                                         </td>
-                                        <td class="text-end numeric text-muted">
+                                        <td class="text-end numeric text-muted" data-order="{% if mat.base_quantity %}{{ mat.base_quantity }}{% else %}{{ mat.quantity }}{% endif %}">
                                             {% if mat.base_quantity and mat.base_quantity > mat.quantity %}
                                                 <del>{{ mat.base_quantity|intcomma }}</del>
                                             {% else %}
                                                 {{ mat.quantity|intcomma }}
                                             {% endif %}
                                         </td>
-                                        <td class="text-end numeric fw-bold {% if mat.savings > 0 %}text-success{% endif %}">
+                                        <td class="text-end numeric fw-bold {% if mat.savings > 0 %}text-success{% endif %}" data-order="{{ mat.quantity }}">
                                             {{ mat.quantity|intcomma }}
                                             {% if mat.savings > 0 %}
                                                 <br><small class="text-success"><i class="fas fa-arrow-down"></i> -{{ mat.savings|intcomma }}</small>
                                             {% endif %}
                                         </td>
-                                        <td class="text-end numeric">
+                                        <td class="text-end numeric" data-order="{{ mat.price_per_unit }}">
                                             {% if mat.original_jita_price > mat.price_per_unit %}
                                                 <del class="text-muted small" data-bs-toggle="tooltip" title="{% trans 'Original Jita Price' %}">{{ mat.original_jita_price|eve_isk }}</del><br>
                                             {% elif mat.original_jita_price < mat.price_per_unit and mat.original_jita_price > 0 %}
@@ -65,22 +67,63 @@
                                                 {{ mat.price_per_unit|eve_isk }}
                                             </span>
                                         </td>
-                                        <td class="text-end numeric text-warning">{{ mat.total_price|eve_isk }}</td>
+                                        <td class="text-end numeric text-warning" data-order="{{ mat.total_price }}">{{ mat.total_price|eve_isk }}</td>
                                     </tr>
-                                    {% empty %}
-                                    <tr><td colspan="6" class="text-center">No materials required or failed to load SDE data.</td></tr>
                                     {% endfor %}
+                                    
+                                    {% if bom_blueprints %}
+                                    {% for mat in bom_blueprints %}
+                                    <tr {% if mat.corp_stock < mat.quantity %}data-shortage="true"{% endif %}>
+                                        <td>Blueprints</td>
+                                        <td data-order="{{ mat.name }}">
+                                            <div class="d-flex align-items-center">
+                                                <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/bp?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/bp?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
+                                                <span>{{ mat.name }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end numeric" data-order="{{ mat.corp_stock|default:0 }}">
+                                            {% if mat.corp_stock >= mat.quantity %}
+                                                <span class="text-success" data-bs-toggle="tooltip" title="{% trans 'Sufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                            {% else %}
+                                                <span class="text-danger" data-bs-toggle="tooltip" title="{% trans 'Insufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end numeric text-muted" data-order="{% if mat.base_quantity %}{{ mat.base_quantity }}{% else %}{{ mat.quantity }}{% endif %}">
+                                            {% if mat.base_quantity and mat.base_quantity > mat.quantity %}
+                                                <del>{{ mat.base_quantity|intcomma }}</del>
+                                            {% else %}
+                                                {{ mat.quantity|intcomma }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end numeric fw-bold {% if mat.savings > 0 %}text-success{% endif %}" data-order="{{ mat.quantity }}">
+                                            {{ mat.quantity|intcomma }}
+                                            {% if mat.savings > 0 %}
+                                                <br><small class="text-success"><i class="fas fa-arrow-down"></i> -{{ mat.savings|intcomma }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end numeric" data-order="{{ mat.price_per_unit }}">
+                                            <span class="{% if mat.price_per_unit > 0 %}text-warning{% else %}text-muted{% endif %}">
+                                                {{ mat.price_per_unit|eve_isk }}
+                                            </span>
+                                            {% if mat.price_per_unit == 0 %}
+                                            <br><small class="text-muted"><i class="fas fa-info-circle" data-bs-toggle="tooltip" title="{% trans 'No manual override found. ESI price ignored for BPCs.' %}"></i></small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end numeric text-warning" data-order="{{ mat.total_price }}">{{ mat.total_price|eve_isk }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% endif %}
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th colspan="5" class="text-end text-muted">
+                                        <th colspan="6" class="text-end text-muted">
                                             {% trans "Original Jita Price (Est.):" %}
                                             <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{% trans 'Live Jita 5% Sell Price fetched via direct ESI market orders' %}"></i>
                                         </th>
                                         <th class="text-end text-muted numeric">{{ original_price|eve_isk }}</th>
                                     </tr>
                                     <tr>
-                                        <th colspan="5" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
+                                        <th colspan="6" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
                                         <th class="text-end fs-5 text-warning numeric">{{ total_bom_price|eve_isk }}</th>
                                     </tr>
                                 </tfoot>
@@ -136,3 +179,82 @@
     <i class="fas fa-coins"></i> {% trans "BOM Cost:" %} {{ total_bom_price|eve_isk_short }}
 </span>
 {% endif %}
+
+<script>
+    var expandedGroups = new Set();
+    
+    function initBomTable() {
+        if (!$.fn.DataTable.isDataTable('#required-raw-materials-table')) {
+            $('#required-raw-materials-table').DataTable({
+                "paging": false,
+                "order": [[ 0, 'asc' ], [ 1, 'asc' ]],
+                "columnDefs": [
+                    { "visible": false, "targets": 0 },
+                    { "orderable": false, "targets": '_all' }
+                ],
+                "drawCallback": function ( settings ) {
+                    var api = this.api();
+                    var rows = api.rows( {page:'current'} ).nodes();
+                    var last = null;
+                    
+                    var searchTerm = api.search();
+                    var isSearching = searchTerm && searchTerm.trim().length > 0;
+                    
+                    api.column(0, {page:'current'} ).data().each( function ( group, i ) {
+                        var groupId = group.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+                        var shouldShow = isSearching || expandedGroups.has(groupId);
+                        
+                        if ( last !== group ) {
+                            var title = group;
+                            var icon = group === 'Blueprints' ? 'fa-microchip text-info' : 'fa-boxes text-warning';
+                            var chevronIcon = shouldShow ? 'fa-chevron-down' : 'fa-chevron-right';
+                            
+                            $(rows).eq( i ).before(
+                                '<tr class="table-dark group" style="cursor: pointer;" data-group-target="' + groupId + '"><th colspan="6" class="text-info"><i class="fas ' + chevronIcon + ' me-2 toggle-icon"></i><i class="fas ' + icon + ' me-2"></i>' + title + '</th></tr>'
+                            );
+                            last = group;
+                        }
+                        
+                        var row = $(rows).eq( i );
+                        row.addClass('child-of-' + groupId);
+                        
+                        if (shouldShow) {
+                            row.show();
+                        } else {
+                            row.hide();
+                        }
+                    } );
+                    
+                    // Add shortage indicators to group headers
+                    $('#required-raw-materials-table tbody tr.group').each(function() {
+                        var target = $(this).data('group-target');
+                        var hasShortage = $('.child-of-' + target + '[data-shortage="true"]').length > 0;
+                        if (hasShortage && $(this).find('.shortage-indicator').length === 0) {
+                            $(this).find('th').append('<span class="shortage-indicator badge bg-danger ms-3" title="{% trans "Shortages in this group" %}"><i class="fas fa-exclamation-triangle"></i> {% trans "Shortage" %}</span>');
+                        }
+                    });
+                }
+            });
+            
+            $('#required-raw-materials-table tbody').on('click', 'tr.group', function () {
+                var target = $(this).data('group-target');
+                var children = $('.child-of-' + target);
+                var icon = $(this).find('.toggle-icon');
+                
+                if (children.is(':visible')) {
+                    children.hide();
+                    icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+                    expandedGroups.delete(target);
+                } else {
+                    children.show();
+                    icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                    expandedGroups.add(target);
+                }
+            });
+        }
+    }
+    
+    $(document).ready(function() {
+        initBomTable();
+    });
+</script>

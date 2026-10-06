@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.14.5 (2026-10-06)
+
+### Feature
+
+- **ui**: Overhauled the 'Required Raw Materials' BOM view. It now uses collapsible DataTables for improved readability and searchability. Materials are automatically mapped into logical EVE categories (Minerals, Moon Goo, Reaction Materials, Planetary Commodities, etc.) instead of obscure standard SDE group names.
+- **ui**: The BOM view acts as an accordion, meaning groups are collapsed by default for maximum overview. A real-time red 'Shortage' badge is appended to the group header if any material inside lacks sufficient corporate stock.
+- **logic**: Top-level items on an order that are set to "BUY" (i.e. products that are simply bought and delivered rather than built) are now smartly excluded from the Required Raw Materials list.
+
 ## v0.14.4 (2026-10-02)
 
 ### Fix

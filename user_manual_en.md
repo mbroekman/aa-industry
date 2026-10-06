@@ -46,7 +46,7 @@ This is the central marketplace for corporate builders.
 
 ### 2.3 Shopping List & Full Production Tree
 
-- **Order & Task Shopping Lists**: Extremely useful for buyers and builders: generate a "Shopping List" of required raw materials for a specific order or a group of tasks. The flattened shopping list explicitly displays the currently available "Corp Stock" for each required material. You can copy this list with a single click in the EVE Online "Multibuy" format.
+- **Order & Task Shopping Lists**: Extremely useful for buyers and builders: generate a "Shopping List" of required raw materials for a specific order or a group of tasks. The flattened shopping list explicitly displays the currently available "Corp Stock" for each required material. You can copy this list with a single click in the EVE Online "Multibuy" format. The list uses a collapsible accordion design grouped by logical EVE categories (Minerals, Moon Goo, etc.), with automatic "Shortage" badges highlighting missing stock. Top-level items that are set to "BUY" (not built) are smartly excluded to prevent clutter.
 - **Recursive BOM Drilldown**: When viewing the details of an Order, Industrialists have access to an exclusive **"Full Production Tree"** tab. This provides an interactive, recursive breakdown of the Bill of Materials based on the local SDE database. You can drill down through complex intermediate components all the way down to base raw materials (Minerals, PI, Moon Goo, etc.), including full support for **Reactions**.
 - **Component Sourcing**: Next to every intermediate component in the Production Tree, you will find a dedicated Shopping Cart icon. Clicking it instantly generates a specific raw material shopping list for *that particular component* at the exact quantity required. This gives builders full flexibility to decide which sub-components they want to build themselves and which they prefer to buy off the market.
 
@@ -98,7 +98,8 @@ All business and pricing rules are managed strictly via the **Director Control P
 - **Global Pricing**: Configure the default corporate discount percentage and the builder reward percentage per corporation.
 - **Minimum Margin Floor**: Define the minimum acceptable margin over the True Material Cost (the recursively calculated raw material cost) for item quotes and AI generated jobs.
 - **Type Discounts**: Specify granular discounts per item category (e.g., ships vs. modules) for specific corporations.
-- **Item Configurations**: Manually override the Jita buy/sell price for specific items (highly useful for unique Faction items with erratic market histories).
+- **Item Configurations (Manual Price Overrides)**: Manually override the Jita buy/sell price for specific items. This is highly useful for unique Faction items with erratic market histories, and is **strictly required for selling Blueprint Copies (BPCs)**.
+  - *Note on Blueprint Pricing*: In EVE Online, both Blueprint Originals (BPOs) and Blueprint Copies (BPCs) share the exact same Type ID. Because BPCs cannot be listed on the regional market, the ESI API will always return the multi-billion ISK price of the BPO when you quote a Blueprint. To prevent your BPC quotes from being astronomically high, you must use this Item Configuration feature to explicitly set a manual price override (e.g., 500,000 ISK) for the blueprints you intend to sell.
 - **System Taxes**: Define the standard Industry Tax and Broker Fee percentages applicable to your corporate production calculations.
 
 ### 3.6 Corporate Discord Webhooks

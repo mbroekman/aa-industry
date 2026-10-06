@@ -61,6 +61,13 @@
 
                 <dt class="col-sm-4 text-danger">{% trans "Remaining" %}</dt>
                 <dd class="col-sm-8 text-danger numeric">{{ order.remaining_balance|eve_isk }}</dd>
+
+                <div class="w-100 my-2 border-bottom border-secondary"></div>
+
+                <dt class="col-sm-4 text-info">{% trans "Output Location" %}</dt>
+                <dd class="col-sm-8 text-info">{% if order.output_location %}{{ order.output_location.name }}{% else %}-{% endif %}</dd>
+                <dt class="col-sm-4 text-info">{% trans "Container" %}</dt>
+                <dd class="col-sm-8 text-info">{% if order.output_container %}{{ order.output_container }}{% else %}-{% endif %}</dd>
                 {% endif %}
             </dl>
 

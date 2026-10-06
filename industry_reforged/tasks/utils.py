@@ -140,8 +140,11 @@ def ensure_eve_type(type_id):
             from eveuniverse.models import EveType
 
             EveType.objects.get_or_create_esi(id=type_id)
+            return True
         except Exception as e:
             logger.warning(f"Could not fetch EveType {type_id}: {e}")
+            return False
+    return False
 
 
 def _get_security_space(system_id):

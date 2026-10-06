@@ -132,7 +132,17 @@ def add_facility(request: WSGIRequest) -> HttpResponse:
 
         form = IndustryFacilityForm(request.POST, instance=instance)
         if form.is_valid():
-            facility = form.save()
+            facility = form.save(commit=False)
+            if not facility.owner_id and corporation:
+                facility.owner_id = corporation.corporation_id
+            facility.save()
+            
+            # Ensure the facility is known to the configuring corporation so it shows up in director_config
+            if corporation and facility.owner_id != corporation.corporation_id:
+                from ..models.facilities import KnownLocation
+                loc, _ = KnownLocation.objects.get_or_create(location_id=facility.facility_id, defaults={'name': facility.name})
+                loc.corporations.add(corporation)
+
             formset = IndustryFacilityRigFormSet(request.POST, instance=facility)
             if formset.is_valid():
                 formset.save()

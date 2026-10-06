@@ -64,6 +64,21 @@ class CorpTypeDiscount(models.Model):
         return f"{self.eve_type.name} - {self.discount_percent}% off"
 
 
+class OutputLocation(models.Model):
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="output_locations"
+    )
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        verbose_name = _("Output Location")
+        verbose_name_plural = _("Output Locations")
+        unique_together = (("corporation", "name"),)
+
+    def __str__(self):
+        return self.name
+
+
 class MemberOrder(models.Model):
     ORDER_STATUS_CHOICES = (
         ("REQUESTED", "Requested"),
@@ -111,6 +126,21 @@ class MemberOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, null=True)
 
+    output_location = models.ForeignKey(
+        OutputLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        help_text=_("The destination where the finished goods will be delivered.")
+    )
+    output_container = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text=_("The name of the container where the goods will be placed.")
+    )
+
     parent_order = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
@@ -146,7 +176,11 @@ class MemberOrder(models.Model):
     @property
     def root_order(self):
         root = self
+        visited = {root.id}
         while root.parent_order:
+            if root.parent_order.id in visited:
+                break
+            visited.add(root.parent_order.id)
             root = root.parent_order
         return root
 
@@ -380,11 +414,6 @@ class ProductionTask(models.Model):
 
 
 class CorpItemConfig(models.Model):
-    BOM_CHOICES = (
-        ("SDE", "Eve SDE (Database)"),
-        ("FUZZWORK", "Fuzzwork API"),
-    )
-
     corporation = models.ForeignKey(
         EveCorporationInfo, on_delete=models.CASCADE, related_name="item_configs"
     )
@@ -418,9 +447,6 @@ class CorpItemConfig(models.Model):
 
     build_or_buy = models.CharField(
         max_length=10, choices=(("BUILD", "Build"), ("BUY", "Buy")), default="BUILD"
-    )
-    bom_source = models.CharField(
-        max_length=10, choices=BOM_CHOICES, default="FUZZWORK"
     )
 
     exclude_from_orders = models.BooleanField(

@@ -83,8 +83,41 @@
                             <td class="text-end numeric text-warning" data-sort="{{ mat.total_price }}">{{ mat.total_price|eve_isk }}</td>
                         </tr>
                         {% empty %}
+                        {% if not bom_blueprints %}
                         <tr><td colspan="5" class="text-center py-4">No materials found.</td></tr>
+                        {% endif %}
                         {% endfor %}
+                        
+                        {% if bom_blueprints %}
+                        <tr class="table-dark">
+                            <th colspan="5" class="text-info"><i class="fas fa-microchip me-2"></i>{% trans "Required Blueprints" %}</th>
+                        </tr>
+                        {% for mat in bom_blueprints %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/bp?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/bp?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
+                                    <span>{{ mat.name }}</span>
+                                </div>
+                            </td>
+                            <td class="text-end numeric">
+                                {% if mat.corp_stock >= mat.quantity %}
+                                    <span class="text-success" data-bs-toggle="tooltip" title="{% trans 'Sufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                {% else %}
+                                    <span class="text-danger" data-bs-toggle="tooltip" title="{% trans 'Insufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end numeric">{{ mat.quantity|intcomma }}</td>
+                            <td class="text-end numeric" data-sort="{{ mat.price_per_unit }}">
+                                <span class="{% if mat.price_per_unit > 0 %}text-muted{% else %}text-muted{% endif %}">{{ mat.price_per_unit|eve_isk }}</span>
+                                {% if mat.price_per_unit == 0 %}
+                                <br><small class="text-muted"><i class="fas fa-info-circle" data-bs-toggle="tooltip" title="{% trans 'No manual override found.' %}"></i></small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end numeric text-warning" data-sort="{{ mat.total_price }}">{{ mat.total_price|eve_isk }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
                     </tbody>
                     <tfoot>
                         <tr>

@@ -300,6 +300,11 @@ urlpatterns = [
         name="director_config_structure_toggle",
     ),
     path(
+        "director/config/locations/<int:location_id>/delete/",
+        director.director_config_delete_output_location,
+        name="director_config_delete_output_location",
+    ),
+    path(
         "director/wallets/",
         director.director_wallets,
         name="director_wallets",

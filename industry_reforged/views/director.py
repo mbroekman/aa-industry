@@ -393,13 +393,44 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     # Django
     from django.db.models import Sum
 
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        from django.contrib import messages
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:index")
+
     inventory = (
-        CorpInventory.objects.filter(quantity__gt=0)
+        CorpInventory.objects.filter(corporation=corporation, quantity__gt=0)
         .values("item_type__name", "item_type__id")
         .annotate(total_qty=Sum("quantity"))
     )
 
-    configs = CorpItemConfig.objects.filter(target_threshold__gt=0)
+    from ..models import KnownLocation, IndustryFacility
+    loc_names = dict(KnownLocation.objects.filter(corporations=corporation).values_list("location_id", "name"))
+    fac_names = dict(IndustryFacility.objects.filter(owner_id=corporation.corporation_id).values_list("facility_id", "name"))
+    loc_names.update(fac_names)
+    
+    inventory_breakdown = CorpInventory.objects.filter(
+        corporation=corporation, quantity__gt=0
+    ).values("item_type__id", "location_id").annotate(qty=Sum("quantity"))
+    
+    breakdown_by_item = {}
+    for entry in inventory_breakdown:
+        item_id = entry["item_type__id"]
+        loc_id = entry["location_id"]
+        qty = entry["qty"]
+        loc_name = loc_names.get(loc_id, f"Unknown Location ({loc_id})")
+        
+        if item_id not in breakdown_by_item:
+            breakdown_by_item[item_id] = []
+        breakdown_by_item[item_id].append({"location_name": loc_name, "quantity": qty})
+        
+    for item_id in breakdown_by_item:
+        breakdown_by_item[item_id].sort(key=lambda x: x["quantity"], reverse=True)
+
+    configs = CorpItemConfig.objects.filter(corporation=corporation, target_threshold__gt=0)
     config_dict = {
         c.item_type_id: {
             "target": c.target_threshold,
@@ -423,6 +454,7 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
                 "target": config_data["target"],
                 "auto_produce": config_data["auto_produce"],
                 "build_or_buy": config_data["build_or_buy"],
+                "locations": breakdown_by_item.get(item["item_type__id"], []),
             }
         )
 
@@ -443,20 +475,14 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     )
     open_tasks_dict = {t["item_type_id"]: t["total"] for t in open_tasks}
 
-    main_char = request.user.profile.main_character
-    corporation = main_char.corporation if main_char else None
-
-    if corporation:
-        open_buys = (
+    open_buys = (
             CorpBuyOrder.objects.filter(
                 corporation=corporation, status__in=["OPEN", "IN_PROGRESS"]
             )
             .values("item_type_id")
             .annotate(total=Sum("quantity"))
         )
-        open_buys_dict = {b["item_type_id"]: b["total"] for b in open_buys}
-    else:
-        open_buys_dict = {}
+    open_buys_dict = {b["item_type_id"]: b["total"] for b in open_buys}
 
     for config in configs:
         current_qty = inv_dict.get(config.item_type.id, 0)
@@ -480,13 +506,15 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
 
     from ..models import IndustryFacility
 
-    facilities = IndustryFacility.objects.filter(is_production_facility=True)
+    from django.db.models import Q
+    valid_facility_ids = list(corporation.known_locations.values_list("location_id", flat=True))
+    facilities = IndustryFacility.objects.filter(Q(owner_id=corporation.corporation_id) | Q(facility_id__in=valid_facility_ids), is_production_facility=True).distinct()
     facility_inventories = []
 
     for facility in facilities:
         invs = (
             CorpInventory.objects.filter(
-                location_id=facility.facility_id, quantity__gt=0
+                corporation=corporation, location_id=facility.facility_id, quantity__gt=0
             )
             .values("item_type__name", "item_type__id")
             .annotate(total_qty=Sum("quantity"))
@@ -712,22 +740,42 @@ def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
 
     total_bom_price = 0
     sorted_bom = []
+    sorted_bps = []
     if bom:
         from ..utils.pricing_engine import get_market_prices
 
         mat_ids = list(bom.keys())
+        
+        from eveuniverse.models import EveType
+        blueprint_ids = set(
+            EveType.objects.filter(
+                id__in=mat_ids, eve_group__eve_category_id=9
+            ).values_list("id", flat=True)
+        )
+        
         prices = get_market_prices(mat_ids)
+        
+        bom_materials_list = []
+        bom_blueprints_list = []
+        
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
+            
+            if mat_id in blueprint_ids:
+                bom_blueprints_list.append(data)
+            else:
+                bom_materials_list.append(data)
 
-        sorted_bom = sorted(bom.values(), key=lambda x: x["name"])
+        sorted_bom = sorted(bom_materials_list, key=lambda x: x["name"])
+        sorted_bps = sorted(bom_blueprints_list, key=lambda x: x["name"])
 
     context = {
         "title": _("Master Deficit Shopping List"),
         "bom_materials": sorted_bom,
+        "bom_blueprints": sorted_bps,
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": [],
         "hide_tree": True,
@@ -747,25 +795,30 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         messages.error(request, _("You are not part of a corporation."))
         return redirect("industry_reforged:index")
 
-    item_configs = CorpItemConfig.objects.all().select_related(
+    item_configs = CorpItemConfig.objects.filter(corporation=corporation).select_related(
         "corporation", "item_type"
     )
     from ..models import CorporationPricingConfig
 
-    pricing_configs = CorpPricingConfig.objects.all().select_related("corporation")
-    corp_pricing_configs = CorporationPricingConfig.objects.all().select_related(
+    pricing_configs = CorpPricingConfig.objects.filter(corporation=corporation).select_related("corporation")
+    corp_pricing_configs = CorporationPricingConfig.objects.filter(corporation=corporation).select_related(
         "corporation"
     )
-    type_discounts = CorpTypeDiscount.objects.all().select_related(
+    type_discounts = CorpTypeDiscount.objects.filter(config__corporation=corporation).select_related(
         "config__corporation", "eve_type"
     )
-    tax_configs = TaxConfig.objects.all().select_related("corporation")
+    tax_configs = TaxConfig.objects.filter(corporation=corporation).select_related("corporation")
     task_logs = TaskExecutionLog.objects.all().order_by("task_name")
     has_failed_tasks = task_logs.filter(status="FAILED").exists()
 
     from ..models import IndustryFacility
 
-    facilities = IndustryFacility.objects.filter(is_production_facility=True)
+    from django.db.models import Q
+    valid_facility_ids = list(corporation.known_locations.values_list("location_id", flat=True))
+    facilities = IndustryFacility.objects.filter(Q(owner_id=corporation.corporation_id) | Q(facility_id__in=valid_facility_ids), is_production_facility=True).distinct()
+
+    from ..models.orders import OutputLocation
+    output_locations = OutputLocation.objects.filter(corporation=corporation).order_by("name")
 
     context = {
         "title": "Configurations",
@@ -777,6 +830,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "task_logs": task_logs,
         "has_failed_tasks": has_failed_tasks,
         "facilities": facilities,
+        "output_locations": output_locations,
     }
     return render(request, "industry_reforged/director_config.html", context)
 
@@ -799,6 +853,30 @@ def director_config_structure_toggle(
     status = "enabled" if facility.sync_inventory else "disabled"
     messages.success(request, f"Inventory sync for {facility.name} has been {status}.")
     return redirect(reverse("industry_reforged:director_config") + "#facilities")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_delete_output_location(
+    request: WSGIRequest, location_id: int
+) -> HttpResponse:
+    """Delete an OutputLocation."""
+    from django.shortcuts import get_object_or_404
+    from ..models.orders import OutputLocation
+
+    main_char = request.user.profile.main_character
+    corporation = main_char.corporation if main_char else None
+
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    location = get_object_or_404(OutputLocation, id=location_id, corporation=corporation)
+    location_name = location.name
+    location.delete()
+
+    messages.success(request, f"Output Location '{location_name}' has been deleted.")
+    return redirect(reverse("industry_reforged:director_config") + "#locations")
 
 
 @login_required

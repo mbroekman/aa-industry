@@ -69,7 +69,7 @@ class TestInventoryTasks:
     @patch("industry_reforged.tasks.utils.resolve_unknown_locations")
     @patch("industry_reforged.tasks.inventory.esi")
     @patch("industry_reforged.tasks.inventory.Token.objects.filter")
-    def test_task_sync_corp_inventory_without_configured_facilities(
+    def test_task_sync_corp_inventory_all_locations(
         self, mock_filter, mock_esi, mock_resolve
     ):
         user = UserFactory()
@@ -99,8 +99,15 @@ class TestInventoryTasks:
 
         # AA Industry App
         from industry_reforged.models.facilities import KnownLocation
+        from industry_reforged.models.inventory import CorpInventory
 
         loc = KnownLocation.objects.filter(location_id=1045667241057).first()
         assert loc is not None
         assert corp in loc.corporations.all()
         assert mock_resolve.delay.called
+        
+        # Verify inventory was created even without configured facilities
+        assert CorpInventory.objects.filter(corporation=corp).count() == 1
+        inv = CorpInventory.objects.filter(corporation=corp).first()
+        assert inv.item_type_id == 10
+        assert inv.quantity == 100

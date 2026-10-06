@@ -210,8 +210,21 @@ def get_prices_with_overrides(type_ids, corporation=None):
     """
     Fetch Jita prices for a list of type IDs, but apply any manual price
     overrides defined in CorpItemConfig for the given corporation.
+    Blueprints (category_id 9) are ignored from ESI and default to 0 unless overridden.
     """
-    prices = get_market_prices(type_ids)
+    from eveuniverse.models import EveType
+
+    blueprints = set(
+        EveType.objects.filter(
+            id__in=type_ids, eve_group__eve_category_id=9
+        ).values_list("id", flat=True)
+    )
+    non_bp_type_ids = [t for t in type_ids if t not in blueprints]
+
+    prices = get_market_prices(non_bp_type_ids)
+    
+    for bp_id in blueprints:
+        prices[bp_id] = 0.0
 
     if corporation:
         from ..models import CorpItemConfig
@@ -230,12 +243,26 @@ def get_prices_with_overrides(type_ids, corporation=None):
 def get_detailed_prices(type_ids, corporation=None):
     """
     Fetch Jita prices and return detailed breakdown with both original and final prices.
+    Blueprints (category_id 9) are ignored from ESI and default to 0 unless overridden.
     """
-    prices = get_market_prices(type_ids)
+    from eveuniverse.models import EveType
+
+    blueprints = set(
+        EveType.objects.filter(
+            id__in=type_ids, eve_group__eve_category_id=9
+        ).values_list("id", flat=True)
+    )
+    non_bp_type_ids = [t for t in type_ids if t not in blueprints]
+
+    prices = get_market_prices(non_bp_type_ids)
     detailed = {}
+    
     for tid in type_ids:
-        val = prices.get(tid, 0.0)
-        detailed[tid] = {"original_jita_price": val, "final_price": val}
+        if tid in blueprints:
+            detailed[tid] = {"original_jita_price": 0.0, "final_price": 0.0}
+        else:
+            val = prices.get(tid, 0.0)
+            detailed[tid] = {"original_jita_price": val, "final_price": val}
 
     if corporation:
         from ..models import CorpItemConfig
@@ -373,6 +400,7 @@ def calculate_bom_cost(parsed_items, corporation=None):
         for c in configs:
             config_dict[c.item_type_id] = {
                 "exclude_from_orders": getattr(c, "exclude_from_orders", False),
+                "build_or_buy": getattr(c, "build_or_buy", "BUILD"),
             }
 
     # 3. Calculate flattened BOM
