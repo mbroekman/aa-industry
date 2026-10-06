@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.6 (2026-10-06)
+
+### Fix
+
+- **ui**: Fixed blueprint images displaying incorrectly (or falling back to a generic icon) in the item rules configuration and quote view tables by adding a fallback to the `/bp` image server endpoint.
+
 ## v0.15.5 (2026-10-06)
 
 ### Fix
