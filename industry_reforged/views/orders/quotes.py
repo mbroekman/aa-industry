@@ -207,10 +207,14 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 }
             )
 
-    missing_bps = [
-        bp for bp in bom_blueprints_list
-        if bp.get("corp_stock", 0) < bp.get("quantity", 0)
-    ]
+    missing_bps = []
+    for bp in bom_blueprints_list:
+        stock = bp.get("corp_stock", 0)
+        req = bp.get("quantity", 0)
+        if stock < req:
+            bp_copy = bp.copy()
+            bp_copy["shortage"] = req - stock
+            missing_bps.append(bp_copy)
 
     estimated_build_cost = total_bom_price
     profit_margin = float(order.total_price) - estimated_build_cost

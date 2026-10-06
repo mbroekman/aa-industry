@@ -725,6 +725,8 @@
                                             <thead>
                                                 <tr>
                                                     <th>{% trans "Item" %}</th>
+                                                    <th class="text-end" style="width:100px;">{% trans "Required" %}</th>
+                                                    <th class="text-end" style="width:100px;">{% trans "Shortage" %}</th>
                                                     <th class="text-center" style="width:120px;">{% trans "Status" %}</th>
                                                 </tr>
                                             </thead>
@@ -735,6 +737,8 @@
                                                         <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/bp?size=32';" src="https://images.evetech.net/types/{{ p.type_id }}/bp?size=32" alt="{{ p.name }}" width="24" height="24" class="me-2 rounded">
                                                         {{ p.name }}
                                                     </td>
+                                                    <td class="text-end">{{ p.quantity }}</td>
+                                                    <td class="text-end text-danger fw-bold">{{ p.shortage }}</td>
                                                     <td class="text-center">
                                                         <span class="badge bg-danger"><i class="fas fa-times"></i> {% trans "Missing" %}</span>
                                                     </td>
