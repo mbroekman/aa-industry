@@ -68,3 +68,8 @@ Before finalizing output, verify:
 
 - DataTables `colspan` in `{% empty %}` rows must match the exact number of `<th>` columns in the corresponding `<thead>`. Mismatch causes DataTables error TN/18.
 - DataTables `columnDefs` target indices are 0-based; verify against the actual column count after any column addition or removal.
+
+### Release Process
+
+- **No auto-releases:** Do NOT automatically bump the version, create tags, or push a release (e.g. `gh release create` or `git tag -a`) for every commit or code change.
+- Only prepare and execute a release when the user explicitly commands it (e.g., "maak hier een release van").
