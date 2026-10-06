@@ -24,7 +24,7 @@ def get_sde_bom(type_id):
     try:
         # Try finding the blueprint that manufactures this item (Activity 1 or 11)
         bp_prod = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=type_id, activity_id__in=[1, 11]
+            product_eve_type_id=type_id, activity_id__in=[1, 11], eve_type__published=True
         ).first()
 
         if bp_prod:
@@ -160,7 +160,7 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         default_t2 = corp_info.pricing_config.default_t2_me
 
     bp_prod = EveIndustryActivityProduct.objects.filter(
-        product_eve_type_id=product_type.id, activity_id__in=[1, 11]
+        product_eve_type_id=product_type.id, activity_id__in=[1, 11], eve_type__published=True
     ).first()
 
     has_corp_bp = True
@@ -182,7 +182,7 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         from eveuniverse.models import EveIndustryActivityDuration
 
         is_invented = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=bp_prod.eve_type_id, activity_id=8
+            product_eve_type_id=bp_prod.eve_type_id, activity_id=8, eve_type__published=True
         ).exists()
 
         if is_invented:
@@ -266,96 +266,7 @@ def calculate_order_bom(order):
         for inv in inventory:
             corp_stock[inv["item_type_id"]] = inv["total"]
 
-    for item in order.items.all():
-        type_id = item.item_type.id
-        quantity = item.quantity
-
-        if quantity <= 0:
-            continue
-
-        materials, yield_qty, activity_id = get_sde_bom(type_id)
-        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
-
-        target_facility = order.target_facility
-        if activity_id == 11:
-            from industry_reforged.models import IndustryFacility
-            reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
-            if reaction_fac:
-                target_facility = reaction_fac
-        elif target_facility is None:
-            from industry_reforged.models import IndustryFacility
-            target_facility = IndustryFacility.objects.filter(is_default=True).first()
-
-        facility_me_multiplier = calculate_facility_me_multiplier(
-            target_facility, item.item_type
-        )
-
-        me_override, max_runs_override, _ = get_blueprint_me(
-            item.item_type, corp_info, order
-        )
-        product_me = (
-            me_override
-            if me_override is not None
-            else get_blueprint_me(item.item_type, corp_info, None)[0]
-        )
-
-        for mat in materials:
-            mat_type_id = mat.get("typeid")
-            base_qty = mat.get("quantity", 0)
-
-            # EVE Math: run_cost = round(base_qty * ((100 - ME)/100) * facility_me_multiplier, 2)
-            run_cost = round(
-                base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
-            )
-
-            # Chunking logic for max_runs
-            if max_runs_override > 0 and runs > max_runs_override:
-                full_jobs = runs // max_runs_override
-                remaining_runs = runs % max_runs_override
-
-                required_qty = 0
-                if full_jobs > 0:
-                    required_qty += full_jobs * max(
-                        max_runs_override, math.ceil(run_cost * max_runs_override)
-                    )
-                if remaining_runs > 0:
-                    required_qty += max(
-                        remaining_runs, math.ceil(run_cost * remaining_runs)
-                    )
-            else:
-                required_qty = max(runs, math.ceil(run_cost * runs))
-
-            base_total = max(runs, base_qty * runs)
-
-            available = bom_splits.get(mat_type_id, 0)
-            if available > 0:
-                if available >= required_qty:
-                    bom_splits[mat_type_id] -= required_qty
-                    required_qty = 0
-                else:
-                    required_qty -= available
-                    bom_splits[mat_type_id] = 0
-
-            if required_qty <= 0:
-                continue
-
-            if mat_type_id in bom:
-                bom[mat_type_id]["quantity"] += required_qty
-                bom[mat_type_id]["base_quantity"] += base_total
-                bom[mat_type_id]["savings"] = bom[mat_type_id].get("savings", 0) + (
-                    base_total - required_qty
-                )
-            else:
-                bom[mat_type_id] = {
-                    "type_id": mat_type_id,
-                    "name": mat.get("name"),
-                    "quantity": required_qty,
-                    "base_quantity": base_total,
-                    "savings": base_total - required_qty,
-                    "corp_stock": corp_stock.get(mat_type_id, 0),
-                }
-
-    return bom
+    return flatten_bom_tree(calculate_recursive_order_bom(order), corp_stock=corp_stock)
 
 
 def calculate_tasks_bom(tasks, corp_info=None):
@@ -379,85 +290,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
         for inv in inventory:
             corp_stock[inv["item_type_id"]] = inv["total"]
 
-    bom = {}
-    for task in tasks:
-        type_id = task.item_type.id
-        quantity = task.quantity
-        order = task.created_from_order if hasattr(task, "created_from_order") else None
-
-        materials, yield_qty, activity_id = get_sde_bom(type_id)
-        runs = math.ceil(quantity / yield_qty) if yield_qty > 0 else quantity
-
-        target_facility = None
-        if order and order.target_facility:
-            target_facility = order.target_facility
-            
-        if activity_id == 11:
-            from industry_reforged.models import IndustryFacility
-            reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
-            if reaction_fac:
-                target_facility = reaction_fac
-        elif target_facility is None:
-            from industry_reforged.models import IndustryFacility
-            target_facility = IndustryFacility.objects.filter(is_default=True).first()
-
-        facility_me_multiplier = calculate_facility_me_multiplier(
-            target_facility, task.item_type
-        )
-
-        me_override, max_runs_override, _ = get_blueprint_me(
-            task.item_type, corp_info, order
-        )
-        product_me = (
-            me_override
-            if me_override is not None
-            else get_blueprint_me(task.item_type, corp_info, None)[0]
-        )
-
-        for mat in materials:
-            mat_type_id = mat.get("typeid")
-            base_qty = mat.get("quantity", 0)
-
-            run_cost = round(
-                base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
-            )
-
-            # Chunking logic for max_runs
-            if max_runs_override > 0 and runs > max_runs_override:
-                full_jobs = runs // max_runs_override
-                remaining_runs = runs % max_runs_override
-
-                required_qty = 0
-                if full_jobs > 0:
-                    required_qty += full_jobs * max(
-                        max_runs_override, math.ceil(run_cost * max_runs_override)
-                    )
-                if remaining_runs > 0:
-                    required_qty += max(
-                        remaining_runs, math.ceil(run_cost * remaining_runs)
-                    )
-            else:
-                required_qty = max(runs, math.ceil(run_cost * runs))
-
-            base_total = max(runs, base_qty * runs)
-
-            if mat_type_id in bom:
-                bom[mat_type_id]["quantity"] += required_qty
-                bom[mat_type_id]["base_quantity"] += base_total
-                bom[mat_type_id]["savings"] = bom[mat_type_id].get("savings", 0) + (
-                    base_total - required_qty
-                )
-            else:
-                bom[mat_type_id] = {
-                    "type_id": mat_type_id,
-                    "name": mat.get("name"),
-                    "quantity": required_qty,
-                    "base_quantity": base_total,
-                    "savings": base_total - required_qty,
-                    "corp_stock": corp_stock.get(mat_type_id, 0),
-                }
-
-    return bom
+    return flatten_bom_tree(calculate_recursive_tasks_bom(tasks, corp_info=corp_info), corp_stock=corp_stock)
 
 
 def get_recursive_bom_tree(
@@ -472,11 +305,13 @@ def get_recursive_bom_tree(
     order=None,
     bom_splits=None,
     top_level_splits=None,
+    base_quantity=None,
 ):
     """
     Recursively fetch manufacturing materials to build a hierarchical BOM.
     """
     original_quantity = quantity
+    original_base_quantity = base_quantity if base_quantity is not None else quantity
     provided_from_stock = 0
     if stock_dict is not None and type_id in stock_dict:
         available = stock_dict[type_id]
@@ -533,6 +368,24 @@ def get_recursive_bom_tree(
             "missing_bp": False,
         }
 
+    build_or_buy = config_dict.get(type_id, {}).get("build_or_buy", "BUILD")
+    if build_or_buy == "BUY":
+        return {
+                "type_id": type_id,
+                "name": name,
+                "quantity": quantity,
+                "base_quantity": original_quantity,
+                "provided_from_stock": provided_from_stock,
+                "provided_from_child_order": provided_from_child_order,
+                "activity_id": activity_id,
+                "sub_materials": [],
+                "product_me": 0,
+                "hull_bonus": 0.0,
+                "rig_bonus": 0.0,
+                "facility_name": "Market",
+                "missing_bp": False,
+            }
+
     if quantity == 0:
         return {
             "type_id": type_id,
@@ -576,12 +429,28 @@ def get_recursive_bom_tree(
         
         if activity_id == 11:
             from industry_reforged.models import IndustryFacility
-            reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
+            if corp_info:
+                from django.db.models import Q
+                valid_facility_ids = list(corp_info.known_locations.values_list("location_id", flat=True))
+                reaction_fac = IndustryFacility.objects.filter(
+                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids),
+                    is_default_reaction=True
+                ).first()
+            else:
+                reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
             if reaction_fac:
                 target_facility = reaction_fac
         elif target_facility is None:
             from industry_reforged.models import IndustryFacility
-            target_facility = IndustryFacility.objects.filter(is_default=True).first()
+            if corp_info:
+                from django.db.models import Q
+                valid_facility_ids = list(corp_info.known_locations.values_list("location_id", flat=True))
+                target_facility = IndustryFacility.objects.filter(
+                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids),
+                    is_default=True
+                ).first()
+            else:
+                target_facility = IndustryFacility.objects.filter(is_default=True).first()
 
         facility_me_multiplier, hull_bonus, total_rig_bonus = (
             calculate_facility_me_multiplier(
@@ -641,20 +510,21 @@ def get_recursive_bom_tree(
                 order=order,
                 bom_splits=bom_splits,
                 top_level_splits=top_level_splits,
+                base_quantity=base_total,
             )
         sub_materials.append(sub_node)
 
     # Fetch blueprints for science jobs (Copying / Invention)
     try:
         bp_prod = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=type_id, activity_id__in=[1, 11]
+            product_eve_type_id=type_id, activity_id__in=[1, 11], eve_type__published=True
         ).first()
         if bp_prod:
             blueprint_type = bp_prod.eve_type
 
             # Check if this blueprint comes from invention (activity 8)
             inv_prod = EveIndustryActivityProduct.objects.filter(
-                product_eve_type_id=blueprint_type.id, activity_id=8
+                product_eve_type_id=blueprint_type.id, activity_id=8, eve_type__published=True
             ).first()
             if inv_prod:
                 t1_blueprint = inv_prod.eve_type
@@ -701,6 +571,7 @@ def get_recursive_bom_tree(
                             "type_id": blueprint_type.id,
                             "name": blueprint_type.name,
                             "quantity": runs,
+                            "base_quantity": runs,
                             "activity_id": 8,  # Invention
                             "sub_materials": inv_sub_materials,
                         }
@@ -727,7 +598,7 @@ def get_recursive_bom_tree(
         "type_id": type_id,
         "name": name,
         "quantity": quantity,
-        "base_quantity": original_quantity,  # The root's quantity is the requested quantity
+        "base_quantity": original_base_quantity,
         "provided_from_stock": provided_from_stock,
         "provided_from_child_order": provided_from_child_order,
         "activity_id": activity_id,
@@ -740,6 +611,39 @@ def get_recursive_bom_tree(
         "facility_name": target_facility.name if target_facility else "None",
         "missing_bp": not has_corp_bp if "has_corp_bp" in locals() else False,
     }
+
+
+def flatten_bom_tree(recursive_tree, corp_stock=None):
+    """
+    Flattens a recursive BOM tree into an aggregated dictionary of leaf nodes.
+    Leaf nodes are materials that have no sub_materials.
+    """
+    bom = {}
+    if corp_stock is None:
+        corp_stock = {}
+
+    def _flatten(node):
+        # We only aggregate leaf nodes (raw materials or components explicitly excluded from breakdown)
+        if not node.get("sub_materials"):
+            type_id = node.get("type_id")
+            if type_id not in bom:
+                bom[type_id] = {
+                    "type_id": type_id,
+                    "name": node.get("name"),
+                    "quantity": 0,
+                    "base_quantity": 0,
+                    "corp_stock": corp_stock.get(type_id, 0),
+                }
+            bom[type_id]["quantity"] += node.get("quantity", 0)
+            bom[type_id]["base_quantity"] += node.get("base_quantity", node.get("quantity", 0))
+        else:
+            for sub in node.get("sub_materials", []):
+                _flatten(sub)
+
+    for tree in recursive_tree:
+        _flatten(tree)
+
+    return bom
 
 
 def calculate_recursive_order_bom(order):
@@ -791,6 +695,7 @@ def calculate_recursive_order_bom(order):
         for c in configs:
             config_dict[c.item_type_id] = {
                 "exclude_from_orders": c.exclude_from_orders,
+                "build_or_buy": c.build_or_buy,
             }
 
     tree = []
@@ -830,6 +735,7 @@ def calculate_recursive_tasks_bom(tasks, corp_info=None):
         for c in configs:
             config_dict[c.item_type_id] = {
                 "exclude_from_orders": c.exclude_from_orders,
+                "build_or_buy": c.build_or_buy,
             }
 
     tree = []
