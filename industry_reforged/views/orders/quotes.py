@@ -200,17 +200,10 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 }
             )
 
-    missing_bps = [p for p in products_me if p.get("missing_bp")]
-    if corp_info:
-        from ...models import CorpBlueprint
-        for b_data in bom_blueprints_list:
-            bp_type_id = b_data.get("type_id")
-            if bp_type_id and not CorpBlueprint.objects.filter(corporation=corp_info, eve_type_id=bp_type_id).exists():
-                if not any(m["type_id"] == bp_type_id for m in missing_bps):
-                    missing_bps.append({
-                        "type_id": bp_type_id,
-                        "name": b_data["name"]
-                    })
+    missing_bps = [
+        bp for bp in bom_blueprints_list
+        if bp.get("corp_stock", 0) < bp.get("quantity", 0)
+    ]
 
     estimated_build_cost = total_bom_price
     profit_margin = float(order.total_price) - estimated_build_cost
