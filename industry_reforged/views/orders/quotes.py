@@ -225,10 +225,6 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     corporation=corp_info, eve_type_id=bp_type_id, quantity=-1
                 ).exists()
 
-            # If they have a BPO, they don't need to acquire more, so it's not a shortage.
-            if has_bpo:
-                continue
-
             stock = bp.get("corp_stock", 0)
             req = bp.get("quantity", 0)
             if stock < req:
