@@ -475,7 +475,7 @@ class CorpItemConfig(models.Model):
         from eveuniverse.models import EveIndustryActivityProduct
 
         return EveIndustryActivityProduct.objects.filter(
-            product_eve_type=self.item_type, activity_id=1
+            product_eve_type=self.item_type, activity_id__in=[1, 11]
         ).exists()
 
 
@@ -501,7 +501,7 @@ class OrderBlueprintOverride(models.Model):
         from eveuniverse.models import EveIndustryActivityProduct
 
         return EveIndustryActivityProduct.objects.filter(
-            product_eve_type=self.item_type, activity_id=1
+            product_eve_type=self.item_type, activity_id__in=[1, 11]
         ).exists()
 
 

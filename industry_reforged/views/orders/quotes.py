@@ -139,7 +139,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     def extract_manufactured_types(nodes, result_dict):
         for node in nodes:
             # Anything with sub_materials or explicitly built
-            if node.get("activity_id") == 1 or node.get("sub_materials"):
+            if node.get("activity_id") in [1, 11] or node.get("sub_materials"):
                 result_dict[node["type_id"]] = node["name"]
             if node.get("sub_materials"):
                 extract_manufactured_types(node["sub_materials"], result_dict)

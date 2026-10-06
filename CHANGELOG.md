@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.4 (2026-10-06)
+
+### Fix
+
+- **logic**: Fixed hardcoded `activity_id=1` in `quotes.py` and `models/orders.py` which caused Reaction Formulas (`activity_id=11`) to be ignored in blueprint configuration and override logic.
+
 ## v0.15.3 (2026-10-06)
 
 ### Fix
