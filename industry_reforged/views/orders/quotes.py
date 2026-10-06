@@ -113,7 +113,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     from eveuniverse.models import EveIndustryActivityProduct
     for item in order_items:
         has_bp = EveIndustryActivityProduct.objects.filter(
-            product_eve_type=item.item_type, activity_id=1
+            product_eve_type=item.item_type, activity_id__in=[1, 11]
         ).exists()
         item.is_buy_product = not has_bp
         if item.is_buy_product:
@@ -175,7 +175,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 me_val = get_blueprint_me(eve_type, corp_info, None)[0]
 
             has_bp = EveIndustryActivityProduct.objects.filter(
-                product_eve_type=eve_type, activity_id=1
+                product_eve_type=eve_type, activity_id__in=[1, 11]
             ).exists()
 
             if not has_bp:
@@ -212,18 +212,26 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         from ...models import CorpBlueprint
         has_corp_bp_cache = {}
         for bp in bom_blueprints_list:
+            bp_type_id = bp.get("type_id")
+            has_bpo = False
+            if bp_type_id:
+                if bp_type_id not in has_corp_bp_cache:
+                    # Check if the corp owns any BPOs (quantity=-1) or BPCs with runs
+                    has_corp_bp_cache[bp_type_id] = CorpBlueprint.objects.filter(
+                        corporation=corp_info, eve_type_id=bp_type_id
+                    ).exists()
+                    
+                has_bpo = CorpBlueprint.objects.filter(
+                    corporation=corp_info, eve_type_id=bp_type_id, quantity=-1
+                ).exists()
+
+            # If they have a BPO, they don't need to acquire more, so it's not a shortage.
+            if has_bpo:
+                continue
+
             stock = bp.get("corp_stock", 0)
             req = bp.get("quantity", 0)
             if stock < req:
-                bp_type_id = bp.get("type_id")
-                has_bpo = False
-                if bp_type_id:
-                    if bp_type_id not in has_corp_bp_cache:
-                        has_corp_bp_cache[bp_type_id] = CorpBlueprint.objects.filter(
-                            corporation=corp_info, eve_type_id=bp_type_id
-                        ).exists()
-                    has_bpo = has_corp_bp_cache[bp_type_id]
-                
                 bp_copy = bp.copy()
                 bp_copy["shortage"] = req - stock
                 bp_copy["has_bpo"] = has_bpo
