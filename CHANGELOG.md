@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.1 (2026-10-06)
+
+### Fix
+
+- **logic**: Fixed a bug where missing blueprints would evaluate inventory quantity instead of runs, causing false shortage reports for blueprints stored as BPCs.
+- **ui**: Replaced the standard CCP Image Server icon endpoint with the blueprint `/bp` endpoint to fix broken missing blueprint icons.
+- **ui**: The "Missing Blueprints" table is now a DataTable for easy sorting, and clearly displays both the required amount and actual shortage of runs.
+- **ui**: Correctly detect if a missing blueprint is available as a BPO and display a warning badge instead of a missing error.
+
 ## v0.15.0 (2026-10-06)
 
 ### Feature
