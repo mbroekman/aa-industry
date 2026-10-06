@@ -98,7 +98,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             # Django
             from django.db.models import Sum
 
-            from ...models import CorpInventory
+            from ...models import CorpInventory, CorpBlueprint
 
             inventory = (
                 CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
@@ -107,6 +107,14 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             )
             for inv in inventory:
                 corp_stock[inv["item_type_id"]] = inv["total"]
+                
+            bpc_inventory = (
+                CorpBlueprint.objects.filter(corporation=corp_info, quantity=-2, runs__gt=0)
+                .values("eve_type_id")
+                .annotate(total_runs=Sum("runs"))
+            )
+            for bpc in bpc_inventory:
+                corp_stock[bpc["eve_type_id"]] = bpc["total_runs"]
 
         node = get_recursive_bom_tree(
             type_id,

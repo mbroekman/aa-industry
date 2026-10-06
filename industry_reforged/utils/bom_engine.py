@@ -256,7 +256,7 @@ def calculate_order_bom(order):
         from django.db.models import Sum
 
         # AA Industry App
-        from industry_reforged.models import CorpInventory
+        from industry_reforged.models import CorpInventory, CorpBlueprint
 
         inventory = (
             CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
@@ -265,6 +265,15 @@ def calculate_order_bom(order):
         )
         for inv in inventory:
             corp_stock[inv["item_type_id"]] = inv["total"]
+            
+        # Overwrite blueprint stock with actual BPC runs instead of copy counts
+        bpc_inventory = (
+            CorpBlueprint.objects.filter(corporation=corp_info, quantity=-2, runs__gt=0)
+            .values("eve_type_id")
+            .annotate(total_runs=Sum("runs"))
+        )
+        for bpc in bpc_inventory:
+            corp_stock[bpc["eve_type_id"]] = bpc["total_runs"]
 
     return flatten_bom_tree(calculate_recursive_order_bom(order), corp_stock=corp_stock)
 
@@ -280,7 +289,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
         from django.db.models import Sum
 
         # AA Industry App
-        from industry_reforged.models import CorpInventory
+        from industry_reforged.models import CorpInventory, CorpBlueprint
 
         inventory = (
             CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
@@ -289,6 +298,15 @@ def calculate_tasks_bom(tasks, corp_info=None):
         )
         for inv in inventory:
             corp_stock[inv["item_type_id"]] = inv["total"]
+            
+        # Overwrite blueprint stock with actual BPC runs instead of copy counts
+        bpc_inventory = (
+            CorpBlueprint.objects.filter(corporation=corp_info, quantity=-2, runs__gt=0)
+            .values("eve_type_id")
+            .annotate(total_runs=Sum("runs"))
+        )
+        for bpc in bpc_inventory:
+            corp_stock[bpc["eve_type_id"]] = bpc["total_runs"]
 
     return flatten_bom_tree(calculate_recursive_tasks_bom(tasks, corp_info=corp_info), corp_stock=corp_stock)
 
