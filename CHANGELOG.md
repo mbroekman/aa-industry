@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.2 (2026-10-06)
+
+### Fix
+
+- **logic**: correctly identify reaction formulas as available blueprints and exclude owned BPOs from shortage list
+
 ## v0.15.1 (2026-10-06)
 
 ### Fix
