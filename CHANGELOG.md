@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.5 (2026-10-06)
+
+### Fix
+
+- **logic**: Fixed the check for BPOs in `quotes.py` to also check `runs=-1`, correctly identifying stacked or sync-adjusted Reaction Formulas as owned.
+
 ## v0.15.4 (2026-10-06)
 
 ### Fix

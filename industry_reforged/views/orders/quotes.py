@@ -214,15 +214,16 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         for bp in bom_blueprints_list:
             bp_type_id = bp.get("type_id")
             has_bpo = False
+            from django.db.models import Q
             if bp_type_id:
                 if bp_type_id not in has_corp_bp_cache:
-                    # Check if the corp owns any BPOs (quantity=-1) or BPCs with runs
+                    # Check if the corp owns any BPOs (runs=-1) or BPCs with runs
                     has_corp_bp_cache[bp_type_id] = CorpBlueprint.objects.filter(
                         corporation=corp_info, eve_type_id=bp_type_id
                     ).exists()
                     
                 has_bpo = CorpBlueprint.objects.filter(
-                    corporation=corp_info, eve_type_id=bp_type_id, quantity=-1
+                    Q(quantity=-1) | Q(runs=-1), corporation=corp_info, eve_type_id=bp_type_id
                 ).exists()
 
             stock = bp.get("corp_stock", 0)
