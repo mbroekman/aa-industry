@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fix
+
+- **bom**: ensure only published blueprints are used for reactions (preventing massive cost inflation for T2 components) (TASK-219).
+- **bom**: ensure items configured as BUY are not exploded into raw materials even when requested as the root quote item (TASK-218).
+
 ## v0.14.1 (2026-10-01)
 
 ### Fix
