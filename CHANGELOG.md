@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.3 (2026-10-06)
+
+### Fix
+
+- **ui**: restored BPO tracking in missing list but flagged as owned so the UI badge shows correctly instead of disappearing
+
 ## v0.15.2 (2026-10-06)
 
 ### Fix
