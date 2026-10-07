@@ -380,6 +380,13 @@ class ProductionTask(models.Model):
         help_text=_("Actual calculated ISK payout reward for completing this task"),
     )
 
+    # Claimability
+    is_claimable = models.BooleanField(
+        default=True,
+        help_text=_("If False, this task cannot be claimed directly (used for large parent items)"),
+    )
+
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     assigned_at = models.DateTimeField(null=True, blank=True)
@@ -459,6 +466,10 @@ class CorpItemConfig(models.Model):
         help_text=_(
             "Message to display to the user if this item is removed (e.g. 'Please acquire deadspace items yourself')."
         ),
+    )
+    is_unclaimable_parent = models.BooleanField(
+        default=False,
+        help_text=_("Do not allow this item to be claimed as a single task. Sub-components become claimable instead."),
     )
 
     class Meta:

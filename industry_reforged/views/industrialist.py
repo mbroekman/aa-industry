@@ -61,13 +61,26 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             flatten(root, 0)
         return flattened
 
+    # Django
+    from django.db.models import Count, Q
+
     # Unclaimed tasks
     unclaimed_tasks_qs = (
-        ProductionTask.objects.filter(status="UNCLAIMED", bom_parent__isnull=True)
+        ProductionTask.objects.filter(
+            status="UNCLAIMED"
+        )
+        .filter(
+            Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False)
+        )
         .select_related("item_type", "bom_parent", "created_from_order")
+        .annotate(
+            incomplete_children_count=Count(
+                "bom_children", filter=~Q(bom_children__status="COMPLETED")
+            )
+        )
         .order_by("created_from_order__created_at", "id")
     )
-    unclaimed_tasks = list(unclaimed_tasks_qs)
+    unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
 
     # My active tasks
     # Django
@@ -80,7 +93,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         ProductionTask.objects.filter(
             status="IN_PRODUCTION",
             assigned_to_id__in=user_characters,
-            bom_parent__isnull=True,
+        )
+        .filter(
+            Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False)
         )
         .select_related("item_type", "bom_parent")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
@@ -98,7 +113,9 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         ProductionTask.objects.filter(
             status="COMPLETED",
             assigned_to_id__in=user_characters,
-            bom_parent__isnull=True,
+        )
+        .filter(
+            Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False)
         )
         .select_related("item_type")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
@@ -483,6 +500,10 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
         if task:
+            if not task.is_claimable:
+                if task.bom_children.exclude(status="COMPLETED").exists():
+                    messages.error(request, _("Cannot claim this task until all sub-jobs are completed."))
+                    return redirect("industry_reforged:industrialist_dashboard")
 
             def has_owned_ancestor(t, char):
                 visited = set()
@@ -624,9 +645,14 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
                     claim_recursive(child, char)
 
             for task in tasks:
+                if not task.is_claimable:
+                    if task.bom_children.exclude(status="COMPLETED").exists():
+                        messages.warning(request, _("Skipped %(item)s because sub-jobs are incomplete.") % {"item": task.item_type.name})
+                        continue
                 claim_recursive(task, character)
 
-            messages.success(request, f"Successfully claimed {count} tasks.")
+            if count > 0:
+                messages.success(request, f"Successfully claimed {count} tasks.")
         else:
             messages.error(
                 request, _("No valid tasks selected or they are already claimed.")

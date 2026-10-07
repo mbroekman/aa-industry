@@ -80,6 +80,7 @@ class CorpItemConfigForm(forms.ModelForm):
             "build_or_buy",
             "exclude_from_orders",
             "exclude_warning_message",
+            "is_unclaimable_parent",
         ]
         widgets = {
             "corporation": forms.Select(attrs={"class": "form-select"}),
@@ -98,6 +99,9 @@ class CorpItemConfigForm(forms.ModelForm):
                     "class": "form-control",
                     "placeholder": "E.g. Get deadspace items yourself",
                 }
+            ),
+            "is_unclaimable_parent": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
             ),
         }
 

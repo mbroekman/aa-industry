@@ -1,6 +1,6 @@
 """Initialize the app"""
 
-__version__ = "0.15.6"
+__version__ = "0.15.7"
 __title__ = "Industry"
 __author__ = "Maddog Broekman"
 __copyright__ = "Copyright 2026 Maddog Broekman"

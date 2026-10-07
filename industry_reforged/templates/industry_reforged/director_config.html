@@ -117,7 +117,13 @@
                                         <span class="badge bg-danger" {% if config.exclude_warning_message %}data-bs-toggle="tooltip" title="{{ config.exclude_warning_message }}"{% endif %}>
                                             <i class="fas fa-ban"></i> Excluded
                                         </span>
-                                        {% else %}
+                                        {% endif %}
+                                        {% if config.is_unclaimable_parent %}
+                                        <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="{% trans 'This item is split into sub-components for claiming' %}">
+                                            <i class="fas fa-sitemap"></i> Unclaimable
+                                        </span>
+                                        {% endif %}
+                                        {% if not config.exclude_from_orders and not config.is_unclaimable_parent %}
                                         <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>

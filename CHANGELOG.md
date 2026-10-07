@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## v0.15.7 (2026-10-07)
+
+### Feat
+
+- **ui**: Support for unclaimable parent tasks in the industrialist dashboard, showing sub-jobs visually nested and delaying claimability until sub-jobs are COMPLETED.
+
+### Fix
+
+- **logic**: Fixed an issue where the initial `is_claimable` state lookup failed during quote acceptance due to using the EVE Corporation ID instead of the internal Django Database ID.
+
 ## v0.15.6 (2026-10-06)
 
 ### Fix

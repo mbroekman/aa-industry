@@ -656,6 +656,16 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     line_total = float(price_per_unit) * quantity
                     task_reward_value = line_total * (reward_percent / 100.0)
 
+                    # Check item configuration for unclaimable status
+                    from ...models import CorpItemConfig
+                    is_claimable = True
+                    if corp_info:
+                        config = CorpItemConfig.objects.filter(
+                            corporation=corp_info, item_type_id=eve_type.id
+                        ).first()
+                        if config and config.is_unclaimable_parent:
+                            is_claimable = False
+
                     task = ProductionTask.objects.create(
                         item_type=eve_type,
                         quantity=quantity,
@@ -666,6 +676,7 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         gamification_value=line_total,
                         builder_reward=task_reward_value,
                         bom_parent=parent_task,
+                        is_claimable=is_claimable,
                     )
 
                     for sub in node.get("sub_materials", []):

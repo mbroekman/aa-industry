@@ -161,10 +161,11 @@
                                                 <tr data-task-id="{{ task.id }}">
                                                     <td class="text-center">
                                                         <input type="checkbox" name="task_ids" value="{{ task.id }}"
-                                                            class="unclaimed-checkbox" data-task-id="{{ task.id }}">
+                                                            class="unclaimed-checkbox" data-task-id="{{ task.id }}"
+                                                            {% if not task.is_claimable and task.incomplete_children_count > 0 %}disabled title="{% trans 'Cannot claim until sub-jobs are complete' %}"{% endif %}>
                                                     </td>
                                                     <td>
-                                                        <div class="d-flex align-items-center">
+                                                        <div class="d-flex align-items-center" style="margin-left: calc({{ task.depth|default:0 }} * 1.5rem);">
                                                             <img onerror="handleImageFallback(this, {{ task.item_type.id }})"
                                                                 src="https://images.evetech.net/types/{{ task.item_type.id }}/icon?size=32"
                                                                 alt="{{ task.item_type.name }}" width="24" height="24"
@@ -185,7 +186,7 @@
                                                     </td>
                                                     <td class="text-end">
                                                         <div class="d-flex justify-content-end gap-1">
-                                                            {% if not task.bom_parent_id %}
+                                                            {% if task.is_claimable or task.incomplete_children_count == 0 %}
                                                             <form method="post"
                                                                 action="{% url 'industry_reforged:claim_task' task.id %}"
                                                                 class="d-inline">
