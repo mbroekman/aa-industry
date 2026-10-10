@@ -372,17 +372,32 @@ def task_sync_all_rigs():
         cats = ""
         groups = ""
         name = t.name
+        is_reaction = "Reactor" in name or "Reaction" in name
+        is_mfg = "Manufacturing" in name or "Component" in name or "Structure" in name
 
-        if "Material Efficiency II" in name:
-            me, te = 2.4, 24.0
-        elif "Material Efficiency I" in name:
-            me, te = 2.0, 20.0
-        elif "Time Efficiency II" in name:
+        if not is_reaction and not is_mfg:
+            continue
+
+        if "Time Efficiency II" in name:
             me, te = 0.0, 24.0
         elif "Time Efficiency I" in name:
             me, te = 0.0, 20.0
+        elif "Efficiency II" in name or "Material Efficiency II" in name:
+            me, te = 2.4, 24.0
+        elif "Efficiency I" in name or "Material Efficiency I" in name or "Efficiency" in name:
+            me, te = 2.0, 20.0
 
-        if "Ship" in name:
+        # Groups: 334 = Construction Components, 873 = Capital Construction Components, 913 = Structure Components, 1955 = Advanced Capital Construction Components
+        component_groups = "334,873,913,1955"
+
+        if "Structure and Component" in name:
+            cats = "66"
+            groups = component_groups
+        elif "Structure" in name or "Upwell" in name:
+            cats = "66"
+        elif "Component" in name:
+            groups = component_groups
+        elif "Ship" in name:
             cats = "6"
         elif "Equipment" in name:
             cats = "65"  # 65 is Structure Modules in EVE (used for equipment in seed script)
@@ -390,8 +405,9 @@ def task_sync_all_rigs():
             cats = "8"
         elif "Drone" in name or "Fighter" in name:
             cats = "18"
-        elif "Structure" in name or "Upwell" in name:
-            cats = "66"
+        elif is_reaction:
+            cats = ""
+            groups = ""
 
         rig, created = IndustryRig.objects.update_or_create(
             type_id=t.id,

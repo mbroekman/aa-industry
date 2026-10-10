@@ -12,9 +12,22 @@
                 </span>
             {% endif %}
             {% if node.sub_materials %}
-                <span class="ms-2 badge border border-secondary text-light bg-dark" title="{% trans 'Modifiers Applied' %}">
-                    <i class="fas fa-industry text-muted"></i> BP ME: <span class="text-info">{{ node.product_me }}%</span> | Rig: <span class="text-info">{{ node.rig_bonus|floatformat:1 }}%</span> | Struct: <span class="text-info">{{ node.hull_bonus|floatformat:1 }}%</span> <span class="text-muted">({{ node.facility_name|default:"None" }})</span>
-                </span>
+                {% if node.is_reaction or node.activity_id == 11 %}
+                    <span class="ms-2 badge bg-info text-dark" title="{% trans 'Reaction Activity' %}"><i class="fas fa-atom"></i> Reaction</span>
+                    <span class="ms-1 badge border border-info text-info bg-dark" title="{% trans 'Reaction Facility' %}">
+                        <i class="fas fa-vial"></i> {{ node.facility_name|default:"None" }}
+                    </span>
+                {% else %}
+                    <span class="ms-2 badge bg-secondary text-light" title="{% trans 'Manufacturing Activity' %}"><i class="fas fa-cogs"></i> Mfg</span>
+                    <span class="ms-1 badge border border-secondary text-light bg-dark" title="{% trans 'Modifiers Applied' %}">
+                        <i class="fas fa-industry text-muted"></i> BP ME: <span class="text-info">{{ node.product_me }}%</span> | Rig: <span class="text-info">{{ node.rig_bonus|floatformat:1 }}%</span> | Struct: <span class="text-info">{{ node.hull_bonus|floatformat:1 }}%</span> <span class="text-muted">({{ node.facility_name|default:"None" }})</span>
+                    </span>
+                {% endif %}
+                {% if node.blueprint_name %}
+                    <span class="ms-2 badge bg-dark border border-secondary text-warning" title="{% trans 'Linked Blueprint or Formula' %}">
+                        <i class="fas fa-scroll"></i> {{ node.blueprint_name }}
+                    </span>
+                {% endif %}
             {% endif %}
             {% if node.provided_from_stock and node.provided_from_stock > 0 %}
                 <span class="ms-2 badge bg-success" title="{% trans 'Sourced from inventory' %}">
@@ -41,7 +54,7 @@
         {% if node.sub_materials %}
             <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
                 {% if order and order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
-                <button type="button" class="btn btn-sm btn-outline-info me-2" onclick="openSplitComponentModal('{{ node.type_id }}', '{{ node.name|escapejs }}', {{ node.quantity|floatformat:0 }})" title="{% trans 'Split this component to a new Child Order' %}">
+                <button type="button" class="btn btn-sm btn-outline-info me-2" onclick="openSplitComponentModal('{{ node.type_id }}', '{{ node.name|escapejs }}', {{ node.quantity|floatformat:0 }}, {{ node.activity_id|default:1 }})" title="{% trans 'Split this component to a new Child Order' %}">
                     <i class="fas fa-code-branch"></i> {% trans "Split" %}
                 </button>
                 {% endif %}

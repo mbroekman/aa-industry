@@ -286,7 +286,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                 row_status = "completed"
 
             # Sum up dynamic properties using the filtered list
-            to_build = sum(t.quantity for t in tasks_to_summarize)
+            claimed = sum(t.quantity for t in tasks_to_summarize)
             remaining = sum(get_remaining(t) for t in tasks_to_summarize)
             eve_active = sum(t.task_eve_active for t in tasks_to_summarize)
             eve_ready = sum(t.task_eve_ready for t in tasks_to_summarize)
@@ -294,17 +294,18 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             in_progress = eve_active + eve_ready
 
             # Since 'completed' includes what's consumed, we calculate it dynamically
-            # so that Claimed (to_build) = Completed + Remaining + InProgress
-            completed = max(0, to_build - in_progress - remaining)
+            # so that Claimed = Completed + Remaining (to_build) + InProgress
+            completed = max(0, claimed - in_progress - remaining)
 
-            progress_percent = (completed / to_build * 100) if to_build > 0 else 100
+            progress_percent = (completed / claimed * 100) if claimed > 0 else 100
 
             my_claimed_summary.append(
                 {
                     "item_type_id": type_id,
                     "item_type_name": tasks[0].item_type.name,
                     "activity_name": activity_name,
-                    "to_build": to_build,
+                    "claimed": claimed,
+                    "to_build": remaining,
                     "in_progress": in_progress,
                     "eve_active": eve_active,
                     "eve_ready": eve_ready,

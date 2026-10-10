@@ -447,14 +447,15 @@ def get_recursive_bom_tree(
         
         if activity_id == 11:
             from industry_reforged.models import IndustryFacility
+            reaction_fac = None
             if corp_info:
                 from django.db.models import Q
                 valid_facility_ids = list(corp_info.known_locations.values_list("location_id", flat=True))
                 reaction_fac = IndustryFacility.objects.filter(
-                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids),
+                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids) | Q(owner_id__isnull=True),
                     is_default_reaction=True
                 ).first()
-            else:
+            if not reaction_fac:
                 reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
             if reaction_fac:
                 target_facility = reaction_fac
@@ -464,10 +465,10 @@ def get_recursive_bom_tree(
                 from django.db.models import Q
                 valid_facility_ids = list(corp_info.known_locations.values_list("location_id", flat=True))
                 target_facility = IndustryFacility.objects.filter(
-                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids),
+                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids) | Q(owner_id__isnull=True),
                     is_default=True
                 ).first()
-            else:
+            if not target_facility:
                 target_facility = IndustryFacility.objects.filter(is_default=True).first()
 
         facility_me_multiplier, hull_bonus, total_rig_bonus = (
@@ -494,8 +495,9 @@ def get_recursive_bom_tree(
         mat_name = mat.get("name")
         base_qty = mat.get("quantity", 0)
 
-        run_cost = round(
-            base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier, 2
+        # Do NOT round run_cost prematurely to 2 decimals, to prevent drift on large run counts
+        run_cost = (
+            base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier
         )
 
         # Chunking logic for max_runs
@@ -532,7 +534,9 @@ def get_recursive_bom_tree(
             )
         sub_materials.append(sub_node)
 
-    # Fetch blueprints for science jobs (Copying / Invention)
+    # Fetch blueprints for science jobs (Copying / Invention) or reaction formula
+    bp_prod = None
+    blueprint_type = None
     try:
         bp_prod = EveIndustryActivityProduct.objects.filter(
             product_eve_type_id=type_id, activity_id__in=[1, 11], eve_type__published=True
@@ -594,6 +598,23 @@ def get_recursive_bom_tree(
                             "sub_materials": inv_sub_materials,
                         }
                     )
+            elif bp_prod.activity_id == 11:
+                # Reaction Formula: reusable formula
+                if not config_dict.get(blueprint_type.id, {}).get(
+                    "exclude_from_orders", False
+                ):
+                    sub_materials.append(
+                        {
+                            "type_id": blueprint_type.id,
+                            "name": blueprint_type.name,
+                            "quantity": 1,
+                            "base_quantity": 1,
+                            "activity_id": 11,  # Reaction Formula
+                            "sub_materials": [],
+                            "facility_name": target_facility.name if target_facility else "None",
+                            "is_reaction": True,
+                        }
+                    )
             else:
                 # T1 Blueprint -> Copying
                 if not config_dict.get(blueprint_type.id, {}).get(
@@ -607,6 +628,8 @@ def get_recursive_bom_tree(
                             "base_quantity": runs,
                             "activity_id": 5,  # Copying
                             "sub_materials": [],
+                            "facility_name": target_facility.name if target_facility else "None",
+                            "is_reaction": False,
                         }
                     )
     except Exception as e:
@@ -620,6 +643,9 @@ def get_recursive_bom_tree(
         "provided_from_stock": provided_from_stock,
         "provided_from_child_order": provided_from_child_order,
         "activity_id": activity_id,
+        "is_reaction": (activity_id == 11),
+        "blueprint_type_id": blueprint_type.id if blueprint_type else None,
+        "blueprint_name": blueprint_type.name if blueprint_type else None,
         "sub_materials": sub_materials,
         "product_me": product_me if "product_me" in locals() else 0,
         "hull_bonus": (hull_bonus * 100.0) if "hull_bonus" in locals() else 0.0,

@@ -66,6 +66,38 @@ class Command(BaseCommand):
                 "te_bonus": 24.0,
                 "applies_to_categories": "6",
             },
+            {
+                "type_id": 43704,
+                "name": "Standup XL-Set Structure and Component Manufacturing Efficiency I",
+                "me_bonus": 2.0,
+                "te_bonus": 20.0,
+                "applies_to_categories": "66",
+                "applies_to_groups": "334,873,913,1955",
+            },
+            {
+                "type_id": 43705,
+                "name": "Standup XL-Set Structure and Component Manufacturing Efficiency II",
+                "me_bonus": 2.4,
+                "te_bonus": 24.0,
+                "applies_to_categories": "66",
+                "applies_to_groups": "334,873,913,1955",
+            },
+            {
+                "type_id": 46496,
+                "name": "Standup L-Set Reactor Efficiency I",
+                "me_bonus": 2.0,
+                "te_bonus": 20.0,
+                "applies_to_categories": "",
+                "applies_to_groups": "",
+            },
+            {
+                "type_id": 46497,
+                "name": "Standup L-Set Reactor Efficiency II",
+                "me_bonus": 2.4,
+                "te_bonus": 24.0,
+                "applies_to_categories": "",
+                "applies_to_groups": "",
+            },
         ]
 
         count = 0

@@ -272,8 +272,8 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="missing-bp-tab" data-bs-toggle="tab" data-bs-target="#missing-bp-pane" type="button" role="tab" aria-controls="missing-bp-pane" aria-selected="false">
                         {% trans "Missing Blueprints" %}
-                        {% if missing_bps|length > 0 %}
-                            <span class="badge bg-danger rounded-pill ms-2">{{ missing_bps|length }}</span>
+                        {% if actual_missing_count > 0 %}
+                            <span class="badge bg-danger rounded-pill ms-2">{{ actual_missing_count }}</span>
                         {% endif %}
                     </button>
                 </li>
@@ -355,13 +355,14 @@
                                                     <th class="text-end">{% trans "Discount" %}</th>
                                                     <th class="text-end">{% trans "Unit Price" %}</th>
                                                     <th class="text-end">{% trans "Total" %}</th>
+                                                    <th class="text-center" style="width: 170px;">{% trans "Status" %}</th>
                                                 </tr>
                                             </thead>
                                         <tbody>
                                             {% if build_items %}
                                             {% if buy_items %}
                                             <tr>
-                                                <td colspan="6" class="bg-dark text-white fw-bold py-1 px-3 border-bottom border-secondary"><i class="fas fa-hammer me-1 text-warning"></i> {% trans "Manufactured Items" %}</td>
+                                                <td colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="bg-dark text-white fw-bold py-1 px-3 border-bottom border-secondary"><i class="fas fa-hammer me-1 text-warning"></i> {% trans "Manufactured Items" %}</td>
                                             </tr>
                                             {% endif %}
                                             {% for item in build_items %}
@@ -397,16 +398,29 @@
                                                     {{ item.price_per_unit|eve_isk }}
                                                 </td>
                                                 <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
+                                                <td class="text-center align-middle text-nowrap">
+                                                    {% with info=item.build_status_info %}
+                                                        {% if info %}
+                                                            <span class="badge {{ info.badge_class }}" 
+                                                                  data-bs-toggle="tooltip"
+                                                                  title="{% if info.status == 'COMPLETED' %}{% trans 'Completed' %}{% if info.task.completed_at %} ({{ info.task.completed_at|date:'Y-m-d H:i' }}){% endif %}{% if info.task.assigned_to %} {% trans 'by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'IN_PRODUCTION' %}{% trans 'In Production' %}{% if info.task.assigned_to %} - {% trans 'Claimed by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'UNCLAIMED' %}{% trans 'Unclaimed - Waiting for builder' %}{% else %}{% trans 'To Build' %}{% endif %}">
+                                                                <i class="fas {{ info.icon }} me-1"></i>{{ info.label }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary"><i class="fas fa-hammer me-1"></i>{% trans "To Build" %}</span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </td>
                                             </tr>
                                             {% endfor %}
                                             {% endif %}
 
                                             {% if buy_items %}
                                             <tr>
-                                                <td colspan="6" class="bg-dark text-white fw-bold py-1 px-3 border-bottom border-info border-top"><i class="fas fa-shopping-cart me-1 text-info"></i> {% trans "Buy Products (Jita Price)" %}</td>
+                                                <td colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="bg-dark text-white fw-bold py-1 px-3 border-bottom border-info border-top"><i class="fas fa-shopping-cart me-1 text-info"></i> {% trans "Buy Products (Jita Price)" %}</td>
                                             </tr>
                                             {% for item in buy_items %}
-                                            <tr>
+                                            <tr id="order-item-row-{{ item.id }}">
                                                 {% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}
                                                 <td class="text-center align-middle">
                                                     <input class="form-check-input split-item-checkbox" type="checkbox" name="item_ids" value="{{ item.id }}">
@@ -415,7 +429,7 @@
                                                 <td>
                                                     <div class="d-flex align-items-center">
                                                         <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ item.item_type.id }}/bp?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                                        <span>{{ item.item_type.name }}</span>
+                                                        <span id="item-name-{{ item.id }}" class="{% if item.is_bought %}text-decoration-line-through text-muted{% endif %}">{{ item.item_type.name }}</span>
                                                     </div>
                                                 </td>
                                                 <td class="text-end numeric">
@@ -438,48 +452,76 @@
                                                     {{ item.price_per_unit|eve_isk }}
                                                 </td>
                                                 <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
+                                                <td class="text-center align-middle text-nowrap">
+                                                    <span id="bought-badge-container-{{ item.id }}" class="me-1">
+                                                        {% if item.is_bought %}
+                                                            <span class="badge bg-success" title="{% trans 'Bought' %}{% if item.bought_at %} ({{ item.bought_at|date:'Y-m-d H:i' }}){% endif %}{% if item.bought_by %} {% trans 'by' %} {{ item.bought_by.character_name }}{% endif %}">
+                                                                <i class="fas fa-check me-1"></i>{% trans "Bought" %}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="fas fa-shopping-cart me-1"></i>{% trans "To Buy" %}
+                                                            </span>
+                                                        {% endif %}
+                                                    </span>
+                                                    {% if can_manage_order and order.status != 'DELIVERED' and order.status != 'REJECTED' %}
+                                                    <button type="button" class="btn btn-sm {% if item.is_bought %}btn-outline-secondary{% else %}btn-success{% endif %} toggle-bought-btn" data-item-id="{{ item.id }}" data-url="{% url 'industry_reforged:toggle_order_item_bought' item.id %}" title="{% if item.is_bought %}{% trans 'Unmark as bought' %}{% else %}{% trans 'Mark as bought' %}{% endif %}">
+                                                        {% if item.is_bought %}
+                                                            <i class="fas fa-undo me-1"></i>{% trans "Unmark" %}
+                                                        {% else %}
+                                                            <i class="fas fa-check me-1"></i>{% trans "Mark Bought" %}
+                                                        {% endif %}
+                                                    </button>
+                                                    {% endif %}
+                                                </td>
                                             </tr>
                                             {% endfor %}
                                             {% endif %}
                                             
                                             {% if not build_items and not buy_items %}
-                                                <tr><td colspan="6" class="text-center">No items found.</td></tr>
+                                                <tr><td colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="text-center">No items found.</td></tr>
                                             {% endif %}
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="4" class="text-end text-muted">{% trans "Original Jita Price (Est.):" %}</th>
+                                                <th colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}5{% else %}4{% endif %}" class="text-end text-muted">{% trans "Original Jita Price (Est.):" %}</th>
                                                 <th class="text-end text-muted numeric">{{ original_price|eve_isk }}</th>
+                                                <th></th>
                                             </tr>
                                             {% if savings > 0 %}
                                             <tr>
-                                                <th colspan="4" class="text-end text-success">{% trans "Your Savings (Corp Discount / Adjustment):" %}</th>
+                                                <th colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}5{% else %}4{% endif %}" class="text-end text-success">{% trans "Your Savings (Corp Discount / Adjustment):" %}</th>
                                                 <th class="text-end text-success numeric">-{{ savings|eve_isk }}</th>
+                                                <th></th>
                                             </tr>
                                             {% endif %}
                                             <tr>
-                                                <th colspan="4" class="text-end fs-4">{% trans "Current Quote Total:" %}</th>
+                                                <th colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}5{% else %}4{% endif %}" class="text-end fs-4">{% trans "Current Quote Total:" %}</th>
                                                 <th class="text-end fs-4 text-warning numeric">{{ order.total_price|eve_isk }}</th>
+                                                <th></th>
                                             </tr>
                                             {% if order.upfront_payment > 0 %}
                                             <tr>
-                                                <th colspan="4" class="text-end fs-5 text-warning">{% trans "Upfront Payment Required:" %}</th>
+                                                <th colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}5{% else %}4{% endif %}" class="text-end fs-5 text-warning">{% trans "Upfront Payment Required:" %}</th>
                                                 <th class="text-end fs-5 text-warning numeric">{{ order.upfront_payment|eve_isk }}</th>
+                                                <th></th>
                                             </tr>
                                             {% endif %}
                                             {% if order.upfront_payment_plex > 0 %}
                                             <tr>
-                                                <th colspan="4" class="text-end fs-5 text-warning">
+                                                <th colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}5{% else %}4{% endif %}" class="text-end fs-5 text-warning">
                                                     {% trans "Upfront Payment Required (PLEX):" %}
                                                     <br><small class="text-muted fw-normal">{% trans "Current rate" %}: 1 PLEX = {{ plex_price|eve_isk_short }}</small>
                                                 </th>
                                                 <th class="text-end fs-5 text-warning align-middle">{{ order.upfront_payment_plex }} PLEX</th>
+                                                <th></th>
                                             </tr>
                                             {% endif %}
                                             {% if order.upfront_payment > 0 or order.upfront_payment_plex > 0 %}
                                             <tr>
-                                                <th colspan="4" class="text-end fs-4 text-info mt-2">{% trans "Remaining Balance on Delivery:" %}</th>
+                                                <th colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}5{% else %}4{% endif %}" class="text-end fs-4 text-info mt-2">{% trans "Remaining Balance on Delivery:" %}</th>
                                                 <th class="text-end fs-4 text-info mt-2 numeric">{{ order.remaining_balance|eve_isk }}</th>
+                                                <th></th>
                                             </tr>
                                             {% endif %}
                                         </tfoot>
@@ -545,7 +587,7 @@
                             {% endif %}
 
                             {% if display_child_orders and order.child_orders.exists %}
-                            {% for child in order.child_orders.all %}
+                            {% for child in child_orders|default:order.child_orders.all %}
                             <div class="card border-0 mt-4">
                                 <div class="card-header bg-secondary">
                                     <h3 class="card-title text-white"><i class="fas fa-level-up-alt fa-rotate-90"></i> {% trans "Split Order #" %}{{ child.id }}</h3>
@@ -560,15 +602,16 @@
                                                     <th class="text-end">{% trans "Discount" %}</th>
                                                     <th class="text-end">{% trans "Unit Price" %}</th>
                                                     <th class="text-end">{% trans "Total" %}</th>
+                                                    <th class="text-center" style="width: 170px;">{% trans "Status" %}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {% for item in child.items.all %}
-                                                <tr>
+                                                <tr id="order-item-row-{{ item.id }}">
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ item.item_type.id }}/bp?size=32';" src="https://images.evetech.net/types/{{ item.item_type.id }}/icon?size=32" alt="{{ item.item_type.name }}" width="24" height="24" class="me-2 rounded">
-                                                            <span>{{ item.item_type.name }}</span>
+                                                            <span id="item-name-{{ item.id }}" class="{% if item.is_bought %}text-decoration-line-through text-muted{% endif %}">{{ item.item_type.name }}</span>
                                                         </div>
                                                     </td>
                                                     <td class="text-end numeric">{{ item.quantity }}</td>
@@ -586,27 +629,64 @@
                                                         {{ item.price_per_unit|eve_isk }}
                                                     </td>
                                                     <td class="text-end fw-bold numeric text-warning">{{ item.line_total|eve_isk }}</td>
+                                                    <td class="text-center align-middle text-nowrap">
+                                                        {% if item.is_buy_product %}
+                                                            <span id="bought-badge-container-{{ item.id }}" class="me-1">
+                                                                {% if item.is_bought %}
+                                                                    <span class="badge bg-success" title="{% trans 'Bought' %}{% if item.bought_at %} ({{ item.bought_at|date:'Y-m-d H:i' }}){% endif %}{% if item.bought_by %} {% trans 'by' %} {{ item.bought_by.character_name }}{% endif %}">
+                                                                        <i class="fas fa-check me-1"></i>{% trans "Bought" %}
+                                                                    </span>
+                                                                {% else %}
+                                                                    <span class="badge bg-warning text-dark">
+                                                                        <i class="fas fa-shopping-cart me-1"></i>{% trans "To Buy" %}
+                                                                    </span>
+                                                                {% endif %}
+                                                            </span>
+                                                            {% if can_manage_order and child.status != 'DELIVERED' and child.status != 'REJECTED' %}
+                                                            <button type="button" class="btn btn-sm {% if item.is_bought %}btn-outline-secondary{% else %}btn-success{% endif %} toggle-bought-btn" data-item-id="{{ item.id }}" data-url="{% url 'industry_reforged:toggle_order_item_bought' item.id %}" title="{% if item.is_bought %}{% trans 'Unmark as bought' %}{% else %}{% trans 'Mark as bought' %}{% endif %}">
+                                                                {% if item.is_bought %}
+                                                                    <i class="fas fa-undo me-1"></i>{% trans "Unmark" %}
+                                                                {% else %}
+                                                                    <i class="fas fa-check me-1"></i>{% trans "Mark Bought" %}
+                                                                {% endif %}
+                                                            </button>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {% with info=item.build_status_info %}
+                                                                {% if info %}
+                                                                    <span class="badge {{ info.badge_class }}" 
+                                                                          data-bs-toggle="tooltip"
+                                                                          title="{% if info.status == 'COMPLETED' %}{% trans 'Completed' %}{% if info.task.completed_at %} ({{ info.task.completed_at|date:'Y-m-d H:i' }}){% endif %}{% if info.task.assigned_to %} {% trans 'by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'IN_PRODUCTION' %}{% trans 'In Production' %}{% if info.task.assigned_to %} - {% trans 'Claimed by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'UNCLAIMED' %}{% trans 'Unclaimed - Waiting for builder' %}{% else %}{% trans 'To Build' %}{% endif %}">
+                                                                        <i class="fas {{ info.icon }} me-1"></i>{{ info.label }}
+                                                                    </span>
+                                                                {% else %}
+                                                                    <span class="badge bg-secondary"><i class="fas fa-hammer me-1"></i>{% trans "To Build" %}</span>
+                                                                {% endif %}
+                                                            {% endwith %}
+                                                        {% endif %}
+                                                    </td>
                                                 </tr>
                                                 {% empty %}
-                                                <tr><td colspan="5" class="text-center">No items found.</td></tr>
+                                                <tr><td colspan="6" class="text-center">No items found.</td></tr>
                                                 {% endfor %}
                                             </tbody>
                                             <tfoot>
                                                 <tr>
-                                                    <th colspan="4" class="text-end fs-5">{% trans "Target Facility:" %}</th>
+                                                    <th colspan="5" class="text-end fs-5">{% trans "Target Facility:" %}</th>
                                                     <th class="text-end fs-5 text-info">{% if child.target_facility %}{{ child.target_facility.name }}{% else %}{% trans "Default" %}{% endif %}</th>
                                                 </tr>
                                                 <tr>
-                                                    <th colspan="4" class="text-end fs-5">{% trans "Output Location:" %}</th>
+                                                    <th colspan="5" class="text-end fs-5">{% trans "Output Location:" %}</th>
                                                     <th class="text-end fs-5 text-info">{% if child.output_location %}{{ child.output_location.name }}{% else %}-{% endif %}</th>
                                                 </tr>
                                                 <tr>
-                                                    <th colspan="4" class="text-end fs-5">{% trans "Output Container:" %}</th>
+                                                    <th colspan="5" class="text-end fs-5">{% trans "Output Container:" %}</th>
                                                     <th class="text-end fs-5 text-info">{% if child.output_container %}{{ child.output_container }}{% else %}-{% endif %}</th>
                                                 </tr>
                                                 <tr>
                                                     <th colspan="4" class="text-end fs-5">{% trans "Child Order Total:" %}</th>
                                                     <th class="text-end fs-5 text-warning numeric">{{ child.total_price|eve_isk }}</th>
+                                                    <th></th>
                                                 </tr>
                                             </tfoot>
                                         </table>
@@ -665,7 +745,9 @@
                                                         <div class="d-flex align-items-center">
                                                             <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ p.type_id }}/bp?size=32';" src="https://images.evetech.net/types/{{ p.type_id }}/icon?size=32" alt="{{ p.name }}" width="24" height="24" class="me-2 rounded">
                                                             <span>{{ p.name }}</span>
-                                                            {% if p.missing_bp and p.has_blueprint %}
+                                                            {% if p.is_used %}
+                                                            <span class="badge bg-secondary ms-2" title="{% trans 'Blueprint already used' %}"><i class="fas fa-check me-1"></i>{% trans "Used" %}</span>
+                                                            {% elif p.missing_bp and p.has_blueprint %}
                                                             <span class="badge bg-danger ms-2" title="{% trans 'Corporation does not own this Blueprint' %}"><i class="fas fa-exclamation-triangle"></i></span>
                                                             {% endif %}
                                                         </div>
@@ -738,12 +820,20 @@
                                                         {{ p.name }}
                                                     </td>
                                                     <td class="text-end">{{ p.quantity }}</td>
-                                                    <td class="text-end text-danger fw-bold">{{ p.shortage }}</td>
-                                                    <td class="text-center">
-                                                        {% if p.has_bpo %}
-                                                            <span class="badge bg-warning text-dark"><i class="fas fa-copy"></i> {% trans "BPO Owned (Copies needed)" %}</span>
+                                                    <td class="text-end">
+                                                        {% if p.shortage > 0 %}
+                                                            <span class="text-danger fw-bold">{{ p.shortage }}</span>
                                                         {% else %}
-                                                            <span class="badge bg-danger"><i class="fas fa-times"></i> {% trans "Missing" %}</span>
+                                                            <span class="text-muted">0</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        {% if p.is_used %}
+                                                            <span class="badge bg-secondary"><i class="fas fa-check me-1"></i> {% trans "Used" %}</span>
+                                                        {% elif p.has_bpo %}
+                                                            <span class="badge bg-warning text-dark"><i class="fas fa-copy me-1"></i> {% trans "BPO Owned (Copies needed)" %}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-danger"><i class="fas fa-times me-1"></i> {% trans "Missing" %}</span>
                                                         {% endif %}
                                                     </td>
                                                 </tr>
@@ -907,7 +997,7 @@
                         <select name="target_facility" id="split_target_facility" class="form-select" required>
                             <option value="">-- {% trans "Select Facility" %} --</option>
                             {% for fac in facilities %}
-                            <option value="{{ fac.facility_id }}" {% if fac.is_default %}selected{% endif %}>{{ fac.name }}</option>
+                            <option value="{{ fac.facility_id }}" data-is-reaction="{% if fac.is_default_reaction %}true{% else %}false{% endif %}" data-is-default="{% if fac.is_default %}true{% else %}false{% endif %}" {% if fac.is_default %}selected{% endif %}>{{ fac.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -936,13 +1026,28 @@
 </div>
 
 <script>
-    function openSplitComponentModal(typeId, name, quantity) {
+    function openSplitComponentModal(typeId, name, quantity, activityId) {
         document.getElementById('split_type_id').value = typeId;
         document.getElementById('split_component_name').innerText = name;
 
         let qtyInput = document.getElementById('split_quantity');
         qtyInput.value = quantity;
         qtyInput.max = quantity;
+
+        let facilitySelect = document.getElementById('split_target_facility');
+        if (facilitySelect) {
+            if (activityId === 11) {
+                let rxOption = facilitySelect.querySelector('option[data-is-reaction="true"]');
+                if (rxOption) {
+                    facilitySelect.value = rxOption.value;
+                }
+            } else {
+                let defOption = facilitySelect.querySelector('option[data-is-default="true"]');
+                if (defOption) {
+                    facilitySelect.value = defOption.value;
+                }
+            }
+        }
 
         var splitModal = new bootstrap.Modal(document.getElementById('splitComponentModal'));
         splitModal.show();
@@ -1080,6 +1185,64 @@
             "language": {
                 "emptyTable": '<span class="text-success p-3"><i class="fas fa-check-circle me-1"></i> {% trans "All required blueprints are available in the corporation." %}</span>'
             }
+        });
+
+        // AJAX Toggle Bought Status for Buy Products
+        $(document).on('click', '.toggle-bought-btn', function(e) {
+            e.preventDefault();
+            const btn = $(this);
+            const itemId = btn.data('item-id');
+            const url = btn.data('url');
+            const csrfToken = $('input[name=csrfmiddlewaretoken]').val();
+
+            btn.prop('disabled', true);
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(data) {
+                    btn.prop('disabled', false);
+                    if (data.success) {
+                        const badgeContainer = $('#bought-badge-container-' + itemId);
+                        const nameSpan = $('#item-name-' + itemId);
+
+                        if (data.is_bought) {
+                            let byText = data.bought_by ? ' by ' + data.bought_by : '';
+                            let atText = data.bought_at ? ' (' + data.bought_at + ')' : '';
+                            badgeContainer.html('<span class="badge bg-success" title="{% trans "Bought" %}' + byText + atText + '"><i class="fas fa-check me-1"></i>{% trans "Bought" %}</span>');
+                            btn.removeClass('btn-success').addClass('btn-outline-secondary');
+                            btn.html('<i class="fas fa-undo me-1"></i>{% trans "Unmark" %}');
+                            btn.attr('title', '{% trans "Unmark as bought" %}');
+                            if (nameSpan.length) {
+                                nameSpan.addClass('text-decoration-line-through text-muted');
+                            }
+                        } else {
+                            badgeContainer.html('<span class="badge bg-warning text-dark"><i class="fas fa-shopping-cart me-1"></i>{% trans "To Buy" %}</span>');
+                            btn.removeClass('btn-outline-secondary').addClass('btn-success');
+                            btn.html('<i class="fas fa-check me-1"></i>{% trans "Mark Bought" %}');
+                            btn.attr('title', '{% trans "Mark as bought" %}');
+                            if (nameSpan.length) {
+                                nameSpan.removeClass('text-decoration-line-through text-muted');
+                            }
+                        }
+
+                        if (data.order_progress !== undefined) {
+                            $('.order-progress-bar').css('width', data.order_progress + '%').attr('aria-valuenow', data.order_progress);
+                            $('.order-progress-text').text(data.order_progress + '%');
+                        }
+                    } else {
+                        alert(data.error || 'Failed to update item status');
+                    }
+                },
+                error: function(xhr) {
+                    btn.prop('disabled', false);
+                    alert(xhr.responseJSON?.error || 'Error updating status');
+                }
+            });
         });
     });
 </script>

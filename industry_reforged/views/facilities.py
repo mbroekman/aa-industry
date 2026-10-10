@@ -16,59 +16,52 @@ def get_corporate_structures_for_dropdown(corporation):
 
     # Alliance Auth
     from esi.models import Token
+    from django.db.models import Q
 
-    from ..models import CorporationSyncConfig
-
-    if not corporation:
-        return []
-
-    sync_config = CorporationSyncConfig.objects.filter(corporation=corporation).first()
-    if not sync_config:
-        return []
-
-    token = Token.objects.filter(
-        character_id=sync_config.sync_character.character_id,
-        scopes__name="esi-corporations.read_structures.v1",
-    ).first()
-
-    if not token:
-        return []
-
-    url = f"https://esi.evetech.net/latest/corporations/{corporation.corporation_id}/structures/?datasource=tranquility"
-    headers = {
-        "Authorization": f"Bearer {token.valid_access_token()}",
-        "Accept": "application/json",
-    }
-    from ..models import IndustryFacility
+    from ..models import CorporationSyncConfig, IndustryFacility
+    from ..models.facilities import KnownLocation
 
     structures = []
-
     production_facility_ids = set(
         IndustryFacility.objects.filter(is_production_facility=True).values_list(
             "facility_id", flat=True
         )
     )
 
-    # First, fetch from ESI (which gives us structures the corp actually owns/rents)
-    try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            valid_types = {35825, 35826, 35827, 35832, 35833, 35835, 35836, 35834}
-            for st in resp.json():
-                if (
-                    st.get("type_id") in valid_types
-                    and st["structure_id"] not in production_facility_ids
-                ):
-                    structures.append(
-                        {
-                            "id": st["structure_id"],
-                            "name": st["name"],
-                            "type_id": st["type_id"],
-                            "system_id": st["system_id"],
-                        }
-                    )
-    except Exception:
-        pass
+    if corporation:
+        sync_config = CorporationSyncConfig.objects.filter(corporation=corporation).first()
+        token = None
+        if sync_config and sync_config.sync_character:
+            token = Token.objects.filter(
+                character_id=sync_config.sync_character.character_id,
+                scopes__name="esi-corporations.read_structures.v1",
+            ).first()
+
+        if token:
+            url = f"https://esi.evetech.net/latest/corporations/{corporation.corporation_id}/structures/?datasource=tranquility"
+            headers = {
+                "Authorization": f"Bearer {token.valid_access_token()}",
+                "Accept": "application/json",
+            }
+            try:
+                resp = requests.get(url, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    valid_types = {35825, 35826, 35827, 35832, 35833, 35835, 35836, 35834}
+                    for st in resp.json():
+                        if (
+                            st.get("type_id") in valid_types
+                            and st["structure_id"] not in production_facility_ids
+                        ):
+                            structures.append(
+                                {
+                                    "id": st["structure_id"],
+                                    "name": st["name"],
+                                    "type_id": st["type_id"],
+                                    "system_id": st["system_id"],
+                                }
+                            )
+            except Exception:
+                pass
 
     # Second, include any discovered non-production facilities
     known_facility_ids = {s["id"] for s in structures}
@@ -84,13 +77,16 @@ def get_corporate_structures_for_dropdown(corporation):
             )
             known_facility_ids.add(fac.facility_id)
 
-    # Third, include any KnownLocation associated with this corporation
-    from ..models.facilities import KnownLocation
+    # Third, include any KnownLocation associated with this corporation (or global)
+    loc_qs = KnownLocation.objects.all()
+    if corporation:
+        loc_qs = loc_qs.filter(Q(corporations=corporation) | Q(corporations__isnull=True))
 
-    for loc in KnownLocation.objects.filter(corporations=corporation):
+    for loc in loc_qs:
         if (
             loc.location_id not in known_facility_ids
             and loc.location_id not in production_facility_ids
+            and loc.location_id >= 1_000_000_000_000  # Player structures only, ignore solar systems / NPC stations
         ):
             structures.append(
                 {
@@ -140,7 +136,7 @@ def add_facility(request: WSGIRequest) -> HttpResponse:
             # Ensure the facility is known to the configuring corporation so it shows up in director_config
             if corporation and facility.owner_id != corporation.corporation_id:
                 from ..models.facilities import KnownLocation
-                loc, _ = KnownLocation.objects.get_or_create(location_id=facility.facility_id, defaults={'name': facility.name})
+                loc, _created = KnownLocation.objects.get_or_create(location_id=facility.facility_id, defaults={'name': facility.name})
                 loc.corporations.add(corporation)
 
             formset = IndustryFacilityRigFormSet(request.POST, instance=facility)

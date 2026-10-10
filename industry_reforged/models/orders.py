@@ -203,12 +203,34 @@ class MemberOrder(models.Model):
         return total
 
     @property
+    def has_work_items(self):
+        """Returns True if this order has production tasks or buy products."""
+        if self.production_tasks.exists():
+            return True
+        for item in self.items.all():
+            if item.is_buy_product or item.is_bought:
+                return True
+        return False
+
+    @property
     def progress_percent(self):
         total_tasks = self.production_tasks.count()
-        if total_tasks == 0:
-            return 0
         completed_tasks = self.production_tasks.filter(status="COMPLETED").count()
-        return int((completed_tasks / total_tasks) * 100)
+
+        # Count buy items
+        buy_items = [
+            item
+            for item in self.items.all()
+            if item.is_buy_product or item.is_bought
+        ]
+        total_buy = len(buy_items)
+        completed_buy = sum(1 for item in buy_items if item.is_bought)
+
+        total_work = total_tasks + total_buy
+        if total_work == 0:
+            return 0
+        completed_work = completed_tasks + completed_buy
+        return int((completed_work / total_work) * 100)
 
     @property
     def most_expensive_item(self):
@@ -227,6 +249,23 @@ class OrderItem(models.Model):
     quantity = models.IntegerField(default=1)
     price_per_unit = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
     discount_applied = models.FloatField(default=0.0)
+    is_bought = models.BooleanField(
+        default=False,
+        help_text=_("Indicates if this product has been purchased for the order"),
+    )
+    bought_by = models.ForeignKey(
+        EveCharacter,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text=_("The character who purchased this item"),
+    )
+    bought_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("Timestamp when this item was marked as bought"),
+    )
 
     class Meta:
         verbose_name = _("Order Item")
@@ -234,6 +273,116 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.item_type.name} for Order #{self.order_id}"
+
+    @property
+    def is_buy_product(self):
+        """Returns True if this item has no manufacturing/reaction blueprint or is set to BUY in CorpItemConfig."""
+        # Third Party
+        from eveuniverse.models import EveIndustryActivityProduct
+
+        has_bp = EveIndustryActivityProduct.objects.filter(
+            product_eve_type=self.item_type, activity_id__in=[1, 11]
+        ).exists()
+        if not has_bp:
+            return True
+
+        corp_info = (
+            self.order.character.corporation
+            if (self.order and self.order.character)
+            else None
+        )
+        if corp_info:
+            config = CorpItemConfig.objects.filter(
+                corporation=corp_info, item_type=self.item_type
+            ).first()
+            if config and config.build_or_buy == "BUY":
+                return True
+
+        return False
+
+    def get_build_status(self, preloaded_tasks=None):
+        """Returns the build status info dict for this item based on its production tasks."""
+        if self.is_buy_product:
+            return None
+
+        if preloaded_tasks is not None:
+            tasks = preloaded_tasks
+        else:
+            tasks = list(
+                self.order.production_tasks.filter(
+                    item_type=self.item_type, bom_parent__isnull=True
+                ).select_related("assigned_to")
+            )
+            if not tasks:
+                tasks = list(
+                    self.order.production_tasks.filter(
+                        item_type=self.item_type
+                    ).select_related("assigned_to")
+                )
+
+        if not tasks:
+            return {
+                "status": "TO_BUILD",
+                "label": _("To Build"),
+                "badge_class": "bg-secondary",
+                "icon": "fa-hammer",
+                "completed_count": 0,
+                "total_count": self.quantity,
+                "task": None,
+            }
+
+        completed_tasks = [t for t in tasks if t.status == "COMPLETED"]
+        in_prod_tasks = [t for t in tasks if t.status == "IN_PRODUCTION"]
+
+        total_qty = sum(t.quantity for t in tasks)
+        completed_qty = sum(t.quantity for t in completed_tasks)
+
+        primary_task = (
+            completed_tasks[0]
+            if completed_tasks
+            else (in_prod_tasks[0] if in_prod_tasks else tasks[0])
+        )
+
+        if len(completed_tasks) == len(tasks):
+            return {
+                "status": "COMPLETED",
+                "label": _("Completed"),
+                "badge_class": "bg-success",
+                "icon": "fa-check",
+                "completed_count": completed_qty,
+                "total_count": total_qty,
+                "task": primary_task,
+            }
+
+        if in_prod_tasks or (completed_tasks and len(completed_tasks) < len(tasks)):
+            label = _("In Production")
+            if total_qty > 1 and completed_qty > 0:
+                label = f"{completed_qty}/{total_qty} " + str(_("Built"))
+            return {
+                "status": "IN_PRODUCTION",
+                "label": label,
+                "badge_class": "bg-info text-dark",
+                "icon": "fa-cogs",
+                "completed_count": completed_qty,
+                "total_count": total_qty,
+                "task": primary_task,
+            }
+
+        return {
+            "status": "UNCLAIMED",
+            "label": _("Unclaimed"),
+            "badge_class": "bg-warning text-dark",
+            "icon": "fa-clock",
+            "completed_count": 0,
+            "total_count": total_qty,
+            "task": primary_task,
+        }
+
+    @property
+    def build_status_info(self):
+        if not hasattr(self, "_cached_build_status_info"):
+            self._cached_build_status_info = self.get_build_status()
+        return self._cached_build_status_info
 
     @property
     def line_total(self):

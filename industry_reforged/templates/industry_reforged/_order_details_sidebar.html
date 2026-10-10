@@ -17,11 +17,11 @@
                         {% elif order.status == 'REJECTED' %}<span class="badge bg-danger">{% translate "Rejected" %}</span>
                         {% endif %}
                     </div>
-                    {% if order.production_tasks.exists %}
+                    {% if order.has_work_items %}
                         <div class="progress mt-2"  title="{{ order.progress_percent }}% Completed">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div class="progress-bar bg-success order-progress-bar" role="progressbar" style="width: {{ order.progress_percent }}%; box-shadow: 0 0 8px #28a745;" aria-valuenow="{{ order.progress_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <small class="text-muted numeric">{{ order.progress_percent }}% completed</small>
+                        <small class="text-muted numeric"><span class="order-progress-text">{{ order.progress_percent }}%</span> completed</small>
                     {% endif %}
                 </dd>
 

@@ -670,18 +670,79 @@ def dt_blueprint_library(request):
 
     # Search
     if search:
-        qs = qs.filter(
+        matching_loc_ids = set()
+        matching_item_ids = set()
+        from ..models.facilities import IndustryFacility, KnownLocation
+
+        matching_loc_ids.update(
+            IndustryFacility.objects.filter(name__icontains=search).values_list(
+                "facility_id", flat=True
+            )
+        )
+        matching_loc_ids.update(
+            KnownLocation.objects.filter(name__icontains=search).values_list(
+                "location_id", flat=True
+            )
+        )
+        try:
+            from corptools.models import CorpAsset, EveLocation
+
+            eve_loc_ids = list(
+                EveLocation.objects.filter(
+                    location_name__icontains=search
+                ).values_list("location_id", flat=True)
+            )
+            matching_loc_ids.update(eve_loc_ids)
+
+            # Match blueprints inside containers by searching CorpAsset
+            matching_item_ids.update(
+                CorpAsset.objects.filter(
+                    location_name_id__in=eve_loc_ids
+                ).values_list("item_id", flat=True)
+            )
+
+            # Map negative hangar locations back to office parent structures
+            neg_hangar_ids = [abs(lid) // 10 for lid in eve_loc_ids if lid < 0]
+            if neg_hangar_ids:
+                matching_loc_ids.update(
+                    CorpAsset.objects.filter(
+                        item_id__in=neg_hangar_ids, location_flag="OfficeFolder"
+                    ).values_list("location_id", flat=True)
+                )
+        except (ImportError, Exception):
+            pass
+
+        # Check if search matches any division names (e.g. "Blueprints - Corp", "SECURE")
+        matching_flags = set()
+        from ..utils.locations import get_corp_division_names
+
+        corp_divs = get_corp_division_names()
+        for flag, div_name in corp_divs.get(None, {}).items():
+            if search.lower() in div_name.lower():
+                matching_flags.add(flag)
+
+        search_q = (
             Q(eve_type__name__icontains=search)
             | Q(corporation__corporation_name__icontains=search)
+            | Q(location_flag__icontains=search)
         )
+        if matching_flags:
+            search_q |= Q(location_flag__in=matching_flags)
+        if matching_loc_ids:
+            search_q |= Q(location_id__in=matching_loc_ids)
+        if matching_item_ids:
+            search_q |= Q(item_id__in=matching_item_ids)
+
+        qs = qs.filter(search_q)
 
     filtered_records = qs.count()
 
-    # Columns: 0: Blueprint, 1: Corporation, 2: Runs, 3: Actions
+    # Columns: 0: Blueprint, 1: Corporation, 2: Location, 3: Runs, 4: Actions
     order_map = {
         "0": "eve_type__name",
         "1": "corporation__corporation_name",
-        "2": "runs",
+        "2": "location_id",
+        "3": "runs",
     }
 
     order_field = order_map.get(str(order_col), "eve_type__name")
@@ -692,9 +753,32 @@ def dt_blueprint_library(request):
     if length > 0:
         qs = qs[start : start + length]
 
+    from ..utils.locations import (
+        get_blueprint_asset_locations,
+        get_blueprint_full_location,
+        get_corp_division_names,
+        get_office_hangar_locations,
+        resolve_location_names,
+    )
+
+    page_bps = list(qs)
+    loc_ids = {bp.location_id for bp in page_bps}
+    item_ids = {bp.item_id for bp in page_bps}
+    location_names = resolve_location_names(loc_ids)
+    office_hangars = get_office_hangar_locations(loc_ids)
+    corp_divisions = get_corp_division_names()
+    asset_locations = get_blueprint_asset_locations(item_ids)
+
     data = []
-    for bp in qs:
+    for bp in page_bps:
         runs_html = "&infin;" if bp.is_original else str(bp.runs)
+        full_location = get_blueprint_full_location(
+            bp,
+            location_names,
+            office_hangars=office_hangars,
+            corp_divisions=corp_divisions,
+            asset_locations=asset_locations,
+        )
 
         data.append(
             [
@@ -702,6 +786,13 @@ def dt_blueprint_library(request):
                     "industry_reforged/partials/dt_blueprint_item.html", {"bp": bp}
                 ),
                 bp.corporation.corporation_name,
+                render_to_string(
+                    "industry_reforged/partials/dt_blueprint_location.html",
+                    {
+                        "bp": bp,
+                        "full_location": full_location,
+                    },
+                ),
                 runs_html,
                 render_to_string(
                     "industry_reforged/partials/dt_blueprint_actions.html",

@@ -540,7 +540,7 @@
                                                             <div class="progress-bar {% if sum_item.progress_percent == 100 %}bg-success{% else %}bg-info{% endif %}" role="progressbar" style="width: {{ sum_item.progress_percent|floatformat:0 }}%;" aria-valuenow="{{ sum_item.progress_percent|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100" title="{{ sum_item.progress_percent|floatformat:1 }}%"></div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end numeric fw-bold text-info">{{ sum_item.to_build }}</td>
+                                                    <td class="text-end numeric fw-bold text-info">{{ sum_item.claimed }}</td>
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="text-end numeric fw-bold {% if sum_item.remaining > 0 %}text-danger{% else %}text-success{% endif %}">{{ sum_item.remaining|floatformat:0 }}</td>
                                                     <td class="text-end numeric {% if sum_item.corp_stock >= sum_item.remaining and sum_item.remaining > 0 %}text-success fw-bold{% elif sum_item.corp_stock > 0 %}text-info{% else %}text-muted{% endif %}">
@@ -608,7 +608,7 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="text-end numeric fw-bold text-info">{{ sum_item.to_build }}</td>
+                                                    <td class="text-end numeric fw-bold text-info" title="{% trans 'Claimed' %}: {{ sum_item.claimed }}">{{ sum_item.to_build }}</td>
                                                     <td class="text-end numeric text-warning">{{ sum_item.in_progress }}</td>
                                                     <td class="text-end numeric text-success">{{ sum_item.completed }}</td>
                                                     <td class="align-middle">
@@ -1416,6 +1416,9 @@
                     if (!filter || filter === 'all') return true;
                     var rowNode = settings.aoData[dataIndex].nTr;
                     var status = $(rowNode).attr('data-job-status');
+                    if (filter === 'active') {
+                        return status === 'active' || status === 'ready';
+                    }
                     if (filter === 'other') {
                         return status === 'paused' || status === 'cancelled';
                     }
@@ -1426,6 +1429,9 @@
                     if (!filter || filter === 'all') return true;
                     var rowNode = settings.aoData[dataIndex].nTr;
                     var status = $(rowNode).attr('data-job-status');
+                    if (filter === 'active') {
+                        return status === 'active' || status === 'ready';
+                    }
                     if (filter === 'other') {
                         return status === 'paused' || status === 'cancelled';
                     }

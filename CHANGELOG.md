@@ -4,14 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
+## Unreleased
+
+### Feat
+
+- **orders**: Added ability to mark buy products as bought on order details (`view_quote`), complete with purchaser tracking, instant AJAX status toggle, and progress bar integration.
+- **orders**: Display actual production task status (`Completed`, `In Production`, `Unclaimed`, `To Build`) with builder tooltip for manufactured items in order details and child orders instead of static label.
+
 ## v0.15.7 (2026-10-07)
 
 ### Feat
 
+- **ui**: Added 'Location' column to the Corp Blueprint Library table, resolving structure, station, container, and hangar division paths with full server-side search support.
 - **ui**: Support for unclaimable parent tasks in the industrialist dashboard, showing sub-jobs visually nested and delaying claimability until sub-jobs are COMPLETED.
 
 ### Fix
 
+- **ui**: Fixed 'Missing Blueprints' tab on order view marking consumed blueprints from completed tasks as missing; consumed blueprints now correctly display as 'Used' with 0 shortage and are omitted from the red shortage counter badge.
+- **ui**: Fixed 'My Corporate Jobs' and 'Corporate Jobs' tables hiding ready-to-deliver jobs under the default 'Active' filter, keeping them visible until actually delivered in EVE Online.
+- **ui**: Fixed 'To Build' column in Build Steps on the Industrialist Dashboard not deducting 'In Progress' or completed amounts, ensuring 'To Build' accurately reflects remaining items to build.
 - **logic**: Fixed an issue where the initial `is_claimable` state lookup failed during quote acceptance due to using the EVE Corporation ID instead of the internal Django Database ID.
 
 ## v0.15.6 (2026-10-06)

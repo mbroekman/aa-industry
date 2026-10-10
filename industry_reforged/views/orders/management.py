@@ -156,3 +156,95 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
     if is_director:
         return redirect("industry_reforged:director_dashboard")
     return redirect("industry_reforged:orders_dashboard")
+
+
+def toggle_order_item_bought(request: WSGIRequest, item_id: int) -> HttpResponse:
+    """Toggle the bought status of an OrderItem."""
+    if not request.user.is_authenticated:
+        from django.http import HttpResponseForbidden
+
+        return HttpResponseForbidden()
+
+    if request.method != "POST":
+        from django.http import HttpResponseNotAllowed
+
+        return HttpResponseNotAllowed(["POST"])
+
+    from django.http import JsonResponse
+    from django.utils import timezone
+    from ...models import OrderItem
+
+    item = (
+        OrderItem.objects.select_related("order", "order__character", "item_type")
+        .filter(id=item_id)
+        .first()
+    )
+    if not item:
+        if (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or request.content_type == "application/json"
+        ):
+            return JsonResponse(
+                {"success": False, "error": _("Item not found.")}, status=404
+            )
+        messages.error(request, _("Item not found."))
+        return redirect("industry_reforged:orders_dashboard")
+
+    order = item.order
+    user_characters = request.user.character_ownerships.all().values_list(
+        "character_id", flat=True
+    )
+
+    is_privileged = request.user.has_perm(
+        "industry_reforged.corp_access"
+    ) or request.user.has_perm("industry_reforged.industrialist_access")
+    is_owner = order.character_id in user_characters
+
+    if not (is_privileged or is_owner):
+        if (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or request.content_type == "application/json"
+        ):
+            return JsonResponse(
+                {"success": False, "error": _("Permission denied.")}, status=403
+            )
+        messages.error(request, _("Permission denied."))
+        return redirect("industry_reforged:view_quote", order_id=order.id)
+
+    # Toggle bought status
+    item.is_bought = not item.is_bought
+    if item.is_bought:
+        item.bought_at = timezone.now()
+        char = getattr(request.user.profile, "main_character", None)
+        item.bought_by = char
+    else:
+        item.bought_at = None
+        item.bought_by = None
+
+    item.save(update_fields=["is_bought", "bought_at", "bought_by"])
+
+    if (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or request.content_type == "application/json"
+    ):
+        return JsonResponse(
+            {
+                "success": True,
+                "item_id": item.id,
+                "is_bought": item.is_bought,
+                "bought_by": (
+                    item.bought_by.character_name if item.bought_by else None
+                ),
+                "bought_at": (
+                    item.bought_at.strftime("%Y-%m-%d %H:%M")
+                    if item.bought_at
+                    else None
+                ),
+                "order_progress": order.progress_percent,
+            }
+        )
+
+    status_str = _("bought") if item.is_bought else _("not bought")
+    messages.success(request, _(f"Marked {item.item_type.name} as {status_str}."))
+    return redirect("industry_reforged:view_quote", order_id=order.id)
+

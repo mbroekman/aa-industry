@@ -121,6 +121,26 @@ DEFAULT_FROM_EMAIL = ""
 # Add any custom settings below here. #
 #######################################
 
+import fakeredis
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CONNECTION_POOL_KWARGS": {
+                "connection_class": fakeredis.FakeRedisConnection,
+            },
+        },
+    }
+}
+
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_ALWAYS_EAGER = True
+task_always_eager = True
+task_eager_propagates = True
+
 CELERYBEAT_SCHEDULE["industry_sync_corp_blueprints"] = {
     "task": "industry_reforged.tasks.task_sync_corp_blueprints",
     "schedule": crontab(minute="0", hour="*/2"),

@@ -106,6 +106,11 @@ urlpatterns = [
         name="split_bom_component",
     ),
     path(
+        "orders/items/<int:item_id>/toggle-bought/",
+        orders.toggle_order_item_bought,
+        name="toggle_order_item_bought",
+    ),
+    path(
         "industrialist/",
         industrialist.industrialist_dashboard,
         name="industrialist_dashboard",

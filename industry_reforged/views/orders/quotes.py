@@ -110,16 +110,38 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     # Annotate buy products
     build_items = []
     buy_items = []
-    from eveuniverse.models import EveIndustryActivityProduct
     for item in order_items:
-        has_bp = EveIndustryActivityProduct.objects.filter(
-            product_eve_type=item.item_type, activity_id__in=[1, 11]
-        ).exists()
-        item.is_buy_product = not has_bp
         if item.is_buy_product:
             buy_items.append(item)
         else:
             build_items.append(item)
+
+    # Bulk fetch tasks for all items on this order and child orders
+    from collections import defaultdict
+    all_order_ids = [order.id] + list(order.child_orders.values_list("id", flat=True))
+    all_tasks = list(
+        ProductionTask.objects.filter(
+            created_from_order_id__in=all_order_ids
+        ).select_related("assigned_to", "item_type")
+    )
+    tasks_by_order_and_type = defaultdict(list)
+    for t in all_tasks:
+        tasks_by_order_and_type[(t.created_from_order_id, t.item_type_id)].append(t)
+
+    for item in build_items:
+        item_tasks = tasks_by_order_and_type.get((item.order_id, item.item_type_id), [])
+        top_tasks = [t for t in item_tasks if t.bom_parent_id is None] or item_tasks
+        item._cached_build_status_info = item.get_build_status(preloaded_tasks=top_tasks)
+
+    child_orders = list(
+        order.child_orders.prefetch_related("items__item_type", "items__order").all()
+    )
+    for child in child_orders:
+        for child_item in child.items.all():
+            if not child_item.is_buy_product:
+                child_tasks = tasks_by_order_and_type.get((child_item.order_id, child_item.item_type_id), [])
+                top_child_tasks = [t for t in child_tasks if t.bom_parent_id is None] or child_tasks
+                child_item._cached_build_status_info = child_item.get_build_status(preloaded_tasks=top_child_tasks)
 
     recursive_bom_tree = []
     if request.user.has_perm(
@@ -132,7 +154,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     facilities = IndustryFacility.objects.filter(is_production_facility=True)
 
     # Third Party
-    from eveuniverse.models import EveType
+    from eveuniverse.models import EveIndustryActivityProduct, EveType
 
     from ...utils.bom_engine import get_blueprint_me
 
@@ -166,6 +188,93 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         for item in order_items:
             products_me_dict[item.item_type.id] = item.item_type.name
 
+    # Blueprint completion & shortage analysis
+    bp_status_map = {}
+    missing_bps = []
+    actual_missing_count = 0
+
+    if corp_info and bom_blueprints_list:
+        import math
+        from collections import defaultdict
+        from django.db.models import Q
+        from ...models import CorpBlueprint
+
+        root = order.root_order if hasattr(order, "root_order") and order.root_order else order
+        related_order_ids = set(root.child_orders.values_list("id", flat=True)) | {root.id, order.id}
+
+        completed_tasks = ProductionTask.objects.filter(
+            created_from_order_id__in=related_order_ids,
+            status="COMPLETED",
+        )
+        product_completed_qty = defaultdict(int)
+        for t in completed_tasks:
+            product_completed_qty[t.item_type_id] += t.quantity
+
+        bp_type_ids = [bp.get("type_id") for bp in bom_blueprints_list if bp.get("type_id")]
+        bp_products_map = defaultdict(list)
+        if bp_type_ids:
+            for ap in EveIndustryActivityProduct.objects.filter(
+                eve_type_id__in=bp_type_ids, activity_id__in=[1, 11]
+            ).values("eve_type_id", "product_eve_type_id", "quantity"):
+                bp_products_map[ap["eve_type_id"]].append(ap)
+
+        has_corp_bp_cache = {}
+        for bp in bom_blueprints_list:
+            bp_type_id = bp.get("type_id")
+            req_runs = bp.get("quantity", 0)
+            stock_runs = bp.get("corp_stock", 0)
+
+            completed_runs = 0
+            if bp_type_id in bp_products_map:
+                for ap in bp_products_map[bp_type_id]:
+                    p_id = ap["product_eve_type_id"]
+                    yield_qty = ap["quantity"] or 1
+                    c_qty = product_completed_qty.get(p_id, 0)
+                    if c_qty > 0:
+                        completed_runs += math.ceil(c_qty / max(1, yield_qty))
+
+            remaining_runs = max(0, req_runs - completed_runs)
+            shortage = max(0, remaining_runs - stock_runs)
+            is_used = (completed_runs >= req_runs and req_runs > 0)
+
+            has_bpo = False
+            if bp_type_id:
+                if bp_type_id not in has_corp_bp_cache:
+                    has_corp_bp_cache[bp_type_id] = CorpBlueprint.objects.filter(
+                        corporation=corp_info, eve_type_id=bp_type_id
+                    ).exists()
+
+                has_bpo = CorpBlueprint.objects.filter(
+                    Q(quantity=-1) | Q(runs=-1),
+                    corporation=corp_info,
+                    eve_type_id=bp_type_id,
+                ).exists()
+
+            bp_status_map[bp_type_id] = {
+                "completed_runs": completed_runs,
+                "remaining_runs": remaining_runs,
+                "shortage": shortage,
+                "is_used": is_used,
+                "has_bpo": has_bpo,
+            }
+
+            if stock_runs < req_runs:
+                if is_used:
+                    bp_copy = bp.copy()
+                    bp_copy["shortage"] = 0
+                    bp_copy["has_bpo"] = has_bpo
+                    bp_copy["is_used"] = True
+                    bp_copy["completed_runs"] = completed_runs
+                    missing_bps.append(bp_copy)
+                elif shortage > 0:
+                    bp_copy = bp.copy()
+                    bp_copy["shortage"] = shortage
+                    bp_copy["has_bpo"] = has_bpo
+                    bp_copy["is_used"] = False
+                    bp_copy["completed_runs"] = completed_runs
+                    missing_bps.append(bp_copy)
+                    actual_missing_count += 1
+
     products_me = []
     for type_id, name in products_me_dict.items():
         eve_type = EveType.objects.filter(id=type_id).first()
@@ -187,14 +296,20 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             is_invented = False
             missing_bp = not has_corp_bp
+            is_used = False
             if bp_prod:
                 if bp_prod.eve_type_id in invented_blueprint_types:
                     is_invented = True
                     missing_bp = False
                 else:
-                    bp_in_bom = next((bp for bp in bom_blueprints_list if bp.get("type_id") == bp_prod.eve_type_id), None)
-                    if bp_in_bom:
-                        missing_bp = bp_in_bom.get("corp_stock", 0) < bp_in_bom.get("quantity", 0)
+                    status_info = bp_status_map.get(bp_prod.eve_type_id)
+                    if status_info:
+                        is_used = status_info.get("is_used", False)
+                        missing_bp = status_info.get("shortage", 0) > 0
+                    else:
+                        bp_in_bom = next((bp for bp in bom_blueprints_list if bp.get("type_id") == bp_prod.eve_type_id), None)
+                        if bp_in_bom:
+                            missing_bp = bp_in_bom.get("corp_stock", 0) < bp_in_bom.get("quantity", 0)
 
             products_me.append(
                 {
@@ -204,35 +319,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     "current_max_runs": max_runs,
                     "has_blueprint": has_bp,
                     "missing_bp": missing_bp,
+                    "is_used": is_used,
                 }
             )
-
-    missing_bps = []
-    if corp_info:
-        from ...models import CorpBlueprint
-        has_corp_bp_cache = {}
-        for bp in bom_blueprints_list:
-            bp_type_id = bp.get("type_id")
-            has_bpo = False
-            from django.db.models import Q
-            if bp_type_id:
-                if bp_type_id not in has_corp_bp_cache:
-                    # Check if the corp owns any BPOs (runs=-1) or BPCs with runs
-                    has_corp_bp_cache[bp_type_id] = CorpBlueprint.objects.filter(
-                        corporation=corp_info, eve_type_id=bp_type_id
-                    ).exists()
-                    
-                has_bpo = CorpBlueprint.objects.filter(
-                    Q(quantity=-1) | Q(runs=-1), corporation=corp_info, eve_type_id=bp_type_id
-                ).exists()
-
-            stock = bp.get("corp_stock", 0)
-            req = bp.get("quantity", 0)
-            if stock < req:
-                bp_copy = bp.copy()
-                bp_copy["shortage"] = req - stock
-                bp_copy["has_bpo"] = has_bpo
-                missing_bps.append(bp_copy)
 
     estimated_build_cost = total_bom_price
     profit_margin = float(order.total_price) - estimated_build_cost
@@ -250,6 +339,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "order_items": order_items,
         "build_items": build_items,
         "buy_items": buy_items,
+        "child_orders": child_orders,
         "display_child_orders": is_privileged,
         "bom_materials": bom_materials_list,
         "bom_blueprints": bom_blueprints_list,
@@ -259,20 +349,25 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "original_price": original_price,
         "savings": savings,
         "is_owner": order.character_id in user_characters,
+        "is_privileged": is_privileged,
+        "can_manage_order": is_privileged or (order.character_id in user_characters),
         "recursive_bom_tree": recursive_bom_tree,
         "facilities": facilities,
         "products_me": products_me,
         "missing_bps": missing_bps,
+        "actual_missing_count": actual_missing_count,
         "plex_price": plex_price,
     }
     output_locations = []
     if is_privileged:
         from ...models.orders import OutputLocation
-        corp_info = request.user.profile.main_character.corporation_id
-        from allianceauth.eveonline.models import EveCorporationInfo
-        corp = EveCorporationInfo.objects.filter(corporation_id=corp_info).first()
-        if corp:
-            output_locations = OutputLocation.objects.filter(corporation=corp).order_by("name")
+        main_char = getattr(getattr(request.user, "profile", None), "main_character", None)
+        corp_id = main_char.corporation_id if main_char else None
+        if corp_id:
+            from allianceauth.eveonline.models import EveCorporationInfo
+            corp = EveCorporationInfo.objects.filter(corporation_id=corp_id).first()
+            if corp:
+                output_locations = OutputLocation.objects.filter(corporation=corp).order_by("name")
     
     context["output_locations"] = output_locations
 

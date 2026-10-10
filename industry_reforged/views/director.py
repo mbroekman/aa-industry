@@ -815,7 +815,10 @@ def director_config(request: WSGIRequest) -> HttpResponse:
 
     from django.db.models import Q
     valid_facility_ids = list(corporation.known_locations.values_list("location_id", flat=True))
-    facilities = IndustryFacility.objects.filter(Q(owner_id=corporation.corporation_id) | Q(facility_id__in=valid_facility_ids), is_production_facility=True).distinct()
+    facilities = IndustryFacility.objects.filter(
+        Q(owner_id=corporation.corporation_id) | Q(facility_id__in=valid_facility_ids) | Q(owner_id__isnull=True),
+        is_production_facility=True
+    ).distinct()
 
     from ..models.orders import OutputLocation
     output_locations = OutputLocation.objects.filter(corporation=corporation).order_by("name")
