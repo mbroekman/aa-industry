@@ -395,7 +395,7 @@ def update_character_pi(character_id=None):
                             else (
                                 char_planet.planet_type.name
                                 if char_planet.planet_type
-                                else f"Planeet {char_planet.planet_id}"
+                                else f"Planet {char_planet.planet_id}"
                             )
                         )
 
@@ -403,7 +403,7 @@ def update_character_pi(character_id=None):
                         if pin_obj.is_extractor and pin_obj.expiry_time:
                             if now >= pin_obj.expiry_time:
                                 if not pin_obj.notification_sent:
-                                    message = f"Je extractor op je **{planet_label}** is zojuist gestopt. Tijd om deze opnieuw aan te zetten!"
+                                    message = f"Your extractor on **{planet_label}** has just stopped. Time to restart it!"
                                     send_pi_notification(
                                         character, "PI Extractor Expired", message
                                     )
@@ -431,7 +431,7 @@ def update_character_pi(character_id=None):
 
                             if pin_obj.utilization_pct >= threshold:
                                 if not pin_obj.notification_sent:
-                                    message = f"De opslag (of launchpad) op je **{planet_label}** is (bijna) vol! Tijd om spullen op te halen."
+                                    message = f"The storage (or launchpad) on **{planet_label}** is (almost) full! Time to pick up your goods."
                                     send_pi_notification(
                                         character, "PI Storage Full", message
                                     )

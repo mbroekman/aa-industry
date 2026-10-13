@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## Unreleased
 
+### Fix
+
+- **pi**: Translated hardcoded Dutch text in PI extractor-expired and storage-full notification messages (and the planet-name fallback label) to English, consistent with the Alliance Auth ecosystem's English-only standard.
+
 ### Feat
 
 - **orders**: Added ability to mark buy products as bought on order details (`view_quote`), complete with purchaser tracking, instant AJAX status toggle, and progress bar integration.
