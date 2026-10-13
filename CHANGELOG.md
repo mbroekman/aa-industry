@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **security**: Bumped `fastapi` in `ai-forecasting/pyproject.toml` from `^0.110.0` to `^0.135.0`, resolving 7 Dependabot-flagged Starlette CVEs (transitively pulled in via FastAPI's own `starlette` requirement, which was unpinned in this sub-project). No `poetry.lock` exists for this service, so the version bump is the full fix; verified by installing the full dependency set into an isolated venv and confirming `ai_forecasting.main` still imports cleanly.
 - **pi**: Translated hardcoded Dutch text in PI extractor-expired and storage-full notification messages (and the planet-name fallback label) to English, consistent with the Alliance Auth ecosystem's English-only standard.
 
 ### Feat
