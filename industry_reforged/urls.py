@@ -358,6 +358,7 @@ urlpatterns = [
     ),
     path("buyback/", buyback.buyback_dashboard, name="buyback_dashboard"),
     path("buyback/calculator/", buyback.buyback_calculator, name="buyback_calculator"),
+    path("buyback/stats/", buyback.buyback_stats, name="buyback_stats"),
     path(
         "buyback/<str:tracking_number>/",
         buyback.buyback_contract_detail,

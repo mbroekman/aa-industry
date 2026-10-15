@@ -13,7 +13,10 @@
             </nav>
             <div class="d-flex justify-content-between align-items-center">
                 <h2 class="mb-0">{% trans "Buyback Program" %}</h2>
-                <a href="{% url 'industry_reforged:buyback_calculator' %}" class="btn btn-success"><i class="fas fa-calculator"></i> {% trans "New Appraisal" %}</a>
+                <div>
+                    <a href="{% url 'industry_reforged:buyback_stats' %}" class="btn btn-outline-secondary"><i class="fas fa-chart-line"></i> {% trans "Statistics" %}</a>
+                    <a href="{% url 'industry_reforged:buyback_calculator' %}" class="btn btn-success"><i class="fas fa-calculator"></i> {% trans "New Appraisal" %}</a>
+                </div>
             </div>
         </div>
     </div>

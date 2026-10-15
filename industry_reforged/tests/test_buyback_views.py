@@ -19,6 +19,7 @@ from industry_reforged.views.buyback.member import (
     buyback_contract_detail,
     buyback_dashboard,
 )
+from industry_reforged.views.buyback.stats import buyback_stats
 
 from .factories import (
     BuybackContractFactory,
@@ -173,3 +174,39 @@ class TestBuybackMemberViews:
 
         contract.refresh_from_db()
         assert contract.status == "CANCELLED"
+
+
+@pytest.mark.django_db
+class TestBuybackStatsView:
+    @patch("industry_reforged.views.buyback.stats.render")
+    def test_requires_permission(self, mock_render, rf):
+        request = rf.get("/")
+        request.user = UserFactory()
+        response = buyback_stats(request)
+        assert response.status_code == 302
+        mock_render.assert_not_called()
+
+    @patch("industry_reforged.views.buyback.stats.render")
+    def test_renders_with_permission(self, mock_render, rf):
+        user, _ = _member_user()
+        BuybackProgramFactory()
+
+        request = rf.get("/")
+        request.user = user
+        buyback_stats(request)
+
+        mock_render.assert_called()
+        context = mock_render.call_args[0][2]
+        assert len(context["program_stats"]) == 1
+        assert context["days"] == 30
+
+    @patch("industry_reforged.views.buyback.stats.render")
+    def test_days_param_is_clamped(self, mock_render, rf):
+        user, _ = _member_user()
+
+        request = rf.get("/", {"days": "9999"})
+        request.user = user
+        buyback_stats(request)
+
+        context = mock_render.call_args[0][2]
+        assert context["days"] == 365

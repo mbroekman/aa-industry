@@ -103,6 +103,7 @@ class BuybackMenuItem(MenuItemHook):
                 "industry_reforged:buyback_dashboard",
                 "industry_reforged:buyback_calculator",
                 "industry_reforged:buyback_contract_detail",
+                "industry_reforged:buyback_stats",
             ],
         )
 

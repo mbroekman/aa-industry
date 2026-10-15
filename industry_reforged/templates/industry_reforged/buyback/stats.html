@@ -1,0 +1,238 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+{% load industry_tags %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Statistics" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Buyback Statistics" %}</h2>
+                <form method="get" class="d-flex align-items-center gap-2">
+                    <label for="days" class="form-label mb-0">{% trans "Window" %}</label>
+                    <select name="days" id="days" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>{% trans "7 days" %}</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>{% trans "30 days" %}</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>{% trans "90 days" %}</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if not program_stats %}
+    <div class="alert alert-info">{% trans "No active buyback programs to show statistics for." %}</div>
+    {% endif %}
+
+    {% for stats in program_stats %}
+    <div class="card border-0 mb-4 shadow-sm">
+        <div class="card-header bg-light">
+            <h4 class="card-title mb-0">{{ stats.program_name }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-4 text-center">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h3 mb-0">{{ stats.total_contracts }}</div>
+                        <div class="text-muted small">{% trans "Total Contracts" %}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h3 mb-0">{{ stats.total_isk_paid|eve_isk_short }}</div>
+                        <div class="text-muted small">{% trans "ISK Paid Out" %}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h3 mb-0">{{ stats.total_items_sold }}</div>
+                        <div class="text-muted small">{% trans "Items Sold" %}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h3 mb-0">{{ stats.avg_contract_value|eve_isk_short }}</div>
+                        <div class="text-muted small">{% trans "Avg Contract Value" %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4 text-center">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded {% if stats.flag_rate > 20 %}border-warning{% endif %}">
+                        <div class="h4 mb-0">{{ stats.flag_rate|floatformat:1 }}%</div>
+                        <div class="text-muted small">{% trans "Flag Rate" %}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h4 mb-0">{{ stats.rejection_rate|floatformat:1 }}%</div>
+                        <div class="text-muted small">{% trans "Rejection Rate" %}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h4 mb-0">{{ stats.expiry_rate|floatformat:1 }}%</div>
+                        <div class="text-muted small">{% trans "Expiry Rate" %}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded">
+                        <div class="h4 mb-0">
+                            {% if stats.avg_turnaround_hours is not None %}
+                            {{ stats.avg_turnaround_hours|floatformat:1 }}h
+                            {% else %}
+                            &mdash;
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small">{% trans "Avg Turnaround" %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <canvas id="buyback-trend-{{ stats.program_id }}" height="80"></canvas>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <h5>{% trans "Top Sellers" %}</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Character" %}</th>
+                                    <th class="text-end">{% trans "Contracts" %}</th>
+                                    <th class="text-end">{% trans "ISK Paid" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for seller in stats.top_sellers %}
+                                <tr>
+                                    <td>{{ seller.character_name }}</td>
+                                    <td class="text-end">{{ seller.contract_count }}</td>
+                                    <td class="text-end">{{ seller.total_paid|eve_isk }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">{% trans "No payouts yet." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <h5>{% trans "Top Items" %}</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Item" %}</th>
+                                    <th class="text-end">{% trans "Qty" %}</th>
+                                    <th class="text-end">{% trans "Total Value" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in stats.top_items %}
+                                <tr>
+                                    <td>{{ item.eve_type_name }}</td>
+                                    <td class="text-end">{{ item.total_quantity }}</td>
+                                    <td class="text-end">{{ item.total_value|eve_isk }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">{% trans "No items sold yet." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{{ chart_data|json_script:"buyback-chart-data" }}
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+{% include 'bundles/chart-js.html' %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Same abbreviation style used elsewhere in this plugin (e.g. director_wallets.html).
+        function formatISK(val) {
+            if (!val) return "0";
+            var num = parseFloat(val);
+            if (isNaN(num)) return "0";
+            if (num >= 1000000000) return (num / 1000000000).toFixed(2) + "b";
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + "m";
+            if (num >= 1000) return (num / 1000).toFixed(2) + "k";
+            return num.toFixed(2);
+        }
+
+        var chartData = JSON.parse(document.getElementById("buyback-chart-data").textContent);
+        Object.keys(chartData).forEach(function (programId) {
+            var data = chartData[programId];
+            var canvas = document.getElementById("buyback-trend-" + programId);
+            if (!canvas) return;
+            new Chart(canvas.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: "{% trans 'Contracts submitted' %}",
+                            data: data.submitted,
+                            yAxisID: "y",
+                            borderColor: "#0d6efd",
+                            backgroundColor: "rgba(13, 110, 253, 0.1)",
+                            tension: 0.2,
+                        },
+                        {
+                            label: "{% trans 'ISK paid out' %}",
+                            data: data.paidIsk,
+                            yAxisID: "y1",
+                            borderColor: "#198754",
+                            backgroundColor: "rgba(25, 135, 84, 0.1)",
+                            tension: 0.2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: "index", intersect: false },
+                    scales: {
+                        y: { type: "linear", position: "left", beginAtZero: true, title: { display: true, text: "{% trans 'Contracts' %}" } },
+                        y1: {
+                            type: "linear", position: "right", beginAtZero: true, grid: { drawOnChartArea: false },
+                            title: { display: true, text: "ISK" },
+                            ticks: { callback: function (value) { return formatISK(value) + " ISK"; } },
+                        },
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    if (context.dataset.yAxisID === "y1") {
+                                        return context.dataset.label + ": " + formatISK(context.parsed.y) + " ISK";
+                                    }
+                                    return context.dataset.label + ": " + context.parsed.y;
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        });
+    });
+</script>
+{% endblock %}

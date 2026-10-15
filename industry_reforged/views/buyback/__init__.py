@@ -13,3 +13,4 @@ from .member import (
     buyback_contract_detail,
     buyback_dashboard,
 )
+from .stats import buyback_stats
