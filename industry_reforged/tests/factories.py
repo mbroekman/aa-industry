@@ -145,3 +145,43 @@ class CorpWalletDivisionFactory(factory.django.DjangoModelFactory):
     division = factory.Sequence(lambda n: n + 1)
     name = factory.Sequence(lambda n: f"Division {n}")
     balance = factory.LazyFunction(lambda: Decimal("0.00"))
+
+
+class BuybackProgramFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "industry_reforged.BuybackProgram"
+
+    corporation = factory.SubFactory(EveCorporationInfoFactory)
+    name = factory.Sequence(lambda n: f"Buyback Program {n}")
+    is_active = True
+    facility = factory.SubFactory(IndustryFacilityFactory)
+
+
+class BuybackWatchlistItemFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "industry_reforged.BuybackWatchlistItem"
+
+    program = factory.SubFactory(BuybackProgramFactory)
+    eve_type = factory.SubFactory(EveTypeFactory)
+    blocks_submission = False
+
+
+class BuybackContractFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "industry_reforged.BuybackContract"
+
+    tracking_number = factory.Sequence(lambda n: f"BB-{n:08d}")
+    program = factory.SubFactory(BuybackProgramFactory)
+    character = factory.SubFactory(EveCharacterFactory)
+    status = "PENDING"
+    quoted_price = factory.LazyFunction(lambda: Decimal("1000.00"))
+
+
+class BuybackContractItemFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "industry_reforged.BuybackContractItem"
+
+    contract = factory.SubFactory(BuybackContractFactory)
+    eve_type = factory.SubFactory(EveTypeFactory)
+    quantity = 1
+    unit_price = factory.LazyFunction(lambda: Decimal("100.00"))

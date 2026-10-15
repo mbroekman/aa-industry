@@ -24,6 +24,7 @@ A powerful plugin for [Alliance Auth](https://gitlab.com/allianceauth/allianceau
   - **Direct Messages**: Receive automatic DMs via Discord when a personal industry job finishes or when PI extractors expire / storage fills up.
   - **Corporate Webhooks**: Send alerts to a designated Discord channel when new orders are placed, quotes are updated, or orders are fully built and ready for delivery.
 - **Automated Payment Tracking**: Generate unique references for member orders and builder payouts. The background ESI Wallet Sync task automatically reads the corporate wallet journal, accumulates partial payments, logs them as order notes, and marks orders as "Paid" once the full amount is reached. Supports upfront payment requirements (downpayments).
+- **Buyback Program**: Members paste an in-game inventory list to get an instant appraisal and a tracking number, then create an item-exchange contract in-game; a background task polls and matches it against ESI, flagging item/price/structure/receiver mismatches and title tampering for director review before payout. Directors configure drop-off locations, a price modifier, and a per-item watchlist entirely from the front-end.
 - **Transaction Ledger**: View a comprehensive history of all internal payments and payouts on the Director Dashboard.
 - **System Health Monitor**: A dedicated tab in the Director Configurations page that provides real-time logging and status updates for all Celery background tasks, including exact execution duration and Python error stack traces.
 - **Multilingual Support (i18n)**: Fully translatable UI using Django gettext (`django.po`). Prepare custom translations for your community (e.g., English, Dutch, etc.).
@@ -133,6 +134,7 @@ This plugin requires specific ESI scopes depending on the features you want to u
 - **`esi-universe.read_structures.v1`**: Required to resolve public Upwell structure names in EVE. Directors grant this via the "Add Corporate Token" button.
 - **`esi-corporations.read_structures.v1`**: Required for the Director Control Panel to discover and resolve names for structures owned by the corporation. Directors grant this via the "Add Corporate Token" button.
 - **`esi-wallet.read_corporation_wallets.v1`**: Required to track corporate wallet balances and journal transactions. Directors grant this via the "Add Corporate Token" button.
+- **`esi-contracts.read_corporation_contracts.v1`**: Required for the Buyback Program to poll and match corporation item-exchange contracts. Directors grant this via the "Add Corporate Token" button.
 
 #### Automating Scopes for all Users
 To prevent members from having to manually authorize additional PI or Industry tokens, you can configure Alliance Auth to **automatically request these scopes** during the standard "Add Character" login flow. Add the following to your `myauth/settings/local.py`:
@@ -246,6 +248,16 @@ CELERYBEAT_SCHEDULE["industry_sync_all_rigs"] = {
 CELERYBEAT_SCHEDULE["industry_link_orphaned_jobs"] = {
     "task": "industry_reforged.tasks.link_orphaned_jobs_to_tasks",
     "schedule": crontab(minute="*/30"),
+}
+
+CELERYBEAT_SCHEDULE["industry_buyback_poll_contracts"] = {
+    "task": "industry_reforged.tasks.buyback_poll_contracts",
+    "schedule": crontab(minute="*/15"),
+}
+
+CELERYBEAT_SCHEDULE["industry_buyback_purge_stale_contracts"] = {
+    "task": "industry_reforged.tasks.buyback_purge_stale_contracts",
+    "schedule": crontab(minute="30", hour="12"),  # once daily, after EVE downtime
 }
 ```
 

@@ -59,6 +59,11 @@
                 <i class="fas fa-map-marker-alt"></i> {% trans "Output Locations" %}
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="buyback-tab" data-bs-toggle="tab" data-bs-target="#buyback" type="button" role="tab" aria-controls="buyback" aria-selected="false">
+                <i class="fas fa-hand-holding-usd"></i> {% trans "Buyback Program" %}
+            </button>
+        </li>
     </ul>
 
     <!-- Tab panes -->
@@ -498,6 +503,106 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- BUYBACK TAB -->
+        <div class="tab-pane fade" id="buyback" role="tabpanel" aria-labelledby="buyback-tab">
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-hand-holding-usd text-primary"></i> {% trans "Buyback Programs" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_buyback_program_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Program" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{% trans "Name" %}</th>
+                                    <th>{% trans "Corporation" %}</th>
+                                    <th>{% trans "Drop-off" %}</th>
+                                    <th>{% trans "Price Modifier" %}</th>
+                                    <th>{% trans "Active" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for program in buyback_programs %}
+                                <tr>
+                                    <td class="fw-bold">{{ program.name }}</td>
+                                    <td>{{ program.corporation.corporation_ticker }}</td>
+                                    <td>{{ program.drop_off_name }}</td>
+                                    <td>{{ program.price_modifier_percent }}%</td>
+                                    <td>
+                                        {% if program.is_active %}
+                                        <span class="badge bg-success">{% trans "Active" %}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_buyback_program_edit' program.id %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_program_delete' program.id %}"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">{% trans "No buyback programs configured yet." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-exclamation-triangle text-primary"></i> {% trans "Buyback Watchlist" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_buyback_watchlist_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Watchlist Item" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{% trans "Program" %}</th>
+                                    <th>{% trans "Item" %}</th>
+                                    <th>{% trans "Reason" %}</th>
+                                    <th>{% trans "Blocks Submission" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in buyback_watchlist_items %}
+                                <tr>
+                                    <td>{{ item.program.name }}</td>
+                                    <td class="fw-bold">{{ item.eve_type.name }}</td>
+                                    <td>{{ item.reason }}</td>
+                                    <td>
+                                        {% if item.blocks_submission %}
+                                        <span class="badge bg-danger">{% trans "Blocked" %}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">{% trans "Flagged" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_buyback_watchlist_edit' item.id %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_watchlist_delete' item.id %}"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">{% trans "No watchlist items configured." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="{% url 'industry_reforged:director_buyback_review' %}" class="btn btn-warning"><i class="fas fa-flag"></i> {% trans "Review Flagged Contracts" %}</a>
             </div>
         </div>
 

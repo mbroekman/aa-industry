@@ -6,6 +6,7 @@ from .ai_manager import (
     scan_market_opportunities,
 )
 from .blueprints import task_sync_corp_blueprints
+from .buyback import buyback_poll_contracts, buyback_purge_stale_contracts
 from .facilities import (
     sync_facility_rigs,
     task_sync_all_rigs,
@@ -48,4 +49,6 @@ __all__ = [
     "evaluate_baskets",
     "scan_market_opportunities",
     "run_all_active_scanners",
+    "buyback_poll_contracts",
+    "buyback_purge_stale_contracts",
 ]

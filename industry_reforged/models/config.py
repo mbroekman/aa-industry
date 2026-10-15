@@ -75,6 +75,11 @@ class CorporationWebhookConfig(models.Model):
         null=True,
         help_text=_("Webhook URL for new AI-generated Production Tasks."),
     )
+    buyback_webhook = models.URLField(
+        blank=True,
+        null=True,
+        help_text=_("Webhook URL for new/flagged Buyback contracts."),
+    )
 
     class Meta:
         verbose_name = _("Discord Webhook Configuration")

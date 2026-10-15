@@ -1,5 +1,11 @@
 from .ai_manager import AIMarketLog, Basket, BasketItem
 from .blueprints import BlueprintRequest, CorpBlueprint
+from .buyback import (
+    BuybackContract,
+    BuybackContractItem,
+    BuybackProgram,
+    BuybackWatchlistItem,
+)
 from .config import (
     CorpMOTD,
     CorporationPricingConfig,
@@ -79,4 +85,8 @@ __all__ = [
     "Basket",
     "BasketItem",
     "AIMarketLog",
+    "BuybackProgram",
+    "BuybackWatchlistItem",
+    "BuybackContract",
+    "BuybackContractItem",
 ]

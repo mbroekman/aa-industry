@@ -11,6 +11,8 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     Basket,
     BasketItem,
+    BuybackProgram,
+    BuybackWatchlistItem,
     CorpItemConfig,
     CorporationPricingConfig,
     CorpPricingConfig,
@@ -811,4 +813,110 @@ class OpportunityScannerForm(forms.ModelForm):
         if categories:
             self.instance.categories = [int(c) for c in categories]
 
+        return cleaned_data
+
+
+class BuybackProgramForm(forms.ModelForm):
+    class Meta:
+        model = BuybackProgram
+        fields = [
+            "corporation",
+            "name",
+            "is_active",
+            "facility",
+            "known_location",
+            "price_modifier_percent",
+            "accepted_categories",
+            "price_density_threshold",
+            "price_density_tax_percent",
+            "contract_expiry_days",
+        ]
+        widgets = {
+            "corporation": forms.Select(attrs={"class": "form-select"}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "facility": forms.Select(attrs={"class": "form-select"}),
+            "known_location": forms.Select(attrs={"class": "form-select"}),
+            "price_modifier_percent": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "accepted_categories": forms.SelectMultiple(
+                attrs={"class": "form-select", "size": "6"}
+            ),
+            "price_density_threshold": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "price_density_tax_percent": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "contract_expiry_days": forms.NumberInput(
+                attrs={"class": "form-control", "min": "1"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["corporation"].disabled = True
+        self.fields["facility"].required = False
+        self.fields["known_location"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        facility = cleaned_data.get("facility")
+        known_location = cleaned_data.get("known_location")
+        if not facility and not known_location:
+            raise ValidationError(
+                _("You must select either a Facility or a Known Location as the drop-off point.")
+            )
+        if facility and known_location:
+            raise ValidationError(
+                _("Select either a Facility or a Known Location, not both.")
+            )
+        return cleaned_data
+
+
+class BuybackWatchlistItemForm(forms.ModelForm):
+    item_name = forms.CharField(
+        max_length=100,
+        help_text=_("Exact name of the item (e.g. PLEX)"),
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "PLEX"}),
+    )
+
+    class Meta:
+        model = BuybackWatchlistItem
+        fields = ["program", "item_name", "reason", "blocks_submission"]
+        widgets = {
+            "program": forms.Select(attrs={"class": "form-select"}),
+            "reason": forms.TextInput(attrs={"class": "form-control"}),
+            "blocks_submission": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["program"].label_from_instance = lambda obj: obj.name
+        if self.instance and self.instance.pk:
+            self.fields["program"].disabled = True
+            if self.instance.eve_type:
+                self.fields["item_name"].initial = self.instance.eve_type.name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item_name = cleaned_data.get("item_name")
+        if item_name:
+            eve_type = resolve_eve_type(item_name)
+
+            program = cleaned_data.get("program")
+            if not program:
+                return cleaned_data
+
+            qs = BuybackWatchlistItem.objects.filter(program=program, eve_type=eve_type)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error(
+                    "item_name", _("A watchlist entry for this item already exists.")
+                )
+
+            self.instance.eve_type = eve_type
         return cleaned_data

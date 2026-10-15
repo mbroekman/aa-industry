@@ -1,0 +1,96 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Calculator" %}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">{% trans "Buyback Calculator" %}</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 mb-4">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="program_id" class="form-label">{% trans "Buyback Program" %}</label>
+                            <select name="program_id" id="program_id" class="form-select" required>
+                                {% for program in programs %}
+                                <option value="{{ program.id }}" {% if selected_program.id == program.id %}selected{% endif %}>{{ program.name }} ({{ program.drop_off_name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="inventory_text" class="form-label">{% trans "Paste your inventory (Copy as List)" %}</label>
+                            <textarea name="inventory_text" id="inventory_text" rows="12" class="form-control" placeholder="{% trans 'Right-click your inventory window in-game, Copy as List, then paste here.' %}">{{ inventory_text }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-calculator"></i> {% trans "Get Appraisal" %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            {% if item_details %}
+            <div class="card border-0 mb-4">
+                <div class="card-header"><h5 class="card-title mb-0">{% trans "Appraisal" %}</h5></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped m-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Item" %}</th>
+                                    <th class="text-end">{% trans "Qty" %}</th>
+                                    <th class="text-end">{% trans "Unit Price" %}</th>
+                                    <th class="text-end">{% trans "Total" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in item_details %}
+                                <tr class="{% if detail.blocked %}table-danger{% elif detail.flagged %}table-warning{% endif %}">
+                                    <td>
+                                        {{ detail.eve_type.name }}
+                                        {% if detail.blocked %}<span class="badge bg-danger ms-1">{% trans "Blocked" %}</span>{% elif detail.flagged %}<span class="badge bg-warning text-dark ms-1">{% trans "Flagged" %}</span>{% endif %}
+                                    </td>
+                                    <td class="text-end">{{ detail.quantity }}</td>
+                                    <td class="text-end">{{ detail.unit_price }}</td>
+                                    <td class="text-end">{{ detail.line_total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td colspan="3">{% trans "Total" %}</td>
+                                    <td class="text-end">{{ total_price }} ISK</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-end">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="program_id" value="{{ selected_program.id }}">
+                        <input type="hidden" name="inventory_text" value="{{ inventory_text }}">
+                        <input type="hidden" name="confirm" value="1">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Confirm & Get Tracking Number" %}</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">{% trans "Paste your inventory and submit to see an appraisal here." %}</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

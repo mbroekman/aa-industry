@@ -1,0 +1,88 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ contract.tracking_number }}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">{{ contract.tracking_number }}</h2>
+        </div>
+    </div>
+
+    <div class="card border-0 mb-4">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">{% trans "Status" %}</dt>
+                <dd class="col-sm-9">{{ contract.get_status_display }}</dd>
+
+                <dt class="col-sm-3">{% trans "Program" %}</dt>
+                <dd class="col-sm-9">{{ contract.program.name }} ({{ contract.program.drop_off_name }})</dd>
+
+                <dt class="col-sm-3">{% trans "Quoted Price" %}</dt>
+                <dd class="col-sm-9">{{ contract.quoted_price }} ISK</dd>
+
+                {% if contract.contract_price %}
+                <dt class="col-sm-3">{% trans "Actual Contract Price" %}</dt>
+                <dd class="col-sm-9">{{ contract.contract_price }} ISK</dd>
+                {% endif %}
+
+                <dt class="col-sm-3">{% trans "Submitted" %}</dt>
+                <dd class="col-sm-9">{{ contract.created_at|date:"Y-m-d H:i" }}</dd>
+            </dl>
+
+            {% if contract.has_flags %}
+            <div class="alert alert-warning mt-3">
+                <strong><i class="fas fa-exclamation-triangle"></i> {% trans "This contract needs review" %}</strong>
+                <p class="mb-0">{{ contract.flag_notes }}</p>
+            </div>
+            {% endif %}
+
+            {% if contract.status == "PENDING" %}
+            <div class="alert alert-info mt-3">
+                {% trans "Create an in-game item-exchange contract with this exact tracking number in the title:" %}
+                <strong>{{ contract.tracking_number }}</strong>
+            </div>
+            <form method="post" action="{% url 'industry_reforged:buyback_contract_cancel' contract.tracking_number %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-times"></i> {% trans "Cancel" %}</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{% trans "Items" %}</h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Item" %}</th>
+                            <th class="text-end">{% trans "Qty" %}</th>
+                            <th class="text-end">{% trans "Unit Price" %}</th>
+                            <th class="text-end">{% trans "Total" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.eve_type.name }}</td>
+                            <td class="text-end">{{ item.quantity }}</td>
+                            <td class="text-end">{{ item.unit_price }}</td>
+                            <td class="text-end">{{ item.line_total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

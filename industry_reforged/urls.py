@@ -8,6 +8,7 @@ from industry_reforged.views import (
     ai_manager,
     api,
     blueprints,
+    buyback,
     dashboard,
     datatables,
     director,
@@ -354,5 +355,57 @@ urlpatterns = [
         "director/blueprints/sync/",
         api.trigger_blueprint_sync,
         name="trigger_blueprint_sync",
+    ),
+    path("buyback/", buyback.buyback_dashboard, name="buyback_dashboard"),
+    path("buyback/calculator/", buyback.buyback_calculator, name="buyback_calculator"),
+    path(
+        "buyback/<str:tracking_number>/",
+        buyback.buyback_contract_detail,
+        name="buyback_contract_detail",
+    ),
+    path(
+        "buyback/<str:tracking_number>/cancel/",
+        buyback.buyback_contract_cancel,
+        name="buyback_contract_cancel",
+    ),
+    path(
+        "director/buyback/program/add/",
+        buyback.director_config_buyback_program_edit,
+        name="director_config_buyback_program_add",
+    ),
+    path(
+        "director/buyback/program/<int:program_id>/edit/",
+        buyback.director_config_buyback_program_edit,
+        name="director_config_buyback_program_edit",
+    ),
+    path(
+        "director/buyback/program/<int:program_id>/delete/",
+        buyback.director_config_buyback_program_delete,
+        name="director_config_buyback_program_delete",
+    ),
+    path(
+        "director/buyback/watchlist/add/",
+        buyback.director_config_buyback_watchlist_edit,
+        name="director_config_buyback_watchlist_add",
+    ),
+    path(
+        "director/buyback/watchlist/<int:item_id>/edit/",
+        buyback.director_config_buyback_watchlist_edit,
+        name="director_config_buyback_watchlist_edit",
+    ),
+    path(
+        "director/buyback/watchlist/<int:item_id>/delete/",
+        buyback.director_config_buyback_watchlist_delete,
+        name="director_config_buyback_watchlist_delete",
+    ),
+    path(
+        "director/buyback/review/",
+        buyback.director_buyback_review,
+        name="director_buyback_review",
+    ),
+    path(
+        "director/buyback/review/<str:tracking_number>/resolve/",
+        buyback.director_buyback_contract_resolve,
+        name="director_buyback_contract_resolve",
     ),
 ]

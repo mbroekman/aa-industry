@@ -109,6 +109,7 @@ class LedgerTransaction(models.Model):
         ("INCOME", _("Income (Member Payment)")),
         ("PAYOUT", _("Payout (Builder Batch)")),
         ("PROCUREMENT", _("Procurement (Buy Order)")),
+        ("BUYBACK_PAYOUT", _("Payout (Buyback Contract)")),
     )
 
     date = models.DateTimeField(auto_now_add=True)
@@ -144,6 +145,13 @@ class LedgerTransaction(models.Model):
         null=True,
         blank=True,
         related_name="transactions",
+    )
+    buyback_contract = models.ForeignKey(
+        "industry_reforged.BuybackContract",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ledger_transactions",
     )
 
     class Meta:

@@ -823,6 +823,15 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     from ..models.orders import OutputLocation
     output_locations = OutputLocation.objects.filter(corporation=corporation).order_by("name")
 
+    from ..models import BuybackProgram, BuybackWatchlistItem
+
+    buyback_programs = BuybackProgram.objects.filter(corporation=corporation).select_related(
+        "corporation", "facility", "known_location"
+    )
+    buyback_watchlist_items = BuybackWatchlistItem.objects.filter(
+        program__corporation=corporation
+    ).select_related("program", "eve_type")
+
     context = {
         "title": "Configurations",
         "configs": item_configs,
@@ -834,6 +843,8 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "has_failed_tasks": has_failed_tasks,
         "facilities": facilities,
         "output_locations": output_locations,
+        "buyback_programs": buyback_programs,
+        "buyback_watchlist_items": buyback_watchlist_items,
     }
     return render(request, "industry_reforged/director_config.html", context)
 

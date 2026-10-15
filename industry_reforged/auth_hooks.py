@@ -90,6 +90,34 @@ def register_member_orders_menu():
     return MemberOrdersMenuItem()
 
 
+class BuybackMenuItem(MenuItemHook):
+    """Menu entry for the Buyback Program"""
+
+    def __init__(self):
+        MenuItemHook.__init__(
+            self,
+            _("Buyback Program"),
+            "fas fa-hand-holding-usd fa-fw",
+            "industry_reforged:buyback_dashboard",
+            navactive=[
+                "industry_reforged:buyback_dashboard",
+                "industry_reforged:buyback_calculator",
+                "industry_reforged:buyback_contract_detail",
+            ],
+        )
+
+    def render(self, request):
+        if request.user.has_perm("industry_reforged.basic_access"):
+            return MenuItemHook.render(self, request)
+        return ""
+
+
+@hooks.register("menu_item_hook")
+def register_buyback_menu():
+    """Register the buyback menu item"""
+    return BuybackMenuItem()
+
+
 class IndustrialistMenuItem(MenuItemHook):
     """Menu entry for Industrialist Dashboard"""
 

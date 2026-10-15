@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## Unreleased
 
+### Feat
+
+- **buyback**: Added a Buyback Program sub-feature (TASK-243): members paste an in-game inventory list to get an instant appraisal (market price vs. reprocessing value, whichever is higher, with a configurable price modifier and a bulky-item price-density tax) and a tracking number, then create an in-game item-exchange contract; a background task polls ESI corporation contracts every 15 minutes, matches by tracking number, and flags item/price/structure/receiver mismatches or title tampering for director review before payout (recorded as a `LedgerTransaction`). Directors configure drop-off locations (`IndustryFacility`/`KnownLocation`), the price modifier, and a per-item watchlist (block or flag) entirely from a new "Buyback" tab on the Director Configurations page; a separate review queue lists flagged/matched contracts awaiting a pay/reject decision. Member access reuses the existing `basic_access` permission, manager access reuses `corp_access` - no new permissions were added. Ported the concept (not the code) of a third-party `allianceauth-buyback-program` plugin per the research/integration proposal in `backlog/docs/doc-18`; reverse buyback (corp selling hangar stock to members), public/anonymous program access, and a stats/leaderboard dashboard are explicitly deferred to a future task.
+
 ### Fix
 
 - **security**: Bumped `fastapi` in `ai-forecasting/pyproject.toml` from `^0.110.0` to `^0.135.0`, resolving 7 Dependabot-flagged Starlette CVEs (transitively pulled in via FastAPI's own `starlette` requirement, which was unpinned in this sub-project). No `poetry.lock` exists for this service, so the version bump is the full fix; verified by installing the full dependency set into an isolated venv and confirming `ai_forecasting.main` still imports cleanly.

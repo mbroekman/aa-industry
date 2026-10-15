@@ -456,3 +456,156 @@ def calculate_bom_cost(parsed_items, corporation=None):
         total_bom_cost += price * qty
 
     return total_bom_cost
+
+
+# --- Buyback appraisal ---------------------------------------------------
+#
+# Appended here rather than in a separate module: the buyback appraisal is
+# the same "value an item" concept get_market_prices/get_prices_with_overrides
+# already own, and keeping it in one file means there is only ever one cache
+# format and one place to fix a pricing bug.
+
+
+def get_reprocessing_value(eve_type, quantity, efficiency=1.0) -> Decimal | None:
+    """
+    Reprocessing valuation via eveuniverse's EveType.materials (SDE reprocessing
+    yield), valued at the refined materials' market sell price. Returns None
+    (never False/0) when the item has no reprocessing output at all, so callers
+    never hit a "0 vs. unset" ambiguity.
+    """
+    materials = list(eve_type.materials.all())
+    if not materials:
+        return None
+
+    material_ids = [m.material_eve_type_id for m in materials]
+    prices = get_market_prices(material_ids)
+
+    total = Decimal("0.00")
+    for mat in materials:
+        unit_price = Decimal(str(prices.get(mat.material_eve_type_id, 0.0)))
+        yielded_per_unit = Decimal(str(mat.quantity)) * Decimal(str(efficiency))
+        total += unit_price * yielded_per_unit
+
+    return total * quantity
+
+
+def get_item_value_variants(eve_type, quantity) -> dict:
+    """
+    Single parameterized replacement for the "raw/compressed/refined/NPC
+    best-of" concept: returns only the valuation keys that actually apply to
+    this item, using explicit `is not None` checks rather than a `False`-as-
+    sentinel pattern. Compressed/raw ore items are themselves distinct
+    EveTypes with their own market price, so "best of market vs. reprocessed"
+    already covers raw ore without any ore-specific special-casing.
+    """
+    variants = {}
+
+    market_price = get_market_prices([eve_type.id]).get(eve_type.id, 0.0)
+    if market_price and market_price > 0.0:
+        variants["market"] = Decimal(str(market_price)) * quantity
+
+    reprocessed = get_reprocessing_value(eve_type, quantity)
+    if reprocessed is not None and reprocessed > 0:
+        variants["reprocessed"] = reprocessed
+
+    return variants
+
+
+def calculate_price_density_tax(unit_price: Decimal, packaged_volume, program) -> Decimal:
+    """
+    Tax on bulky, low ISK/m3 items, consistently parameterized on
+    packaged_volume (the source project's documented bug divided by the wrong
+    volume field in one of its four copies of this logic - with a single
+    copy, that bug class is structurally impossible).
+
+    Returns the ISK amount to deduct from unit_price, or 0.00 if the program
+    has no density threshold configured or the item doesn't qualify.
+    """
+    threshold = getattr(program, "price_density_threshold", 0.0) or 0.0
+    tax_percent = getattr(program, "price_density_tax_percent", 0.0) or 0.0
+    if threshold <= 0 or tax_percent <= 0 or not packaged_volume or packaged_volume <= 0:
+        return Decimal("0.00")
+
+    density = unit_price / Decimal(str(packaged_volume))
+    if density >= Decimal(str(threshold)):
+        return Decimal("0.00")
+
+    return (unit_price * Decimal(str(tax_percent)) / Decimal("100.00")).quantize(Decimal("0.01"))
+
+
+def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]:
+    """
+    The buyback calculator's entry point: takes {EveType: quantity} and a
+    BuybackProgram, returns (total_price, item_details) in the same shape
+    calculate_quote() already uses, so the calculator view can be built the
+    same way views/orders/create.py already builds on calculate_quote().
+
+    Never raises on an unrecognized valuation path (the source project's
+    `raise f"Unknown pricing method: ..."` bug - raising a string isn't valid
+    exception semantics) - logs a warning and returns a 0-value line instead.
+    """
+    from ..models.buyback import BuybackWatchlistItem
+
+    watchlist = {
+        w.eve_type_id: w
+        for w in BuybackWatchlistItem.objects.filter(
+            program=program, eve_type_id__in=[t.id for t in parsed_items.keys()]
+        )
+    }
+
+    total_price = Decimal("0.00")
+    item_details = []
+
+    for eve_type, quantity in parsed_items.items():
+        watchlist_entry = watchlist.get(eve_type.id)
+        if watchlist_entry and watchlist_entry.blocks_submission:
+            item_details.append(
+                {
+                    "eve_type": eve_type,
+                    "quantity": quantity,
+                    "unit_price": Decimal("0.00"),
+                    "line_total": Decimal("0.00"),
+                    "value_source": None,
+                    "blocked": True,
+                    "flagged": False,
+                    "watchlist_reason": watchlist_entry.reason,
+                }
+            )
+            continue
+
+        variants = get_item_value_variants(eve_type, quantity)
+        if not variants:
+            logger.warning(
+                f"No valuation method applies to {eve_type.name} ({eve_type.id}) - valuing at 0."
+            )
+            line_total = Decimal("0.00")
+            value_source = None
+        else:
+            value_source, line_total = max(variants.items(), key=lambda kv: kv[1])
+
+        unit_price = (line_total / quantity).quantize(Decimal("0.01")) if quantity else Decimal("0.00")
+
+        modifier = Decimal(str(program.price_modifier_percent or 0.0)) / Decimal("100.00")
+        unit_price = (unit_price * (Decimal("1.00") + modifier)).quantize(Decimal("0.01"))
+
+        packaged_volume = eve_type.packaged_volume or eve_type.volume
+        density_tax = calculate_price_density_tax(unit_price, packaged_volume, program)
+        unit_price = max(Decimal("0.00"), unit_price - density_tax)
+
+        line_total = unit_price * quantity
+        total_price += line_total
+
+        item_details.append(
+            {
+                "eve_type": eve_type,
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "line_total": line_total,
+                "value_source": value_source,
+                "blocked": False,
+                "flagged": bool(watchlist_entry),
+                "watchlist_reason": watchlist_entry.reason if watchlist_entry else "",
+            }
+        )
+
+    return total_price, item_details
