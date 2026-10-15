@@ -33,7 +33,15 @@
                     {% endif %}
                 </dd>
 
-                <dt class="col-sm-3">{% trans "Quoted Price" %}</dt>
+                {% if contract.donation_amount %}
+                <dt class="col-sm-3">{% trans "Appraisal" %}</dt>
+                <dd class="col-sm-9">{{ contract.gross_appraisal|eve_isk }}</dd>
+
+                <dt class="col-sm-3">{% trans "Donated to corp" %}</dt>
+                <dd class="col-sm-9 text-danger">-{{ contract.donation_amount|eve_isk }}</dd>
+                {% endif %}
+
+                <dt class="col-sm-3">{% trans "Quoted Price" %}{% if contract.donation_amount %} ({% trans "net" %}){% endif %}</dt>
                 <dd class="col-sm-9">{{ contract.quoted_price|eve_isk }}</dd>
 
                 {% if contract.contract_price %}
@@ -55,7 +63,9 @@
             {% if contract.status == "PENDING" %}
             <div class="alert alert-info mt-3">
                 {% trans "Create an in-game item-exchange contract with this exact tracking number in the title:" %}
-                <strong>{{ contract.tracking_number }}</strong>
+                <strong>{{ contract.tracking_number }}</strong><br>
+                {% trans "Set the contract price to:" %} <strong>{{ contract.quoted_price|eve_isk }}</strong>
+                {% if contract.donation_amount %}({% trans "already net of your donation" %}){% endif %}
             </div>
             <form method="post" action="{% url 'industry_reforged:buyback_contract_cancel' contract.tracking_number %}">
                 {% csrf_token %}

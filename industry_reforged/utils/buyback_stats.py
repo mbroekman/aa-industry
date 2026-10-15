@@ -38,6 +38,14 @@ class SellerStat:
 
 
 @dataclass
+class DonorStat:
+    character_id: int
+    character_name: str
+    total_donated: Decimal
+    contract_count: int
+
+
+@dataclass
 class DailyStat:
     date: str
     submitted_count: int
@@ -53,12 +61,14 @@ class ProgramStats:
     total_isk_paid: Decimal = Decimal("0.00")
     total_items_sold: int = 0
     avg_contract_value: Decimal = Decimal("0.00")
+    total_donated: Decimal = Decimal("0.00")
     flag_rate: float = 0.0
     rejection_rate: float = 0.0
     expiry_rate: float = 0.0
     avg_turnaround_hours: float | None = None
     top_items: list = field(default_factory=list)
     top_sellers: list = field(default_factory=list)
+    top_donors: list = field(default_factory=list)
     daily_trend: list = field(default_factory=list)
 
 
@@ -88,6 +98,10 @@ def get_program_stats(program, days: int = 30, top_n: int = 10) -> ProgramStats:
             total=Sum("quantity")
         )["total"]
         or 0
+    )
+
+    total_donated = (
+        paid_contracts_qs.aggregate(total=Sum("donation_amount"))["total"] or Decimal("0.00")
     )
 
     resolved_qs = contracts.filter(status__in=RESOLVED_STATUSES)
@@ -152,6 +166,21 @@ def get_program_stats(program, days: int = 30, top_n: int = 10) -> ProgramStats:
         )
     ]
 
+    top_donors = [
+        DonorStat(
+            character_id=row["character_id"],
+            character_name=row["character__character_name"] or "Unknown",
+            total_donated=row["total_donated"],
+            contract_count=row["contract_count"],
+        )
+        for row in (
+            paid_contracts_qs.filter(donation_amount__gt=0)
+            .values("character_id", "character__character_name")
+            .annotate(total_donated=Sum("donation_amount"), contract_count=Count("id"))
+            .order_by("-total_donated")[:top_n]
+        )
+    ]
+
     daily_trend = _build_daily_trend(contracts, payout_qs, days)
 
     return ProgramStats(
@@ -162,12 +191,14 @@ def get_program_stats(program, days: int = 30, top_n: int = 10) -> ProgramStats:
         total_isk_paid=total_isk_paid,
         total_items_sold=total_items_sold,
         avg_contract_value=avg_contract_value,
+        total_donated=total_donated,
         flag_rate=flag_rate,
         rejection_rate=rejection_rate,
         expiry_rate=expiry_rate,
         avg_turnaround_hours=avg_turnaround_hours,
         top_items=top_items,
         top_sellers=top_sellers,
+        top_donors=top_donors,
         daily_trend=daily_trend,
     )
 

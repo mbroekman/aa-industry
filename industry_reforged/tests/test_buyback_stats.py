@@ -181,3 +181,25 @@ class TestGetProgramStats:
 
         stats_a = get_program_stats(program_a)
         assert stats_a.total_contracts == 1
+
+    def test_total_donated_only_counts_paid_contracts(self):
+        program = BuybackProgramFactory()
+        BuybackContractFactory(program=program, status="PAID", donation_amount=Decimal("500.00"))
+        BuybackContractFactory(program=program, status="PENDING", donation_amount=Decimal("999.00"))
+
+        stats = get_program_stats(program)
+        assert stats.total_donated == Decimal("500.00")
+
+    def test_top_donors_excludes_zero_donations_and_orders_by_amount(self):
+        program = BuybackProgramFactory()
+        alice = EveCharacterFactory(character_name="Alice")
+        bob = EveCharacterFactory(character_name="Bob")
+        carol = EveCharacterFactory(character_name="Carol")
+        BuybackContractFactory(program=program, status="PAID", character=alice, donation_amount=Decimal("100.00"))
+        BuybackContractFactory(program=program, status="PAID", character=bob, donation_amount=Decimal("1000.00"))
+        BuybackContractFactory(program=program, status="PAID", character=carol, donation_amount=Decimal("0.00"))
+
+        stats = get_program_stats(program)
+        donor_names = [d.character_name for d in stats.top_donors]
+        assert donor_names == ["Bob", "Alice"]
+        assert "Carol" not in donor_names

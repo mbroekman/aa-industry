@@ -37,29 +37,35 @@
             <h4 class="card-title mb-0">{{ stats.program_name }}</h4>
         </div>
         <div class="card-body">
-            <div class="row g-3 mb-4 text-center">
-                <div class="col-6 col-md-3">
+            <div class="row row-cols-2 row-cols-md-5 g-3 mb-4 text-center">
+                <div>
                     <div class="p-3 border rounded">
                         <div class="h3 mb-0">{{ stats.total_contracts }}</div>
                         <div class="text-muted small">{% trans "Total Contracts" %}</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
+                <div>
                     <div class="p-3 border rounded">
                         <div class="h3 mb-0">{{ stats.total_isk_paid|eve_isk_short }}</div>
                         <div class="text-muted small">{% trans "ISK Paid Out" %}</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
+                <div>
                     <div class="p-3 border rounded">
                         <div class="h3 mb-0">{{ stats.total_items_sold }}</div>
                         <div class="text-muted small">{% trans "Items Sold" %}</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
+                <div>
                     <div class="p-3 border rounded">
                         <div class="h3 mb-0">{{ stats.avg_contract_value|eve_isk_short }}</div>
                         <div class="text-muted small">{% trans "Avg Contract Value" %}</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="p-3 border rounded {% if stats.total_donated %}border-success{% endif %}">
+                        <div class="h3 mb-0">{{ stats.total_donated|eve_isk_short }}</div>
+                        <div class="text-muted small">{% trans "Donated to Corp" %}</div>
                     </div>
                 </div>
             </div>
@@ -104,7 +110,7 @@
             </div>
 
             <div class="row g-3">
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
                     <h5>{% trans "Top Sellers" %}</h5>
                     <div class="table-responsive">
                         <table class="table table-sm table-striped">
@@ -129,7 +135,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
                     <h5>{% trans "Top Items" %}</h5>
                     <div class="table-responsive">
                         <table class="table table-sm table-striped">
@@ -149,6 +155,31 @@
                                 </tr>
                                 {% empty %}
                                 <tr><td colspan="3" class="text-center text-muted">{% trans "No items sold yet." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <h5>{% trans "Top Donors" %}</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Character" %}</th>
+                                    <th class="text-end">{% trans "Contracts" %}</th>
+                                    <th class="text-end">{% trans "ISK Donated" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for donor in stats.top_donors %}
+                                <tr>
+                                    <td>{{ donor.character_name }}</td>
+                                    <td class="text-end">{{ donor.contract_count }}</td>
+                                    <td class="text-end">{{ donor.total_donated|eve_isk }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">{% trans "No donations yet." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

@@ -1,5 +1,8 @@
 """App Views"""
 
+# Standard Library
+from decimal import Decimal, InvalidOperation
+
 # Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -19,6 +22,26 @@ def _generate_tracking_number() -> str:
         candidate = "BB-" + get_random_string(8).upper()
         if not BuybackContract.objects.filter(tracking_number=candidate).exists():
             return candidate
+
+
+def _compute_donation(gross_total: Decimal, mode: str, raw_value: str) -> Decimal:
+    """Resolves the member's chosen donation (ISK amount or percentage of the
+    gross appraisal) into a concrete ISK amount, clamped to [0, gross_total]
+    so a donation can never exceed - let alone invert - the payout."""
+    try:
+        value = Decimal(raw_value.strip().replace(",", ".")) if raw_value else Decimal("0.00")
+    except InvalidOperation:
+        value = Decimal("0.00")
+    if value < 0:
+        value = Decimal("0.00")
+
+    if mode == "percent":
+        value = min(value, Decimal("100.00"))
+        donation = (gross_total * value / Decimal("100.00")).quantize(Decimal("0.01"))
+    else:
+        donation = value.quantize(Decimal("0.01"))
+
+    return min(donation, gross_total)
 
 
 @login_required
@@ -90,9 +113,17 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         messages.error(request, _("No valid items found in the pasted list."))
         return render(request, "industry_reforged/buyback/calculator.html", context)
 
-    total_price, item_details = calculate_buyback_quote(parsed_items, program)
-    context["total_price"] = total_price
+    gross_total, item_details = calculate_buyback_quote(parsed_items, program)
+    donation_mode = request.POST.get("donation_mode", "isk")
+    donation_amount = _compute_donation(gross_total, donation_mode, request.POST.get("donation_value", ""))
+    net_total = gross_total - donation_amount
+
+    context["total_price"] = gross_total
     context["item_details"] = item_details
+    context["donation_mode"] = donation_mode
+    context["donation_value"] = request.POST.get("donation_value", "")
+    context["donation_amount"] = donation_amount
+    context["net_total"] = net_total
 
     if request.POST.get("confirm") != "1":
         # Preview only - nothing is persisted and no ESI call is made here.
@@ -108,7 +139,8 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         tracking_number=tracking_number,
         program=program,
         character=character,
-        quoted_price=total_price,
+        quoted_price=net_total,
+        donation_amount=donation_amount,
         status="PENDING",
     )
     BuybackContractItem.objects.bulk_create(

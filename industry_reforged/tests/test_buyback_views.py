@@ -1,4 +1,5 @@
 # Standard Library
+from decimal import Decimal
 from unittest.mock import patch
 
 # Third Party
@@ -124,6 +125,105 @@ class TestBuybackMemberViews:
         assert contract.character_id == character.id
         assert contract.tracking_number.startswith("BB-")
         assert BuybackContractItem.objects.filter(contract=contract).count() == 1
+        assert contract.donation_amount == Decimal("0.00")
+        assert contract.quoted_price == Decimal("100")
+
+    def test_calculator_confirm_applies_isk_donation(self, rf):
+        user, character = _member_user()
+        program = BuybackProgramFactory()
+        eve_type = EveTypeFactory(name="Tritanium")
+
+        request = rf.post(
+            "/",
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t100",
+                "donation_mode": "isk",
+                "donation_value": "30",
+                "confirm": "1",
+            },
+        )
+        request.user = user
+
+        detail = {
+            "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
+            "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
+        }
+        with patch(
+            "industry_reforged.views.buyback.member.calculate_buyback_quote",
+            return_value=(Decimal("100"), [detail]),
+        ):
+            with patch("industry_reforged.views.buyback.member.messages"):
+                buyback_calculator(request)
+
+        contract = BuybackContract.objects.first()
+        assert contract.donation_amount == Decimal("30.00")
+        assert contract.quoted_price == Decimal("70.00")
+        assert contract.gross_appraisal == Decimal("100.00")
+
+    def test_calculator_confirm_applies_percent_donation(self, rf):
+        user, character = _member_user()
+        program = BuybackProgramFactory()
+        eve_type = EveTypeFactory(name="Tritanium")
+
+        request = rf.post(
+            "/",
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t100",
+                "donation_mode": "percent",
+                "donation_value": "10",
+                "confirm": "1",
+            },
+        )
+        request.user = user
+
+        detail = {
+            "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
+            "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
+        }
+        with patch(
+            "industry_reforged.views.buyback.member.calculate_buyback_quote",
+            return_value=(Decimal("100"), [detail]),
+        ):
+            with patch("industry_reforged.views.buyback.member.messages"):
+                buyback_calculator(request)
+
+        contract = BuybackContract.objects.first()
+        assert contract.donation_amount == Decimal("10.00")
+        assert contract.quoted_price == Decimal("90.00")
+
+    def test_calculator_donation_cannot_exceed_total(self, rf):
+        user, character = _member_user()
+        program = BuybackProgramFactory()
+        eve_type = EveTypeFactory(name="Tritanium")
+
+        request = rf.post(
+            "/",
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t100",
+                "donation_mode": "isk",
+                "donation_value": "99999999",  # far more than the gross total
+                "confirm": "1",
+            },
+        )
+        request.user = user
+
+        detail = {
+            "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
+            "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
+        }
+        with patch(
+            "industry_reforged.views.buyback.member.calculate_buyback_quote",
+            return_value=(Decimal("100"), [detail]),
+        ):
+            with patch("industry_reforged.views.buyback.member.messages"):
+                buyback_calculator(request)
+
+        contract = BuybackContract.objects.first()
+        assert contract.donation_amount == Decimal("100.00")
+        assert contract.quoted_price == Decimal("0.00")
 
     @patch("industry_reforged.views.buyback.member.render")
     def test_contract_detail_denies_non_owner(self, mock_render, rf):

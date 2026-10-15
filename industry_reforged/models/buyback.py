@@ -156,7 +156,18 @@ class BuybackContract(models.Model):
     esi_issuer_character_id = models.IntegerField(null=True, blank=True)
     esi_acceptor_character_id = models.IntegerField(null=True, blank=True)
 
-    quoted_price = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    quoted_price = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=0.00,
+        help_text=_("Net amount after any donation - this is what the member should put on the in-game contract."),
+    )
+    donation_amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=0.00,
+        help_text=_("ISK voluntarily donated to the corp from this contract's appraisal, chosen by the member at submission time. Already deducted from quoted_price."),
+    )
     contract_price = models.DecimalField(
         max_digits=20, decimal_places=2, null=True, blank=True
     )
@@ -180,6 +191,11 @@ class BuybackContract(models.Model):
 
     def __str__(self):
         return f"{self.tracking_number} ({self.status})"
+
+    @property
+    def gross_appraisal(self):
+        """The full appraisal before any donation - quoted_price + donation_amount."""
+        return self.quoted_price + self.donation_amount
 
     @property
     def has_flags(self):

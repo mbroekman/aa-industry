@@ -35,6 +35,17 @@
                             <label for="inventory_text" class="form-label">{% trans "Paste your inventory (Copy as List)" %}</label>
                             <textarea name="inventory_text" id="inventory_text" rows="12" class="form-control" placeholder="{% trans 'Right-click your inventory window in-game, Copy as List, then paste here.' %}">{{ inventory_text }}</textarea>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Donate part of this payout to the corp (optional)" %}</label>
+                            <div class="input-group">
+                                <select name="donation_mode" class="form-select" style="max-width: 7rem;">
+                                    <option value="isk" {% if donation_mode == "isk" %}selected{% endif %}>ISK</option>
+                                    <option value="percent" {% if donation_mode == "percent" %}selected{% endif %}>%</option>
+                                </select>
+                                <input type="text" inputmode="decimal" name="donation_value" class="form-control" placeholder="0" value="{{ donation_value|default:'' }}">
+                            </div>
+                            <div class="form-text">{% trans "Leave at 0 to keep the full payout." %}</div>
+                        </div>
                         <button type="submit" class="btn btn-primary"><i class="fas fa-calculator"></i> {% trans "Get Appraisal" %}</button>
                     </form>
                 </div>
@@ -84,9 +95,22 @@
                                 {% endfor %}
                             </tbody>
                             <tfoot>
-                                <tr class="fw-bold">
-                                    <td colspan="3">{% trans "Total" %}</td>
+                                <tr>
+                                    <td colspan="3">{% trans "Appraisal Subtotal" %}</td>
                                     <td class="text-end">{{ total_price|eve_isk }}</td>
+                                </tr>
+                                {% if donation_amount %}
+                                <tr class="text-danger">
+                                    <td colspan="3">
+                                        {% trans "Donation to corp" %}
+                                        {% if donation_mode == "percent" %}({{ donation_value }}%){% endif %}
+                                    </td>
+                                    <td class="text-end">-{{ donation_amount|eve_isk }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="fw-bold border-top">
+                                    <td colspan="3">{% trans "You Receive" %}</td>
+                                    <td class="text-end">{{ net_total|eve_isk }}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -97,6 +121,8 @@
                         {% csrf_token %}
                         <input type="hidden" name="program_id" value="{{ selected_program.id }}">
                         <input type="hidden" name="inventory_text" value="{{ inventory_text }}">
+                        <input type="hidden" name="donation_mode" value="{{ donation_mode }}">
+                        <input type="hidden" name="donation_value" value="{{ donation_value }}">
                         <input type="hidden" name="confirm" value="1">
                         <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Confirm & Get Tracking Number" %}</button>
                     </form>
