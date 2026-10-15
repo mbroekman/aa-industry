@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -23,14 +24,21 @@
                 <dd class="col-sm-9">{{ contract.get_status_display }}</dd>
 
                 <dt class="col-sm-3">{% trans "Program" %}</dt>
-                <dd class="col-sm-9">{{ contract.program.name }} ({{ contract.program.drop_off_name }})</dd>
+                <dd class="col-sm-9">
+                    {{ contract.program.name }} ({{ contract.program.drop_off_name }})
+                    {% if contract.program.price_modifier_percent %}
+                    <span class="badge {% if contract.program.price_modifier_percent < 0 %}bg-danger{% else %}bg-success{% endif %} ms-1">
+                        {% if contract.program.price_modifier_percent > 0 %}+{% endif %}{{ contract.program.price_modifier_percent }}%
+                    </span>
+                    {% endif %}
+                </dd>
 
                 <dt class="col-sm-3">{% trans "Quoted Price" %}</dt>
-                <dd class="col-sm-9">{{ contract.quoted_price }} ISK</dd>
+                <dd class="col-sm-9">{{ contract.quoted_price|eve_isk }}</dd>
 
                 {% if contract.contract_price %}
                 <dt class="col-sm-3">{% trans "Actual Contract Price" %}</dt>
-                <dd class="col-sm-9">{{ contract.contract_price }} ISK</dd>
+                <dd class="col-sm-9">{{ contract.contract_price|eve_isk }}</dd>
                 {% endif %}
 
                 <dt class="col-sm-3">{% trans "Submitted" %}</dt>
@@ -75,8 +83,8 @@
                         <tr>
                             <td>{{ item.eve_type.name }}</td>
                             <td class="text-end">{{ item.quantity }}</td>
-                            <td class="text-end">{{ item.unit_price }}</td>
-                            <td class="text-end">{{ item.line_total }}</td>
+                            <td class="text-end">{{ item.unit_price|eve_isk }}</td>
+                            <td class="text-end">{{ item.line_total|eve_isk }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

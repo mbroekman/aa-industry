@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -43,7 +44,7 @@
                                 {% endif %}
                             </td>
                             <td>{{ contract.flag_notes|default:"-" }}</td>
-                            <td class="text-end">{{ contract.quoted_price }} ISK</td>
+                            <td class="text-end">{{ contract.quoted_price|eve_isk }}</td>
                             <td class="text-end">
                                 <form method="post" action="{% url 'industry_reforged:director_buyback_contract_resolve' contract.tracking_number %}" class="d-inline">
                                     {% csrf_token %}

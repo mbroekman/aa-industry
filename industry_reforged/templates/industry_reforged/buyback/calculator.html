@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -43,7 +44,21 @@
         <div class="col-12 col-lg-6">
             {% if item_details %}
             <div class="card border-0 mb-4">
-                <div class="card-header"><h5 class="card-title mb-0">{% trans "Appraisal" %}</h5></div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{% trans "Appraisal" %}</h5>
+                    <div>
+                        {% if selected_program.price_modifier_percent %}
+                        <span class="badge {% if selected_program.price_modifier_percent < 0 %}bg-danger{% else %}bg-success{% endif %}" title="{% trans 'Price modifier applied by this program' %}">
+                            {% trans "Price modifier:" %} {% if selected_program.price_modifier_percent > 0 %}+{% endif %}{{ selected_program.price_modifier_percent }}%
+                        </span>
+                        {% endif %}
+                        {% if selected_program.price_density_tax_percent %}
+                        <span class="badge bg-warning text-dark" title="{% trans 'Deducted from bulky, low ISK/m3 items below the configured threshold' %}">
+                            {% trans "Bulk item tax:" %} -{{ selected_program.price_density_tax_percent }}%
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-striped m-0">
@@ -63,15 +78,15 @@
                                         {% if detail.blocked %}<span class="badge bg-danger ms-1">{% trans "Blocked" %}</span>{% elif detail.flagged %}<span class="badge bg-warning text-dark ms-1">{% trans "Flagged" %}</span>{% endif %}
                                     </td>
                                     <td class="text-end">{{ detail.quantity }}</td>
-                                    <td class="text-end">{{ detail.unit_price }}</td>
-                                    <td class="text-end">{{ detail.line_total }}</td>
+                                    <td class="text-end">{{ detail.unit_price|eve_isk }}</td>
+                                    <td class="text-end">{{ detail.line_total|eve_isk }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold">
                                     <td colspan="3">{% trans "Total" %}</td>
-                                    <td class="text-end">{{ total_price }} ISK</td>
+                                    <td class="text-end">{{ total_price|eve_isk }}</td>
                                 </tr>
                             </tfoot>
                         </table>

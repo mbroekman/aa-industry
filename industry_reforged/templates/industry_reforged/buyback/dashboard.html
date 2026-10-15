@@ -1,5 +1,6 @@
 {% extends "industry_reforged/base.html" %}
 {% load i18n %}
+{% load industry_tags %}
 
 {% block details %}
 <div class="container-fluid">
@@ -40,7 +41,11 @@
                             <td class="fw-bold">{{ program.name }}</td>
                             <td>{{ program.corporation.corporation_ticker }}</td>
                             <td>{{ program.drop_off_name }}</td>
-                            <td>{{ program.price_modifier_percent }}%</td>
+                            <td>
+                                <span class="badge {% if program.price_modifier_percent < 0 %}bg-danger{% elif program.price_modifier_percent > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {% if program.price_modifier_percent > 0 %}+{% endif %}{{ program.price_modifier_percent }}%
+                                </span>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4" class="text-center text-muted py-3">{% trans "No active buyback programs right now." %}</td></tr>
@@ -71,7 +76,7 @@
                             <td><a href="{% url 'industry_reforged:buyback_contract_detail' contract.tracking_number %}">{{ contract.tracking_number }}</a></td>
                             <td>{{ contract.program.name }}</td>
                             <td>{{ contract.get_status_display }}</td>
-                            <td class="text-end">{{ contract.quoted_price }} ISK</td>
+                            <td class="text-end">{{ contract.quoted_price|eve_isk }}</td>
                             <td class="text-end">{{ contract.created_at|date:"Y-m-d H:i" }}</td>
                         </tr>
                         {% empty %}

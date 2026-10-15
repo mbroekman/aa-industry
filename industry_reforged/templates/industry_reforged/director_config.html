@@ -532,7 +532,11 @@
                                     <td class="fw-bold">{{ program.name }}</td>
                                     <td>{{ program.corporation.corporation_ticker }}</td>
                                     <td>{{ program.drop_off_name }}</td>
-                                    <td>{{ program.price_modifier_percent }}%</td>
+                                    <td>
+                                        <span class="badge {% if program.price_modifier_percent < 0 %}bg-danger{% elif program.price_modifier_percent > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {% if program.price_modifier_percent > 0 %}+{% endif %}{{ program.price_modifier_percent }}%
+                                        </span>
+                                    </td>
                                     <td>
                                         {% if program.is_active %}
                                         <span class="badge bg-success">{% trans "Active" %}</span>
