@@ -95,6 +95,7 @@ class CorporationWebhookConfigAdmin(admin.ModelAdmin):
         "wallets_webhook",
         "inventory_webhook",
         "ai_jobs_webhook",
+        "buyback_webhook",
     )
 
 
