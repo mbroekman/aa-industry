@@ -185,3 +185,4 @@ class BuybackContractItemFactory(factory.django.DjangoModelFactory):
     eve_type = factory.SubFactory(EveTypeFactory)
     quantity = 1
     unit_price = factory.LazyFunction(lambda: Decimal("100.00"))
+    base_unit_price = factory.LazyAttribute(lambda o: o.unit_price)

@@ -23,6 +23,9 @@
                 <dt class="col-sm-3">{% trans "Status" %}</dt>
                 <dd class="col-sm-9">{{ contract.get_status_display }}</dd>
 
+                <dt class="col-sm-3">{% trans "Submitted By" %}</dt>
+                <dd class="col-sm-9">{{ contract.character.character_name|default:"-" }}</dd>
+
                 <dt class="col-sm-3">{% trans "Program" %}</dt>
                 <dd class="col-sm-9">
                     {{ contract.program.name }} ({{ contract.program.drop_off_name }})
@@ -32,6 +35,16 @@
                     </span>
                     {% endif %}
                 </dd>
+
+                <dt class="col-sm-3">{% trans "Base Market Value" %}</dt>
+                <dd class="col-sm-9">{{ contract.base_appraisal_total|eve_isk }}</dd>
+
+                {% if contract.modifier_impact %}
+                <dt class="col-sm-3">{% trans "Price Modifier / Bulk Tax" %}</dt>
+                <dd class="col-sm-9 {% if contract.modifier_impact < 0 %}text-danger{% else %}text-success{% endif %}">
+                    {% if contract.modifier_impact > 0 %}+{% endif %}{{ contract.modifier_impact|eve_isk }}
+                </dd>
+                {% endif %}
 
                 {% if contract.donation_amount %}
                 <dt class="col-sm-3">{% trans "Appraisal" %}</dt>

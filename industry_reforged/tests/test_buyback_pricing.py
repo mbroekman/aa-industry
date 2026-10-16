@@ -161,6 +161,27 @@ class TestCalculateBuybackQuote:
         total, details = calculate_buyback_quote({eve_type: 1}, program)
         assert total == Decimal("90.00")
 
+    def test_base_unit_price_reflects_pre_modifier_value(self, mock_esi_orders):
+        program = BuybackProgramFactory(price_modifier_percent=-10.0)
+        eve_type = EveTypeFactory()
+        mock_esi_orders.return_value = _market_response(100.0)
+
+        total, details = calculate_buyback_quote({eve_type: 2}, program)
+        assert details[0]["base_unit_price"] == Decimal("100.00")
+        assert details[0]["base_line_total"] == Decimal("200.00")
+        assert details[0]["unit_price"] == Decimal("90.00")
+        assert total == Decimal("180.00")
+
+    def test_blocked_item_has_zero_base_price(self, mock_esi_orders):
+        program = BuybackProgramFactory()
+        eve_type = EveTypeFactory()
+        BuybackWatchlistItemFactory(program=program, eve_type=eve_type, blocks_submission=True)
+        mock_esi_orders.return_value = _market_response(100.0)
+
+        total, details = calculate_buyback_quote({eve_type: 1}, program)
+        assert details[0]["base_unit_price"] == Decimal("0.00")
+        assert details[0]["base_line_total"] == Decimal("0.00")
+
     def test_watchlist_blocking_item_excluded_from_total(self, mock_esi_orders):
         program = BuybackProgramFactory()
         eve_type = EveTypeFactory()

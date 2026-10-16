@@ -114,12 +114,17 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         return render(request, "industry_reforged/buyback/calculator.html", context)
 
     gross_total, item_details = calculate_buyback_quote(parsed_items, program)
+    base_total = sum((d["base_line_total"] for d in item_details), Decimal("0.00"))
+    modifier_impact = gross_total - base_total
+
     donation_mode = request.POST.get("donation_mode", "isk")
     donation_amount = _compute_donation(gross_total, donation_mode, request.POST.get("donation_value", ""))
     net_total = gross_total - donation_amount
 
     context["total_price"] = gross_total
     context["item_details"] = item_details
+    context["base_total"] = base_total
+    context["modifier_impact"] = modifier_impact
     context["donation_mode"] = donation_mode
     context["donation_value"] = request.POST.get("donation_value", "")
     context["donation_amount"] = donation_amount
@@ -150,6 +155,7 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
                 eve_type=d["eve_type"],
                 quantity=d["quantity"],
                 unit_price=d["unit_price"],
+                base_unit_price=d["base_unit_price"],
             )
             for d in submittable
         ]

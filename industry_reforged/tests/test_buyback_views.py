@@ -80,7 +80,7 @@ class TestBuybackMemberViews:
 
         with patch(
             "industry_reforged.views.buyback.member.calculate_buyback_quote",
-            return_value=(100, [{"eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100, "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": ""}]),
+            return_value=(100, [{"eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100, "base_unit_price": 1, "base_line_total": 100, "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": ""}]),
         ):
             buyback_calculator(request)
 
@@ -107,6 +107,8 @@ class TestBuybackMemberViews:
             "quantity": 100,
             "unit_price": 1,
             "line_total": 100,
+            "base_unit_price": 1,
+            "base_line_total": 100,
             "blocked": False,
             "flagged": False,
             "value_source": "market",
@@ -128,6 +130,42 @@ class TestBuybackMemberViews:
         assert contract.donation_amount == Decimal("0.00")
         assert contract.quoted_price == Decimal("100")
 
+    def test_calculator_persists_base_unit_price_for_modifier_breakdown(self, rf):
+        user, character = _member_user()
+        program = BuybackProgramFactory(price_modifier_percent=-10.0)
+        eve_type = EveTypeFactory(name="Tritanium")
+
+        request = rf.post(
+            "/",
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t1",
+                "confirm": "1",
+            },
+        )
+        request.user = user
+
+        # Simulates a -10% modifier: base 100 -> final 90.
+        detail = {
+            "eve_type": eve_type, "quantity": 1, "unit_price": Decimal("90.00"),
+            "line_total": Decimal("90.00"), "base_unit_price": Decimal("100.00"),
+            "base_line_total": Decimal("100.00"), "blocked": False, "flagged": False,
+            "value_source": "market", "watchlist_reason": "",
+        }
+        with patch(
+            "industry_reforged.views.buyback.member.calculate_buyback_quote",
+            return_value=(Decimal("90.00"), [detail]),
+        ):
+            with patch("industry_reforged.views.buyback.member.messages"):
+                buyback_calculator(request)
+
+        contract = BuybackContract.objects.first()
+        item = BuybackContractItem.objects.get(contract=contract)
+        assert item.base_unit_price == Decimal("100.00")
+        assert item.unit_price == Decimal("90.00")
+        assert contract.base_appraisal_total == Decimal("100.00")
+        assert contract.modifier_impact == Decimal("-10.00")
+
     def test_calculator_confirm_applies_isk_donation(self, rf):
         user, character = _member_user()
         program = BuybackProgramFactory()
@@ -147,6 +185,7 @@ class TestBuybackMemberViews:
 
         detail = {
             "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
+            "base_unit_price": 1, "base_line_total": 100,
             "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
         }
         with patch(
@@ -180,6 +219,7 @@ class TestBuybackMemberViews:
 
         detail = {
             "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
+            "base_unit_price": 1, "base_line_total": 100,
             "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
         }
         with patch(
@@ -212,6 +252,7 @@ class TestBuybackMemberViews:
 
         detail = {
             "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
+            "base_unit_price": 1, "base_line_total": 100,
             "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
         }
         with patch(

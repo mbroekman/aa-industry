@@ -96,6 +96,16 @@
                             </tbody>
                             <tfoot>
                                 <tr>
+                                    <td colspan="3">{% trans "Base Market Value" %}</td>
+                                    <td class="text-end">{{ base_total|eve_isk }}</td>
+                                </tr>
+                                {% if modifier_impact %}
+                                <tr class="{% if modifier_impact < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    <td colspan="3">{% trans "Price modifier / bulk tax adjustment" %}</td>
+                                    <td class="text-end">{% if modifier_impact > 0 %}+{% endif %}{{ modifier_impact|eve_isk }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="border-top">
                                     <td colspan="3">{% trans "Appraisal Subtotal" %}</td>
                                     <td class="text-end">{{ total_price|eve_isk }}</td>
                                 </tr>

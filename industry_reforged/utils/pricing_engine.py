@@ -565,6 +565,8 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
                     "quantity": quantity,
                     "unit_price": Decimal("0.00"),
                     "line_total": Decimal("0.00"),
+                    "base_unit_price": Decimal("0.00"),
+                    "base_line_total": Decimal("0.00"),
                     "value_source": None,
                     "blocked": True,
                     "flagged": False,
@@ -583,10 +585,10 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
         else:
             value_source, line_total = max(variants.items(), key=lambda kv: kv[1])
 
-        unit_price = (line_total / quantity).quantize(Decimal("0.01")) if quantity else Decimal("0.00")
+        base_unit_price = (line_total / quantity).quantize(Decimal("0.01")) if quantity else Decimal("0.00")
 
         modifier = Decimal(str(program.price_modifier_percent or 0.0)) / Decimal("100.00")
-        unit_price = (unit_price * (Decimal("1.00") + modifier)).quantize(Decimal("0.01"))
+        unit_price = (base_unit_price * (Decimal("1.00") + modifier)).quantize(Decimal("0.01"))
 
         packaged_volume = eve_type.packaged_volume or eve_type.volume
         density_tax = calculate_price_density_tax(unit_price, packaged_volume, program)
@@ -601,6 +603,8 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
                 "quantity": quantity,
                 "unit_price": unit_price,
                 "line_total": line_total,
+                "base_unit_price": base_unit_price,
+                "base_line_total": base_unit_price * quantity,
                 "value_source": value_source,
                 "blocked": False,
                 "flagged": bool(watchlist_entry),

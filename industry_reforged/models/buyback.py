@@ -2,11 +2,15 @@
 App Models
 """
 
+# Standard Library
+from decimal import Decimal
+
 # Third Party
 from eveuniverse.models import EveCategory, EveType
 
 # Django
 from django.db import models
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
@@ -198,6 +202,22 @@ class BuybackContract(models.Model):
         return self.quoted_price + self.donation_amount
 
     @property
+    def base_appraisal_total(self):
+        """Sum of items' base_line_total - what the items were worth before the
+        program's price modifier and bulk-item tax were applied."""
+        total = self.items.aggregate(
+            total=Sum(models.F("base_unit_price") * models.F("quantity"))
+        )["total"]
+        return total or Decimal("0.00")
+
+    @property
+    def modifier_impact(self):
+        """ISK difference the program's price modifier + bulk-item tax made to
+        this contract: gross_appraisal (pre-donation) minus base_appraisal_total.
+        Negative means the modifier reduced the payout (e.g. a -5% modifier)."""
+        return self.gross_appraisal - self.base_appraisal_total
+
+    @property
     def has_flags(self):
         return any(
             [
@@ -224,6 +244,12 @@ class BuybackContractItem(models.Model):
     eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     quantity = models.IntegerField()
     unit_price = models.DecimalField(max_digits=20, decimal_places=2)
+    base_unit_price = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=0.00,
+        help_text=_("Appraised unit price before the program's price modifier and bulk-item tax were applied."),
+    )
     is_esi_verified = models.BooleanField(
         default=False,
         help_text=_("Set True once the matching task confirms this exact type/qty in the real ESI contract."),
@@ -239,3 +265,7 @@ class BuybackContractItem(models.Model):
     @property
     def line_total(self):
         return self.unit_price * self.quantity
+
+    @property
+    def base_line_total(self):
+        return self.base_unit_price * self.quantity
