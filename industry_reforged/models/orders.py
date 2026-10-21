@@ -503,6 +503,7 @@ class ProductionTask(models.Model):
     )
 
     PRIORITY_CHOICES = (
+        ("URGENT", "Urgent"),
         ("HIGH", "High"),
         ("NORMAL", "Normal"),
         ("LOW", "Low"),

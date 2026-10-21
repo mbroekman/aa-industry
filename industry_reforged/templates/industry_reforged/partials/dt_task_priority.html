@@ -1,3 +1,13 @@
-<span class="badge {% if task.priority == 'HIGH' %}bg-danger{% elif task.priority == 'NORMAL' %}bg-primary{% else %}bg-secondary{% endif %}">
-    {{ task.priority }}
-</span>
+{% load i18n %}
+{% if task.priority == 'URGENT' %}
+<span class="badge bg-danger text-white"><i class="fas fa-bolt me-1"></i>{% trans "Urgent" %}</span>
+{% elif task.priority == 'HIGH' %}
+<span class="badge bg-warning text-dark"><i class="fas fa-angle-double-up me-1"></i>{% trans "High" %}</span>
+{% elif task.priority == 'NORMAL' %}
+<span class="badge bg-primary text-white">{% trans "Normal" %}</span>
+{% elif task.priority == 'LOW' %}
+<span class="badge bg-secondary text-white"><i class="fas fa-angle-down me-1"></i>{% trans "Low" %}</span>
+{% else %}
+<span class="badge bg-secondary text-white">{{ task.priority }}</span>
+{% endif %}
+

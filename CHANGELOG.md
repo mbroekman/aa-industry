@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **tasks**: Implemented Production Task Priority Controls and Multiplier Visualization (TASK-254):
+  - Added `URGENT` to `ProductionTask.PRIORITY_CHOICES` (migration `0079`) for rush jobs.
+  - Added single (`set_task_priority`) and bulk (`bulk_set_task_priority`) priority management endpoints with automatic `builder_reward` and `estimated_duration_seconds` recalculation using configured corporate multipliers (`builder_urgent_multiplier`, `builder_high_multiplier`, `builder_low_multiplier`).
+  - Added priority selector when directors spawn manual restock jobs in `director_inventory.html`.
+  - Added Priority column to Job Market (`#jobmarket-table`) and Active Production (`#active-production-table`) in `industrialist_dashboard.html`:
+    - Directors can change task priorities inline via dropdown or in bulk via "Set Priority" toolbar dropdown.
+    - Added rich priority badges with icons for Urgent (danger/bolt), High (warning/angle-double-up), Normal (primary), and Low (secondary/angle-down).
+    - Unclaimed tasks on Job Market are ordered with Urgent and High priorities appearing first.
+  - Added unit test suite `test_task_priority.py` covering single/bulk priority updates, reward recalculations, permission gates, restock spawning, and priority sorting.
 - **rewards**: Restored `builder_reward_percent` in Builder Pricing (TASK-253):
   - Re-added `builder_reward_percent` field to `CorpPricingConfig` (migration `0078`), restoring the optional value incentive component in builder compensation configurations.
   - Restored "Value %" column and inputs in `director_config.html` and `CorpPricingConfigForm`.

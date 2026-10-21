@@ -205,12 +205,20 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="quantity" value="{{ item.deficit }}">
                                         {% if item.build_or_buy == "BUILD" %}
-                                        <button type="submit" class="btn btn-xs btn-outline-warning" title="Spawn UNCLAIMED task">
-                                            <i class="fas fa-industry"></i> Spawn Job
-                                        </button>
+                                        <div class="input-group input-group-sm d-inline-flex w-auto align-items-center">
+                                            <select name="priority" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: auto;" title="{% trans 'Priority' %}">
+                                                <option value="NORMAL" selected>{% trans "Normal" %}</option>
+                                                <option value="HIGH">{% trans "High" %}</option>
+                                                <option value="URGENT">{% trans "Urgent" %}</option>
+                                                <option value="LOW">{% trans "Low" %}</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Spawn UNCLAIMED task">
+                                                <i class="fas fa-industry"></i> {% trans "Spawn Job" %}
+                                            </button>
+                                        </div>
                                         {% else %}
-                                        <button type="submit" class="btn btn-xs btn-outline-success" title="Generate Procurement Order">
-                                            <i class="fas fa-shopping-cart"></i> Procure
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Generate Procurement Order">
+                                            <i class="fas fa-shopping-cart"></i> {% trans "Procure" %}
                                         </button>
                                         {% endif %}
                                     </form>

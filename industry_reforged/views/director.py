@@ -217,6 +217,148 @@ def bulk_delete_tasks(request: WSGIRequest) -> HttpResponse:
 
 @login_required
 @permission_required("industry_reforged.corp_access")
+def set_task_priority(request: WSGIRequest, task_id: int) -> HttpResponse:
+    """Update priority for a single ProductionTask and recalculate builder reward."""
+    if request.method == "POST":
+        from ..utils.pricing_engine import calculate_task_builder_reward
+
+        task = get_object_or_404(ProductionTask, id=task_id)
+        new_priority = request.POST.get("priority", "").upper()
+        valid_priorities = [p[0] for p in ProductionTask.PRIORITY_CHOICES]
+
+        if new_priority in valid_priorities:
+            task.priority = new_priority
+
+            corp_info = None
+            if task.created_from_order and task.created_from_order.character:
+                corp_info = task.created_from_order.character.corporation
+            elif request.user.profile.main_character:
+                corp_info = request.user.profile.main_character.corporation
+
+            pricing_config = (
+                CorpPricingConfig.objects.filter(corporation=corp_info).first()
+                if corp_info
+                else None
+            )
+
+            new_reward, est_sec = calculate_task_builder_reward(
+                eve_type=task.item_type,
+                quantity=task.quantity,
+                activity_id=task.activity_id,
+                priority=task.priority,
+                pricing_config=pricing_config,
+                line_total_value=task.gamification_value,
+            )
+            task.builder_reward = new_reward
+            if est_sec > 0:
+                task.estimated_duration_seconds = est_sec
+            task.save(
+                update_fields=[
+                    "priority",
+                    "builder_reward",
+                    "estimated_duration_seconds",
+                ]
+            )
+
+            messages.success(
+                request,
+                _(
+                    "Updated priority for %(qty)sx %(item)s to %(prio)s (Reward: %(reward)s ISK)."
+                )
+                % {
+                    "qty": task.quantity,
+                    "item": task.item_type.name,
+                    "prio": task.get_priority_display(),
+                    "reward": f"{task.builder_reward:,.2f}",
+                },
+            )
+        else:
+            messages.error(request, _("Invalid priority specified."))
+
+    referer = request.headers.get("referer")
+    if referer and ("industry" in referer):
+        return redirect(referer)
+    return redirect("industry_reforged:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def bulk_set_task_priority(request: WSGIRequest) -> HttpResponse:
+    """Bulk update priority for ProductionTasks and recalculate builder rewards."""
+    if request.method == "POST":
+        from ..utils.pricing_engine import calculate_task_builder_reward
+
+        task_ids = request.POST.getlist("task_ids")
+        new_priority = request.POST.get("priority", "").upper()
+        valid_priorities = [p[0] for p in ProductionTask.PRIORITY_CHOICES]
+
+        if not task_ids:
+            messages.warning(request, _("No tasks selected."))
+        elif new_priority not in valid_priorities:
+            messages.error(request, _("Invalid priority specified."))
+        else:
+            tasks = ProductionTask.objects.filter(id__in=task_ids)
+            updated_count = 0
+
+            main_corp = (
+                request.user.profile.main_character.corporation
+                if request.user.profile.main_character
+                else None
+            )
+            pricing_configs = {}
+            for c in CorpPricingConfig.objects.all().select_related("corporation"):
+                pricing_configs[c.corporation_id] = c
+                if c.corporation:
+                    pricing_configs[c.corporation.pk] = c
+                    pricing_configs[getattr(c.corporation, "corporation_id", None)] = c
+
+            for task in tasks:
+                task.priority = new_priority
+                corp_info = None
+                if task.created_from_order and task.created_from_order.character:
+                    corp_info = task.created_from_order.character.corporation
+                elif main_corp:
+                    corp_info = main_corp
+
+                cfg = None
+                if corp_info:
+                    cfg = pricing_configs.get(corp_info.pk) or pricing_configs.get(
+                        getattr(corp_info, "corporation_id", None)
+                    )
+                new_reward, est_sec = calculate_task_builder_reward(
+                    eve_type=task.item_type,
+                    quantity=task.quantity,
+                    activity_id=task.activity_id,
+                    priority=task.priority,
+                    pricing_config=cfg,
+                    line_total_value=task.gamification_value,
+                )
+                task.builder_reward = new_reward
+                if est_sec > 0:
+                    task.estimated_duration_seconds = est_sec
+                task.save(
+                    update_fields=[
+                        "priority",
+                        "builder_reward",
+                        "estimated_duration_seconds",
+                    ]
+                )
+                updated_count += 1
+
+            messages.success(
+                request,
+                _("Successfully updated priority to %(prio)s for %(count)s job(s).")
+                % {"prio": new_priority, "count": updated_count},
+            )
+
+    referer = request.headers.get("referer")
+    if referer and ("industry" in referer):
+        return redirect(referer)
+    return redirect("industry_reforged:industrialist_dashboard")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
 def mark_order_paid(request: WSGIRequest, order_id: int) -> HttpResponse:
     """Manually process payment (partial or full) and optional notes."""
     if request.method == "POST":
@@ -658,11 +800,15 @@ def spawn_restock_job(request: WSGIRequest, type_id: int) -> HttpResponse:
                 price_per_unit = prices.get(eve_type.id, 0)
                 line_total = float(price_per_unit) * quantity
 
+                priority = request.POST.get("priority", "NORMAL").upper()
+                if priority not in [p[0] for p in ProductionTask.PRIORITY_CHOICES]:
+                    priority = "NORMAL"
+
                 task_reward, est_duration_seconds = calculate_task_builder_reward(
                     eve_type=eve_type,
                     quantity=quantity,
                     activity_id=1,
-                    priority="NORMAL",
+                    priority=priority,
                     pricing_config=pricing_config,
                     line_total_value=line_total,
                 )
@@ -672,6 +818,7 @@ def spawn_restock_job(request: WSGIRequest, type_id: int) -> HttpResponse:
                     quantity=quantity,
                     status="UNCLAIMED",
                     origin="MANUAL",
+                    priority=priority,
                     gamification_value=line_total,
                     builder_reward=task_reward,
                     estimated_duration_seconds=est_duration_seconds,

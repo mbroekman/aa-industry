@@ -132,6 +132,22 @@
                                         </form>
                                         {% if perms.industry_reforged.corp_access %}
                                         <div class="vr bg-secondary mx-1"></div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-tags me-1"></i> {% trans "Set Priority" %}
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-dark shadow">
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="submitBulkPriority('URGENT')"><span class="badge bg-danger me-2"><i class="fas fa-bolt"></i></span> {% trans "Urgent" %}</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="submitBulkPriority('HIGH')"><span class="badge bg-warning text-dark me-2"><i class="fas fa-angle-double-up"></i></span> {% trans "High" %}</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="submitBulkPriority('NORMAL')"><span class="badge bg-primary me-2"><i class="fas fa-minus"></i></span> {% trans "Normal" %}</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="submitBulkPriority('LOW')"><span class="badge bg-secondary me-2"><i class="fas fa-angle-down"></i></span> {% trans "Low" %}</a></li>
+                                            </ul>
+                                        </div>
+                                        <form method="post" action="{% url 'industry_reforged:bulk_set_task_priority' %}" id="bulkSetPriorityForm" class="d-none">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="priority" id="bulkPriorityInput" value="">
+                                        </form>
+                                        <div class="vr bg-secondary mx-1"></div>
                                         <form method="post" action="{% url 'industry_reforged:bulk_delete_tasks' %}"
                                             id="bulkDeleteUnclaimedForm" class="d-flex align-items-center gap-1 mb-0">
                                             {% csrf_token %}
@@ -150,6 +166,7 @@
                                                     <th style="width: 40px;" class="text-center"><input type="checkbox"
                                                             onclick="toggleSelectAllUnclaimed(this)"></th>
                                                     <th>{% trans "Item" %}</th>
+                                                    <th>{% trans "Priority" %}</th>
                                                     <th>Origin</th>
                                                     <th class="text-end">{% trans "Qty" %}</th>
                                                     <th class="text-end">{% trans "Reward Value" %}</th>
@@ -178,6 +195,56 @@
                                                                 </span>
                                                             </div>
                                                         </div>
+                                                    </td>
+                                                    <td data-sort="{% if task.priority == 'URGENT' %}1{% elif task.priority == 'HIGH' %}2{% elif task.priority == 'NORMAL' %}3{% else %}4{% endif %}">
+                                                        {% if perms.industry_reforged.corp_access %}
+                                                        <div class="dropdown">
+                                                            <button class="btn btn-sm dropdown-toggle p-0 border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                                {% include "industry_reforged/partials/dt_task_priority.html" with task=task %}
+                                                            </button>
+                                                            <ul class="dropdown-menu dropdown-menu-dark shadow">
+                                                                <li><h6 class="dropdown-header">{% trans "Change Priority" %}</h6></li>
+                                                                <li>
+                                                                    <form method="post" action="{% url 'industry_reforged:set_task_priority' task.id %}">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="priority" value="URGENT">
+                                                                        <button type="submit" class="dropdown-item d-flex align-items-center {% if task.priority == 'URGENT' %}active{% endif %}">
+                                                                            <span class="badge bg-danger me-2"><i class="fas fa-bolt"></i></span> {% trans "Urgent" %}
+                                                                        </button>
+                                                                    </form>
+                                                                </li>
+                                                                <li>
+                                                                    <form method="post" action="{% url 'industry_reforged:set_task_priority' task.id %}">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="priority" value="HIGH">
+                                                                        <button type="submit" class="dropdown-item d-flex align-items-center {% if task.priority == 'HIGH' %}active{% endif %}">
+                                                                            <span class="badge bg-warning text-dark me-2"><i class="fas fa-angle-double-up"></i></span> {% trans "High" %}
+                                                                        </button>
+                                                                    </form>
+                                                                </li>
+                                                                <li>
+                                                                    <form method="post" action="{% url 'industry_reforged:set_task_priority' task.id %}">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="priority" value="NORMAL">
+                                                                        <button type="submit" class="dropdown-item d-flex align-items-center {% if task.priority == 'NORMAL' %}active{% endif %}">
+                                                                            <span class="badge bg-primary me-2"><i class="fas fa-minus"></i></span> {% trans "Normal" %}
+                                                                        </button>
+                                                                    </form>
+                                                                </li>
+                                                                <li>
+                                                                    <form method="post" action="{% url 'industry_reforged:set_task_priority' task.id %}">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="priority" value="LOW">
+                                                                        <button type="submit" class="dropdown-item d-flex align-items-center {% if task.priority == 'LOW' %}active{% endif %}">
+                                                                            <span class="badge bg-secondary me-2"><i class="fas fa-angle-down"></i></span> {% trans "Low" %}
+                                                                        </button>
+                                                                    </form>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                        {% else %}
+                                                        {% include "industry_reforged/partials/dt_task_priority.html" with task=task %}
+                                                        {% endif %}
                                                     </td>
                                                     <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
@@ -291,6 +358,7 @@
                                                                 type="checkbox" onclick="toggleSelectAllActive(this)">
                                                         </th>
                                                         <th>{% trans "Item" %}</th>
+                                                        <th>{% trans "Priority" %}</th>
                                                         <th>Origin</th>
                                                         <th class="text-end">{% trans "Qty" %}</th>
                                                         <th>{% trans "Claimed By" %}</th>
@@ -355,6 +423,9 @@
                                                                     {% endif %}
                                                                 </div>
                                                             </div>
+                                                        </td>
+                                                        <td data-sort="{% if task.priority == 'URGENT' %}1{% elif task.priority == 'HIGH' %}2{% elif task.priority == 'NORMAL' %}3{% else %}4{% endif %}">
+                                                            {% include "industry_reforged/partials/dt_task_priority.html" with task=task %}
                                                         </td>
                                                         <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                         <td class="text-end numeric">{{ task.quantity }}</td>
@@ -1289,6 +1360,38 @@
             }, 'btn-danger');
         }
 
+        function submitBulkPriority(prio) {
+            var checkboxes = document.getElementsByClassName('unclaimed-checkbox');
+            var selectedIds = [];
+            for (var i = 0, n = checkboxes.length; i < n; i++) {
+                if (checkboxes[i].checked) {
+                    selectedIds.push(checkboxes[i].value);
+                }
+            }
+
+            if (selectedIds.length === 0) {
+                var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('shoppingListErrorModal'));
+                document.getElementById('shoppingListErrorModalLabel').innerText = "{% trans 'Selection Required' %}";
+                document.querySelector('#shoppingListErrorModal .modal-body').innerText = "{% trans 'Please select at least one task to set priority.' %}";
+                errorModal.show();
+                return;
+            }
+
+            var form = document.getElementById('bulkSetPriorityForm');
+            if (!form) return;
+            document.getElementById('bulkPriorityInput').value = prio;
+            form.querySelectorAll('input[name="task_ids"]').forEach(function(e) { e.remove(); });
+            selectedIds.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'task_ids';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            form.submit();
+        }
+
         function submitBulkDeleteActive() {
             var checkboxes = document.querySelectorAll('.active-checkbox');
             var selectedIds = [];
@@ -1343,7 +1446,7 @@
             try {
                 if ($('#active-production-table').length) {
                     var config1 = $.extend(true, {}, baseConfig);
-                    config1.columnDefs = [{ "orderable": false, "targets": [0, 6] }];
+                    config1.columnDefs = [{ "orderable": false, "targets": [0, 7] }];
                     $('#active-production-table').DataTable(config1);
                 }
             } catch (e) { console.error("Error init active production table:", e); }
@@ -1351,7 +1454,7 @@
             try {
                 if ($('#jobmarket-table').length) {
                     var config2 = $.extend(true, {}, baseConfig);
-                    config2.columnDefs = [{ "orderable": false, "targets": [0, 5] }];
+                    config2.columnDefs = [{ "orderable": false, "targets": [0, 6] }];
                     $('#jobmarket-table').DataTable(config2);
                 }
             } catch (e) { console.error("Error init jobmarket table:", e); }

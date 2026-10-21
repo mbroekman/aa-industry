@@ -193,6 +193,16 @@ urlpatterns = [
         name="bulk_delete_tasks",
     ),
     path(
+        "director/task/<int:task_id>/priority/",
+        director.set_task_priority,
+        name="set_task_priority",
+    ),
+    path(
+        "director/tasks/bulk-priority/",
+        director.bulk_set_task_priority,
+        name="bulk_set_task_priority",
+    ),
+    path(
         "director/order/<int:order_id>/paid/",
         director.mark_order_paid,
         name="mark_order_paid",

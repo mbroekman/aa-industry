@@ -62,7 +62,16 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         return flattened
 
     # Django
-    from django.db.models import Count, Q
+    from django.db.models import Case, Count, IntegerField, Q, Value, When
+
+    priority_order = Case(
+        When(priority="URGENT", then=Value(1)),
+        When(priority="HIGH", then=Value(2)),
+        When(priority="NORMAL", then=Value(3)),
+        When(priority="LOW", then=Value(4)),
+        default=Value(3),
+        output_field=IntegerField(),
+    )
 
     # Unclaimed tasks
     unclaimed_tasks_qs = (
@@ -72,9 +81,10 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         .annotate(
             incomplete_children_count=Count(
                 "bom_children", filter=~Q(bom_children__status="COMPLETED")
-            )
+            ),
+            prio_rank=priority_order,
         )
-        .order_by("created_from_order__created_at", "id")
+        .order_by("prio_rank", "created_from_order__created_at", "id")
     )
     unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
 
