@@ -458,9 +458,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         # EVE Progress
         eve_delivered = 0
         eve_active = 0
-        portion_size = 1
-        if getattr(task.item_type, "portion_size", 0) > 0:
-            portion_size = task.item_type.portion_size
+        portion_size = task.portion_size
 
         for link in getattr(task, "linked_jobs_cached", task.linked_jobs.all()):
             job = link.character_job or link.corporation_job

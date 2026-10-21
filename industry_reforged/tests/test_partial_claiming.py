@@ -288,3 +288,75 @@ class TestPartialClaimingAndSlots(TestCase):
         assert task.status == "IN_PRODUCTION"
         assert task.quantity == 10
         assert task.allocated_slots == 2
+
+    @patch(
+        "django.contrib.staticfiles.storage.staticfiles_storage.url",
+        side_effect=lambda name: f"/static/{name}",
+    )
+    @patch(
+        "django.contrib.staticfiles.storage.staticfiles_storage.stored_name",
+        side_effect=lambda name: name,
+    )
+    @patch(
+        "sri.templatetags.sri.sri_integrity_static",
+        side_effect=lambda path, algorithm_type=None: "sha256-dummy",
+    )
+    def test_active_production_table_column_count_matches_thead(
+        self, mock_sri, mock_stored, mock_url
+    ):
+        """Verify that thead and tbody row column counts match on active-production-table (prevents TN/18)."""
+        # Standard Library
+        import re
+
+        # AA Industry App
+        from industry_reforged.views.industrialist import industrialist_dashboard
+
+        ProductionTaskFactory(
+            item_type=self.item_type,
+            quantity=5,
+            status="IN_PRODUCTION",
+            assigned_to=self.character,
+            builder_reward=Decimal("1000000.00"),
+        )
+        ProductionTaskFactory(
+            item_type=self.item_type,
+            quantity=10,
+            status="UNCLAIMED",
+            builder_reward=Decimal("2000000.00"),
+        )
+
+        req = self.rf.get("/industry/industrialist/")
+        req.user = self.user
+        req.session = MagicMock()
+        req._messages = FallbackStorage(req)
+
+        resp = industrialist_dashboard(req)
+        assert resp.status_code == 200
+        content = resp.content.decode("utf-8")
+
+        # Extract active-production-table HTML
+        active_table_match = re.search(
+            r'<table id="active-production-table"[^>]*>(.*?)</table>',
+            content,
+            re.DOTALL,
+        )
+        assert active_table_match is not None
+        table_html = active_table_match.group(1)
+
+        # Count <th> in thead
+        thead_match = re.search(r"<thead>(.*?)</thead>", table_html, re.DOTALL)
+        assert thead_match is not None
+        th_count = len(re.findall(r"<th[\s>]", thead_match.group(1)))
+
+        # Count <td> in first tbody row
+        tbody_match = re.search(r"<tbody>(.*?)</tbody>", table_html, re.DOTALL)
+        assert tbody_match is not None
+        first_row_match = re.search(
+            r"<tr[^>]*>(.*?)</tr>", tbody_match.group(1), re.DOTALL
+        )
+        assert first_row_match is not None
+        td_count = len(re.findall(r"<td[\s>]", first_row_match.group(1)))
+
+        assert th_count == 8
+        assert td_count == 8
+        assert th_count == td_count

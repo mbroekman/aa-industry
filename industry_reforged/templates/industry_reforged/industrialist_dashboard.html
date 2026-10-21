@@ -446,6 +446,7 @@
                                                         <td data-sort="{% if task.priority == 'URGENT' %}1{% elif task.priority == 'HIGH' %}2{% elif task.priority == 'NORMAL' %}3{% else %}4{% endif %}">
                                                             {% include "industry_reforged/partials/dt_task_priority.html" with task=task %}
                                                         </td>
+                                                        <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                         <td class="text-end numeric">
                                                             <div>{{ task.quantity }}</div>
                                                             {% if task.allocated_slots > 1 %}

@@ -73,6 +73,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **ui**: Fixed DataTables warning TN/18 ("Incorrect column count") on `#active-production-table` in the Industrialist Dashboard (TASK-256):
+  - Restored missing Origin `<td>` column (`dt_task_origin.html`) in `#active-production-table` tbody, bringing row column count back to 8 to exactly match the 8 `<th>` columns in `<thead>` and DataTables `columnDefs` targets `[0, 7]`.
+  - Safely accessed `task.portion_size` property in `industrialist_dashboard` to eliminate potential `TypeError` on nullable `EveType.portion_size`.
+  - Added regression test `test_active_production_table_column_count_matches_thead` verifying matching column counts.
 - **pricing**: Fixed severe cost underestimation and distorted margin calculations on orders (TASK-247):
   - In `pricing_engine.py`, added filtering of extreme lowball/troll buy orders (< 25% of highest bid) in `calculate_percentile_price` and sanity validation comparing buy orders to sell market depth in `fetch_single_market_price`, falling back to EveMarketPrice or Jita Sell when buy order books are illiquid or manipulated (resolving 0.01 ISK evaluations on Zydrine, Fullerite, P4 PI commodities, and direct-buy fittings).
   - Added safety fallback in `calculate_bom_cost` ensuring any raw material returning <= 0.05 ISK falls back to current market sell pricing.
