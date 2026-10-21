@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **claims**: Implemented Interactive Slot-Based Partial Claiming and Task Splitting (TASK-255):
+  - Created `slot_service.py` to calculate available industry slots live from ESI character skills (Mass Production, Advanced Mass Production, Mass Reactions, Advanced Mass Reactions, Laboratory Operation, Advanced Laboratory Operation) and `CharacterIndustryJob` across all user-owned characters without Corptools dependency, with 24-hour Django caching.
+  - Added `allocated_slots` field to `ProductionTask` model (migration `0080`) and `portion_size` property.
+  - Upgraded `claim_task` view with support for partial quantity claiming and automatic task splitting:
+    - Claimed portion is assigned to the builder in `IN_PRODUCTION` with allocated slots recorded and its builder reward / estimated duration dynamically calculated.
+    - Remaining quantity stays on the Job Market as `UNCLAIMED` with its builder reward and duration accurately recalculated.
+  - Added `claim_task_preview` AJAX endpoint for real-time live preview of claim metrics (runs per slot, wall-clock duration, claimed reward, and remaining reward).
+  - Enhanced Job Market UI in `industrialist_dashboard.html`:
+    - Displayed live available manufacturing and reaction slot indicators in the Job Market card header.
+    - Added `#claimTaskModal` with interactive slots-to-dedicate and quantity-to-claim inputs, quick preset buttons (24h Batch, 48h Batch, Claim All, 1 Run), and dynamic live batch metrics panel with wall-clock duration and reward previews.
+    - Displayed allocated slots badge on `#active-production-table`.
+  - Added unit test suite `test_partial_claiming.py` covering live slot determination, active job subtractions, caching, full claims, partial claims with task splitting, boundary clamping, and preview API.
 - **tasks**: Implemented Production Task Priority Controls and Multiplier Visualization (TASK-254):
   - Added `URGENT` to `ProductionTask.PRIORITY_CHOICES` (migration `0079`) for rush jobs.
   - Added single (`set_task_priority`) and bulk (`bulk_set_task_priority`) priority management endpoints with automatic `builder_reward` and `estimated_duration_seconds` recalculation using configured corporate multipliers (`builder_urgent_multiplier`, `builder_high_multiplier`, `builder_low_multiplier`).

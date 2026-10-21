@@ -81,6 +81,7 @@ class IndustryESIProvider(ESIClientProvider):
                 "GetCorporationsCorporationIdBlueprints",
                 "GetCorporationsCorporationIdContracts",
                 "GetCorporationsCorporationIdContractsContractIdItems",
+                "GetCharactersCharacterIdSkills",
             ],
         )
 

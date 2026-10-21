@@ -114,7 +114,17 @@
                     <div class="card border-0 mb-4 h-100">
                                 <div
                                     class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <h4 class="card-title mb-0"><i class="fas fa-store"></i> {% trans "Job Market (Unclaimed)" %}</h4>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <h4 class="card-title mb-0"><i class="fas fa-store"></i> {% trans "Job Market (Unclaimed)" %}</h4>
+                                        {% if user_slots %}
+                                        <span class="badge bg-dark border border-info text-info small" title="{% trans 'Live available manufacturing slots across your owned characters' %}">
+                                            <i class="fas fa-industry me-1"></i><strong>{{ user_slots.mfg_available }}</strong>/{{ user_slots.mfg_total }} {% trans "Mfg Slots" %}
+                                        </span>
+                                        <span class="badge bg-dark border border-warning text-warning small" title="{% trans 'Live available reaction slots across your owned characters' %}">
+                                            <i class="fas fa-atom me-1"></i><strong>{{ user_slots.reaction_available }}</strong>/{{ user_slots.reaction_total }} {% trans "Rx Slots" %}
+                                        </span>
+                                        {% endif %}
+                                    </div>
                                     <div class="d-flex align-items-center gap-2">
 
 
@@ -257,13 +267,22 @@
                                                     <td class="text-end">
                                                         <div class="d-flex justify-content-end gap-1">
                                                             {% if task.is_claimable or task.incomplete_children_count == 0 %}
-                                                            <form method="post"
-                                                                action="{% url 'industry_reforged:claim_task' task.id %}"
-                                                                class="d-inline">
-                                                                {% csrf_token %}
-                                                                <button type="submit"
-                                                                    class="btn btn-sm btn-success">{% trans "Claim" %}</button>
-                                                            </form>
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-success"
+                                                                data-task-id="{{ task.id }}"
+                                                                data-item-name="{{ task.item_type.name }}"
+                                                                data-type-id="{{ task.item_type.id }}"
+                                                                data-quantity="{{ task.quantity }}"
+                                                                data-activity-id="{{ task.activity_id }}"
+                                                                data-activity-name="{{ task.activity_name }}"
+                                                                data-priority="{{ task.priority }}"
+                                                                data-duration-sec="{{ task.estimated_duration_seconds }}"
+                                                                data-reward="{{ task.builder_reward }}"
+                                                                data-portion-size="{{ task.portion_size|default:1 }}"
+                                                                data-claim-url="{% url 'industry_reforged:claim_task' task.id %}"
+                                                                onclick="openClaimModal(this)">
+                                                                <i class="fas fa-hand-holding-usd me-1"></i>{% trans "Claim" %}
+                                                            </button>
                                                             {% endif %}
                                                             {% if perms.industry_reforged.corp_access %}
                                                             <form method="post"
@@ -427,8 +446,14 @@
                                                         <td data-sort="{% if task.priority == 'URGENT' %}1{% elif task.priority == 'HIGH' %}2{% elif task.priority == 'NORMAL' %}3{% else %}4{% endif %}">
                                                             {% include "industry_reforged/partials/dt_task_priority.html" with task=task %}
                                                         </td>
-                                                        <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
-                                                        <td class="text-end numeric">{{ task.quantity }}</td>
+                                                        <td class="text-end numeric">
+                                                            <div>{{ task.quantity }}</div>
+                                                            {% if task.allocated_slots > 1 %}
+                                                            <span class="badge bg-dark border border-info text-info small" title="{% trans 'Allocated parallel industry slots' %}">
+                                                                <i class="fas fa-th-large me-1"></i>{{ task.allocated_slots }} slots
+                                                            </span>
+                                                            {% endif %}
+                                                        </td>
                                                         <td>{{ task.assigned_to.character_name }}</td>
                                                         <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">
                                                             <div>{{ task.builder_reward|eve_isk }}</div>
@@ -1050,6 +1075,137 @@
                         <p class="text-muted mb-0">{% trans "This may take a few seconds for large production trees." %}</p>
                     </div>
                 </div>
+    <!-- Interactive Claim & Partial Splitting Modal -->
+    <div class="modal fade" id="claimTaskModal" tabindex="-1" aria-labelledby="claimTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark border border-secondary shadow-lg">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-light" id="claimTaskModalLabel">
+                        <i class="fas fa-hand-holding-usd text-success me-2"></i>{% trans "Claim Production Task" %}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="claimTaskForm" method="post" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="claim_quantity" id="claimModalHiddenQty" value="1">
+                    <input type="hidden" name="allocated_slots" id="claimModalHiddenSlots" value="1">
+
+                    <div class="modal-body p-4">
+                        <!-- Item Header Banner -->
+                        <div class="d-flex align-items-center gap-3 p-3 mb-3 rounded border border-secondary" style="background-color: rgba(255, 255, 255, 0.05);">
+                            <img id="claimModalItemImg" src="" alt="" width="56" height="56" class="rounded border border-secondary">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <h4 class="mb-0 text-white fw-bold" id="claimModalItemName"></h4>
+                                    <span id="claimModalActivityBadge" class="badge bg-secondary"></span>
+                                    <span id="claimModalPriorityBadge"></span>
+                                </div>
+                                <div class="small text-muted d-flex gap-3 flex-wrap">
+                                    <span>{% trans "Total Available:" %} <strong class="text-light" id="claimModalTotalQty"></strong></span>
+                                    <span>{% trans "Portion Size:" %} <strong class="text-light" id="claimModalPortionSize"></strong></span>
+                                    <span>{% trans "Base Run Time:" %} <strong class="text-light" id="claimModalBaseTime"></strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detected Live Slots Info Banner -->
+                        <div class="alert alert-dark border border-info d-flex align-items-center justify-content-between p-3 mb-4 rounded">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fas fa-industry fa-2x text-info"></i>
+                                <div>
+                                    <div class="fw-bold text-white">{% trans "Your Live Detected Available Slots" %}</div>
+                                    <div class="small text-muted">{% trans "Calculated live across all your owned characters minus active in-flight jobs." %}</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-info text-dark fs-5 fw-bold px-3 py-2" id="claimModalFreeSlotsBadge">0 free</span>
+                            </div>
+                        </div>
+
+                        <!-- Configuration Inputs: Slots & Quantity -->
+                        <div class="row g-3 mb-4">
+                            <!-- Slots to commit -->
+                            <div class="col-md-6">
+                                <div class="card h-100 bg-black bg-opacity-25 border-secondary p-3">
+                                    <label class="form-label text-light fw-bold d-flex justify-content-between">
+                                        <span><i class="fas fa-th-large text-info me-1"></i> {% trans "Slots to Dedicate" %}</span>
+                                        <small class="text-muted">{% trans "Parallel industry slots" %}</small>
+                                    </label>
+                                    <div class="input-group mb-2">
+                                        <button class="btn btn-outline-light" type="button" onclick="adjustClaimSlots(-1)"><i class="fas fa-minus"></i></button>
+                                        <input type="number" id="claimModalSlotsInput" class="form-control text-center fs-5 fw-bold bg-dark text-white border-secondary" min="1" max="100" value="1" oninput="updateClaimPreview()" onchange="updateClaimPreview()">
+                                        <button class="btn btn-outline-light" type="button" onclick="adjustClaimSlots(1)"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-info flex-fill" onclick="setClaimSlots(1)">1 Slot</button>
+                                        <button type="button" class="btn btn-sm btn-outline-info flex-fill" id="claimModalSlotPresetMax" onclick="setClaimSlotsToFree()">All Free</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quantity to claim -->
+                            <div class="col-md-6">
+                                <div class="card h-100 bg-black bg-opacity-25 border-secondary p-3">
+                                    <label class="form-label text-light fw-bold d-flex justify-content-between">
+                                        <span><i class="fas fa-cubes text-warning me-1"></i> {% trans "Quantity to Claim" %}</span>
+                                        <small class="text-muted" id="claimModalQtyRunsSubtext">1 run</small>
+                                    </label>
+                                    <div class="input-group mb-2">
+                                        <button class="btn btn-outline-light" type="button" onclick="adjustClaimQty(-1)"><i class="fas fa-minus"></i></button>
+                                        <input type="number" id="claimModalQtyInput" class="form-control text-center fs-5 fw-bold bg-dark text-white border-secondary" min="1" value="1" oninput="updateClaimPreview()" onchange="updateClaimPreview()">
+                                        <button class="btn btn-outline-light" type="button" onclick="adjustClaimQty(1)"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="setClaimPreset('24h')">24h Batch</button>
+                                        <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="setClaimPreset('48h')">48h Batch</button>
+                                        <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="setClaimPreset('all')">Claim All</button>
+                                        <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="setClaimPreset('min')">1 Run</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Metrics Panel -->
+                        <div class="card border border-primary bg-black bg-opacity-40 p-3 mb-2 shadow">
+                            <h6 class="text-uppercase text-primary small fw-bold mb-3 d-flex align-items-center gap-2">
+                                <i class="fas fa-calculator"></i> {% trans "Live Batch Preview" %}
+                            </h6>
+                            <div class="row g-2 text-center">
+                                <div class="col-4">
+                                    <div class="p-2 rounded border border-secondary" style="background: rgba(255,255,255,0.03);">
+                                        <div class="small text-muted mb-1"><i class="fas fa-layer-group text-info"></i> {% trans "Runs / Slot" %}</div>
+                                        <div class="fs-5 fw-bold text-light" id="claimModalRunsPerSlot">1</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded border border-secondary" style="background: rgba(255,255,255,0.03);">
+                                        <div class="small text-muted mb-1"><i class="fas fa-clock text-warning"></i> {% trans "Wall-Clock Time" %}</div>
+                                        <div class="fs-5 fw-bold text-light" id="claimModalWallClock">-</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded border border-secondary" style="background: rgba(255,255,255,0.03);">
+                                        <div class="small text-muted mb-1"><i class="fas fa-coins text-success"></i> {% trans "Builder Reward" %}</div>
+                                        <div class="fs-5 fw-bold text-success text-truncate" id="claimModalBatchReward">0 ISK</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Remaining on Market Note -->
+                            <div class="mt-3 pt-2 border-top border-secondary small d-flex justify-content-between align-items-center text-muted">
+                                <span><i class="fas fa-store-alt me-1"></i> {% trans "Remaining on Market:" %} <strong class="text-light" id="claimModalRemainingQty">0</strong></span>
+                                <span>{% trans "Remaining Reward:" %} <strong class="text-warning" id="claimModalRemainingReward">0 ISK</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                        <button type="submit" class="btn btn-success px-4" id="claimModalSubmitBtn">
+                            <i class="fas fa-check-circle me-1"></i> {% trans "Confirm & Claim Batch" %}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -1058,6 +1214,217 @@
     {% block extra_javascript %}
     {{ block.super }}
     <script>
+        const userSlotsData = {
+            mfgAvailable: {{ user_slots.mfg_available|default:1 }},
+            mfgTotal: {{ user_slots.mfg_total|default:1 }},
+            reactionAvailable: {{ user_slots.reaction_available|default:1 }},
+            reactionTotal: {{ user_slots.reaction_total|default:1 }},
+            scienceAvailable: {{ user_slots.science_available|default:1 }},
+            scienceTotal: {{ user_slots.science_total|default:1 }}
+        };
+
+        let currentClaimTask = null;
+        let claimPreviewDebounce = null;
+
+        function openClaimModal(btn) {
+            const taskId = btn.dataset.taskId;
+            const itemName = btn.dataset.itemName;
+            const typeId = btn.dataset.typeId;
+            const totalQty = parseInt(btn.dataset.quantity, 10);
+            const activityId = parseInt(btn.dataset.activityId, 10);
+            const activityName = btn.dataset.activityName;
+            const priority = btn.dataset.priority || 'NORMAL';
+            const totalReward = parseFloat(btn.dataset.reward) || 0;
+            const portionSize = parseInt(btn.dataset.portionSize, 10) || 1;
+            const totalDurationSec = parseInt(btn.dataset.durationSec, 10) || 0;
+            const claimUrl = btn.dataset.claimUrl;
+
+            let freeSlots = 1;
+            if (activityId === 9 || activityId === 11) {
+                freeSlots = userSlotsData.reactionAvailable || 1;
+            } else if (activityId === 3 || activityId === 4 || activityId === 5 || activityId === 8) {
+                freeSlots = userSlotsData.scienceAvailable || 1;
+            } else {
+                freeSlots = userSlotsData.mfgAvailable || 1;
+            }
+
+            const runsTotal = Math.max(1, Math.ceil(totalQty / portionSize));
+            const baseRunDurationSec = runsTotal > 0 && totalDurationSec > 0 ? (totalDurationSec / runsTotal / 0.75) : 3600;
+
+            currentClaimTask = {
+                taskId: taskId,
+                itemName: itemName,
+                typeId: typeId,
+                totalQty: totalQty,
+                activityId: activityId,
+                activityName: activityName,
+                priority: priority,
+                totalReward: totalReward,
+                portionSize: portionSize,
+                baseRunDurationSec: baseRunDurationSec,
+                claimUrl: claimUrl,
+                freeSlots: freeSlots
+            };
+
+            document.getElementById('claimTaskForm').action = claimUrl;
+            document.getElementById('claimModalItemName').innerText = itemName;
+            document.getElementById('claimModalTotalQty').innerText = totalQty.toLocaleString() + ' units';
+            document.getElementById('claimModalPortionSize').innerText = portionSize + ' / run';
+            document.getElementById('claimModalActivityBadge').innerText = activityName;
+            document.getElementById('claimModalFreeSlotsBadge').innerText = freeSlots + ' free';
+            document.getElementById('claimModalSlotPresetMax').innerText = 'All Free (' + freeSlots + ')';
+
+            const baseHours = (baseRunDurationSec / 3600).toFixed(1);
+            document.getElementById('claimModalBaseTime').innerText = baseHours + 'h / run';
+
+            const img = document.getElementById('claimModalItemImg');
+            img.src = 'https://images.evetech.net/types/' + typeId + '/icon?size=64';
+            img.onerror = function() { handleImageFallback(this, typeId); };
+
+            const prioBadge = document.getElementById('claimModalPriorityBadge');
+            if (priority === 'URGENT') {
+                prioBadge.className = 'badge bg-danger';
+                prioBadge.innerHTML = '<i class="fas fa-bolt"></i> Urgent';
+            } else if (priority === 'HIGH') {
+                prioBadge.className = 'badge bg-warning text-dark';
+                prioBadge.innerHTML = '<i class="fas fa-angle-double-up"></i> High';
+            } else if (priority === 'LOW') {
+                prioBadge.className = 'badge bg-secondary';
+                prioBadge.innerHTML = '<i class="fas fa-angle-down"></i> Low';
+            } else {
+                prioBadge.className = 'badge bg-primary';
+                prioBadge.innerHTML = 'Normal';
+            }
+
+            const initialSlots = Math.min(Math.max(1, freeSlots), runsTotal);
+            document.getElementById('claimModalSlotsInput').value = initialSlots;
+            document.getElementById('claimModalSlotsInput').max = Math.max(freeSlots, 100);
+
+            document.getElementById('claimModalQtyInput').value = totalQty;
+            document.getElementById('claimModalQtyInput').max = totalQty;
+
+            updateClaimPreview();
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('claimTaskModal'));
+            modal.show();
+        }
+
+        function adjustClaimSlots(delta) {
+            const input = document.getElementById('claimModalSlotsInput');
+            let val = (parseInt(input.value, 10) || 1) + delta;
+            if (val < 1) val = 1;
+            input.value = val;
+            updateClaimPreview();
+        }
+
+        function setClaimSlots(slots) {
+            document.getElementById('claimModalSlotsInput').value = slots;
+            updateClaimPreview();
+        }
+
+        function setClaimSlotsToFree() {
+            if (currentClaimTask) {
+                document.getElementById('claimModalSlotsInput').value = Math.max(1, currentClaimTask.freeSlots);
+                updateClaimPreview();
+            }
+        }
+
+        function adjustClaimQty(delta) {
+            if (!currentClaimTask) return;
+            const input = document.getElementById('claimModalQtyInput');
+            const step = currentClaimTask.portionSize || 1;
+            let val = (parseInt(input.value, 10) || 1) + (delta * step);
+            if (val < 1) val = 1;
+            if (val > currentClaimTask.totalQty) val = currentClaimTask.totalQty;
+            input.value = val;
+            updateClaimPreview();
+        }
+
+        function setClaimPreset(preset) {
+            if (!currentClaimTask) return;
+            const slots = parseInt(document.getElementById('claimModalSlotsInput').value, 10) || 1;
+            const portion = currentClaimTask.portionSize || 1;
+            const baseRunSec = currentClaimTask.baseRunDurationSec || 3600;
+
+            let targetRuns = 1;
+            if (preset === '24h') {
+                const runsPerSlotIn24h = Math.max(1, Math.floor((24 * 3600) / (baseRunSec * 0.75)));
+                targetRuns = runsPerSlotIn24h * slots;
+            } else if (preset === '48h') {
+                const runsPerSlotIn48h = Math.max(1, Math.floor((48 * 3600) / (baseRunSec * 0.75)));
+                targetRuns = runsPerSlotIn48h * slots;
+            } else if (preset === 'all') {
+                targetRuns = Math.ceil(currentClaimTask.totalQty / portion);
+            } else if (preset === 'min') {
+                targetRuns = 1;
+            }
+
+            let targetQty = targetRuns * portion;
+            if (targetQty > currentClaimTask.totalQty) targetQty = currentClaimTask.totalQty;
+            if (targetQty < 1) targetQty = 1;
+
+            document.getElementById('claimModalQtyInput').value = targetQty;
+            updateClaimPreview();
+        }
+
+        function formatTimeDuration(seconds) {
+            if (seconds <= 0) return '0m';
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            let res = '';
+            if (days > 0) res += days + 'd ';
+            if (hours > 0 || days > 0) res += hours + 'h ';
+            if (days === 0 && mins > 0) res += mins + 'm';
+            return res.trim() || '1m';
+        }
+
+        function updateClaimPreview() {
+            if (!currentClaimTask) return;
+            const slots = Math.max(1, parseInt(document.getElementById('claimModalSlotsInput').value, 10) || 1);
+            let qty = parseInt(document.getElementById('claimModalQtyInput').value, 10) || 1;
+            if (qty > currentClaimTask.totalQty) qty = currentClaimTask.totalQty;
+            if (qty < 1) qty = 1;
+
+            document.getElementById('claimModalHiddenQty').value = qty;
+            document.getElementById('claimModalHiddenSlots').value = slots;
+
+            const portion = currentClaimTask.portionSize || 1;
+            const runsClaimed = Math.max(1, Math.ceil(qty / portion));
+            const runsPerSlot = Math.max(1, Math.ceil(runsClaimed / slots));
+            const wallClockSec = Math.round(runsPerSlot * currentClaimTask.baseRunDurationSec * 0.75);
+
+            document.getElementById('claimModalRunsPerSlot').innerText = runsPerSlot + (runsPerSlot === 1 ? ' run' : ' runs');
+            document.getElementById('claimModalWallClock').innerText = formatTimeDuration(wallClockSec);
+            document.getElementById('claimModalQtyRunsSubtext').innerText = runsClaimed + (runsClaimed === 1 ? ' run' : ' runs');
+
+            const remQty = currentClaimTask.totalQty - qty;
+            document.getElementById('claimModalRemainingQty').innerText = remQty.toLocaleString() + ' units';
+
+            const ratio = qty / currentClaimTask.totalQty;
+            const estReward = Math.round(currentClaimTask.totalReward * ratio);
+            const remReward = Math.max(0, currentClaimTask.totalReward - estReward);
+            document.getElementById('claimModalBatchReward').innerText = estReward.toLocaleString() + ' ISK';
+            document.getElementById('claimModalRemainingReward').innerText = remReward.toLocaleString() + ' ISK';
+
+            if (claimPreviewDebounce) clearTimeout(claimPreviewDebounce);
+            claimPreviewDebounce = setTimeout(function() {
+                const previewUrl = "{% url 'industry_reforged:claim_task_preview' %}?task_id=" + currentClaimTask.taskId + "&claim_quantity=" + qty + "&allocated_slots=" + slots;
+                fetch(previewUrl)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            document.getElementById('claimModalRunsPerSlot').innerText = data.runs_per_slot + (data.runs_per_slot === 1 ? ' run' : ' runs');
+                            document.getElementById('claimModalWallClock').innerText = data.wall_clock_formatted;
+                            document.getElementById('claimModalBatchReward').innerText = data.reward_claimed_formatted;
+                            document.getElementById('claimModalRemainingQty').innerText = data.rem_quantity.toLocaleString() + ' units';
+                            document.getElementById('claimModalRemainingReward').innerText = data.rem_reward_formatted;
+                        }
+                    })
+                    .catch(function() {});
+            }, 200);
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
             // Save active tab to sessionStorage when changed
             var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');

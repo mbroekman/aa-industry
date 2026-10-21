@@ -117,6 +117,11 @@ urlpatterns = [
         name="industrialist_dashboard",
     ),
     path(
+        "industrialist/claim-preview/",
+        industrialist.claim_task_preview,
+        name="claim_task_preview",
+    ),
+    path(
         "industrialist/claim/<int:task_id>/",
         industrialist.claim_task,
         name="claim_task",

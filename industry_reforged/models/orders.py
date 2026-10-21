@@ -580,6 +580,11 @@ class ProductionTask(models.Model):
         help_text=_("Estimated manufacturing or reaction duration in seconds"),
     )
 
+    allocated_slots = models.PositiveIntegerField(
+        default=1,
+        help_text=_("Number of industry slots allocated by the builder for this task"),
+    )
+
     # Claimability
     is_claimable = models.BooleanField(
         default=True,
@@ -608,6 +613,18 @@ class ProductionTask(models.Model):
     @property
     def estimated_duration_hours(self) -> float:
         return float(self.estimated_duration_seconds) / 3600.0
+
+    @property
+    def portion_size(self) -> int:
+        try:
+            from ..utils.pricing_engine import get_item_production_details
+
+            _, portion = get_item_production_details(
+                self.item_type_id, self.activity_id
+            )
+            return max(1, portion)
+        except Exception:  # noqa: BLE001
+            return 1
 
     @property
     def activity_name(self):

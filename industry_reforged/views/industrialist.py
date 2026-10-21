@@ -186,7 +186,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
                 parent = task_map[t.bom_parent_id]
                 parent_rem = get_remaining(parent)
                 if parent.quantity > 0:
-                    val = int(round(parent_rem * (t.quantity / parent.quantity)))
+                    val = round(parent_rem * (t.quantity / parent.quantity))
                 else:
                     val = 0
 
@@ -475,6 +475,11 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         task.eve_active_qty = eve_active
         task.eve_remaining_qty = max(0, task.quantity - eve_delivered)
 
+    # Live available slots detection
+    from ..utils.slot_service import get_user_available_slots
+
+    user_slots = get_user_available_slots(request.user)
+
     context = {
         "title": "Industrialist Dashboard",
         "motd": motd,
@@ -486,8 +491,122 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "my_eve_jobs": my_eve_jobs,
         "my_claimed_summary": my_claimed_summary,
         "my_payout_tasks": my_payout_tasks,
+        "user_slots": user_slots,
     }
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.industrialist_access")
+def claim_task_preview(request: WSGIRequest) -> HttpResponse:
+    """AJAX endpoint for real-time live preview of claim metrics in the modal."""
+    # Standard Library
+    import math
+    from decimal import Decimal
+
+    # Django
+    from django.http import JsonResponse
+
+    from ..models import CorpPricingConfig, ProductionTask
+    from ..templatetags.industry_tags import format_duration
+    from ..utils.pricing_engine import (
+        calculate_task_builder_reward,
+        get_item_production_details,
+    )
+
+    task_id = request.GET.get("task_id") or request.POST.get("task_id")
+    task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
+    if not task:
+        return JsonResponse(
+            {"success": False, "error": "Task not found or already claimed"}, status=404
+        )
+
+    try:
+        claim_qty = int(
+            request.GET.get("claim_quantity")
+            or request.POST.get("claim_quantity")
+            or task.quantity
+        )
+    except (ValueError, TypeError):
+        claim_qty = task.quantity
+    claim_qty = max(1, min(claim_qty, task.quantity))
+
+    try:
+        allocated_slots = int(
+            request.GET.get("allocated_slots")
+            or request.POST.get("allocated_slots")
+            or 1
+        )
+    except (ValueError, TypeError):
+        allocated_slots = 1
+    allocated_slots = max(1, allocated_slots)
+
+    base_dur_sec, portion_size = get_item_production_details(
+        task.item_type_id, task.activity_id
+    )
+    runs_total = max(1, math.ceil(claim_qty / max(portion_size, 1)))
+    runs_per_slot = max(1, math.ceil(runs_total / allocated_slots))
+    wall_clock_sec = int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
+
+    corp = None
+    if task.created_from_order and task.created_from_order.corporation:
+        corp = task.created_from_order.corporation
+    elif (
+        request.user.profile.main_character
+        and request.user.profile.main_character.corporation
+    ):
+        corp = request.user.profile.main_character.corporation
+    pricing_config = (
+        CorpPricingConfig.objects.filter(corporation=corp).first() if corp else None
+    )
+
+    rem_qty = task.quantity - claim_qty
+    ratio = Decimal(str(claim_qty)) / Decimal(str(task.quantity))
+    claimed_val = (task.gamification_value * ratio).quantize(Decimal("0.01"))
+    rem_val = task.gamification_value - claimed_val
+
+    reward_claimed, _ = calculate_task_builder_reward(
+        task.item_type,
+        claim_qty,
+        task.activity_id,
+        task.priority,
+        pricing_config,
+        claimed_val,
+    )
+    if rem_qty > 0:
+        reward_rem, _ = calculate_task_builder_reward(
+            task.item_type,
+            rem_qty,
+            task.activity_id,
+            task.priority,
+            pricing_config,
+            rem_val,
+        )
+    else:
+        reward_rem = Decimal("0.00")
+
+    return JsonResponse(
+        {
+            "success": True,
+            "task_id": task.id,
+            "total_quantity": task.quantity,
+            "claim_quantity": claim_qty,
+            "allocated_slots": allocated_slots,
+            "runs_claimed": runs_total,
+            "runs_per_slot": runs_per_slot,
+            "portion_size": portion_size,
+            "base_duration_seconds": base_dur_sec,
+            "wall_clock_seconds": wall_clock_sec,
+            "wall_clock_formatted": format_duration(wall_clock_sec),
+            "reward_claimed": float(reward_claimed),
+            "reward_claimed_formatted": f"{reward_claimed:,.2f} ISK",
+            "rem_quantity": rem_qty,
+            "rem_reward": float(reward_rem) if rem_qty > 0 else 0.0,
+            "rem_reward_formatted": f"{reward_rem:,.2f} ISK"
+            if rem_qty > 0
+            else "0.00 ISK",
+        }
+    )
 
 
 @login_required
@@ -503,13 +622,15 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
         if task:
-            if not task.is_claimable:
-                if task.bom_children.exclude(status="COMPLETED").exists():
-                    messages.error(
-                        request,
-                        _("Cannot claim this task until all sub-jobs are completed."),
-                    )
-                    return redirect("industry_reforged:industrialist_dashboard")
+            if (
+                not task.is_claimable
+                and task.bom_children.exclude(status="COMPLETED").exists()
+            ):
+                messages.error(
+                    request,
+                    _("Cannot claim this task until all sub-jobs are completed."),
+                )
+                return redirect("industry_reforged:industrialist_dashboard")
 
             def has_owned_ancestor(t, char):
                 visited = set()
@@ -523,22 +644,125 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     current = current.bom_parent
                 return False
 
-            def claim_recursive(t, char):
-                if t.status == "UNCLAIMED":
-                    t.status = "IN_PRODUCTION"
-                    t.assigned_to = char
-                    t.assigned_at = timezone.now()
-                    if has_owned_ancestor(t, char):
-                        t.builder_reward = 0
-                    t.save()
-                for child in t.bom_children.all():
-                    claim_recursive(child, char)
+            # Check if partial claim was requested
+            try:
+                claim_qty = int(request.POST.get("claim_quantity", task.quantity))
+            except (ValueError, TypeError):
+                claim_qty = task.quantity
 
-            claim_recursive(task, character)
+            try:
+                allocated_slots = max(1, int(request.POST.get("allocated_slots", 1)))
+            except (ValueError, TypeError):
+                allocated_slots = 1
 
-            messages.success(
-                request, f"Successfully claimed {task.quantity}x {task.item_type.name}."
-            )
+            # Validate claim_qty bounds
+            claim_qty = max(1, min(claim_qty, task.quantity))
+
+            if claim_qty < task.quantity:
+                # Standard Library
+                from decimal import Decimal
+
+                # AA Industry App
+                from ..models import CorpPricingConfig
+                from ..utils.pricing_engine import calculate_task_builder_reward
+
+                rem_qty = task.quantity - claim_qty
+                ratio = Decimal(str(claim_qty)) / Decimal(str(task.quantity))
+                claimed_val = (task.gamification_value * ratio).quantize(
+                    Decimal("0.01")
+                )
+                rem_val = task.gamification_value - claimed_val
+
+                corp = None
+                if task.created_from_order and task.created_from_order.corporation:
+                    corp = task.created_from_order.corporation
+                elif character and character.corporation:
+                    corp = character.corporation
+
+                pricing_config = (
+                    CorpPricingConfig.objects.filter(corporation=corp).first()
+                    if corp
+                    else None
+                )
+
+                reward_claimed, dur_claimed = calculate_task_builder_reward(
+                    task.item_type,
+                    claim_qty,
+                    task.activity_id,
+                    task.priority,
+                    pricing_config,
+                    claimed_val,
+                )
+                reward_rem, dur_rem = calculate_task_builder_reward(
+                    task.item_type,
+                    rem_qty,
+                    task.activity_id,
+                    task.priority,
+                    pricing_config,
+                    rem_val,
+                )
+
+                # Create the claimed task
+                ProductionTask.objects.create(
+                    item_type=task.item_type,
+                    quantity=claim_qty,
+                    activity_id=task.activity_id,
+                    status="IN_PRODUCTION",
+                    priority=task.priority,
+                    origin=task.origin,
+                    hidden=task.hidden,
+                    created_from_order=task.created_from_order,
+                    created_from_blueprint_request=task.created_from_blueprint_request,
+                    assigned_to=character,
+                    assigned_at=timezone.now(),
+                    allocated_slots=allocated_slots,
+                    bom_parent=task.bom_parent,
+                    gamification_value=claimed_val,
+                    builder_reward=Decimal("0.00")
+                    if has_owned_ancestor(task, character)
+                    else reward_claimed,
+                    estimated_duration_seconds=dur_claimed,
+                    is_claimable=task.is_claimable,
+                )
+
+                # Update the remaining task on Job Market
+                task.quantity = rem_qty
+                task.gamification_value = rem_val
+                task.builder_reward = reward_rem
+                task.estimated_duration_seconds = dur_rem
+                task.save(
+                    update_fields=[
+                        "quantity",
+                        "gamification_value",
+                        "builder_reward",
+                        "estimated_duration_seconds",
+                    ]
+                )
+
+                messages.success(
+                    request,
+                    f"Successfully claimed batch of {claim_qty}x {task.item_type.name} ({allocated_slots} slot(s)). Remaining {rem_qty}x left on Job Market.",
+                )
+            else:
+                # Full task claim
+                def claim_recursive(t, char):
+                    if t.status == "UNCLAIMED":
+                        t.status = "IN_PRODUCTION"
+                        t.assigned_to = char
+                        t.assigned_at = timezone.now()
+                        t.allocated_slots = allocated_slots
+                        if has_owned_ancestor(t, char):
+                            t.builder_reward = 0
+                        t.save()
+                    for child in t.bom_children.all():
+                        claim_recursive(child, char)
+
+                claim_recursive(task, character)
+
+                messages.success(
+                    request,
+                    f"Successfully claimed {task.quantity}x {task.item_type.name}.",
+                )
         else:
             messages.error(request, _("Task is no longer available or does not exist."))
 
@@ -656,14 +880,16 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
                     claim_recursive(child, char)
 
             for task in tasks:
-                if not task.is_claimable:
-                    if task.bom_children.exclude(status="COMPLETED").exists():
-                        messages.warning(
-                            request,
-                            _("Skipped %(item)s because sub-jobs are incomplete.")
-                            % {"item": task.item_type.name},
-                        )
-                        continue
+                if (
+                    not task.is_claimable
+                    and task.bom_children.exclude(status="COMPLETED").exists()
+                ):
+                    messages.warning(
+                        request,
+                        _("Skipped %(item)s because sub-jobs are incomplete.")
+                        % {"item": task.item_type.name},
+                    )
+                    continue
                 claim_recursive(task, character)
 
             if count > 0:
