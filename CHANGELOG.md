@@ -73,6 +73,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **ui**: Fixed `#claimTaskModal` hidden behind modal backdrop on Job Market (TASK-258):
+  - Added missing closing tags (`</div></div></div>`) for `#shoppingListLoadingModal` in `industrialist_dashboard.html`, which had previously caused `#claimTaskModal` to be nested inside the hidden shopping list modal container (`display: none`).
+  - Restored proper DOM isolation so the Claim modal appears centered and interactable above the Bootstrap backdrop when industrialists click "Claim".
 - **claims**: Fixed 500 Internal Server Error in `claim_task_preview` and `claim_task` endpoints (TASK-257):
   - Fixed `AttributeError: 'MemberOrder' object has no attribute 'corporation'` by accessing corporation through `task.created_from_order.character.corporation` instead of `task.created_from_order.corporation`.
   - Added unit regression test `test_claim_task_preview_with_created_from_order` validating preview calculations when task is linked to a `MemberOrder`.
