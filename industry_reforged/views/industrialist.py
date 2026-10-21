@@ -547,8 +547,12 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
     wall_clock_sec = int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
 
     corp = None
-    if task.created_from_order and task.created_from_order.corporation:
-        corp = task.created_from_order.corporation
+    if (
+        task.created_from_order
+        and task.created_from_order.character
+        and task.created_from_order.character.corporation
+    ):
+        corp = task.created_from_order.character.corporation
     elif (
         request.user.profile.main_character
         and request.user.profile.main_character.corporation
@@ -672,8 +676,12 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 rem_val = task.gamification_value - claimed_val
 
                 corp = None
-                if task.created_from_order and task.created_from_order.corporation:
-                    corp = task.created_from_order.corporation
+                if (
+                    task.created_from_order
+                    and task.created_from_order.character
+                    and task.created_from_order.character.corporation
+                ):
+                    corp = task.created_from_order.character.corporation
                 elif character and character.corporation:
                     corp = character.corporation
 

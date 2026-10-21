@@ -73,6 +73,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **claims**: Fixed 500 Internal Server Error in `claim_task_preview` and `claim_task` endpoints (TASK-257):
+  - Fixed `AttributeError: 'MemberOrder' object has no attribute 'corporation'` by accessing corporation through `task.created_from_order.character.corporation` instead of `task.created_from_order.corporation`.
+  - Added unit regression test `test_claim_task_preview_with_created_from_order` validating preview calculations when task is linked to a `MemberOrder`.
 - **ui**: Fixed DataTables warning TN/18 ("Incorrect column count") on `#active-production-table` in the Industrialist Dashboard (TASK-256):
   - Restored missing Origin `<td>` column (`dt_task_origin.html`) in `#active-production-table` tbody, bringing row column count back to 8 to exactly match the 8 `<th>` columns in `<thead>` and DataTables `columnDefs` targets `[0, 7]`.
   - Safely accessed `task.portion_size` property in `industrialist_dashboard` to eliminate potential `TypeError` on nullable `EveType.portion_size`.

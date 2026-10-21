@@ -269,6 +269,38 @@ class TestPartialClaimingAndSlots(TestCase):
         assert "wall_clock_formatted" in data
         assert data["runs_per_slot"] >= 1
 
+    def test_claim_task_preview_with_created_from_order(self):
+        """Test claim_task_preview does not raise AttributeError when task was created from a MemberOrder."""
+        # AA Industry App
+        from industry_reforged.models import MemberOrder
+
+        order = MemberOrder.objects.create(
+            character=self.character,
+            status="ACCEPTED",
+        )
+        task = ProductionTaskFactory(
+            item_type=self.item_type,
+            quantity=100,
+            status="UNCLAIMED",
+            created_from_order=order,
+            builder_reward=Decimal("50000000.00"),
+            gamification_value=Decimal("10000000.00"),
+        )
+
+        req = self.rf.get(
+            "/industry/industrialist/claim-preview/",
+            data={"task_id": task.id, "claim_quantity": 40, "allocated_slots": 5},
+        )
+        req.user = self.user
+        resp = claim_task_preview(req)
+
+        assert resp.status_code == 200
+        data = json.loads(resp.content)
+        assert data["success"] is True
+        assert data["claim_quantity"] == 40
+        assert data["allocated_slots"] == 5
+        assert data["rem_quantity"] == 60
+
     def test_claim_task_boundary_clamping(self):
         """Test boundary clamping for invalid claim quantities."""
         task = ProductionTaskFactory(
