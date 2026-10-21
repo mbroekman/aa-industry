@@ -40,12 +40,6 @@ class CorpPricingConfig(models.Model):
             "Hourly rate in ISK paid per slot-hour of manufacturing/reaction time"
         ),
     )
-    builder_reward_percent = models.FloatField(
-        default=0.5,
-        help_text=_(
-            "Percentage of the output item value given as incentive reward to the builder"
-        ),
-    )
     builder_min_reward = models.DecimalField(
         max_digits=17,
         decimal_places=2,

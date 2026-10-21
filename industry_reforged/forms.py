@@ -146,7 +146,6 @@ class CorpPricingConfigForm(forms.ModelForm):
             "default_discount_percent",
             "builder_base_fee",
             "builder_hourly_rate",
-            "builder_reward_percent",
             "builder_min_reward",
             "builder_max_reward",
             "builder_urgent_multiplier",
@@ -165,9 +164,6 @@ class CorpPricingConfigForm(forms.ModelForm):
             ),
             "builder_hourly_rate": forms.NumberInput(
                 attrs={"class": "form-control isk-input", "step": "50000", "min": "0"}
-            ),
-            "builder_reward_percent": forms.NumberInput(
-                attrs={"class": "form-control", "step": "0.1", "min": "0"}
             ),
             "builder_min_reward": forms.NumberInput(
                 attrs={"class": "form-control isk-input", "step": "100000", "min": "0"}

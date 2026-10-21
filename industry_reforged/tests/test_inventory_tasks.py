@@ -13,6 +13,7 @@ from industry_reforged.tasks.inventory import task_sync_corp_inventory
 from industry_reforged.tests.factories import (
     EveCharacterFactory,
     EveCorporationInfoFactory,
+    EveTypeFactory,
     UserFactory,
 )
 
@@ -78,6 +79,7 @@ class TestInventoryTasks:
         CorporationSyncConfig.objects.create(corporation=corp, sync_character=char)
         # Ensure no facilities have sync_inventory=True
         IndustryFacility.objects.all().delete()
+        EveTypeFactory(id=10)
 
         token = Token.objects.create(
             character_id=char.character_id, user=user, access_token="test_token"
@@ -105,7 +107,7 @@ class TestInventoryTasks:
         assert loc is not None
         assert corp in loc.corporations.all()
         assert mock_resolve.delay.called
-        
+
         # Verify inventory was created even without configured facilities
         assert CorpInventory.objects.filter(corporation=corp).count() == 1
         inv = CorpInventory.objects.filter(corporation=corp).first()

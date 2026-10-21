@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **rewards**: Removed deprecated `builder_reward_percent` from Builder Pricing model, forms, templates, and calculation (TASK-252):
+  - Removed `builder_reward_percent` field from `CorpPricingConfig` (migration `0077`). Builder compensation is now cleanly focused on slot-duration hours and flat base fee, bounded by configurable floor and cap values.
+  - Removed "Value %" column and inputs from `director_config.html` and `CorpPricingConfigForm`.
+  - Updated `pricing_engine.calculate_task_builder_reward` to omit value incentive, computing reward as Base Fee + (Slot Duration Hours * Hourly Rate), bounded by floor and cap and adjusted by priority multipliers.
 - **config**: Separated Builder Pricing into a dedicated tab in Director Configurations (TASK-251):
   - Created a dedicated "Builder Pricing" tab in `director_config.html` displaying all aspects of the Hybrid Builder Reward Model: Base Fee, Hourly Rate, Value Incentive %, Safety Bounds (Floor & Cap), and Priority Multipliers.
   - Streamlined the "Global Pricing" tab to focus strictly on customer pricing defaults (discount % and ME defaults), material valuation methods and margin floors, and system taxes.
