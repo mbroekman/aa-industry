@@ -33,6 +33,7 @@ class TestHybridBuilderRewards(TestCase):
             corporation=self.corp,
             builder_base_fee=Decimal("1000000.00"),
             builder_hourly_rate=Decimal("750000.00"),
+            builder_reward_percent=0.5,
             builder_min_reward=Decimal("2500000.00"),
             builder_max_reward=Decimal("75000000.00"),
             builder_urgent_multiplier=1.5,
@@ -77,10 +78,11 @@ class TestHybridBuilderRewards(TestCase):
         # Duration: 14400 * 1 * 0.75 = 10800s = 3.0h
         # Base fee: 1.0M
         # Slot cost: 3.0 * 750k = 2.25M
-        # Raw: 1.0M + 2.25M = 3.25M ISK
-        # Within bounds [2.5M, 75M] -> 3,250,000.00 ISK
+        # Value incentive: 15M * 0.5% = 75k
+        # Raw: 1.0M + 2.25M + 75k = 3.325M ISK
+        # Within bounds [2.5M, 75M] -> 3,325,000.00 ISK
         self.assertEqual(est_sec, 10800)
-        self.assertEqual(reward, Decimal("3250000.00"))
+        self.assertEqual(reward, Decimal("3325000.00"))
 
     @patch("industry_reforged.utils.pricing_engine.get_item_production_details")
     def test_calculate_task_builder_reward_minimum_floor(self, mock_details):
@@ -161,6 +163,7 @@ class TestHybridBuilderRewards(TestCase):
             "default_discount_percent": 5.0,
             "builder_base_fee": 1000000.0,
             "builder_hourly_rate": 750000.0,
+            "builder_reward_percent": 0.5,
             "builder_min_reward": 80000000.0,  # 80M > 50M
             "builder_max_reward": 50000000.0,
             "builder_urgent_multiplier": 1.5,

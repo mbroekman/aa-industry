@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **rewards**: Restored `builder_reward_percent` in Builder Pricing (TASK-253):
+  - Re-added `builder_reward_percent` field to `CorpPricingConfig` (migration `0078`), restoring the optional value incentive component in builder compensation configurations.
+  - Restored "Value %" column and inputs in `director_config.html` and `CorpPricingConfigForm`.
+  - Restored `pricing_engine.calculate_task_builder_reward` to include the output value incentive in the hybrid formula: Base Fee + (Slot Duration Hours * Hourly Rate) + (Output Market Value * Value %).
 - **rewards**: Removed deprecated `builder_reward_percent` from Builder Pricing model, forms, templates, and calculation (TASK-252):
   - Removed `builder_reward_percent` field from `CorpPricingConfig` (migration `0077`). Builder compensation is now cleanly focused on slot-duration hours and flat base fee, bounded by configurable floor and cap values.
   - Removed "Value %" column and inputs from `director_config.html` and `CorpPricingConfigForm`.

@@ -48,6 +48,7 @@ class TestDirectorConfigIskFormatting(TestCase):
             corporation=cls.corp,
             builder_base_fee=Decimal("1500000.00"),
             builder_hourly_rate=Decimal("800000.00"),
+            builder_reward_percent=1.0,
             builder_min_reward=Decimal("3000000.00"),
             builder_max_reward=Decimal("85000000.00"),
         )
@@ -141,6 +142,7 @@ class TestDirectorConfigIskFormatting(TestCase):
                 "default_discount_percent": "5.0",
                 "builder_base_fee": "2000000.00",
                 "builder_hourly_rate": "1000000.00",
+                "builder_reward_percent": "0.5",
                 "builder_min_reward": "2500000.00",
                 "builder_max_reward": "80000000.00",
                 "builder_urgent_multiplier": "1.5",

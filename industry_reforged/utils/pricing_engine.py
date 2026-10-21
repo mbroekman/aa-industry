@@ -945,8 +945,8 @@ def calculate_task_builder_reward(
     line_total_value: float | Decimal = 0.0,
 ) -> tuple[Decimal, int]:
     """
-    Calculates the builder reward and estimated duration using Hybrid Builder Reward Model:
-    Raw = Base Fee + (Slot Duration Hours * Hourly Rate)
+    Calculates the builder reward and estimated duration using Hybrid Model 2:
+    Raw = Base Fee + (Slot Duration Hours * Hourly Rate) + (Output Market Value * Value %)
     Bounded = Clamp(Raw, Minimum Floor, Maximum Cap)
     Final = Bounded * Priority Multiplier
 
@@ -956,7 +956,7 @@ def calculate_task_builder_reward(
         activity_id: Industry activity ID (1=Manufacturing, 11=Reactions).
         priority: Priority string ('URGENT', 'HIGH', 'NORMAL', 'LOW').
         pricing_config: CorpPricingConfig instance or None.
-        line_total_value: Optional market value of total output quantity (kept for backwards compatibility).
+        line_total_value: Market value of total output quantity.
 
     Returns:
         tuple[Decimal, int]: (final_builder_reward, estimated_duration_seconds)
@@ -971,6 +971,11 @@ def calculate_task_builder_reward(
         Decimal(str(pricing_config.builder_hourly_rate))
         if pricing_config and pricing_config.builder_hourly_rate is not None
         else Decimal("750000.00")
+    )
+    reward_percent = (
+        float(pricing_config.builder_reward_percent)
+        if pricing_config and pricing_config.builder_reward_percent is not None
+        else 0.5
     )
     min_reward = (
         Decimal(str(pricing_config.builder_min_reward))
@@ -1008,7 +1013,10 @@ def calculate_task_builder_reward(
 
     # 3. Raw reward components
     slot_cost = duration_hours * hourly_rate
-    raw_reward = base_fee + slot_cost
+    val_incentive = Decimal(str(line_total_value)) * (
+        Decimal(str(reward_percent)) / Decimal("100.0")
+    )
+    raw_reward = base_fee + slot_cost + val_incentive
 
     # 4. Bounds Clamping
     bounded = raw_reward
