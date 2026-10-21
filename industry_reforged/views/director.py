@@ -1069,7 +1069,7 @@ def director_config_item_delete(request: WSGIRequest, config_id: int) -> HttpRes
 @login_required
 @permission_required("industry_reforged.corp_access")
 def director_config_pricing_edit(
-    request: WSGIRequest, config_id: int = None
+    request: WSGIRequest, config_id: int | None = None
 ) -> HttpResponse:
     if config_id:
         instance = get_object_or_404(CorpPricingConfig, id=config_id)
@@ -1080,8 +1080,10 @@ def director_config_pricing_edit(
         form = CorpPricingConfigForm(request.POST, instance=instance)
         if form.is_valid():
             form.save()
-            messages.success(request, _("Global pricing configuration saved."))
-            return redirect(reverse("industry_reforged:director_config") + "#pricing")
+            messages.success(request, _("Builder pricing configuration saved."))
+            return redirect(
+                reverse("industry_reforged:director_config") + "#builder-pricing"
+            )
     else:
         form = CorpPricingConfigForm(instance=instance)
 
@@ -1090,13 +1092,11 @@ def director_config_pricing_edit(
         "industry_reforged/director_config_form.html",
         {
             "title": (
-                _("Edit Corporation Pricing")
-                if config_id
-                else _("Add Corporation Pricing")
+                _("Edit Builder Pricing") if config_id else _("Add Builder Pricing")
             ),
             "form": form,
             "back_url": "industry_reforged:director_config",
-            "back_hash": "#pricing",
+            "back_hash": "#builder-pricing",
         },
     )
 

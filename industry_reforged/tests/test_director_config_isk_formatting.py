@@ -114,8 +114,10 @@ class TestDirectorConfigIskFormatting(TestCase):
     @patch.object(
         AaManifestStaticFilesStorage, "stored_name", side_effect=lambda name: name
     )
-    def test_director_config_overview_renders_floor_reward(self, mock_stored_name):
-        """Ensure director_config.html displays Floor reward alongside Base and Cap."""
+    def test_director_config_overview_renders_builder_pricing_tab(
+        self, mock_stored_name
+    ):
+        """Ensure director_config.html displays dedicated Builder Pricing tab and Floor reward."""
         request = self.factory.get(reverse("industry_reforged:director_config"))
         self._prepare_request(request)
 
@@ -123,6 +125,35 @@ class TestDirectorConfigIskFormatting(TestCase):
         self.assertEqual(response.status_code, 200)
 
         content = response.content.decode("utf-8")
+        self.assertIn("builder-pricing", content)
+        self.assertIn("Builder Pricing", content)
+        self.assertIn("Base Fee", content)
         self.assertIn("Floor:", content)
-        self.assertIn("Base:", content)
         self.assertIn("Cap:", content)
+
+    def test_director_config_pricing_edit_redirects_to_builder_pricing_tab(self):
+        """Ensure submitting builder pricing redirects back to the #builder-pricing tab."""
+        request = self.factory.post(
+            reverse(
+                "industry_reforged:director_config_pricing_edit", args=[self.pricing.id]
+            ),
+            data={
+                "corporation": self.corp.id,
+                "default_discount_percent": "5.0",
+                "builder_base_fee": "2000000.00",
+                "builder_hourly_rate": "1000000.00",
+                "builder_reward_percent": "0.5",
+                "builder_min_reward": "2500000.00",
+                "builder_max_reward": "80000000.00",
+                "builder_urgent_multiplier": "1.5",
+                "builder_high_multiplier": "1.25",
+                "builder_low_multiplier": "0.8",
+                "default_t1_me": "10",
+                "default_t2_me": "2",
+            },
+        )
+        self._prepare_request(request)
+
+        response = director_config_pricing_edit(request, config_id=self.pricing.id)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.endswith("#builder-pricing"))

@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **config**: Separated Builder Pricing into a dedicated tab in Director Configurations (TASK-251):
+  - Created a dedicated "Builder Pricing" tab in `director_config.html` displaying all aspects of the Hybrid Builder Reward Model: Base Fee, Hourly Rate, Value Incentive %, Safety Bounds (Floor & Cap), and Priority Multipliers.
+  - Streamlined the "Global Pricing" tab to focus strictly on customer pricing defaults (discount % and ME defaults), material valuation methods and margin floors, and system taxes.
+  - Updated `director_config_pricing_edit` view to redirect to `#builder-pricing` upon saving and set back navigation to `#builder-pricing`.
 - **config**: Added dynamic live formatted ISK preview in director configuration forms and improved ISK overview tables (TASK-250):
   - Added live ISK preview badges (`isk-live-preview`) beneath numeric inputs in `director_config_form.html`, formatting raw numbers with standard comma separators and EVE shorthand (e.g. `75,000,000 ISK (75.00M ISK)`) in real-time as users type.
   - Added `.isk-input` CSS class to `CorpPricingConfigForm` (`builder_base_fee`, `builder_hourly_rate`, `builder_min_reward`, `builder_max_reward`), `CorpItemConfigForm` (`manual_price`), and `BuybackProgramForm` (`price_density_threshold`).
