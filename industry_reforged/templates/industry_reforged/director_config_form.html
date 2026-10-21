@@ -40,3 +40,89 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_javascript %}
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            function formatIskDisplay(val) {
+                if (val === null || val === undefined) return '';
+                const str = String(val).trim();
+                if (str === '') return '';
+                const num = parseFloat(str);
+                if (isNaN(num)) return '';
+
+                const formattedCommas = num.toLocaleString('en-US', {
+                    minimumFractionDigits: (num % 1 !== 0) ? 2 : 0,
+                    maximumFractionDigits: 2
+                });
+
+                const abs = Math.abs(num);
+                let abbrev = '';
+                if (abs >= 1e12) {
+                    abbrev = (num / 1e12).toFixed(2) + 'T ISK';
+                } else if (abs >= 1e9) {
+                    abbrev = (num / 1e9).toFixed(2) + 'B ISK';
+                } else if (abs >= 1e6) {
+                    abbrev = (num / 1e6).toFixed(2) + 'M ISK';
+                } else if (abs >= 1e3) {
+                    abbrev = (num / 1e3).toFixed(2) + 'K ISK';
+                }
+
+                if (abbrev) {
+                    return `${formattedCommas} ISK (${abbrev})`;
+                }
+                return `${formattedCommas} ISK`;
+            }
+
+            const targetIds = [
+                'id_builder_base_fee',
+                'id_builder_hourly_rate',
+                'id_builder_min_reward',
+                'id_builder_max_reward',
+                'id_manual_price',
+                'id_price_density_threshold'
+            ];
+
+            const selector = targetIds.map(id => '#' + id).join(',') + ', .isk-input';
+            const iskInputs = document.querySelectorAll(selector);
+
+            iskInputs.forEach(function (input) {
+                if (input.dataset.hasIskPreview) return;
+                input.dataset.hasIskPreview = 'true';
+
+                const badgeWrapper = document.createElement('div');
+                badgeWrapper.className = 'isk-preview-wrapper mt-1';
+                badgeWrapper.innerHTML = `
+                    <span class="badge bg-dark border border-warning text-warning px-2 py-1 font-monospace d-inline-flex align-items-center shadow-sm" style="font-size: 0.85rem; letter-spacing: 0.3px;">
+                        <i class="fas fa-coins me-2 text-warning"></i>
+                        <span class="isk-preview-text"></span>
+                    </span>
+                `;
+
+                if (input.parentElement && input.parentElement.classList.contains('input-group')) {
+                    input.parentElement.insertAdjacentElement('afterend', badgeWrapper);
+                } else {
+                    input.insertAdjacentElement('afterend', badgeWrapper);
+                }
+
+                const textSpan = badgeWrapper.querySelector('.isk-preview-text');
+
+                function update() {
+                    const formatted = formatIskDisplay(input.value);
+                    if (formatted) {
+                        textSpan.textContent = formatted;
+                        badgeWrapper.style.display = 'block';
+                    } else {
+                        badgeWrapper.style.display = 'none';
+                    }
+                }
+
+                input.addEventListener('input', update);
+                input.addEventListener('change', update);
+                input.addEventListener('keyup', update);
+                update();
+            });
+        });
+    </script>
+{% endblock %}

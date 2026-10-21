@@ -172,7 +172,7 @@
                                     <td class="text-end text-success fw-bold">{% if p.default_discount_percent > 0 %}{{ p.default_discount_percent }}% OFF{% else %}0%{% endif %}</td>
                                     <td class="text-end text-warning fw-bold">
                                         <div>{{ p.builder_hourly_rate|eve_isk }}/h + {{ p.builder_reward_percent }}%</div>
-                                        <div class="small text-muted fw-normal">{% trans "Base:" %} {{ p.builder_base_fee|eve_isk }} | {% trans "Cap:" %} {{ p.builder_max_reward|eve_isk }}</div>
+                                        <div class="small text-muted fw-normal">{% trans "Base:" %} {{ p.builder_base_fee|eve_isk }} | {% trans "Floor:" %} {{ p.builder_min_reward|eve_isk }} | {% trans "Cap:" %} {{ p.builder_max_reward|eve_isk }}</div>
                                     </td>
                                     <td class="text-end">{{ p.default_t1_me }} / {{ p.default_t2_me }}</td>
                                     <td class="text-end">
@@ -539,6 +539,9 @@
                                         <span class="badge {% if program.price_modifier_percent < 0 %}bg-danger{% elif program.price_modifier_percent > 0 %}bg-success{% else %}bg-secondary{% endif %}">
                                             {% if program.price_modifier_percent > 0 %}+{% endif %}{{ program.price_modifier_percent }}%
                                         </span>
+                                        {% if program.price_density_threshold > 0 %}
+                                        <div class="small text-muted mt-1">&lt; {{ program.price_density_threshold|eve_isk }}/m³ (+{{ program.price_density_tax_percent }}% tax)</div>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if program.is_active %}
@@ -548,7 +551,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
-                                        <a href="{% url 'industry_reforged:director_config_buyback_program_edit' program.id %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></a>
+                                        <a href="{% url 'industry_reforged:director_config_buyback_program_edit' program.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_program_delete' program.id %}"><i class="fas fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -594,7 +597,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
-                                        <a href="{% url 'industry_reforged:director_config_buyback_watchlist_edit' item.id %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></a>
+                                        <a href="{% url 'industry_reforged:director_config_buyback_watchlist_edit' item.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_watchlist_delete' item.id %}"><i class="fas fa-trash"></i></button>
                                     </td>
                                 </tr>

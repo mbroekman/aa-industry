@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **config**: Added dynamic live formatted ISK preview in director configuration forms and improved ISK overview tables (TASK-250):
+  - Added live ISK preview badges (`isk-live-preview`) beneath numeric inputs in `director_config_form.html`, formatting raw numbers with standard comma separators and EVE shorthand (e.g. `75,000,000 ISK (75.00M ISK)`) in real-time as users type.
+  - Added `.isk-input` CSS class to `CorpPricingConfigForm` (`builder_base_fee`, `builder_hourly_rate`, `builder_min_reward`, `builder_max_reward`), `CorpItemConfigForm` (`manual_price`), and `BuybackProgramForm` (`price_density_threshold`).
+  - Updated `director_config.html` Corporate Pricing Configurations table to display the configured `builder_min_reward` (Floor) alongside Base fee and Cap.
+  - Formatted `price_density_threshold` with `|eve_isk` in the Buyback Programs table and replaced low-contrast `btn-outline-secondary` buttons with `btn-outline-primary`.
 - **rewards**: Implemented Hybrid Builder Reward Model 2 with slot duration, safety bounds, and priority multipliers (TASK-249):
   - Replaced legacy flat percentage reward model with a balanced hybrid formula: Base Fee + (Slot Duration Hours * Hourly Rate) + (Output Market Value * Value Incentive %).
   - Bounded rewards with configurable `builder_min_reward` (floor, default 2.5M ISK) and `builder_max_reward` (ceiling, default 75M ISK), preventing trivial payouts on consumables and multi-billion wallet drains on Titans/Supercapitals.

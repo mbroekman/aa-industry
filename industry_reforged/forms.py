@@ -89,7 +89,9 @@ class CorpItemConfigForm(forms.ModelForm):
             "manual_me": forms.NumberInput(attrs={"class": "form-control"}),
             "manual_te": forms.NumberInput(attrs={"class": "form-control"}),
             "max_runs": forms.NumberInput(attrs={"class": "form-control"}),
-            "manual_price": forms.NumberInput(attrs={"class": "form-control"}),
+            "manual_price": forms.NumberInput(
+                attrs={"class": "form-control isk-input", "step": "1000"}
+            ),
             "target_threshold": forms.NumberInput(attrs={"class": "form-control"}),
             "auto_produce": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "build_or_buy": forms.Select(attrs={"class": "form-select"}),
@@ -159,19 +161,19 @@ class CorpPricingConfigForm(forms.ModelForm):
                 attrs={"class": "form-control", "step": "0.1"}
             ),
             "builder_base_fee": forms.NumberInput(
-                attrs={"class": "form-control", "step": "100000", "min": "0"}
+                attrs={"class": "form-control isk-input", "step": "100000", "min": "0"}
             ),
             "builder_hourly_rate": forms.NumberInput(
-                attrs={"class": "form-control", "step": "50000", "min": "0"}
+                attrs={"class": "form-control isk-input", "step": "50000", "min": "0"}
             ),
             "builder_reward_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1", "min": "0"}
             ),
             "builder_min_reward": forms.NumberInput(
-                attrs={"class": "form-control", "step": "100000", "min": "0"}
+                attrs={"class": "form-control isk-input", "step": "100000", "min": "0"}
             ),
             "builder_max_reward": forms.NumberInput(
-                attrs={"class": "form-control", "step": "1000000", "min": "0"}
+                attrs={"class": "form-control isk-input", "step": "1000000", "min": "0"}
             ),
             "builder_urgent_multiplier": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.05", "min": "0"}
@@ -893,7 +895,7 @@ class BuybackProgramForm(forms.ModelForm):
                 attrs={"class": "form-select", "size": "6"}
             ),
             "price_density_threshold": forms.NumberInput(
-                attrs={"class": "form-control", "step": "0.1"}
+                attrs={"class": "form-control isk-input", "step": "0.1"}
             ),
             "price_density_tax_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
