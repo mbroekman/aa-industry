@@ -131,6 +131,24 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
 
             # If accepted, spawn a ProductionTask for copying (activity_id 5 is copying usually, assuming 5 based on EVE)
             if new_status == "ACCEPTED":
+                from ..models import CorpPricingConfig
+                from ..utils.pricing_engine import calculate_task_builder_reward
+
+                corp = getattr(bp_req.blueprint, "corporation", None)
+                pricing_config = (
+                    CorpPricingConfig.objects.filter(corporation=corp).first()
+                    if corp
+                    else None
+                )
+                task_reward, est_duration_seconds = calculate_task_builder_reward(
+                    eve_type=bp_req.blueprint.eve_type,
+                    quantity=bp_req.requested_quantity,
+                    activity_id=5,
+                    priority="NORMAL",
+                    pricing_config=pricing_config,
+                    line_total_value=0.0,
+                )
+
                 # Create a job for industrialists
                 ProductionTask.objects.create(
                     item_type=bp_req.blueprint.eve_type,
@@ -139,6 +157,8 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
                     created_from_blueprint_request=bp_req,
                     priority="NORMAL",
                     origin="BLUEPRINT",
+                    builder_reward=task_reward,
+                    estimated_duration_seconds=est_duration_seconds,
                 )
 
             # Send DM to requester

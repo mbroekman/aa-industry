@@ -182,7 +182,10 @@
                                                     <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                     <td class="text-end numeric">{{ task.quantity }}</td>
                                                     <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">
-                                                        {{ task.builder_reward|eve_isk }}
+                                                        <div>{{ task.builder_reward|eve_isk }}</div>
+                                                        {% if task.estimated_duration_seconds > 0 %}
+                                                            <span class="badge bg-secondary small text-light" title="{% trans "Estimated build duration" %}"><i class="fas fa-clock"></i> {{ task.estimated_duration_seconds|format_duration }}</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td class="text-end">
                                                         <div class="d-flex justify-content-end gap-1">
@@ -356,7 +359,12 @@
                                                         <td>{% include "industry_reforged/partials/dt_task_origin.html" with task=task %}</td>
                                                         <td class="text-end numeric">{{ task.quantity }}</td>
                                                         <td>{{ task.assigned_to.character_name }}</td>
-                                                        <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">{{ task.builder_reward|eve_isk }}</td>
+                                                        <td class="text-end numeric text-warning" data-sort="{{ task.builder_reward }}">
+                                                            <div>{{ task.builder_reward|eve_isk }}</div>
+                                                            {% if task.estimated_duration_seconds > 0 %}
+                                                                <span class="badge bg-secondary small text-light" title="{% trans "Estimated build duration" %}"><i class="fas fa-clock"></i> {{ task.estimated_duration_seconds|format_duration }}</span>
+                                                            {% endif %}
+                                                        </td>
                                                         <td class="text-end">
                                                             <div class="d-flex justify-content-end gap-1">
                                                                 <form method="post"

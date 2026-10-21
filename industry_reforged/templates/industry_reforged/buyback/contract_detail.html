@@ -78,7 +78,9 @@
                 {% trans "Create an in-game item-exchange contract with this exact tracking number in the title:" %}
                 <strong>{{ contract.tracking_number }}</strong><br>
                 {% trans "Set the contract price to:" %} <strong>{{ contract.quoted_price|eve_isk }}</strong>
-                {% if contract.donation_amount %}({% trans "already net of your donation" %}){% endif %}
+                {% if contract.donation_amount %}({% trans "already net of your donation" %}){% endif %}<br>
+                {% trans "Set the drop-off location to:" %} <strong>{{ contract.program.drop_off_name }}</strong><br>
+                {% trans "Address the contract to:" %} <strong>{{ contract.program.corporation.corporation_name }}</strong>
             </div>
             <form method="post" action="{% url 'industry_reforged:buyback_contract_cancel' contract.tracking_number %}">
                 {% csrf_token %}

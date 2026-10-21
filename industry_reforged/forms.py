@@ -142,7 +142,14 @@ class CorpPricingConfigForm(forms.ModelForm):
         fields = [
             "corporation",
             "default_discount_percent",
+            "builder_base_fee",
+            "builder_hourly_rate",
             "builder_reward_percent",
+            "builder_min_reward",
+            "builder_max_reward",
+            "builder_urgent_multiplier",
+            "builder_high_multiplier",
+            "builder_low_multiplier",
             "default_t1_me",
             "default_t2_me",
         ]
@@ -151,8 +158,29 @@ class CorpPricingConfigForm(forms.ModelForm):
             "default_discount_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
+            "builder_base_fee": forms.NumberInput(
+                attrs={"class": "form-control", "step": "100000", "min": "0"}
+            ),
+            "builder_hourly_rate": forms.NumberInput(
+                attrs={"class": "form-control", "step": "50000", "min": "0"}
+            ),
             "builder_reward_percent": forms.NumberInput(
-                attrs={"class": "form-control", "step": "0.1"}
+                attrs={"class": "form-control", "step": "0.1", "min": "0"}
+            ),
+            "builder_min_reward": forms.NumberInput(
+                attrs={"class": "form-control", "step": "100000", "min": "0"}
+            ),
+            "builder_max_reward": forms.NumberInput(
+                attrs={"class": "form-control", "step": "1000000", "min": "0"}
+            ),
+            "builder_urgent_multiplier": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.05", "min": "0"}
+            ),
+            "builder_high_multiplier": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.05", "min": "0"}
+            ),
+            "builder_low_multiplier": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.05", "min": "0"}
             ),
             "default_t1_me": forms.NumberInput(
                 attrs={"class": "form-control", "step": "1", "min": "0", "max": "10"}
@@ -166,6 +194,18 @@ class CorpPricingConfigForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["corporation"].disabled = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        min_reward = cleaned_data.get("builder_min_reward")
+        max_reward = cleaned_data.get("builder_max_reward")
+        if min_reward is not None and max_reward is not None:
+            if max_reward > 0 and min_reward > max_reward:
+                self.add_error(
+                    "builder_min_reward",
+                    _("Minimum reward floor cannot exceed maximum reward cap."),
+                )
+        return cleaned_data
 
 
 class TaxConfigForm(forms.ModelForm):
@@ -210,8 +250,8 @@ class CorpTypeDiscountForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Display the corporation name for the config instead of "CorpPricingConfig object"
-        self.fields["config"].label_from_instance = (
-            lambda obj: obj.corporation.corporation_name
+        self.fields["config"].label_from_instance = lambda obj: (
+            obj.corporation.corporation_name
         )
         if self.instance and self.instance.pk:
             self.fields["config"].disabled = True
@@ -259,7 +299,14 @@ class IndustryFacilityForm(forms.ModelForm):
 
     class Meta:
         model = IndustryFacility
-        fields = ["facility_id", "name", "type_id", "solar_system_id", "is_default", "is_default_reaction"]
+        fields = [
+            "facility_id",
+            "name",
+            "type_id",
+            "solar_system_id",
+            "is_default",
+            "is_default_reaction",
+        ]
         help_texts = {
             "facility_id": _("The exact EVE Structure ID. Type manually."),
             "name": _("A friendly name for this facility."),
@@ -830,6 +877,8 @@ class BuybackProgramForm(forms.ModelForm):
             "price_density_threshold",
             "price_density_tax_percent",
             "contract_expiry_days",
+            "price_type",
+            "refining_rate",
         ]
         widgets = {
             "corporation": forms.Select(attrs={"class": "form-select"}),
@@ -852,6 +901,10 @@ class BuybackProgramForm(forms.ModelForm):
             "contract_expiry_days": forms.NumberInput(
                 attrs={"class": "form-control", "min": "1"}
             ),
+            "price_type": forms.Select(attrs={"class": "form-select"}),
+            "refining_rate": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1", "min": "0", "max": "100"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -867,7 +920,9 @@ class BuybackProgramForm(forms.ModelForm):
         known_location = cleaned_data.get("known_location")
         if not facility and not known_location:
             raise ValidationError(
-                _("You must select either a Facility or a Known Location as the drop-off point.")
+                _(
+                    "You must select either a Facility or a Known Location as the drop-off point."
+                )
             )
         if facility and known_location:
             raise ValidationError(
@@ -889,7 +944,9 @@ class BuybackWatchlistItemForm(forms.ModelForm):
         widgets = {
             "program": forms.Select(attrs={"class": "form-select"}),
             "reason": forms.TextInput(attrs={"class": "form-control"}),
-            "blocks_submission": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "blocks_submission": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):

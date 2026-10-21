@@ -1,5 +1,6 @@
 # Standard Library
 import logging
+import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from decimal import Decimal
 
@@ -51,6 +52,19 @@ def calculate_percentile_price(
     if not sorted_orders:
         return 0.0
 
+    # For buy orders, filter out extreme lowball / troll bids (< 25% of highest bid)
+    if is_buy:
+        top_buy_price = float(sorted_orders[0].get("price", 0.0))
+        if top_buy_price <= 0.05:
+            return 0.0
+        valid_buy_orders = [
+            o
+            for o in sorted_orders
+            if float(o.get("price", 0.0)) >= 0.25 * top_buy_price
+        ]
+        if valid_buy_orders:
+            sorted_orders = valid_buy_orders
+
     total_volume = sum(int(o.get("volume_remain", 0)) for o in sorted_orders)
     if total_volume <= 0:
         return float(sorted_orders[0].get("price", 0.0))
@@ -96,8 +110,21 @@ def fetch_single_market_price(
             price = calculate_percentile_price(
                 orders, percentile=0.05, station_id=station_id, order_type=order_type
             )
-            if price > 0.0:
-                return float(price)
+            if price > 0.05:
+                # For buy orders, verify against sell market to prevent illiquid/manipulated book distortion
+                if order_type == "buy":
+                    sell_price = calculate_percentile_price(
+                        orders,
+                        percentile=0.05,
+                        station_id=station_id,
+                        order_type="sell",
+                    )
+                    # If an active sell market exists and buy price is < 20% of sell price,
+                    # the buy book is illiquid or manipulated; invalidate to trigger fallback
+                    if sell_price > 0.0 and price < 0.20 * sell_price:
+                        price = 0.0
+                if price > 0.05:
+                    return float(price)
     except Exception as e:
         logger.warning(f"ESI market order fetch failed for type_id {type_id}: {e}")
 
@@ -110,7 +137,7 @@ def fetch_single_market_price(
         if market_price:
             for attr in ("average_price", "adjusted_price"):
                 val = getattr(market_price, attr, None)
-                if val is not None and float(val) > 0.0:
+                if val is not None and float(val) > 0.05:
                     return float(val)
     except Exception:
         pass
@@ -122,11 +149,28 @@ def fetch_single_market_price(
         if fuzz_res.status_code == 200:
             fuzz_data = fuzz_res.json()
             if str(type_id) in fuzz_data:
-                fuzz_price = fuzz_data[str(type_id)].get(order_type, {}).get("percentile")
-                if fuzz_price and float(fuzz_price) > 0.0:
+                fuzz_price = (
+                    fuzz_data[str(type_id)].get(order_type, {}).get("percentile")
+                )
+                if fuzz_price and float(fuzz_price) > 0.05:
                     return float(fuzz_price)
     except Exception as e:
         logger.warning(f"Fuzzwork fallback failed for type_id {type_id}: {e}")
+
+    # If buy price was requested but no valid buy price exists, fallback to sell price
+    if order_type == "buy":
+        try:
+            sell_fallback = fetch_single_market_price(
+                type_id,
+                region_id=region_id,
+                station_id=station_id,
+                session=req_session,
+                order_type="sell",
+            )
+            if sell_fallback > 0.05:
+                return sell_fallback
+        except Exception as e:
+            logger.debug(f"Sell fallback failed for type_id {type_id}: {e}")
 
     return 0.0
 
@@ -156,7 +200,7 @@ def get_market_prices(
         int_tid = int(tid)
         cache_key = f"esi_market_price_{order_type}_{region_id}_{int_tid}"
         cached_price = cache.get(cache_key)
-        if cached_price is not None:
+        if cached_price is not None and (order_type != "buy" or cached_price > 0.05):
             prices[int_tid] = cached_price
         else:
             missing_ids.append(int_tid)
@@ -222,7 +266,7 @@ def get_prices_with_overrides(type_ids, corporation=None):
     non_bp_type_ids = [t for t in type_ids if t not in blueprints]
 
     prices = get_market_prices(non_bp_type_ids)
-    
+
     for bp_id in blueprints:
         prices[bp_id] = 0.0
 
@@ -256,7 +300,7 @@ def get_detailed_prices(type_ids, corporation=None):
 
     prices = get_market_prices(non_bp_type_ids)
     detailed = {}
-    
+
     for tid in type_ids:
         if tid in blueprints:
             detailed[tid] = {"original_jita_price": 0.0, "final_price": 0.0}
@@ -278,14 +322,16 @@ def get_detailed_prices(type_ids, corporation=None):
     return detailed
 
 
-def calculate_quote(parsed_items, corporation=None, ignore_discounts=False):
+def calculate_quote(
+    parsed_items, corporation=None, ignore_discounts=False, target_facility=None
+):
     """
     Takes a dict of {EveType: quantity} and an optional EveCorporationInfo.
     Returns:
     - total_price: Decimal
     - item_details: List of dicts with price breakdown
     """
-    type_ids = [t.id for t in parsed_items.keys()]
+    type_ids = [t.id for t in parsed_items]
     market_prices = get_prices_with_overrides(type_ids, corporation)
 
     config = None
@@ -327,7 +373,9 @@ def calculate_quote(parsed_items, corporation=None, ignore_discounts=False):
         # True Material Cost and Minimum Margin Logic
         true_cost_per_unit = Decimal("0.00")
         if corporation:
-            true_cost_per_unit = calculate_bom_cost({eve_type: 1}, corporation)
+            true_cost_per_unit = calculate_bom_cost(
+                {eve_type: 1}, corporation, target_facility=target_facility
+            )
 
         minimum_margin_floor = Decimal("0.00")
         if corp_pricing:
@@ -374,11 +422,162 @@ def calculate_quote(parsed_items, corporation=None, ignore_discounts=False):
     return total_price, item_details
 
 
-def calculate_bom_cost(parsed_items, corporation=None):
+def fetch_system_cost_indices(solar_system_id=None):
     """
-    Calculate the True Material Cost of the parsed_items based on a flattened BOM.
+    Fetch system cost indices from ESI with Django cache caching.
+    Returns:
+        dict: If solar_system_id is provided, returns {activity_name: float_cost_index}.
+              If None, returns {solar_system_id: {activity_name: float_cost_index}}.
     """
+    # Django
+    from django.core.cache import cache
+
+    cache_key = "aa_industry_system_cost_indices"
+    sys_indices = cache.get(cache_key)
+
+    if sys_indices is None:
+        sys_indices = {}
+        try:
+            res = requests.get(
+                "https://esi.evetech.net/latest/industry/systems/", timeout=5
+            )
+            if res.status_code == 200:
+                for entry in res.json():
+                    sid = entry.get("solar_system_id")
+                    if sid:
+                        sys_indices[sid] = {
+                            ci["activity"]: float(ci["cost_index"])
+                            for ci in entry.get("cost_indices", [])
+                            if "activity" in ci and "cost_index" in ci
+                        }
+                if sys_indices:
+                    cache.set(cache_key, sys_indices, timeout=3600)
+        except Exception as e:
+            logger.warning(f"Failed to fetch ESI system cost indices: {e}")
+
+    default_indices = {
+        "manufacturing": 0.02,
+        "reaction": 0.01,
+        "copying": 0.01,
+        "invention": 0.02,
+    }
+
+    if solar_system_id is not None:
+        return sys_indices.get(solar_system_id, default_indices)
+    return sys_indices
+
+
+def calculate_structure_job_costs(
+    parsed_items_or_trees, target_facility=None, corporation=None
+):
+    """
+    Calculates the industry job installation fees for all manufacturing and reaction steps
+    in the recursive BOM trees based on system cost indices and facility tax rate.
+    """
+    if not parsed_items_or_trees:
+        return Decimal("0.00")
+
+    # If dict of {EveType: quantity} is passed, build the recursive BOM trees
+    if isinstance(parsed_items_or_trees, dict):
+        from .bom_engine import get_recursive_bom_tree
+
+        trees = []
+        for eve_type, quantity in parsed_items_or_trees.items():
+            t = get_recursive_bom_tree(
+                type_id=eve_type.id,
+                name=eve_type.name,
+                quantity=quantity,
+                corp_info=corporation,
+                target_facility=target_facility,
+            )
+            trees.append(t)
+    elif isinstance(parsed_items_or_trees, list):
+        trees = parsed_items_or_trees
+    else:
+        trees = [parsed_items_or_trees]
+
+    from ..models import IndustryFacility
+
+    if target_facility is None and corporation:
+        target_facility = (
+            IndustryFacility.objects.filter(
+                owner_id=corporation.corporation_id, is_default=True
+            ).first()
+            or IndustryFacility.objects.filter(is_default=True).first()
+        )
+
+    if not target_facility or not target_facility.solar_system_id:
+        return Decimal("0.00")
+
+    indices = fetch_system_cost_indices(target_facility.solar_system_id)
+    mfg_index = indices.get("manufacturing", 0.02)
+    rxn_index = indices.get("reaction", 0.01)
+
+    tax_rate = 0.0
+    if corporation:
+        from ..models import TaxConfig
+
+        tax_config = TaxConfig.objects.filter(corporation=corporation).first()
+        if tax_config and tax_config.industry_tax_rate:
+            tax_rate = tax_config.industry_tax_rate / 100.0
+
+    total_job_cost = Decimal("0.00")
+
+    # Third Party
+    from eveuniverse.models import EveMarketPrice
+
+    def _calc_jobs(nodes):
+        nonlocal total_job_cost
+        for node in nodes:
+            sub = node.get("sub_materials")
+            if sub:
+                act = node.get("activity_id")
+                tid = node.get("type_id")
+                qty = node.get("quantity", 1)
+
+                is_reaction = act == 11 or node.get("is_reaction", False)
+                cost_index = rxn_index if is_reaction else mfg_index
+
+                # Estimated Item Value (EIV) from EveMarketPrice adjusted_price
+                emp = EveMarketPrice.objects.filter(eve_type_id=tid).first()
+                adj_price = (
+                    float(emp.adjusted_price) if (emp and emp.adjusted_price) else 0.0
+                )
+                if adj_price <= 0.05 and emp and emp.average_price:
+                    adj_price = float(emp.average_price)
+                if adj_price <= 0.05:
+                    adj_price = get_market_prices([tid]).get(tid, 0.0)
+
+                if adj_price > 0.0:
+                    fee = (
+                        Decimal(str(adj_price))
+                        * Decimal(str(qty))
+                        * Decimal(str(cost_index))
+                        * Decimal(str(1.0 + tax_rate))
+                    )
+                    total_job_cost += fee
+
+                _calc_jobs(sub)
+
+    _calc_jobs(trees)
+    return total_job_cost.quantize(Decimal("0.01"))
+
+
+def calculate_bom_cost(parsed_items, corporation=None, target_facility=None):
+    """
+    Calculate the True Material Cost of the parsed_items based on a flattened BOM,
+    including unowned blueprint acquisition costs and structure job installation fees.
+    """
+    from ..models import IndustryFacility
     from .bom_engine import get_recursive_bom_tree
+
+    if target_facility is None and corporation:
+        target_facility = (
+            IndustryFacility.objects.filter(
+                owner_id=corporation.corporation_id, is_default=True
+            ).first()
+            or IndustryFacility.objects.filter(is_default=True).first()
+        )
 
     # 1. Determine material valuation method
     valuation_method = "JITA_SELL"
@@ -405,6 +604,7 @@ def calculate_bom_cost(parsed_items, corporation=None):
 
     # 3. Calculate flattened BOM
     raw_materials_qty = {}
+    trees = []
 
     for eve_type, quantity in parsed_items.items():
         tree = get_recursive_bom_tree(
@@ -412,13 +612,29 @@ def calculate_bom_cost(parsed_items, corporation=None):
             name=eve_type.name,
             quantity=quantity,
             config_dict=config_dict,
+            target_facility=target_facility,
             corp_info=corporation,
         )
+        trees.append(tree)
 
         def _flatten(node):
-            if node.get("activity_id") == 5:
-                # Do not include Blueprint copies (BPOs) as a raw material cost
+            # Science job / Blueprint copying or Reaction Formula
+            if node.get("activity_id") == 5 or (
+                node.get("activity_id") == 11 and not node.get("sub_materials")
+            ):
+                bp_id = node.get("type_id")
+                if corporation:
+                    from ..models import CorpBlueprint
+
+                    # Any blueprint the corp owns as BPO or BPC is NOT counted as cost
+                    if CorpBlueprint.objects.filter(
+                        corporation=corporation, eve_type_id=bp_id
+                    ).exists():
+                        return
+                # Unowned blueprint: acquisition cost of 1 blueprint
+                raw_materials_qty[bp_id] = raw_materials_qty.get(bp_id, 0) + 1
                 return
+
             if not node.get("sub_materials"):
                 tid = node["type_id"]
                 qty = node["quantity"]
@@ -434,6 +650,13 @@ def calculate_bom_cost(parsed_items, corporation=None):
 
     if valuation_method == "JITA_BUY":
         base_prices = get_market_prices(type_ids, order_type="buy")
+        # Sanity check against troll buy orders (e.g. 0.01 or 1.10 ISK) and illiquid books
+        sell_prices = get_market_prices(type_ids, order_type="sell")
+        for tid in type_ids:
+            bp = base_prices.get(tid, 0.0)
+            sp = sell_prices.get(tid, 0.0)
+            if bp <= 0.05 or (sp > 0.0 and bp < 0.25 * sp):
+                base_prices[tid] = sp
     else:
         base_prices = get_market_prices(type_ids, order_type="sell")
 
@@ -449,11 +672,17 @@ def calculate_bom_cost(parsed_items, corporation=None):
         for config in configs:
             base_prices[config.item_type_id] = float(config.manual_price)
 
-    # 5. Calculate Total Cost
+    # 5. Calculate Total Material Cost
     total_bom_cost = Decimal("0.00")
     for tid, qty in raw_materials_qty.items():
         price = Decimal(str(base_prices.get(tid, 0.0)))
         total_bom_cost += price * qty
+
+    # 6. Add Structure Job Installation Fees
+    structure_fees = calculate_structure_job_costs(
+        trees, target_facility=target_facility, corporation=corporation
+    )
+    total_bom_cost += structure_fees
 
     return total_bom_cost
 
@@ -489,7 +718,9 @@ def get_reprocessing_value(eve_type, quantity, efficiency=1.0) -> Decimal | None
     return total * quantity
 
 
-def get_item_value_variants(eve_type, quantity) -> dict:
+def get_item_value_variants(
+    eve_type, quantity, order_type="sell", refining_efficiency=1.0
+) -> dict:
     """
     Single parameterized replacement for the "raw/compressed/refined/NPC
     best-of" concept: returns only the valuation keys that actually apply to
@@ -497,21 +728,40 @@ def get_item_value_variants(eve_type, quantity) -> dict:
     sentinel pattern. Compressed/raw ore items are themselves distinct
     EveTypes with their own market price, so "best of market vs. reprocessed"
     already covers raw ore without any ore-specific special-casing.
+
+    `order_type` is "buy", "sell", or "split" (average of both) - the pricing
+    basis for the direct market valuation. `refining_efficiency` (0.0-1.0)
+    scales the reprocessed valuation to a realistic refining rate.
     """
     variants = {}
 
-    market_price = get_market_prices([eve_type.id]).get(eve_type.id, 0.0)
+    if order_type == "split":
+        buy_price = get_market_prices([eve_type.id], order_type="buy").get(
+            eve_type.id, 0.0
+        )
+        sell_price = get_market_prices([eve_type.id], order_type="sell").get(
+            eve_type.id, 0.0
+        )
+        market_price = (buy_price + sell_price) / 2.0
+    else:
+        market_price = get_market_prices([eve_type.id], order_type=order_type).get(
+            eve_type.id, 0.0
+        )
     if market_price and market_price > 0.0:
         variants["market"] = Decimal(str(market_price)) * quantity
 
-    reprocessed = get_reprocessing_value(eve_type, quantity)
+    reprocessed = get_reprocessing_value(
+        eve_type, quantity, efficiency=refining_efficiency
+    )
     if reprocessed is not None and reprocessed > 0:
         variants["reprocessed"] = reprocessed
 
     return variants
 
 
-def calculate_price_density_tax(unit_price: Decimal, packaged_volume, program) -> Decimal:
+def calculate_price_density_tax(
+    unit_price: Decimal, packaged_volume, program
+) -> Decimal:
     """
     Tax on bulky, low ISK/m3 items, consistently parameterized on
     packaged_volume (the source project's documented bug divided by the wrong
@@ -523,14 +773,21 @@ def calculate_price_density_tax(unit_price: Decimal, packaged_volume, program) -
     """
     threshold = getattr(program, "price_density_threshold", 0.0) or 0.0
     tax_percent = getattr(program, "price_density_tax_percent", 0.0) or 0.0
-    if threshold <= 0 or tax_percent <= 0 or not packaged_volume or packaged_volume <= 0:
+    if (
+        threshold <= 0
+        or tax_percent <= 0
+        or not packaged_volume
+        or packaged_volume <= 0
+    ):
         return Decimal("0.00")
 
     density = unit_price / Decimal(str(packaged_volume))
     if density >= Decimal(str(threshold)):
         return Decimal("0.00")
 
-    return (unit_price * Decimal(str(tax_percent)) / Decimal("100.00")).quantize(Decimal("0.01"))
+    return (unit_price * Decimal(str(tax_percent)) / Decimal("100.00")).quantize(
+        Decimal("0.01")
+    )
 
 
 def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]:
@@ -555,6 +812,8 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
 
     total_price = Decimal("0.00")
     item_details = []
+    order_type = (program.price_type or "SELL").lower()
+    refining_efficiency = float(program.refining_rate or 0.0) / 100.0
 
     for eve_type, quantity in parsed_items.items():
         watchlist_entry = watchlist.get(eve_type.id)
@@ -575,7 +834,12 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
             )
             continue
 
-        variants = get_item_value_variants(eve_type, quantity)
+        variants = get_item_value_variants(
+            eve_type,
+            quantity,
+            order_type=order_type,
+            refining_efficiency=refining_efficiency,
+        )
         if not variants:
             logger.warning(
                 f"No valuation method applies to {eve_type.name} ({eve_type.id}) - valuing at 0."
@@ -585,10 +849,18 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
         else:
             value_source, line_total = max(variants.items(), key=lambda kv: kv[1])
 
-        base_unit_price = (line_total / quantity).quantize(Decimal("0.01")) if quantity else Decimal("0.00")
+        base_unit_price = (
+            (line_total / quantity).quantize(Decimal("0.01"))
+            if quantity
+            else Decimal("0.00")
+        )
 
-        modifier = Decimal(str(program.price_modifier_percent or 0.0)) / Decimal("100.00")
-        unit_price = (base_unit_price * (Decimal("1.00") + modifier)).quantize(Decimal("0.01"))
+        modifier = Decimal(str(program.price_modifier_percent or 0.0)) / Decimal(
+            "100.00"
+        )
+        unit_price = (base_unit_price * (Decimal("1.00") + modifier)).quantize(
+            Decimal("0.01")
+        )
 
         packaged_volume = eve_type.packaged_volume or eve_type.volume
         density_tax = calculate_price_density_tax(unit_price, packaged_volume, program)
@@ -613,3 +885,156 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
         )
 
     return total_price, item_details
+
+
+def get_item_production_details(type_id: int, activity_id: int = 1) -> tuple[int, int]:
+    """
+    Returns (base_duration_seconds, portion_size) for 1 run of an item.
+    Uses django-eveuniverse EveIndustryActivityProduct and EveIndustryActivityDuration.
+    Cached for fast repeated lookups.
+    """
+    from django.core.cache import cache
+
+    cache_key = f"aa_industry_prod_details_{type_id}_{activity_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    # Third Party
+    from eveuniverse.models import (
+        EveIndustryActivityDuration,
+        EveIndustryActivityProduct,
+    )
+
+    try:
+        bp_prod = EveIndustryActivityProduct.objects.filter(
+            product_eve_type_id=type_id,
+            activity_id=activity_id,
+            eve_type__published=True,
+        ).first()
+
+        if bp_prod:
+            portion_size = bp_prod.quantity or 1
+            duration_obj = EveIndustryActivityDuration.objects.filter(
+                eve_type_id=bp_prod.eve_type_id,
+                activity_id=activity_id,
+            ).first()
+            dur_sec = duration_obj.time if duration_obj and duration_obj.time else 0
+            res = (dur_sec, portion_size)
+            cache.set(cache_key, res, timeout=86400)
+            return res
+    except Exception as exc:
+        logger.warning(
+            "Error fetching production details for type %s (act %s): %s",
+            type_id,
+            activity_id,
+            exc,
+        )
+
+    fallback = (0, 1)
+    cache.set(cache_key, fallback, timeout=86400)
+    return fallback
+
+
+def calculate_task_builder_reward(
+    eve_type,
+    quantity: int,
+    activity_id: int = 1,
+    priority: str = "NORMAL",
+    pricing_config=None,
+    line_total_value: float | Decimal = 0.0,
+) -> tuple[Decimal, int]:
+    """
+    Calculates the builder reward and estimated duration using Hybrid Model 2:
+    Raw = Base Fee + (Slot Duration Hours * Hourly Rate) + (Output Market Value * Value %)
+    Bounded = Clamp(Raw, Minimum Floor, Maximum Cap)
+    Final = Bounded * Priority Multiplier
+
+    Args:
+        eve_type: EveType instance or object with .id, or integer type_id.
+        quantity: Integer quantity to produce.
+        activity_id: Industry activity ID (1=Manufacturing, 11=Reactions).
+        priority: Priority string ('URGENT', 'HIGH', 'NORMAL', 'LOW').
+        pricing_config: CorpPricingConfig instance or None.
+        line_total_value: Market value of total output quantity.
+
+    Returns:
+        tuple[Decimal, int]: (final_builder_reward, estimated_duration_seconds)
+    """
+    # 1. Retrieve config parameters with defaults
+    base_fee = (
+        Decimal(str(pricing_config.builder_base_fee))
+        if pricing_config and pricing_config.builder_base_fee is not None
+        else Decimal("1000000.00")
+    )
+    hourly_rate = (
+        Decimal(str(pricing_config.builder_hourly_rate))
+        if pricing_config and pricing_config.builder_hourly_rate is not None
+        else Decimal("750000.00")
+    )
+    reward_percent = (
+        float(pricing_config.builder_reward_percent)
+        if pricing_config and pricing_config.builder_reward_percent is not None
+        else 0.5
+    )
+    min_reward = (
+        Decimal(str(pricing_config.builder_min_reward))
+        if pricing_config and pricing_config.builder_min_reward is not None
+        else Decimal("2500000.00")
+    )
+    max_reward = (
+        Decimal(str(pricing_config.builder_max_reward))
+        if pricing_config and pricing_config.builder_max_reward is not None
+        else Decimal("75000000.00")
+    )
+    urgent_mult = (
+        float(pricing_config.builder_urgent_multiplier)
+        if pricing_config and pricing_config.builder_urgent_multiplier is not None
+        else 1.5
+    )
+    high_mult = (
+        float(pricing_config.builder_high_multiplier)
+        if pricing_config and pricing_config.builder_high_multiplier is not None
+        else 1.25
+    )
+    low_mult = (
+        float(pricing_config.builder_low_multiplier)
+        if pricing_config and pricing_config.builder_low_multiplier is not None
+        else 0.8
+    )
+
+    # 2. Duration calculation
+    type_id = eve_type.id if hasattr(eve_type, "id") else int(eve_type)
+    base_dur_sec, portion_size = get_item_production_details(type_id, activity_id)
+    runs = max(math.ceil(quantity / max(portion_size, 1)), 1)
+    # Apply standard TE 0.75 efficiency factor (rigs + skills)
+    est_duration_sec = int(base_dur_sec * runs * 0.75) if base_dur_sec > 0 else 0
+    duration_hours = Decimal(str(est_duration_sec)) / Decimal("3600.0")
+
+    # 3. Raw reward components
+    slot_cost = duration_hours * hourly_rate
+    val_incentive = Decimal(str(line_total_value)) * (
+        Decimal(str(reward_percent)) / Decimal("100.0")
+    )
+    raw_reward = base_fee + slot_cost + val_incentive
+
+    # 4. Bounds Clamping
+    bounded = raw_reward
+    if max_reward > 0 and bounded > max_reward:
+        bounded = max_reward
+    if min_reward > 0 and bounded < min_reward:
+        bounded = min_reward
+
+    # 5. Priority Multiplier
+    prio = (priority or "NORMAL").upper()
+    if prio == "URGENT":
+        mult = Decimal(str(urgent_mult))
+    elif prio == "HIGH":
+        mult = Decimal(str(high_mult))
+    elif prio == "LOW":
+        mult = Decimal(str(low_mult))
+    else:
+        mult = Decimal("1.0")
+
+    final_reward = (bounded * mult).quantize(Decimal("0.01"))
+    return final_reward, est_duration_sec

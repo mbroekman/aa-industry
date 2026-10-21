@@ -45,21 +45,23 @@ def task_sync_corp_inventory():
                 assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=corp_id, token=token, page=page
                 ).results(use_etag=False)
-                
+
                 if not assets_res:
                     break
-                    
+
                 # Prevent infinite loop if ESI ignores pagination
-                current_ids = {getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res}
+                current_ids = {
+                    getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res
+                }
                 if current_ids and current_ids.issubset(previous_ids):
                     break
                 previous_ids.update(current_ids)
-                    
+
                 assets.extend(assets_res)
-                
+
                 if len(assets_res) < 1000:
                     break
-                    
+
                 page += 1
 
             # Build a map of item_id -> location_id to resolve nested containers
@@ -218,10 +220,8 @@ def task_sync_corp_inventory():
                                                 corporation=corp
                                             ).first()
                                         )
-                                        reward_percent = (
-                                            pricing_config.builder_reward_percent
-                                            if pricing_config
-                                            else 0.0
+                                        from ..utils.pricing_engine import (
+                                            calculate_task_builder_reward,
                                         )
 
                                         prices = get_prices_with_overrides(
@@ -231,8 +231,16 @@ def task_sync_corp_inventory():
                                             config.item_type.id, 0
                                         )
                                         line_total = float(price_per_unit) * deficit
-                                        task_reward = line_total * (
-                                            reward_percent / 100.0
+
+                                        task_reward, est_duration_seconds = (
+                                            calculate_task_builder_reward(
+                                                eve_type=config.item_type,
+                                                quantity=deficit,
+                                                activity_id=1,
+                                                priority="NORMAL",
+                                                pricing_config=pricing_config,
+                                                line_total_value=line_total,
+                                            )
                                         )
 
                                         ProductionTask.objects.create(
@@ -242,6 +250,7 @@ def task_sync_corp_inventory():
                                             origin="BOM",
                                             gamification_value=line_total,
                                             builder_reward=task_reward,
+                                            estimated_duration_seconds=est_duration_seconds,
                                         )
                                 else:
                                     from ..models import CorpBuyOrder

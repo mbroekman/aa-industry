@@ -168,11 +168,38 @@ def evaluate_baskets(basket_id=None):
             batches = (shortage + b_item.batch_size - 1) // b_item.batch_size
             order_qty = max(shortage, batches * b_item.batch_size)
             if order_qty > 0:
+                from ..models import CorpPricingConfig
+                from ..utils.pricing_engine import (
+                    calculate_task_builder_reward,
+                    get_prices_with_overrides,
+                )
+
+                corp = getattr(b_item.basket, "corporation", None)
+                pricing_config = (
+                    CorpPricingConfig.objects.filter(corporation=corp).first()
+                    if corp
+                    else None
+                )
+                prices = get_prices_with_overrides([eve_type.id], corp)
+                price_per_unit = prices.get(eve_type.id, 0)
+                line_total = float(price_per_unit) * order_qty
+                task_reward, est_duration_seconds = calculate_task_builder_reward(
+                    eve_type=eve_type,
+                    quantity=order_qty,
+                    activity_id=1,
+                    priority="NORMAL",
+                    pricing_config=pricing_config,
+                    line_total_value=line_total,
+                )
+
                 ProductionTask.objects.create(
                     item_type=eve_type,
                     quantity=order_qty,
                     status="UNCLAIMED",
                     origin="BASKET",
+                    gamification_value=line_total,
+                    builder_reward=task_reward,
+                    estimated_duration_seconds=est_duration_seconds,
                 )
 
                 ai_market_logs.append(
@@ -200,7 +227,7 @@ def evaluate_baskets(basket_id=None):
                 }
             )
 
-        # Save all logs in bulk, ensuring no foreign key constraints are violated 
+        # Save all logs in bulk, ensuring no foreign key constraints are violated
         # if BasketItems were deleted during this long-running task
         if ai_market_logs:
             existing_bitem_ids = set(
@@ -209,7 +236,9 @@ def evaluate_baskets(basket_id=None):
                 ).values_list("id", flat=True)
             )
             valid_logs = [
-                log for log in ai_market_logs if log.basket_item_id in existing_bitem_ids
+                log
+                for log in ai_market_logs
+                if log.basket_item_id in existing_bitem_ids
             ]
             if valid_logs:
                 AIMarketLog.objects.bulk_create(valid_logs)
@@ -554,6 +583,7 @@ def scan_market_opportunities(
             if OpportunityScanner.objects.filter(pk=scanner.id).exists():
                 if scanner.scan_missing_blueprints:
                     from ..models.ai_manager import MissingBlueprintOpportunity
+
                     MissingBlueprintOpportunity.objects.filter(scanner=scanner).delete()
                     if missing_bpos:
                         MissingBlueprintOpportunity.objects.bulk_create(missing_bpos)

@@ -304,6 +304,12 @@
                                                     <td>{% trans "Material Cost (BOM Jita Sell)" %}</td>
                                                     <td class="text-end text-danger numeric">-{{ total_bom_price|eve_isk }}</td>
                                                 </tr>
+                                                {% if structure_job_costs > 0 %}
+                                                <tr>
+                                                    <td>{% trans "Structure Installation Fees (SCI + Facility Tax)" %}</td>
+                                                    <td class="text-end text-danger numeric">-{{ structure_job_costs|eve_isk }}</td>
+                                                </tr>
+                                                {% endif %}
                                                 <tr>
                                                     <td>{% trans "Estimated Build Cost" %}</td>
                                                     <td class="text-end text-danger numeric">-{{ estimated_build_cost|eve_isk }}</td>
@@ -314,7 +320,10 @@
                                                 </tr>
                                                 <tr>
                                                     <td class="fw-bold">{% trans "Profit Margin" %}</td>
-                                                    <td class="text-end {% if profit_margin < 0 %}text-danger{% else %}text-success{% endif %} fw-bold numeric" id="pnlProfitMargin">{{ profit_margin|eve_isk }}</td>
+                                                    <td class="text-end {% if profit_margin < 0 %}text-danger{% else %}text-success{% endif %} fw-bold numeric" id="pnlProfitMargin">
+                                                        {{ profit_margin|eve_isk }}
+                                                        <span class="ms-1 small">({{ profit_margin_percent|floatformat:1 }}%)</span>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>

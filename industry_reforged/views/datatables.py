@@ -94,10 +94,17 @@ def dt_director_orders(request):
             sub_orders_badge = f'<span class="badge bg-secondary ms-1" style="font-size: 0.65em;" data-bs-toggle="tooltip" title="Has {order.child_orders.count()} sub-orders"><i class="fas fa-sitemap"></i> +{order.child_orders.count()}</span>'
 
         margin = 0.0
-        if order.true_cost and order.true_cost > 0:
-            margin = ((order.total_price - order.true_cost) / order.true_cost) * 100
+        markup = 0.0
+        if order.total_price and order.total_price > 0 and order.true_cost:
+            margin = ((order.total_price - order.true_cost) / order.total_price) * 100
+            if order.true_cost > 0:
+                markup = ((order.total_price - order.true_cost) / order.true_cost) * 100
 
-        margin_html = f'<span class="{"text-success" if margin >= 0 else "text-danger"}">{margin:.1f}%</span>'
+        margin_html = (
+            f'<span class="{"text-success" if margin >= 0 else "text-danger"}" '
+            f'data-bs-toggle="tooltip" title="Markup: {markup:.1f}%">'
+            f'{margin:.1f}%</span>'
+        )
 
         primary_item = "-"
         if order.most_expensive_item:

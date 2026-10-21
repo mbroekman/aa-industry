@@ -2,15 +2,18 @@
 App Models
 """
 
-# Third Party
-from eveuniverse.models import EveType
+# Standard Library
+from decimal import Decimal
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 # Django
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-# Alliance Auth
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+# Third Party
+from eveuniverse.models import EveType
 
 
 class CorpPricingConfig(models.Model):
@@ -23,11 +26,49 @@ class CorpPricingConfig(models.Model):
             "Default discount percentage applied to Jita prices (e.g. 10.0 for 10 percent off)"
         ),
     )
-    builder_reward_percent = models.FloatField(
-        default=0.0,
+    builder_base_fee = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=Decimal("1000000.00"),
+        help_text=_("Flat fee in ISK paid for installing and completing a job"),
+    )
+    builder_hourly_rate = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=Decimal("750000.00"),
         help_text=_(
-            "Percentage of the item value given as a financial reward to the builder"
+            "Hourly rate in ISK paid per slot-hour of manufacturing/reaction time"
         ),
+    )
+    builder_reward_percent = models.FloatField(
+        default=0.5,
+        help_text=_(
+            "Percentage of the output item value given as incentive reward to the builder"
+        ),
+    )
+    builder_min_reward = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=Decimal("2500000.00"),
+        help_text=_("Minimum floor payout in ISK per task"),
+    )
+    builder_max_reward = models.DecimalField(
+        max_digits=17,
+        decimal_places=2,
+        default=Decimal("75000000.00"),
+        help_text=_("Maximum cap payout in ISK per task"),
+    )
+    builder_urgent_multiplier = models.FloatField(
+        default=1.5,
+        help_text=_("Multiplier applied to rewards for URGENT priority tasks"),
+    )
+    builder_high_multiplier = models.FloatField(
+        default=1.25,
+        help_text=_("Multiplier applied to rewards for HIGH priority tasks"),
+    )
+    builder_low_multiplier = models.FloatField(
+        default=0.8,
+        help_text=_("Multiplier applied to rewards for LOW priority tasks"),
     )
     default_t1_me = models.IntegerField(
         default=10,
@@ -114,11 +155,15 @@ class MemberOrder(models.Model):
         help_text=_("The calculated True Material Cost at the time of order creation."),
     )
     upfront_payment = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
-    upfront_payment_plex = models.IntegerField(default=0, help_text=_("Upfront payment required in PLEX"))
+    upfront_payment_plex = models.IntegerField(
+        default=0, help_text=_("Upfront payment required in PLEX")
+    )
     amount_paid = models.DecimalField(max_digits=17, decimal_places=2, default=0.00)
     ignore_discounts = models.BooleanField(
         default=False,
-        help_text=_("If True, corp-level discounts are not applied to this order's items.")
+        help_text=_(
+            "If True, corp-level discounts are not applied to this order's items."
+        ),
     )
     created_at = models.DateTimeField(auto_now_add=True)
     quoted_at = models.DateTimeField(null=True, blank=True)
@@ -132,13 +177,13 @@ class MemberOrder(models.Model):
         null=True,
         blank=True,
         related_name="orders",
-        help_text=_("The destination where the finished goods will be delivered.")
+        help_text=_("The destination where the finished goods will be delivered."),
     )
     output_container = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        help_text=_("The name of the container where the goods will be placed.")
+        help_text=_("The name of the container where the goods will be placed."),
     )
 
     parent_order = models.ForeignKey(
@@ -189,10 +234,13 @@ class MemberOrder(models.Model):
         plex_isk_value = 0
         if self.upfront_payment_plex > 0:
             from ..utils.pricing_engine import get_market_prices
+
             plex_price = get_market_prices([44992]).get(44992, 0.0)
             plex_isk_value = self.upfront_payment_plex * float(plex_price)
-            
-        return max(0, float(self.total_price) - float(self.amount_paid) - plex_isk_value)
+
+        return max(
+            0, float(self.total_price) - float(self.amount_paid) - plex_isk_value
+        )
 
     @property
     def grand_total(self):
@@ -219,9 +267,7 @@ class MemberOrder(models.Model):
 
         # Count buy items
         buy_items = [
-            item
-            for item in self.items.all()
-            if item.is_buy_product or item.is_bought
+            item for item in self.items.all() if item.is_buy_product or item.is_bought
         ]
         total_buy = len(buy_items)
         completed_buy = sum(1 for item in buy_items if item.is_bought)
@@ -528,13 +574,18 @@ class ProductionTask(models.Model):
         default=0.00,
         help_text=_("Actual calculated ISK payout reward for completing this task"),
     )
+    estimated_duration_seconds = models.IntegerField(
+        default=0,
+        help_text=_("Estimated manufacturing or reaction duration in seconds"),
+    )
 
     # Claimability
     is_claimable = models.BooleanField(
         default=True,
-        help_text=_("If False, this task cannot be claimed directly (used for large parent items)"),
+        help_text=_(
+            "If False, this task cannot be claimed directly (used for large parent items)"
+        ),
     )
-
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -552,6 +603,10 @@ class ProductionTask(models.Model):
     class Meta:
         verbose_name = _("Production Task")
         verbose_name_plural = _("Production Tasks")
+
+    @property
+    def estimated_duration_hours(self) -> float:
+        return float(self.estimated_duration_seconds) / 3600.0
 
     @property
     def activity_name(self):
@@ -618,7 +673,9 @@ class CorpItemConfig(models.Model):
     )
     is_unclaimable_parent = models.BooleanField(
         default=False,
-        help_text=_("Do not allow this item to be claimed as a single task. Sub-components become claimable instead."),
+        help_text=_(
+            "Do not allow this item to be claimed as a single task. Sub-components become claimable instead."
+        ),
     )
 
     class Meta:

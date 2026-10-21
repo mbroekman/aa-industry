@@ -66,12 +66,8 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     # Unclaimed tasks
     unclaimed_tasks_qs = (
-        ProductionTask.objects.filter(
-            status="UNCLAIMED"
-        )
-        .filter(
-            Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False)
-        )
+        ProductionTask.objects.filter(status="UNCLAIMED")
+        .filter(Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False))
         .select_related("item_type", "bom_parent", "created_from_order")
         .annotate(
             incomplete_children_count=Count(
@@ -94,9 +90,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             status="IN_PRODUCTION",
             assigned_to_id__in=user_characters,
         )
-        .filter(
-            Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False)
-        )
+        .filter(Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False))
         .select_related("item_type", "bom_parent")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
         .annotate(
@@ -114,9 +108,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
             status="COMPLETED",
             assigned_to_id__in=user_characters,
         )
-        .filter(
-            Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False)
-        )
+        .filter(Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False))
         .select_related("item_type")
         .prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
         .order_by("-completed_at")[:10]
@@ -503,7 +495,10 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
         if task:
             if not task.is_claimable:
                 if task.bom_children.exclude(status="COMPLETED").exists():
-                    messages.error(request, _("Cannot claim this task until all sub-jobs are completed."))
+                    messages.error(
+                        request,
+                        _("Cannot claim this task until all sub-jobs are completed."),
+                    )
                     return redirect("industry_reforged:industrialist_dashboard")
 
             def has_owned_ancestor(t, char):
@@ -579,22 +574,27 @@ def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             if corp_info
             else None
         )
-        reward_pct = (
-            float(pricing_config.builder_reward_percent) if pricing_config else 0.0
-        )
+        from ..utils.pricing_engine import calculate_task_builder_reward
 
-        def unclaim_recursive(t, char, pct):
+        def unclaim_recursive(t, char, config):
             if t.status == "IN_PRODUCTION" and t.assigned_to == char:
                 t.status = "UNCLAIMED"
                 t.assigned_to = None
                 t.assigned_at = None
-                t.builder_reward = (float(t.gamification_value) * pct) / 100.0
+                t.builder_reward, _ = calculate_task_builder_reward(
+                    eve_type=t.item_type,
+                    quantity=t.quantity,
+                    activity_id=t.activity_id,
+                    priority=t.priority,
+                    pricing_config=config,
+                    line_total_value=t.gamification_value,
+                )
                 t.save()
             for child in t.bom_children.all():
-                unclaim_recursive(child, char, pct)
+                unclaim_recursive(child, char, config)
 
         if task.assigned_to:
-            unclaim_recursive(task, task.assigned_to, reward_pct)
+            unclaim_recursive(task, task.assigned_to, pricing_config)
 
         messages.success(
             request, f"Successfully unclaimed {task.quantity}x {task.item_type.name}."
@@ -648,7 +648,11 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
             for task in tasks:
                 if not task.is_claimable:
                     if task.bom_children.exclude(status="COMPLETED").exists():
-                        messages.warning(request, _("Skipped %(item)s because sub-jobs are incomplete.") % {"item": task.item_type.name})
+                        messages.warning(
+                            request,
+                            _("Skipped %(item)s because sub-jobs are incomplete.")
+                            % {"item": task.item_type.name},
+                        )
                         continue
                 claim_recursive(task, character)
 
@@ -698,25 +702,30 @@ def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
                 if corp_info
                 else None
             )
-            reward_pct = (
-                float(pricing_config.builder_reward_percent) if pricing_config else 0.0
-            )
+            from ..utils.pricing_engine import calculate_task_builder_reward
 
-            def unclaim_recursive(t, char, pct):
+            def unclaim_recursive(t, char, config):
                 nonlocal count
                 if t.status == "IN_PRODUCTION" and t.assigned_to == char:
                     t.status = "UNCLAIMED"
                     t.assigned_to = None
                     t.assigned_at = None
-                    t.builder_reward = (float(t.gamification_value) * pct) / 100.0
+                    t.builder_reward, _ = calculate_task_builder_reward(
+                        eve_type=t.item_type,
+                        quantity=t.quantity,
+                        activity_id=t.activity_id,
+                        priority=t.priority,
+                        pricing_config=config,
+                        line_total_value=t.gamification_value,
+                    )
                     t.save()
                     count += 1
                 for child in t.bom_children.all():
-                    unclaim_recursive(child, char, pct)
+                    unclaim_recursive(child, char, config)
 
             for task in tasks:
                 if task.assigned_to:
-                    unclaim_recursive(task, task.assigned_to, reward_pct)
+                    unclaim_recursive(task, task.assigned_to, pricing_config)
 
             messages.success(request, f"Successfully unclaimed {count} tasks.")
         else:

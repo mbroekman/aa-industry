@@ -66,6 +66,18 @@ class TestGetReprocessingValue:
         # 100 tritanium/unit * 10.0 isk * 2 units = 2000.0
         assert value == Decimal("2000.00") or value == Decimal("2000")
 
+    def test_value_scaled_by_efficiency(self, mock_esi_orders):
+        eve_type = EveTypeFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=eve_type, material_eve_type=tritanium, quantity=100
+        )
+        mock_esi_orders.return_value = _market_response(10.0)
+
+        value = get_reprocessing_value(eve_type, 2, efficiency=0.5)
+        # 100 tritanium/unit * 10.0 isk * 2 units * 0.5 efficiency = 1000.0
+        assert value == Decimal("1000.00") or value == Decimal("1000")
+
 
 @pytest.mark.django_db
 class TestGetItemValueVariants:
@@ -75,6 +87,19 @@ class TestGetItemValueVariants:
 
         variants = get_item_value_variants(eve_type, 1)
         assert variants == {"market": Decimal("50.0")}
+
+    def test_order_type_buy_uses_buy_price(self, mock_esi_orders):
+        eve_type = EveTypeFactory()
+        mock_esi_orders.return_value = MagicMock(
+            status_code=200,
+            json=lambda: [
+                {"price": 80.0, "volume_remain": 100, "is_buy_order": True, "location_id": 60003760},
+                {"price": 100.0, "volume_remain": 100, "is_buy_order": False, "location_id": 60003760},
+            ],
+        )
+
+        variants = get_item_value_variants(eve_type, 1, order_type="buy")
+        assert variants == {"market": Decimal("80.0")}
 
     def test_reprocessed_only_when_no_market_price(self, mock_esi_orders):
         eve_type = EveTypeFactory()
@@ -143,7 +168,49 @@ class TestCalculateBuybackQuote:
 
         total, details = calculate_buyback_quote({eve_type: 1}, program)
         assert details[0]["value_source"] == "reprocessed"
-        assert total == Decimal("1000.00")
+        # reprocessed is 1000.0/unit at 100% efficiency, scaled by the program's
+        # default 90% refining_rate
+        assert total == Decimal("900.00")
+
+    def test_refining_rate_scales_reprocessed_value(self, mock_esi_orders):
+        program = BuybackProgramFactory(refining_rate=50.0)
+        eve_type = EveTypeFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=eve_type, material_eve_type=tritanium, quantity=1000
+        )
+
+        def side_effect(url, params=None, **kwargs):
+            if params.get("type_id") == eve_type.id:
+                return _market_response(10.0)  # market: 10.0/unit
+            return _market_response(1.0)  # tritanium: 1.0/unit -> reprocessed 1000.0/unit @ 100%
+
+        mock_esi_orders.side_effect = side_effect
+
+        total, details = calculate_buyback_quote({eve_type: 1}, program)
+        assert details[0]["value_source"] == "reprocessed"
+        assert total == Decimal("500.00")
+
+    def test_price_type_split_averages_buy_and_sell(self, mock_esi_orders):
+        program = BuybackProgramFactory(price_type="SPLIT")
+        eve_type = EveTypeFactory()
+
+        def side_effect(url, params=None, **kwargs):
+            if params.get("order_type") == "all":
+                return MagicMock(
+                    status_code=200,
+                    json=lambda: [
+                        {"price": 80.0, "volume_remain": 100, "is_buy_order": True, "location_id": 60003760},
+                        {"price": 100.0, "volume_remain": 100, "is_buy_order": False, "location_id": 60003760},
+                    ],
+                )
+            return _empty_response()
+
+        mock_esi_orders.side_effect = side_effect
+
+        total, details = calculate_buyback_quote({eve_type: 1}, program)
+        # buy 80.0, sell 100.0 -> split 90.0/unit
+        assert total == Decimal("90.00")
 
     def test_positive_price_modifier_increases_payout(self, mock_esi_orders):
         program = BuybackProgramFactory(price_modifier_percent=10.0)

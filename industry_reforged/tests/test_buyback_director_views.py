@@ -80,6 +80,8 @@ class TestBuybackDirectorViews:
                 "price_density_threshold": "0",
                 "price_density_tax_percent": "0",
                 "contract_expiry_days": "7",
+                "price_type": "SELL",
+                "refining_rate": "90.0",
             },
         )
         request.user = user

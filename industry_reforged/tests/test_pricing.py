@@ -7,9 +7,12 @@ import pytest
 
 # AA Industry App
 from industry_reforged.utils.pricing_engine import (
+    calculate_bom_cost,
     calculate_percentile_price,
     calculate_quote,
+    calculate_structure_job_costs,
     fetch_single_market_price,
+    fetch_system_cost_indices,
     get_detailed_prices,
     get_fuzzwork_prices,
     get_market_prices,
@@ -245,3 +248,210 @@ class TestPricingEngine:
                 assert detail["discount_percent"] == 20.0
                 assert detail["final_price_per_unit"] == Decimal("40.00")
                 assert detail["line_total"] == Decimal("400.00")
+
+    def test_calculate_percentile_price_filters_lowball_troll_buy_orders(self):
+        # A genuine buy order exists, along with a massive 0.01 troll order
+        orders = [
+            {
+                "price": 1000.0,
+                "volume_remain": 500,
+                "is_buy_order": True,
+                "location_id": 60003760,
+            },
+            {
+                "price": 950.0,
+                "volume_remain": 1000,
+                "is_buy_order": True,
+                "location_id": 60003760,
+            },
+            {
+                "price": 0.01,
+                "volume_remain": 100_000_000,  # massive troll volume
+                "is_buy_order": True,
+                "location_id": 60003760,
+            },
+        ]
+        price = calculate_percentile_price(orders, percentile=0.05, order_type="buy")
+        assert price >= 950.0
+        assert price != 0.01
+
+    def test_fetch_single_market_price_buy_fallback_to_sell_on_illiquid_book(
+        self, mock_esi_orders
+    ):
+        # ESI returns high sell orders but only a 0.01 buy order
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.json.return_value = [
+            {
+                "price": 5000.0,
+                "volume_remain": 100,
+                "is_buy_order": False,
+                "location_id": 60003760,
+            },
+            {
+                "price": 0.01,
+                "volume_remain": 1000,
+                "is_buy_order": True,
+                "location_id": 60003760,
+            },
+        ]
+        mock_esi_orders.return_value = mock_res
+
+        # Requesting buy price should reject 0.01 and fallback to sell price 5000.0
+        price = fetch_single_market_price(9999, order_type="buy")
+        assert price == 5000.0
+
+    def test_fetch_system_cost_indices_fallback(self):
+        from django.core.cache import cache
+
+        cache.clear()
+
+        with patch("requests.get", side_effect=Exception("ESI down")):
+            indices = fetch_system_cost_indices(solar_system_id=30004582)
+            assert indices["manufacturing"] == 0.02
+            assert indices["reaction"] == 0.01
+
+    def test_fetch_system_cost_indices_caching(self):
+        from django.core.cache import cache
+
+        cache.clear()
+
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.json.return_value = [
+            {
+                "solar_system_id": 30004582,
+                "cost_indices": [
+                    {"activity": "manufacturing", "cost_index": 0.0266},
+                    {"activity": "reaction", "cost_index": 0.0083},
+                ],
+            }
+        ]
+        with patch("requests.get", return_value=mock_res):
+            indices = fetch_system_cost_indices(solar_system_id=30004582)
+            assert indices["manufacturing"] == 0.0266
+            assert indices["reaction"] == 0.0083
+
+            # Second call should use cache without calling requests.get
+            with patch("requests.get") as mock_get_again:
+                cached_indices = fetch_system_cost_indices(solar_system_id=30004582)
+                mock_get_again.assert_not_called()
+                assert cached_indices["manufacturing"] == 0.0266
+
+    def test_calculate_structure_job_costs(self):
+        from eveuniverse.models import EveMarketPrice
+
+        from industry_reforged.models import IndustryFacility, TaxConfig
+
+        corp = EveCorporationInfoFactory(corporation_id=123)
+        TaxConfig.objects.create(corporation=corp, industry_tax_rate=10.0)
+
+        fac = IndustryFacility.objects.create(
+            facility_id=1001,
+            name="Test Sotiyo",
+            owner_id=corp.corporation_id,
+            solar_system_id=30004582,
+            is_default=True,
+        )
+
+        prod_type = EveTypeFactory(id=88001, name="Titan Hull")
+        EveMarketPrice.objects.create(
+            eve_type=prod_type,
+            adjusted_price=Decimal("10000000.00"),  # 10M EIV
+        )
+
+        mock_tree = [
+            {
+                "type_id": prod_type.id,
+                "name": prod_type.name,
+                "quantity": 1,
+                "activity_id": 1,
+                "sub_materials": [
+                    {
+                        "type_id": 999,
+                        "name": "Raw Ore",
+                        "quantity": 100,
+                        "sub_materials": [],
+                    }
+                ],
+            }
+        ]
+
+        with patch(
+            "industry_reforged.utils.pricing_engine.fetch_system_cost_indices",
+            return_value={"manufacturing": 0.02, "reaction": 0.01},
+        ):
+            # Fee: 10,000,000 * 1 * 0.02 (SCI) * 1.10 (Tax) = 220,000.00 ISK
+            fees = calculate_structure_job_costs(
+                mock_tree, target_facility=fac, corporation=corp
+            )
+            assert fees == Decimal("220000.00")
+
+    def test_calculate_bom_cost_blueprint_ownership_rules(self):
+        from industry_reforged.models import CorpBlueprint
+
+        corp = EveCorporationInfoFactory(corporation_id=456)
+        owned_bp = EveTypeFactory(id=77001, name="Owned BPO")
+        unowned_bp = EveTypeFactory(id=77002, name="Unowned BPO")
+
+        # Corp owns owned_bp
+        CorpBlueprint.objects.create(
+            corporation=corp, eve_type=owned_bp, item_id=10, location_id=20, runs=-1
+        )
+
+        # Mock recursive bom tree containing both blueprints and a raw material
+        mock_tree = {
+            "type_id": 8888,
+            "name": "Finished Ship",
+            "quantity": 1,
+            "activity_id": 1,
+            "sub_materials": [
+                {
+                    "type_id": owned_bp.id,
+                    "name": owned_bp.name,
+                    "quantity": 1,
+                    "activity_id": 5,
+                    "sub_materials": [],
+                },
+                {
+                    "type_id": unowned_bp.id,
+                    "name": unowned_bp.name,
+                    "quantity": 1,
+                    "activity_id": 5,
+                    "sub_materials": [],
+                },
+                {
+                    "type_id": 34,
+                    "name": "Tritanium",
+                    "quantity": 1000,
+                    "activity_id": 0,
+                    "sub_materials": [],
+                },
+            ],
+        }
+
+        with (
+            patch(
+                "industry_reforged.utils.bom_engine.get_recursive_bom_tree",
+                return_value=mock_tree,
+            ),
+            patch(
+                "industry_reforged.utils.pricing_engine.get_market_prices",
+                return_value={
+                    owned_bp.id: 1_000_000_000.0,
+                    unowned_bp.id: 50_000_000.0,
+                    34: 5.0,
+                },
+            ),
+            patch(
+                "industry_reforged.utils.pricing_engine.calculate_structure_job_costs",
+                return_value=Decimal("0.00"),
+            ),
+        ):
+            parsed_items = {EveTypeFactory(id=8888): 1}
+            total_cost = calculate_bom_cost(parsed_items, corporation=corp)
+            # Owned BPO (1 Billion) = 0 ISK
+            # Unowned BPO = 50 Million ISK
+            # Tritanium (1000 * 5) = 5,000 ISK
+            # Total = 50,005,000.00 ISK
+            assert total_cost == Decimal("50005000.00")

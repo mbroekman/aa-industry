@@ -79,6 +79,11 @@
                                             <div class="d-flex align-items-center">
                                                 <img onerror="this.onerror=null; this.src='https://images.evetech.net/types/3514/bp?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/bp?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
                                                 <span>{{ mat.name }}</span>
+                                                {% if mat.is_corp_owned %}
+                                                    <span class="badge bg-success ms-2" title="{% trans 'Corporation owns this Blueprint (0 ISK)' %}"><i class="fas fa-check me-1"></i>{% trans "Corp Owned" %}</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger ms-2" title="{% trans 'Corporation does not own this Blueprint' %}"><i class="fas fa-exclamation-triangle me-1"></i>{% trans "Unowned" %}</span>
+                                                {% endif %}
                                             </div>
                                         </td>
                                         <td class="text-end numeric" data-order="{{ mat.corp_stock|default:0 }}">
@@ -102,14 +107,21 @@
                                             {% endif %}
                                         </td>
                                         <td class="text-end numeric" data-order="{{ mat.price_per_unit }}">
-                                            <span class="{% if mat.price_per_unit > 0 %}text-warning{% else %}text-muted{% endif %}">
-                                                {{ mat.price_per_unit|eve_isk }}
-                                            </span>
-                                            {% if mat.price_per_unit == 0 %}
-                                            <br><small class="text-muted"><i class="fas fa-info-circle" data-bs-toggle="tooltip" title="{% trans 'No manual override found. ESI price ignored for BPCs.' %}"></i></small>
+                                            {% if mat.is_corp_owned %}
+                                                <span class="text-success small fw-bold">0.00 ISK</span>
+                                            {% else %}
+                                                <span class="{% if mat.price_per_unit > 0 %}text-warning{% else %}text-muted{% endif %}">
+                                                    {{ mat.price_per_unit|eve_isk }}
+                                                </span>
                                             {% endif %}
                                         </td>
-                                        <td class="text-end numeric text-warning" data-order="{{ mat.total_price }}">{{ mat.total_price|eve_isk }}</td>
+                                        <td class="text-end numeric text-warning" data-order="{{ mat.total_price }}">
+                                            {% if mat.is_corp_owned %}
+                                                <span class="text-success small fw-bold">0.00 ISK</span>
+                                            {% else %}
+                                                {{ mat.total_price|eve_isk }}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                     {% endif %}

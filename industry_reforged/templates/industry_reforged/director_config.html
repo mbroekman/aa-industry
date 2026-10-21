@@ -170,7 +170,10 @@
                                 <tr>
                                     <td class="fw-bold">{{ p.corporation.corporation_name }}</td>
                                     <td class="text-end text-success fw-bold">{% if p.default_discount_percent > 0 %}{{ p.default_discount_percent }}% OFF{% else %}0%{% endif %}</td>
-                                    <td class="text-end text-warning fw-bold">{{ p.builder_reward_percent }}%</td>
+                                    <td class="text-end text-warning fw-bold">
+                                        <div>{{ p.builder_hourly_rate|eve_isk }}/h + {{ p.builder_reward_percent }}%</div>
+                                        <div class="small text-muted fw-normal">{% trans "Base:" %} {{ p.builder_base_fee|eve_isk }} | {% trans "Cap:" %} {{ p.builder_max_reward|eve_isk }}</div>
+                                    </td>
                                     <td class="text-end">{{ p.default_t1_me }} / {{ p.default_t2_me }}</td>
                                     <td class="text-end">
                                         <a href="{% url 'industry_reforged:director_config_pricing_edit' p.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>

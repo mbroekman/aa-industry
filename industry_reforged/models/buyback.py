@@ -25,6 +25,12 @@ class BuybackProgram(models.Model):
     price modifier, and which categories are in scope by default.
     """
 
+    PRICE_TYPE_CHOICES = (
+        ("BUY", _("Buy - pay based on the Jita buy price")),
+        ("SELL", _("Sell - pay based on the Jita sell price")),
+        ("SPLIT", _("Split - pay based on the midpoint of buy and sell price")),
+    )
+
     corporation = models.ForeignKey(
         EveCorporationInfo, on_delete=models.CASCADE, related_name="buyback_programs"
     )
@@ -72,6 +78,19 @@ class BuybackProgram(models.Model):
         default=7,
         help_text=_(
             "Days a member has to create the matching ESI contract before it expires."
+        ),
+    )
+    price_type = models.CharField(
+        max_length=5,
+        choices=PRICE_TYPE_CHOICES,
+        default="SELL",
+        help_text=_("Which Jita price to base the appraisal on."),
+    )
+    refining_rate = models.FloatField(
+        default=90.0,
+        help_text=_(
+            "Refining efficiency (%) used to value reprocessable items (ore, loot) "
+            "that have no direct market price. No real reprocessing setup hits 100%%."
         ),
     )
     created_at = models.DateTimeField(auto_now_add=True)

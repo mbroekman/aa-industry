@@ -74,3 +74,34 @@ def eve_isk_short(value):
     return mark_safe(
         f'<span data-bs-toggle="tooltip" data-bs-placement="top" title="{full_val}" style="text-decoration: underline dotted; cursor: help;">{abbrev}</span>'
     )
+
+
+@register.filter
+def format_duration(seconds):
+    """
+    Formats a duration in seconds into human-readable EVE industry format.
+    Example: 9000000 -> "104d 4h"
+             12000 -> "3h 20m"
+             600 -> "10m"
+    """
+    try:
+        sec = int(seconds)
+    except (ValueError, TypeError):
+        return ""
+    if sec <= 0:
+        return ""
+
+    days, remainder = divmod(sec, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, _ = divmod(remainder, 60)
+
+    if days > 0:
+        if hours > 0:
+            return f"{days}d {hours}h"
+        return f"{days}d"
+    elif hours > 0:
+        if minutes > 0:
+            return f"{hours}h {minutes}m"
+        return f"{hours}h"
+    else:
+        return f"{minutes}m"

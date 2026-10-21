@@ -22,7 +22,9 @@ from ...utils.bom_engine import (
 )
 from ...utils.discord import send_discord_webhook
 from ...utils.pricing_engine import (
+    calculate_bom_cost,
     calculate_quote,
+    calculate_structure_job_costs,
     get_detailed_prices,
     get_prices_with_overrides,
 )
@@ -58,7 +60,10 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     if order.status == "REQUESTED":
         parsed_items = {item.item_type: item.quantity for item in order.items.all()}
         new_total, item_details = calculate_quote(
-            parsed_items, corp_info, ignore_discounts=order.ignore_discounts
+            parsed_items,
+            corp_info,
+            ignore_discounts=order.ignore_discounts,
+            target_facility=order.target_facility,
         )
 
         for detail in item_details:
@@ -69,6 +74,10 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 order_item.save()
 
         order.total_price = new_total
+        order.true_cost = sum(
+            detail.get("true_cost_per_unit", 0) * detail["quantity"]
+            for detail in item_details
+        )
         order.save()
 
     bom_materials = calculate_order_bom(order)
@@ -76,11 +85,12 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     total_bom_price = 0
     bom_materials_list = []
     bom_blueprints_list = []
-    
+
     if bom_materials:
         mat_ids = list(bom_materials.keys())
 
         from eveuniverse.models import EveType
+
         blueprint_ids = set(
             EveType.objects.filter(
                 id__in=mat_ids, eve_group__eve_category_id=9
@@ -92,15 +102,31 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             price_info = prices.get(
                 mat_id, {"original_jita_price": 0, "final_price": 0}
             )
-            data["price_per_unit"] = price_info["final_price"]
             data["original_jita_price"] = price_info["original_jita_price"]
-            data["total_price"] = price_info["final_price"] * data["quantity"]
-            total_bom_price += data["total_price"]
-            
+
             if mat_id in blueprint_ids:
+                is_corp_owned = False
+                if corp_info:
+                    from ...models import CorpBlueprint
+
+                    is_corp_owned = CorpBlueprint.objects.filter(
+                        corporation=corp_info, eve_type_id=mat_id
+                    ).exists()
+                data["is_corp_owned"] = is_corp_owned
+                if is_corp_owned:
+                    data["price_per_unit"] = 0.0
+                    data["total_price"] = 0.0
+                else:
+                    data["price_per_unit"] = price_info["final_price"]
+                    data["total_price"] = price_info["final_price"] * data["quantity"]
+                    # Unowned missing blueprint represents an acquisition cost
+                    total_bom_price += data["total_price"]
                 bom_blueprints_list.append(data)
             else:
+                data["price_per_unit"] = price_info["final_price"]
+                data["total_price"] = price_info["final_price"] * data["quantity"]
                 bom_materials_list.append(data)
+                total_bom_price += data["total_price"]
 
     # Calculate original price from items before any discounts
     order_items = list(order.items.all().select_related("item_type"))
@@ -118,6 +144,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     # Bulk fetch tasks for all items on this order and child orders
     from collections import defaultdict
+
     all_order_ids = [order.id] + list(order.child_orders.values_list("id", flat=True))
     all_tasks = list(
         ProductionTask.objects.filter(
@@ -131,7 +158,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     for item in build_items:
         item_tasks = tasks_by_order_and_type.get((item.order_id, item.item_type_id), [])
         top_tasks = [t for t in item_tasks if t.bom_parent_id is None] or item_tasks
-        item._cached_build_status_info = item.get_build_status(preloaded_tasks=top_tasks)
+        item._cached_build_status_info = item.get_build_status(
+            preloaded_tasks=top_tasks
+        )
 
     child_orders = list(
         order.child_orders.prefetch_related("items__item_type", "items__order").all()
@@ -139,9 +168,15 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     for child in child_orders:
         for child_item in child.items.all():
             if not child_item.is_buy_product:
-                child_tasks = tasks_by_order_and_type.get((child_item.order_id, child_item.item_type_id), [])
-                top_child_tasks = [t for t in child_tasks if t.bom_parent_id is None] or child_tasks
-                child_item._cached_build_status_info = child_item.get_build_status(preloaded_tasks=top_child_tasks)
+                child_tasks = tasks_by_order_and_type.get(
+                    (child_item.order_id, child_item.item_type_id), []
+                )
+                top_child_tasks = [
+                    t for t in child_tasks if t.bom_parent_id is None
+                ] or child_tasks
+                child_item._cached_build_status_info = child_item.get_build_status(
+                    preloaded_tasks=top_child_tasks
+                )
 
     recursive_bom_tree = []
     if request.user.has_perm(
@@ -174,12 +209,14 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         extract_manufactured_types(recursive_bom_tree, products_me_dict)
 
     invented_blueprint_types = set()
+
     def extract_invented(nodes):
         for node in nodes:
             if node.get("activity_id") == 8:
                 invented_blueprint_types.add(node["type_id"])
             if node.get("sub_materials"):
                 extract_invented(node["sub_materials"])
+
     if recursive_bom_tree:
         extract_invented(recursive_bom_tree)
 
@@ -199,8 +236,15 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         from django.db.models import Q
         from ...models import CorpBlueprint
 
-        root = order.root_order if hasattr(order, "root_order") and order.root_order else order
-        related_order_ids = set(root.child_orders.values_list("id", flat=True)) | {root.id, order.id}
+        root = (
+            order.root_order
+            if hasattr(order, "root_order") and order.root_order
+            else order
+        )
+        related_order_ids = set(root.child_orders.values_list("id", flat=True)) | {
+            root.id,
+            order.id,
+        }
 
         completed_tasks = ProductionTask.objects.filter(
             created_from_order_id__in=related_order_ids,
@@ -210,7 +254,9 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         for t in completed_tasks:
             product_completed_qty[t.item_type_id] += t.quantity
 
-        bp_type_ids = [bp.get("type_id") for bp in bom_blueprints_list if bp.get("type_id")]
+        bp_type_ids = [
+            bp.get("type_id") for bp in bom_blueprints_list if bp.get("type_id")
+        ]
         bp_products_map = defaultdict(list)
         if bp_type_ids:
             for ap in EveIndustryActivityProduct.objects.filter(
@@ -235,7 +281,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             remaining_runs = max(0, req_runs - completed_runs)
             shortage = max(0, remaining_runs - stock_runs)
-            is_used = (completed_runs >= req_runs and req_runs > 0)
+            is_used = completed_runs >= req_runs and req_runs > 0
 
             has_bpo = False
             if bp_type_id:
@@ -307,9 +353,18 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         is_used = status_info.get("is_used", False)
                         missing_bp = status_info.get("shortage", 0) > 0
                     else:
-                        bp_in_bom = next((bp for bp in bom_blueprints_list if bp.get("type_id") == bp_prod.eve_type_id), None)
+                        bp_in_bom = next(
+                            (
+                                bp
+                                for bp in bom_blueprints_list
+                                if bp.get("type_id") == bp_prod.eve_type_id
+                            ),
+                            None,
+                        )
                         if bp_in_bom:
-                            missing_bp = bp_in_bom.get("corp_stock", 0) < bp_in_bom.get("quantity", 0)
+                            missing_bp = bp_in_bom.get("corp_stock", 0) < bp_in_bom.get(
+                                "quantity", 0
+                            )
 
             products_me.append(
                 {
@@ -323,14 +378,28 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 }
             )
 
-    estimated_build_cost = total_bom_price
+    structure_job_costs = float(
+        calculate_structure_job_costs(
+            recursive_bom_tree,
+            target_facility=order.target_facility,
+            corporation=corp_info,
+        )
+    )
+    estimated_build_cost = total_bom_price + structure_job_costs
     profit_margin = float(order.total_price) - estimated_build_cost
+    profit_margin_percent = (
+        ((float(order.total_price) - estimated_build_cost) / float(order.total_price))
+        * 100.0
+        if order.total_price > 0
+        else 0.0
+    )
 
     is_privileged = request.user.has_perm(
         "industry_reforged.corp_access"
     ) or request.user.has_perm("industry_reforged.industrialist_access")
-    
+
     from ...utils.pricing_engine import get_market_prices
+
     plex_price = get_market_prices([44992]).get(44992, 0.0)
 
     context = {
@@ -344,8 +413,10 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "bom_materials": bom_materials_list,
         "bom_blueprints": bom_blueprints_list,
         "total_bom_price": total_bom_price,
+        "structure_job_costs": structure_job_costs,
         "estimated_build_cost": estimated_build_cost,
         "profit_margin": profit_margin,
+        "profit_margin_percent": profit_margin_percent,
         "original_price": original_price,
         "savings": savings,
         "is_owner": order.character_id in user_characters,
@@ -361,14 +432,20 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     output_locations = []
     if is_privileged:
         from ...models.orders import OutputLocation
-        main_char = getattr(getattr(request.user, "profile", None), "main_character", None)
+
+        main_char = getattr(
+            getattr(request.user, "profile", None), "main_character", None
+        )
         corp_id = main_char.corporation_id if main_char else None
         if corp_id:
             from allianceauth.eveonline.models import EveCorporationInfo
+
             corp = EveCorporationInfo.objects.filter(corporation_id=corp_id).first()
             if corp:
-                output_locations = OutputLocation.objects.filter(corporation=corp).order_by("name")
-    
+                output_locations = OutputLocation.objects.filter(
+                    corporation=corp
+                ).order_by("name")
+
     context["output_locations"] = output_locations
 
     return render(request, "industry_reforged/view_quote.html", context)
@@ -411,12 +488,12 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
             order.total_price = new_total_decimal
             order.upfront_payment = upfront
-            
+
             upfront_plex = int(request.POST.get("upfront_payment_plex", 0))
             if upfront_plex < 0:
                 raise ValueError("PLEX payment cannot be negative")
             order.upfront_payment_plex = upfront_plex
-            
+
             if "ignore_discounts" in request.POST:
                 order.ignore_discounts = request.POST.get("ignore_discounts") == "on"
             else:
@@ -429,9 +506,13 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     new_loc_name = output_location_id.replace("new_", "", 1).strip()
                     if new_loc_name:
                         from ...models.orders import OutputLocation
+
                         corp_info = request.user.profile.main_character.corporation_id
                         from allianceauth.eveonline.models import EveCorporationInfo
-                        corp = EveCorporationInfo.objects.filter(corporation_id=corp_info).first()
+
+                        corp = EveCorporationInfo.objects.filter(
+                            corporation_id=corp_info
+                        ).first()
                         if corp:
                             new_loc, created = OutputLocation.objects.get_or_create(
                                 corporation=corp, name=new_loc_name
@@ -439,6 +520,7 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                             order.output_location = new_loc
                 else:
                     from ...models.orders import OutputLocation
+
                     loc = OutputLocation.objects.filter(id=output_location_id).first()
                     if loc:
                         order.output_location = loc
@@ -502,6 +584,15 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     order.notes += f"\n{combined_note}"
                 else:
                     order.notes = combined_note
+
+            # Recalculate true material cost with current facility and material valuation
+            parsed_items = {item.item_type: item.quantity for item in order.items.all()}
+            corp_info = None
+            if order.character and order.character.corporation:
+                corp_info = order.character.corporation
+            order.true_cost = calculate_bom_cost(
+                parsed_items, corp_info, target_facility=order.target_facility
+            )
 
             order.save()
 
@@ -594,28 +685,44 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     total_bom_price = 0
     bom_materials_list = []
     bom_blueprints_list = []
-    
+
     if bom_materials:
         mat_ids = list(bom_materials.keys())
-        
+
         from eveuniverse.models import EveType
+
         blueprint_ids = set(
             EveType.objects.filter(
                 id__in=mat_ids, eve_group__eve_category_id=9
             ).values_list("id", flat=True)
         )
-        
+
         prices = get_prices_with_overrides(mat_ids, corp_info)
         for mat_id, data in bom_materials.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
             data["total_price"] = price * data["quantity"]
-            total_bom_price += data["total_price"]
-            
+
             if mat_id in blueprint_ids:
+                is_corp_owned = False
+                if corp_info:
+                    from ...models import CorpBlueprint
+
+                    is_corp_owned = CorpBlueprint.objects.filter(
+                        corporation=corp_info, eve_type_id=mat_id
+                    ).exists()
+                data["is_corp_owned"] = is_corp_owned
+                if is_corp_owned:
+                    data["price_per_unit"] = 0.0
+                    data["total_price"] = 0.0
+                else:
+                    data["price_per_unit"] = price
+                    data["total_price"] = price * data["quantity"]
+                    total_bom_price += data["total_price"]
                 bom_blueprints_list.append(data)
             else:
                 bom_materials_list.append(data)
+                total_bom_price += data["total_price"]
 
     context = {
         "order": order,
@@ -707,10 +814,6 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     corporation=o.character.corporation
                 ).first()
 
-            reward_percent = (
-                pricing_config.builder_reward_percent if pricing_config else 0.0
-            )
-
             # Calculate full BOM tree
             recursive_bom_tree = calculate_recursive_order_bom(o)
 
@@ -749,10 +852,24 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
                     price_per_unit = prices.get(type_id, 0)
                     line_total = float(price_per_unit) * quantity
-                    task_reward_value = line_total * (reward_percent / 100.0)
+                    activity_id = node.get("activity_id", 1)
+
+                    from ...utils.pricing_engine import calculate_task_builder_reward
+
+                    task_reward_value, est_duration_seconds = (
+                        calculate_task_builder_reward(
+                            eve_type=eve_type,
+                            quantity=quantity,
+                            activity_id=activity_id,
+                            priority="NORMAL",
+                            pricing_config=pricing_config,
+                            line_total_value=line_total,
+                        )
+                    )
 
                     # Check item configuration for unclaimable status
                     from ...models import CorpItemConfig
+
                     is_claimable = True
                     if corp_info:
                         config = CorpItemConfig.objects.filter(
@@ -764,12 +881,13 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                     task = ProductionTask.objects.create(
                         item_type=eve_type,
                         quantity=quantity,
-                        activity_id=node.get("activity_id", 1),
+                        activity_id=activity_id,
                         status="UNCLAIMED",
                         origin="MEMBER_ORDER",
                         created_from_order=o,
                         gamification_value=line_total,
                         builder_reward=task_reward_value,
+                        estimated_duration_seconds=est_duration_seconds,
                         bom_parent=parent_task,
                         is_claimable=is_claimable,
                     )
