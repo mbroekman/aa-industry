@@ -224,7 +224,7 @@ class TestPartialClaimingAndSlots(TestCase):
         task.refresh_from_db()
         assert task.status == "UNCLAIMED"
         assert task.quantity == 70
-        assert task.builder_reward > Decimal("0.00")
+        assert task.builder_reward == Decimal("35000000.00")
         assert task.gamification_value == Decimal("7000000.00")
 
         # New claimed task should be created with 30 quantity
@@ -238,11 +238,12 @@ class TestPartialClaimingAndSlots(TestCase):
         assert claimed.quantity == 30
         assert claimed.allocated_slots == 5
         assert claimed.gamification_value == Decimal("3000000.00")
-        assert claimed.builder_reward > Decimal("0.00")
+        assert claimed.builder_reward == Decimal("15000000.00")
+        assert task.builder_reward + claimed.builder_reward == Decimal("50000000.00")
         assert claimed.estimated_duration_seconds > 0
 
     def test_claim_task_preview_api(self):
-        """Test claim_task_preview returns accurate real-time metrics."""
+        """Test claim_task_preview returns accurate real-time metrics with pro-rata rewards."""
         task = ProductionTaskFactory(
             item_type=self.item_type,
             quantity=50,
@@ -265,12 +266,15 @@ class TestPartialClaimingAndSlots(TestCase):
         assert data["claim_quantity"] == 20
         assert data["allocated_slots"] == 4
         assert data["rem_quantity"] == 30
+        # 20/50 = 40% of 30,000,000 = 12,000,000.00
+        assert data["reward_claimed"] == 12000000.0
+        assert data["rem_reward"] == 18000000.0
         assert "reward_claimed_formatted" in data
         assert "wall_clock_formatted" in data
         assert data["runs_per_slot"] >= 1
 
     def test_claim_task_preview_with_created_from_order(self):
-        """Test claim_task_preview does not raise AttributeError when task was created from a MemberOrder."""
+        """Test claim_task_preview does not raise AttributeError and distributes pro-rata."""
         # AA Industry App
         from industry_reforged.models import MemberOrder
 
@@ -300,6 +304,52 @@ class TestPartialClaimingAndSlots(TestCase):
         assert data["claim_quantity"] == 40
         assert data["allocated_slots"] == 5
         assert data["rem_quantity"] == 60
+        # 40/100 = 40% of 50M = 20M
+        assert data["reward_claimed"] == 20000000.0
+        assert data["rem_reward"] == 30000000.0
+
+    def test_claim_task_partial_claim_pro_rata_conservation_of_capped_reward(self):
+        """Test user scenario: 50 Capital Corporate Hangar Bays claimed from a 432-item task with 75M cap."""
+        task = ProductionTaskFactory(
+            item_type=self.item_type,
+            quantity=432,
+            status="UNCLAIMED",
+            priority="NORMAL",
+            builder_reward=Decimal("75000000.00"),
+            gamification_value=Decimal("5741280000.00"),
+            estimated_duration_seconds=5184000,
+        )
+
+        req = self._prepare_post_request(
+            f"/industry/industrialist/claim/{task.id}/",
+            post_data={"claim_quantity": 50, "allocated_slots": 10},
+        )
+        resp = claim_task(req, task.id)
+        assert resp.status_code == 302
+
+        task.refresh_from_db()
+        assert task.status == "UNCLAIMED"
+        assert task.quantity == 382
+
+        claimed = ProductionTask.objects.filter(
+            item_type=self.item_type,
+            status="IN_PRODUCTION",
+            assigned_to=self.character,
+        ).first()
+
+        assert claimed is not None
+        assert claimed.quantity == 50
+        assert claimed.allocated_slots == 10
+
+        # Exact pro-rata shares: 50 / 432 * 75,000,000 = 8,680,555.56
+        expected_claimed_reward = (
+            Decimal("75000000.00") * Decimal(50) / Decimal(432)
+        ).quantize(Decimal("0.01"))
+        assert expected_claimed_reward == Decimal("8680555.56")
+        assert claimed.builder_reward == Decimal("8680555.56")
+        assert task.builder_reward == Decimal("75000000.00") - Decimal("8680555.56")
+        assert task.builder_reward == Decimal("66319444.44")
+        assert task.builder_reward + claimed.builder_reward == Decimal("75000000.00")
 
     def test_claim_task_boundary_clamping(self):
         """Test boundary clamping for invalid claim quantities."""

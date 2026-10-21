@@ -564,28 +564,23 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
 
     rem_qty = task.quantity - claim_qty
     ratio = Decimal(str(claim_qty)) / Decimal(str(task.quantity))
-    claimed_val = (task.gamification_value * ratio).quantize(Decimal("0.01"))
-    rem_val = task.gamification_value - claimed_val
 
-    reward_claimed, _ = calculate_task_builder_reward(
-        task.item_type,
-        claim_qty,
-        task.activity_id,
-        task.priority,
-        pricing_config,
-        claimed_val,
-    )
-    if rem_qty > 0:
-        reward_rem, _ = calculate_task_builder_reward(
+    # Pro-rata reward distribution based on the original task's builder_reward
+    if task.builder_reward and task.builder_reward > 0:
+        reward_claimed = (task.builder_reward * ratio).quantize(Decimal("0.01"))
+        reward_rem = (task.builder_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+    else:
+        # Fallback if task had no builder_reward stored
+        full_reward, _dur = calculate_task_builder_reward(
             task.item_type,
-            rem_qty,
+            task.quantity,
             task.activity_id,
             task.priority,
             pricing_config,
-            rem_val,
+            task.gamification_value,
         )
-    else:
-        reward_rem = Decimal("0.00")
+        reward_claimed = (full_reward * ratio).quantize(Decimal("0.01"))
+        reward_rem = (full_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
 
     return JsonResponse(
         {
@@ -662,11 +657,15 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
             if claim_qty < task.quantity:
                 # Standard Library
+                import math
                 from decimal import Decimal
 
                 # AA Industry App
                 from ..models import CorpPricingConfig
-                from ..utils.pricing_engine import calculate_task_builder_reward
+                from ..utils.pricing_engine import (
+                    calculate_task_builder_reward,
+                    get_item_production_details,
+                )
 
                 rem_qty = task.quantity - claim_qty
                 ratio = Decimal(str(claim_qty)) / Decimal(str(task.quantity))
@@ -691,22 +690,30 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     else None
                 )
 
-                reward_claimed, dur_claimed = calculate_task_builder_reward(
-                    task.item_type,
-                    claim_qty,
-                    task.activity_id,
-                    task.priority,
-                    pricing_config,
-                    claimed_val,
+                # Pro-rata reward distribution based on the original task's builder_reward
+                if task.builder_reward and task.builder_reward > 0:
+                    reward_claimed = (task.builder_reward * ratio).quantize(Decimal("0.01"))
+                    reward_rem = (task.builder_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+                else:
+                    full_reward, _dur = calculate_task_builder_reward(
+                        task.item_type,
+                        task.quantity,
+                        task.activity_id,
+                        task.priority,
+                        pricing_config,
+                        task.gamification_value,
+                    )
+                    reward_claimed = (full_reward * ratio).quantize(Decimal("0.01"))
+                    reward_rem = (full_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+
+                base_dur_sec, portion_size = get_item_production_details(
+                    task.item_type_id, task.activity_id
                 )
-                reward_rem, dur_rem = calculate_task_builder_reward(
-                    task.item_type,
-                    rem_qty,
-                    task.activity_id,
-                    task.priority,
-                    pricing_config,
-                    rem_val,
-                )
+                runs_total = max(1, math.ceil(claim_qty / max(portion_size, 1)))
+                runs_per_slot = max(1, math.ceil(runs_total / allocated_slots))
+                dur_claimed = int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
+                rem_runs = max(1, math.ceil(rem_qty / max(portion_size, 1)))
+                dur_rem = int(base_dur_sec * rem_runs * 0.75) if base_dur_sec > 0 else 0
 
                 # Create the claimed task
                 ProductionTask.objects.create(
@@ -757,6 +764,21 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                         t.assigned_to = char
                         t.assigned_at = timezone.now()
                         t.allocated_slots = allocated_slots
+                        if allocated_slots > 1:
+                            import math
+
+                            from ..utils.pricing_engine import (
+                                get_item_production_details,
+                            )
+
+                            b_sec, p_size = get_item_production_details(
+                                t.item_type_id, t.activity_id
+                            )
+                            r_total = max(1, math.ceil(t.quantity / max(p_size, 1)))
+                            r_per_slot = max(1, math.ceil(r_total / allocated_slots))
+                            t.estimated_duration_seconds = (
+                                int(b_sec * r_per_slot * 0.75) if b_sec > 0 else 0
+                            )
                         if has_owned_ancestor(t, char):
                             t.builder_reward = 0
                         t.save()

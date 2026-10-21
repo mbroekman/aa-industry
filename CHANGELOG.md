@@ -73,6 +73,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **rewards**: Implemented pro-rata reward splitting for partial claims (TASK-259):
+  - Updated `claim_task_preview` and `claim_task` endpoints in `views/industrialist.py` to distribute `task.builder_reward` pro-rata based on claimed quantity ratio (`claim_qty / task.quantity`).
+  - Resolved issue where partial claims recalculated rewards as independent tasks and consumed the full corporate maximum reward cap (e.g. 75M ISK) on both the claimed batch and the remainder.
+  - Conserved total job reward across all partial claims so that `reward_claimed + reward_remaining == original_task.builder_reward`.
+  - Added unit regression test verifying pro-rata conservation of capped rewards across partial claims.
 - **ui**: Fixed `#claimTaskModal` hidden behind modal backdrop on Job Market (TASK-258):
   - Added missing closing tags (`</div></div></div>`) for `#shoppingListLoadingModal` in `industrialist_dashboard.html`, which had previously caused `#claimTaskModal` to be nested inside the hidden shopping list modal container (`display: none`).
   - Restored proper DOM isolation so the Claim modal appears centered and interactable above the Bootstrap backdrop when industrialists click "Claim".
