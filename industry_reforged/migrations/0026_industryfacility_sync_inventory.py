@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0025_alter_corpinventory_unique_together_and_more"),
     ]

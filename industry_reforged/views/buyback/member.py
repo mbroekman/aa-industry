@@ -29,7 +29,11 @@ def _compute_donation(gross_total: Decimal, mode: str, raw_value: str) -> Decima
     gross appraisal) into a concrete ISK amount, clamped to [0, gross_total]
     so a donation can never exceed - let alone invert - the payout."""
     try:
-        value = Decimal(raw_value.strip().replace(",", ".")) if raw_value else Decimal("0.00")
+        value = (
+            Decimal(raw_value.strip().replace(",", "."))
+            if raw_value
+            else Decimal("0.00")
+        )
     except InvalidOperation:
         value = Decimal("0.00")
     if value < 0:
@@ -98,7 +102,9 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
 
     character = request.user.profile.main_character
     if not character:
-        messages.error(request, _("You must have a main character set to submit a buyback."))
+        messages.error(
+            request, _("You must have a main character set to submit a buyback.")
+        )
         return render(request, "industry_reforged/buyback/calculator.html", context)
 
     parsed_items, unrecognized = parse_inventory_paste(inventory_text)
@@ -118,7 +124,9 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
     modifier_impact = gross_total - base_total
 
     donation_mode = request.POST.get("donation_mode", "isk")
-    donation_amount = _compute_donation(gross_total, donation_mode, request.POST.get("donation_value", ""))
+    donation_amount = _compute_donation(
+        gross_total, donation_mode, request.POST.get("donation_value", "")
+    )
     net_total = gross_total - donation_amount
 
     context["total_price"] = gross_total
@@ -136,7 +144,9 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
 
     submittable = [d for d in item_details if not d["blocked"]]
     if not submittable:
-        messages.error(request, _("Every item in this list was blocked by the watchlist."))
+        messages.error(
+            request, _("Every item in this list was blocked by the watchlist.")
+        )
         return render(request, "industry_reforged/buyback/calculator.html", context)
 
     tracking_number = _generate_tracking_number()
@@ -166,7 +176,9 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         _("Submitted! Your tracking number is %(tracking_number)s.")
         % {"tracking_number": tracking_number},
     )
-    return redirect("industry_reforged:buyback_contract_detail", tracking_number=tracking_number)
+    return redirect(
+        "industry_reforged:buyback_contract_detail", tracking_number=tracking_number
+    )
 
 
 def _get_owned_contract_or_403(request, tracking_number):
@@ -194,7 +206,8 @@ def buyback_contract_detail(request: WSGIRequest, tracking_number: str) -> HttpR
         return redirect("industry_reforged:buyback_dashboard")
 
     context = {
-        "title": _("Buyback Contract %(tracking_number)s") % {"tracking_number": contract.tracking_number},
+        "title": _("Buyback Contract %(tracking_number)s")
+        % {"tracking_number": contract.tracking_number},
         "contract": contract,
         "items": contract.items.select_related("eve_type"),
     }
@@ -218,4 +231,6 @@ def buyback_contract_cancel(request: WSGIRequest, tracking_number: str) -> HttpR
         else:
             messages.error(request, _("Only pending contracts can be cancelled."))
 
-    return redirect("industry_reforged:buyback_contract_detail", tracking_number=tracking_number)
+    return redirect(
+        "industry_reforged:buyback_contract_detail", tracking_number=tracking_number
+    )

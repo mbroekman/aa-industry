@@ -4,20 +4,34 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0074_buybackcontractitem_base_unit_price'),
+        ("industry_reforged", "0074_buybackcontractitem_base_unit_price"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='buybackprogram',
-            name='price_type',
-            field=models.CharField(choices=[('BUY', 'Buy - pay based on the Jita buy price'), ('SELL', 'Sell - pay based on the Jita sell price'), ('SPLIT', 'Split - pay based on the midpoint of buy and sell price')], default='SELL', help_text='Which Jita price to base the appraisal on.', max_length=5),
+            model_name="buybackprogram",
+            name="price_type",
+            field=models.CharField(
+                choices=[
+                    ("BUY", "Buy - pay based on the Jita buy price"),
+                    ("SELL", "Sell - pay based on the Jita sell price"),
+                    (
+                        "SPLIT",
+                        "Split - pay based on the midpoint of buy and sell price",
+                    ),
+                ],
+                default="SELL",
+                help_text="Which Jita price to base the appraisal on.",
+                max_length=5,
+            ),
         ),
         migrations.AddField(
-            model_name='buybackprogram',
-            name='refining_rate',
-            field=models.FloatField(default=90.0, help_text='Refining efficiency (%) used to value reprocessable items (ore, loot) that have no direct market price. No real reprocessing setup hits 100%%.'),
+            model_name="buybackprogram",
+            name="refining_rate",
+            field=models.FloatField(
+                default=90.0,
+                help_text="Refining efficiency (%) used to value reprocessable items (ore, loot) that have no direct market price. No real reprocessing setup hits 100%%.",
+            ),
         ),
     ]

@@ -41,7 +41,9 @@ def _member_user(character=None):
     character = character or EveCharacterFactory()
     user.profile.main_character = character
     user.profile.save()
-    CharacterOwnership.objects.create(user=user, character=character, owner_hash=f"hash-{character.id}")
+    CharacterOwnership.objects.create(
+        user=user, character=character, owner_hash=f"hash-{character.id}"
+    )
     perm = Permission.objects.get(codename="basic_access")
     user.user_permissions.add(perm)
     user = user.__class__.objects.get(pk=user.pk)
@@ -80,7 +82,23 @@ class TestBuybackMemberViews:
 
         with patch(
             "industry_reforged.views.buyback.member.calculate_buyback_quote",
-            return_value=(100, [{"eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100, "base_unit_price": 1, "base_line_total": 100, "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": ""}]),
+            return_value=(
+                100,
+                [
+                    {
+                        "eve_type": eve_type,
+                        "quantity": 100,
+                        "unit_price": 1,
+                        "line_total": 100,
+                        "base_unit_price": 1,
+                        "base_line_total": 100,
+                        "blocked": False,
+                        "flagged": False,
+                        "value_source": "market",
+                        "watchlist_reason": "",
+                    }
+                ],
+            ),
         ):
             buyback_calculator(request)
 
@@ -147,10 +165,16 @@ class TestBuybackMemberViews:
 
         # Simulates a -10% modifier: base 100 -> final 90.
         detail = {
-            "eve_type": eve_type, "quantity": 1, "unit_price": Decimal("90.00"),
-            "line_total": Decimal("90.00"), "base_unit_price": Decimal("100.00"),
-            "base_line_total": Decimal("100.00"), "blocked": False, "flagged": False,
-            "value_source": "market", "watchlist_reason": "",
+            "eve_type": eve_type,
+            "quantity": 1,
+            "unit_price": Decimal("90.00"),
+            "line_total": Decimal("90.00"),
+            "base_unit_price": Decimal("100.00"),
+            "base_line_total": Decimal("100.00"),
+            "blocked": False,
+            "flagged": False,
+            "value_source": "market",
+            "watchlist_reason": "",
         }
         with patch(
             "industry_reforged.views.buyback.member.calculate_buyback_quote",
@@ -184,9 +208,16 @@ class TestBuybackMemberViews:
         request.user = user
 
         detail = {
-            "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
-            "base_unit_price": 1, "base_line_total": 100,
-            "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
+            "eve_type": eve_type,
+            "quantity": 100,
+            "unit_price": 1,
+            "line_total": 100,
+            "base_unit_price": 1,
+            "base_line_total": 100,
+            "blocked": False,
+            "flagged": False,
+            "value_source": "market",
+            "watchlist_reason": "",
         }
         with patch(
             "industry_reforged.views.buyback.member.calculate_buyback_quote",
@@ -218,9 +249,16 @@ class TestBuybackMemberViews:
         request.user = user
 
         detail = {
-            "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
-            "base_unit_price": 1, "base_line_total": 100,
-            "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
+            "eve_type": eve_type,
+            "quantity": 100,
+            "unit_price": 1,
+            "line_total": 100,
+            "base_unit_price": 1,
+            "base_line_total": 100,
+            "blocked": False,
+            "flagged": False,
+            "value_source": "market",
+            "watchlist_reason": "",
         }
         with patch(
             "industry_reforged.views.buyback.member.calculate_buyback_quote",
@@ -251,9 +289,16 @@ class TestBuybackMemberViews:
         request.user = user
 
         detail = {
-            "eve_type": eve_type, "quantity": 100, "unit_price": 1, "line_total": 100,
-            "base_unit_price": 1, "base_line_total": 100,
-            "blocked": False, "flagged": False, "value_source": "market", "watchlist_reason": "",
+            "eve_type": eve_type,
+            "quantity": 100,
+            "unit_price": 1,
+            "line_total": 100,
+            "base_unit_price": 1,
+            "base_line_total": 100,
+            "blocked": False,
+            "flagged": False,
+            "value_source": "market",
+            "watchlist_reason": "",
         }
         with patch(
             "industry_reforged.views.buyback.member.calculate_buyback_quote",

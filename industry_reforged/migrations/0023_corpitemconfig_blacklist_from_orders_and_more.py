@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0022_planetpin_capacity_planetpin_contents_and_more"),
     ]

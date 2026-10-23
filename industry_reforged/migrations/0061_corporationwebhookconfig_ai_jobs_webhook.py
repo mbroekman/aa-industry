@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0060_basket_is_running_basket_last_run_and_more"),
     ]

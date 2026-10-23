@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("eveuniverse", "0001_initial"),
         ("industry_reforged", "0036_corpbuyorder"),

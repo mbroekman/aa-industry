@@ -5,113 +5,309 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('eveonline', '0025_remove_evecharacter_last_updated_and_more'),
-        ('eveuniverse', '0012_alter_evebloodline_eve_ship_type'),
-        ('industry_reforged', '0071_orderitem_is_bought_orderitem_bought_at_orderitem_bought_by'),
+        ("eveonline", "0025_remove_evecharacter_last_updated_and_more"),
+        ("eveuniverse", "0012_alter_evebloodline_eve_ship_type"),
+        (
+            "industry_reforged",
+            "0071_orderitem_is_bought_orderitem_bought_at_orderitem_bought_by",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='corporationwebhookconfig',
-            name='buyback_webhook',
-            field=models.URLField(blank=True, help_text='Webhook URL for new/flagged Buyback contracts.', null=True),
+            model_name="corporationwebhookconfig",
+            name="buyback_webhook",
+            field=models.URLField(
+                blank=True,
+                help_text="Webhook URL for new/flagged Buyback contracts.",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='ledgertransaction',
-            name='transaction_type',
-            field=models.CharField(choices=[('INCOME', 'Income (Member Payment)'), ('PAYOUT', 'Payout (Builder Batch)'), ('PROCUREMENT', 'Procurement (Buy Order)'), ('BUYBACK_PAYOUT', 'Payout (Buyback Contract)')], max_length=20),
+            model_name="ledgertransaction",
+            name="transaction_type",
+            field=models.CharField(
+                choices=[
+                    ("INCOME", "Income (Member Payment)"),
+                    ("PAYOUT", "Payout (Builder Batch)"),
+                    ("PROCUREMENT", "Procurement (Buy Order)"),
+                    ("BUYBACK_PAYOUT", "Payout (Buyback Contract)"),
+                ],
+                max_length=20,
+            ),
         ),
         migrations.CreateModel(
-            name='BuybackContract',
+            name="BuybackContract",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('tracking_number', models.CharField(db_index=True, max_length=20, unique=True)),
-                ('status', models.CharField(choices=[('PENDING', 'Pending - awaiting ESI contract'), ('MATCHED', 'Matched - no issues found'), ('FLAGGED', 'Flagged - needs director review'), ('ACCEPTED', 'Accepted in-game'), ('REJECTED', 'Rejected'), ('PAID', 'Paid'), ('EXPIRED', 'Expired - no contract seen in time'), ('CANCELLED', 'Cancelled by member')], default='PENDING', max_length=20)),
-                ('esi_contract_id', models.BigIntegerField(blank=True, null=True, unique=True)),
-                ('esi_issuer_character_id', models.IntegerField(blank=True, null=True)),
-                ('esi_acceptor_character_id', models.IntegerField(blank=True, null=True)),
-                ('quoted_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=20)),
-                ('contract_price', models.DecimalField(blank=True, decimal_places=2, max_digits=20, null=True)),
-                ('contract_title', models.CharField(blank=True, max_length=255)),
-                ('flag_item_mismatch', models.BooleanField(default=False)),
-                ('flag_price_mismatch', models.BooleanField(default=False)),
-                ('flag_structure_mismatch', models.BooleanField(default=False)),
-                ('flag_receiver_mismatch', models.BooleanField(default=False)),
-                ('flag_title_tampered', models.BooleanField(default=False)),
-                ('flag_no_tracking', models.BooleanField(default=False)),
-                ('flag_notes', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('character', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='buyback_contracts', to='eveonline.evecharacter')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "tracking_number",
+                    models.CharField(db_index=True, max_length=20, unique=True),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending - awaiting ESI contract"),
+                            ("MATCHED", "Matched - no issues found"),
+                            ("FLAGGED", "Flagged - needs director review"),
+                            ("ACCEPTED", "Accepted in-game"),
+                            ("REJECTED", "Rejected"),
+                            ("PAID", "Paid"),
+                            ("EXPIRED", "Expired - no contract seen in time"),
+                            ("CANCELLED", "Cancelled by member"),
+                        ],
+                        default="PENDING",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "esi_contract_id",
+                    models.BigIntegerField(blank=True, null=True, unique=True),
+                ),
+                ("esi_issuer_character_id", models.IntegerField(blank=True, null=True)),
+                (
+                    "esi_acceptor_character_id",
+                    models.IntegerField(blank=True, null=True),
+                ),
+                (
+                    "quoted_price",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=20),
+                ),
+                (
+                    "contract_price",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=20, null=True
+                    ),
+                ),
+                ("contract_title", models.CharField(blank=True, max_length=255)),
+                ("flag_item_mismatch", models.BooleanField(default=False)),
+                ("flag_price_mismatch", models.BooleanField(default=False)),
+                ("flag_structure_mismatch", models.BooleanField(default=False)),
+                ("flag_receiver_mismatch", models.BooleanField(default=False)),
+                ("flag_title_tampered", models.BooleanField(default=False)),
+                ("flag_no_tracking", models.BooleanField(default=False)),
+                ("flag_notes", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "character",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="buyback_contracts",
+                        to="eveonline.evecharacter",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Buyback Contract',
-                'verbose_name_plural': 'Buyback Contracts',
-                'ordering': ['-created_at'],
+                "verbose_name": "Buyback Contract",
+                "verbose_name_plural": "Buyback Contracts",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.AddField(
-            model_name='ledgertransaction',
-            name='buyback_contract',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ledger_transactions', to='industry_reforged.buybackcontract'),
+            model_name="ledgertransaction",
+            name="buyback_contract",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="ledger_transactions",
+                to="industry_reforged.buybackcontract",
+            ),
         ),
         migrations.CreateModel(
-            name='BuybackContractItem',
+            name="BuybackContractItem",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.IntegerField()),
-                ('unit_price', models.DecimalField(decimal_places=2, max_digits=20)),
-                ('is_esi_verified', models.BooleanField(default=False, help_text='Set True once the matching task confirms this exact type/qty in the real ESI contract.')),
-                ('contract', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='items', to='industry_reforged.buybackcontract')),
-                ('eve_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='eveuniverse.evetype')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.IntegerField()),
+                ("unit_price", models.DecimalField(decimal_places=2, max_digits=20)),
+                (
+                    "is_esi_verified",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Set True once the matching task confirms this exact type/qty in the real ESI contract.",
+                    ),
+                ),
+                (
+                    "contract",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="items",
+                        to="industry_reforged.buybackcontract",
+                    ),
+                ),
+                (
+                    "eve_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="+",
+                        to="eveuniverse.evetype",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Buyback Contract Item',
-                'verbose_name_plural': 'Buyback Contract Items',
+                "verbose_name": "Buyback Contract Item",
+                "verbose_name_plural": "Buyback Contract Items",
             },
         ),
         migrations.CreateModel(
-            name='BuybackProgram',
+            name="BuybackProgram",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('is_active', models.BooleanField(default=True)),
-                ('price_modifier_percent', models.FloatField(default=0.0, help_text='Percentage adjustment applied to the market appraisal (e.g. -5.0 to pay 95%).')),
-                ('price_density_threshold', models.FloatField(default=0.0, help_text='ISK/m3 below which the price density tax applies to a bulky, low-value item (0 disables it).')),
-                ('price_density_tax_percent', models.FloatField(default=0.0, help_text='Percentage deducted from items below the price density threshold.')),
-                ('contract_expiry_days', models.IntegerField(default=7, help_text='Days a member has to create the matching ESI contract before it expires.')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('accepted_categories', models.ManyToManyField(blank=True, help_text='If empty, every category not on the watchlist is accepted.', related_name='buyback_programs', to='eveuniverse.evecategory')),
-                ('corporation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='buyback_programs', to='eveonline.evecorporationinfo')),
-                ('facility', models.ForeignKey(blank=True, help_text='Configured drop-off structure, if it is an IndustryFacility.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='buyback_programs', to='industry_reforged.industryfacility')),
-                ('known_location', models.ForeignKey(blank=True, help_text='Drop-off location outside configured IndustryFacilities.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='buyback_programs', to='industry_reforged.knownlocation')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "price_modifier_percent",
+                    models.FloatField(
+                        default=0.0,
+                        help_text="Percentage adjustment applied to the market appraisal (e.g. -5.0 to pay 95%).",
+                    ),
+                ),
+                (
+                    "price_density_threshold",
+                    models.FloatField(
+                        default=0.0,
+                        help_text="ISK/m3 below which the price density tax applies to a bulky, low-value item (0 disables it).",
+                    ),
+                ),
+                (
+                    "price_density_tax_percent",
+                    models.FloatField(
+                        default=0.0,
+                        help_text="Percentage deducted from items below the price density threshold.",
+                    ),
+                ),
+                (
+                    "contract_expiry_days",
+                    models.IntegerField(
+                        default=7,
+                        help_text="Days a member has to create the matching ESI contract before it expires.",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "accepted_categories",
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text="If empty, every category not on the watchlist is accepted.",
+                        related_name="buyback_programs",
+                        to="eveuniverse.evecategory",
+                    ),
+                ),
+                (
+                    "corporation",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="buyback_programs",
+                        to="eveonline.evecorporationinfo",
+                    ),
+                ),
+                (
+                    "facility",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Configured drop-off structure, if it is an IndustryFacility.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="buyback_programs",
+                        to="industry_reforged.industryfacility",
+                    ),
+                ),
+                (
+                    "known_location",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Drop-off location outside configured IndustryFacilities.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="buyback_programs",
+                        to="industry_reforged.knownlocation",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Buyback Program',
-                'verbose_name_plural': 'Buyback Programs',
+                "verbose_name": "Buyback Program",
+                "verbose_name_plural": "Buyback Programs",
             },
         ),
         migrations.AddField(
-            model_name='buybackcontract',
-            name='program',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='contracts', to='industry_reforged.buybackprogram'),
+            model_name="buybackcontract",
+            name="program",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="contracts",
+                to="industry_reforged.buybackprogram",
+            ),
         ),
         migrations.CreateModel(
-            name='BuybackWatchlistItem',
+            name="BuybackWatchlistItem",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('reason', models.CharField(blank=True, max_length=255)),
-                ('blocks_submission', models.BooleanField(default=False, help_text='If True, this item cannot be submitted at all; if False, it is flagged for review.')),
-                ('eve_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='eveuniverse.evetype')),
-                ('program', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='watchlist_items', to='industry_reforged.buybackprogram')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("reason", models.CharField(blank=True, max_length=255)),
+                (
+                    "blocks_submission",
+                    models.BooleanField(
+                        default=False,
+                        help_text="If True, this item cannot be submitted at all; if False, it is flagged for review.",
+                    ),
+                ),
+                (
+                    "eve_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="+",
+                        to="eveuniverse.evetype",
+                    ),
+                ),
+                (
+                    "program",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="watchlist_items",
+                        to="industry_reforged.buybackprogram",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Buyback Watchlist Item',
-                'verbose_name_plural': 'Buyback Watchlist Items',
-                'unique_together': {('program', 'eve_type')},
+                "verbose_name": "Buyback Watchlist Item",
+                "verbose_name_plural": "Buyback Watchlist Items",
+                "unique_together": {("program", "eve_type")},
             },
         ),
     ]

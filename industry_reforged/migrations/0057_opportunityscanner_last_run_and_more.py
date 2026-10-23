@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0056_opportunityscanner_auto_add_basket_and_more"),
     ]

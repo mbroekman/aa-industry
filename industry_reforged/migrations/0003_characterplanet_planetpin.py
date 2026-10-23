@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("eveonline", "0025_remove_evecharacter_last_updated_and_more"),
         ("eveuniverse", "0012_alter_evebloodline_eve_ship_type"),

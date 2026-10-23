@@ -4,15 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0078_corppricingconfig_builder_reward_percent'),
+        ("industry_reforged", "0078_corppricingconfig_builder_reward_percent"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='productiontask',
-            name='priority',
-            field=models.CharField(choices=[('URGENT', 'Urgent'), ('HIGH', 'High'), ('NORMAL', 'Normal'), ('LOW', 'Low')], default='NORMAL', max_length=10),
+            model_name="productiontask",
+            name="priority",
+            field=models.CharField(
+                choices=[
+                    ("URGENT", "Urgent"),
+                    ("HIGH", "High"),
+                    ("NORMAL", "Normal"),
+                    ("LOW", "Low"),
+                ],
+                default="NORMAL",
+                max_length=10,
+            ),
         ),
     ]

@@ -24,7 +24,9 @@ def get_sde_bom(type_id):
     try:
         # Try finding the blueprint that manufactures this item (Activity 1 or 11)
         bp_prod = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=type_id, activity_id__in=[1, 11], eve_type__published=True
+            product_eve_type_id=type_id,
+            activity_id__in=[1, 11],
+            eve_type__published=True,
         ).first()
 
         if bp_prod:
@@ -160,13 +162,16 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         default_t2 = corp_info.pricing_config.default_t2_me
 
     bp_prod = EveIndustryActivityProduct.objects.filter(
-        product_eve_type_id=product_type.id, activity_id__in=[1, 11], eve_type__published=True
+        product_eve_type_id=product_type.id,
+        activity_id__in=[1, 11],
+        eve_type__published=True,
     ).first()
 
     has_corp_bp = True
     if bp_prod:
         if corp_info:
             from industry_reforged.models import CorpBlueprint
+
             has_corp_bp = CorpBlueprint.objects.filter(
                 corporation=corp_info, eve_type_id=bp_prod.eve_type_id
             ).exists()
@@ -182,7 +187,9 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
         from eveuniverse.models import EveIndustryActivityDuration
 
         is_invented = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=bp_prod.eve_type_id, activity_id=8, eve_type__published=True
+            product_eve_type_id=bp_prod.eve_type_id,
+            activity_id=8,
+            eve_type__published=True,
         ).exists()
 
         if is_invented:
@@ -265,7 +272,7 @@ def calculate_order_bom(order):
         )
         for inv in inventory:
             corp_stock[inv["item_type_id"]] = inv["total"]
-            
+
         # Overwrite blueprint stock with actual BPC runs instead of copy counts
         bpc_inventory = (
             CorpBlueprint.objects.filter(corporation=corp_info, quantity=-2, runs__gt=0)
@@ -298,7 +305,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
         )
         for inv in inventory:
             corp_stock[inv["item_type_id"]] = inv["total"]
-            
+
         # Overwrite blueprint stock with actual BPC runs instead of copy counts
         bpc_inventory = (
             CorpBlueprint.objects.filter(corporation=corp_info, quantity=-2, runs__gt=0)
@@ -308,7 +315,9 @@ def calculate_tasks_bom(tasks, corp_info=None):
         for bpc in bpc_inventory:
             corp_stock[bpc["eve_type_id"]] = bpc["total_runs"]
 
-    return flatten_bom_tree(calculate_recursive_tasks_bom(tasks, corp_info=corp_info), corp_stock=corp_stock)
+    return flatten_bom_tree(
+        calculate_recursive_tasks_bom(tasks, corp_info=corp_info), corp_stock=corp_stock
+    )
 
 
 def get_recursive_bom_tree(
@@ -389,20 +398,20 @@ def get_recursive_bom_tree(
     build_or_buy = config_dict.get(type_id, {}).get("build_or_buy", "BUILD")
     if build_or_buy == "BUY":
         return {
-                "type_id": type_id,
-                "name": name,
-                "quantity": quantity,
-                "base_quantity": original_quantity,
-                "provided_from_stock": provided_from_stock,
-                "provided_from_child_order": provided_from_child_order,
-                "activity_id": activity_id,
-                "sub_materials": [],
-                "product_me": 0,
-                "hull_bonus": 0.0,
-                "rig_bonus": 0.0,
-                "facility_name": "Market",
-                "missing_bp": False,
-            }
+            "type_id": type_id,
+            "name": name,
+            "quantity": quantity,
+            "base_quantity": original_quantity,
+            "provided_from_stock": provided_from_stock,
+            "provided_from_child_order": provided_from_child_order,
+            "activity_id": activity_id,
+            "sub_materials": [],
+            "product_me": 0,
+            "hull_bonus": 0.0,
+            "rig_bonus": 0.0,
+            "facility_name": "Market",
+            "missing_bp": False,
+        }
 
     if quantity == 0:
         return {
@@ -444,32 +453,48 @@ def get_recursive_bom_tree(
 
     try:
         product_type = EveType.objects.get(id=type_id)
-        
+
         if activity_id == 11:
             from industry_reforged.models import IndustryFacility
+
             reaction_fac = None
             if corp_info:
                 from django.db.models import Q
-                valid_facility_ids = list(corp_info.known_locations.values_list("location_id", flat=True))
+
+                valid_facility_ids = list(
+                    corp_info.known_locations.values_list("location_id", flat=True)
+                )
                 reaction_fac = IndustryFacility.objects.filter(
-                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids) | Q(owner_id__isnull=True),
-                    is_default_reaction=True
+                    Q(owner_id=corp_info.corporation_id)
+                    | Q(facility_id__in=valid_facility_ids)
+                    | Q(owner_id__isnull=True),
+                    is_default_reaction=True,
                 ).first()
             if not reaction_fac:
-                reaction_fac = IndustryFacility.objects.filter(is_default_reaction=True).first()
+                reaction_fac = IndustryFacility.objects.filter(
+                    is_default_reaction=True
+                ).first()
             if reaction_fac:
                 target_facility = reaction_fac
         elif target_facility is None:
             from industry_reforged.models import IndustryFacility
+
             if corp_info:
                 from django.db.models import Q
-                valid_facility_ids = list(corp_info.known_locations.values_list("location_id", flat=True))
+
+                valid_facility_ids = list(
+                    corp_info.known_locations.values_list("location_id", flat=True)
+                )
                 target_facility = IndustryFacility.objects.filter(
-                    Q(owner_id=corp_info.corporation_id) | Q(facility_id__in=valid_facility_ids) | Q(owner_id__isnull=True),
-                    is_default=True
+                    Q(owner_id=corp_info.corporation_id)
+                    | Q(facility_id__in=valid_facility_ids)
+                    | Q(owner_id__isnull=True),
+                    is_default=True,
                 ).first()
             if not target_facility:
-                target_facility = IndustryFacility.objects.filter(is_default=True).first()
+                target_facility = IndustryFacility.objects.filter(
+                    is_default=True
+                ).first()
 
         facility_me_multiplier, hull_bonus, total_rig_bonus = (
             calculate_facility_me_multiplier(
@@ -482,7 +507,9 @@ def get_recursive_bom_tree(
         total_rig_bonus = 0.0
 
     if "product_type" in locals():
-        product_me, max_runs, has_corp_bp = get_blueprint_me(product_type, corp_info, order)
+        product_me, max_runs, has_corp_bp = get_blueprint_me(
+            product_type, corp_info, order
+        )
     else:
         product_me, max_runs, has_corp_bp = 0, 0, False
 
@@ -496,9 +523,7 @@ def get_recursive_bom_tree(
         base_qty = mat.get("quantity", 0)
 
         # Do NOT round run_cost prematurely to 2 decimals, to prevent drift on large run counts
-        run_cost = (
-            base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier
-        )
+        run_cost = base_qty * ((100.0 - product_me) / 100.0) * facility_me_multiplier
 
         # Chunking logic for max_runs
         if max_runs > 0 and runs > max_runs:
@@ -539,14 +564,18 @@ def get_recursive_bom_tree(
     blueprint_type = None
     try:
         bp_prod = EveIndustryActivityProduct.objects.filter(
-            product_eve_type_id=type_id, activity_id__in=[1, 11], eve_type__published=True
+            product_eve_type_id=type_id,
+            activity_id__in=[1, 11],
+            eve_type__published=True,
         ).first()
         if bp_prod:
             blueprint_type = bp_prod.eve_type
 
             # Check if this blueprint comes from invention (activity 8)
             inv_prod = EveIndustryActivityProduct.objects.filter(
-                product_eve_type_id=blueprint_type.id, activity_id=8, eve_type__published=True
+                product_eve_type_id=blueprint_type.id,
+                activity_id=8,
+                eve_type__published=True,
             ).first()
             if inv_prod:
                 t1_blueprint = inv_prod.eve_type
@@ -611,7 +640,9 @@ def get_recursive_bom_tree(
                             "base_quantity": 1,
                             "activity_id": 11,  # Reaction Formula
                             "sub_materials": [],
-                            "facility_name": target_facility.name if target_facility else "None",
+                            "facility_name": target_facility.name
+                            if target_facility
+                            else "None",
                             "is_reaction": True,
                         }
                     )
@@ -628,7 +659,9 @@ def get_recursive_bom_tree(
                             "base_quantity": runs,
                             "activity_id": 5,  # Copying
                             "sub_materials": [],
-                            "facility_name": target_facility.name if target_facility else "None",
+                            "facility_name": target_facility.name
+                            if target_facility
+                            else "None",
                             "is_reaction": False,
                         }
                     )
@@ -673,7 +706,7 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
                 # Top-level items that cannot be built (e.g. BUY items) should not be in the BOM materials
                 # because they are already listed on the order details.
                 return
-                
+
             type_id = node.get("type_id")
             if type_id not in bom:
                 bom[type_id] = {
@@ -684,7 +717,9 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
                     "corp_stock": corp_stock.get(type_id, 0),
                 }
             bom[type_id]["quantity"] += node.get("quantity", 0)
-            bom[type_id]["base_quantity"] += node.get("base_quantity", node.get("quantity", 0))
+            bom[type_id]["base_quantity"] += node.get(
+                "base_quantity", node.get("quantity", 0)
+            )
         else:
             for sub in node.get("sub_materials", []):
                 _flatten(sub, is_top_level=False)
@@ -696,15 +731,16 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
     type_ids = list(bom.keys())
     if type_ids:
         from eveuniverse.models import EveType
+
         types = EveType.objects.filter(id__in=type_ids).select_related("eve_group")
-        
+
         def get_custom_group(t):
             if not t.eve_group:
                 return "Other"
             cat_id = t.eve_group.eve_category_id
             group_id = t.eve_group.id
             group_name = t.eve_group.name
-            
+
             if cat_id == 9:
                 return "Blueprints"
             if cat_id == 43:
@@ -713,19 +749,23 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
                 return "Minerals"
             if group_id == 429:
                 return "Moon Goo"
-            if group_id in [428, 427, 974]: # Intermediate, Composite, Hybrid Polymers
+            if group_id in [428, 427, 974]:  # Intermediate, Composite, Hybrid Polymers
                 return "Reaction Materials"
-            if group_id in [711, 712, 1034]: # Gas clouds, Biochemical Silos
+            if group_id in [711, 712, 1034]:  # Gas clouds, Biochemical Silos
                 return "Gases"
             if group_id == 423:
                 return "Ice Products"
             if group_id == 754:
                 return "Salvage"
-            if group_id in [334, 913, 873]: # Construction Components, Advanced, Capital
+            if group_id in [
+                334,
+                913,
+                873,
+            ]:  # Construction Components, Advanced, Capital
                 return "Components"
-            
+
             return group_name
-            
+
         group_map = {t.id: get_custom_group(t) for t in types}
         for type_id, data in bom.items():
             data["group_name"] = group_map.get(type_id, "Unknown")

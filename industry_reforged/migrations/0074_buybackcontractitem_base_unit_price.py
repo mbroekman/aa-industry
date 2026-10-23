@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0073_buybackcontract_donation_amount_and_more'),
+        ("industry_reforged", "0073_buybackcontract_donation_amount_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='buybackcontractitem',
-            name='base_unit_price',
-            field=models.DecimalField(decimal_places=2, default=0.0, help_text="Appraised unit price before the program's price modifier and bulk-item tax were applied.", max_digits=20),
+            model_name="buybackcontractitem",
+            name="base_unit_price",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=0.0,
+                help_text="Appraised unit price before the program's price modifier and bulk-item tax were applied.",
+                max_digits=20,
+            ),
         ),
     ]

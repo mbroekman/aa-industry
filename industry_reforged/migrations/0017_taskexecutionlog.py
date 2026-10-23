@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0016_corporationwebhookconfig_directors_webhook"),
     ]

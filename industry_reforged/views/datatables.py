@@ -103,7 +103,7 @@ def dt_director_orders(request):
         margin_html = (
             f'<span class="{"text-success" if margin >= 0 else "text-danger"}" '
             f'data-bs-toggle="tooltip" title="Markup: {markup:.1f}%">'
-            f'{margin:.1f}%</span>'
+            f"{margin:.1f}%</span>"
         )
 
         primary_item = "-"
@@ -695,17 +695,17 @@ def dt_blueprint_library(request):
             from corptools.models import CorpAsset, EveLocation
 
             eve_loc_ids = list(
-                EveLocation.objects.filter(
-                    location_name__icontains=search
-                ).values_list("location_id", flat=True)
+                EveLocation.objects.filter(location_name__icontains=search).values_list(
+                    "location_id", flat=True
+                )
             )
             matching_loc_ids.update(eve_loc_ids)
 
             # Match blueprints inside containers by searching CorpAsset
             matching_item_ids.update(
-                CorpAsset.objects.filter(
-                    location_name_id__in=eve_loc_ids
-                ).values_list("item_id", flat=True)
+                CorpAsset.objects.filter(location_name_id__in=eve_loc_ids).values_list(
+                    "item_id", flat=True
+                )
             )
 
             # Map negative hangar locations back to office parent structures

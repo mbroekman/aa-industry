@@ -60,12 +60,16 @@ class TestMatchContract:
         assert result.item_mismatch is True
 
     def test_wrong_quantity(self):
-        result = match_contract(_expectation(), _esi_contract(), _esi_items(quantity=500))
+        result = match_contract(
+            _expectation(), _esi_contract(), _esi_items(quantity=500)
+        )
         assert result.status == "FLAGGED"
         assert result.item_mismatch is True
 
     def test_wrong_price_over(self):
-        result = match_contract(_expectation(), _esi_contract(price=5000.0), _esi_items())
+        result = match_contract(
+            _expectation(), _esi_contract(price=5000.0), _esi_items()
+        )
         assert result.status == "FLAGGED"
         assert result.price_mismatch is True
 
@@ -75,7 +79,9 @@ class TestMatchContract:
         assert result.price_mismatch is True
 
     def test_price_within_tolerance_not_flagged(self):
-        result = match_contract(_expectation(), _esi_contract(price=1000.5), _esi_items())
+        result = match_contract(
+            _expectation(), _esi_contract(price=1000.5), _esi_items()
+        )
         assert result.price_mismatch is False
 
     def test_wrong_structure(self):

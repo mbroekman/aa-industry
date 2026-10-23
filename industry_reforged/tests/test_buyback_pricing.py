@@ -36,7 +36,12 @@ def _market_response(price):
     mock_res = MagicMock()
     mock_res.status_code = 200
     mock_res.json.return_value = [
-        {"price": price, "volume_remain": 1000, "is_buy_order": False, "location_id": 60003760}
+        {
+            "price": price,
+            "volume_remain": 1000,
+            "is_buy_order": False,
+            "location_id": 60003760,
+        }
     ]
     return mock_res
 
@@ -93,8 +98,18 @@ class TestGetItemValueVariants:
         mock_esi_orders.return_value = MagicMock(
             status_code=200,
             json=lambda: [
-                {"price": 80.0, "volume_remain": 100, "is_buy_order": True, "location_id": 60003760},
-                {"price": 100.0, "volume_remain": 100, "is_buy_order": False, "location_id": 60003760},
+                {
+                    "price": 80.0,
+                    "volume_remain": 100,
+                    "is_buy_order": True,
+                    "location_id": 60003760,
+                },
+                {
+                    "price": 100.0,
+                    "volume_remain": 100,
+                    "is_buy_order": False,
+                    "location_id": 60003760,
+                },
             ],
         )
 
@@ -117,7 +132,9 @@ class TestGetItemValueVariants:
 
         variants = get_item_value_variants(eve_type, 1)
         assert "market" not in variants
-        assert variants["reprocessed"] == Decimal("50.00") or variants["reprocessed"] == Decimal("50.0")
+        assert variants["reprocessed"] == Decimal("50.00") or variants[
+            "reprocessed"
+        ] == Decimal("50.0")
 
     def test_empty_when_no_market_and_not_reprocessable(self, mock_esi_orders):
         eve_type = EveTypeFactory()
@@ -138,13 +155,17 @@ class TestCalculatePriceDensityTax:
         assert tax == Decimal("0.00")
 
     def test_tax_applied_below_threshold(self):
-        program = MagicMock(price_density_threshold=10.0, price_density_tax_percent=20.0)
+        program = MagicMock(
+            price_density_threshold=10.0, price_density_tax_percent=20.0
+        )
         # density = 100/50 = 2.0 isk/m3, below the 10.0 threshold -> taxed
         tax = calculate_price_density_tax(Decimal("100.00"), 50.0, program)
         assert tax == Decimal("20.00")
 
     def test_no_tax_when_no_volume(self):
-        program = MagicMock(price_density_threshold=10.0, price_density_tax_percent=20.0)
+        program = MagicMock(
+            price_density_threshold=10.0, price_density_tax_percent=20.0
+        )
         tax = calculate_price_density_tax(Decimal("100.00"), 0, program)
         assert tax == Decimal("0.00")
 
@@ -162,7 +183,9 @@ class TestCalculateBuybackQuote:
         def side_effect(url, params=None, **kwargs):
             if params.get("type_id") == eve_type.id:
                 return _market_response(10.0)  # market: 10.0/unit
-            return _market_response(1.0)  # tritanium: 1.0/unit -> reprocessed 1000.0/unit
+            return _market_response(
+                1.0
+            )  # tritanium: 1.0/unit -> reprocessed 1000.0/unit
 
         mock_esi_orders.side_effect = side_effect
 
@@ -183,7 +206,9 @@ class TestCalculateBuybackQuote:
         def side_effect(url, params=None, **kwargs):
             if params.get("type_id") == eve_type.id:
                 return _market_response(10.0)  # market: 10.0/unit
-            return _market_response(1.0)  # tritanium: 1.0/unit -> reprocessed 1000.0/unit @ 100%
+            return _market_response(
+                1.0
+            )  # tritanium: 1.0/unit -> reprocessed 1000.0/unit @ 100%
 
         mock_esi_orders.side_effect = side_effect
 
@@ -200,8 +225,18 @@ class TestCalculateBuybackQuote:
                 return MagicMock(
                     status_code=200,
                     json=lambda: [
-                        {"price": 80.0, "volume_remain": 100, "is_buy_order": True, "location_id": 60003760},
-                        {"price": 100.0, "volume_remain": 100, "is_buy_order": False, "location_id": 60003760},
+                        {
+                            "price": 80.0,
+                            "volume_remain": 100,
+                            "is_buy_order": True,
+                            "location_id": 60003760,
+                        },
+                        {
+                            "price": 100.0,
+                            "volume_remain": 100,
+                            "is_buy_order": False,
+                            "location_id": 60003760,
+                        },
                     ],
                 )
             return _empty_response()
@@ -242,7 +277,9 @@ class TestCalculateBuybackQuote:
     def test_blocked_item_has_zero_base_price(self, mock_esi_orders):
         program = BuybackProgramFactory()
         eve_type = EveTypeFactory()
-        BuybackWatchlistItemFactory(program=program, eve_type=eve_type, blocks_submission=True)
+        BuybackWatchlistItemFactory(
+            program=program, eve_type=eve_type, blocks_submission=True
+        )
         mock_esi_orders.return_value = _market_response(100.0)
 
         total, details = calculate_buyback_quote({eve_type: 1}, program)
@@ -252,7 +289,9 @@ class TestCalculateBuybackQuote:
     def test_watchlist_blocking_item_excluded_from_total(self, mock_esi_orders):
         program = BuybackProgramFactory()
         eve_type = EveTypeFactory()
-        BuybackWatchlistItemFactory(program=program, eve_type=eve_type, blocks_submission=True)
+        BuybackWatchlistItemFactory(
+            program=program, eve_type=eve_type, blocks_submission=True
+        )
         mock_esi_orders.return_value = _market_response(100.0)
 
         total, details = calculate_buyback_quote({eve_type: 1}, program)
@@ -262,7 +301,9 @@ class TestCalculateBuybackQuote:
     def test_watchlist_non_blocking_item_included_but_flagged(self, mock_esi_orders):
         program = BuybackProgramFactory()
         eve_type = EveTypeFactory()
-        BuybackWatchlistItemFactory(program=program, eve_type=eve_type, blocks_submission=False)
+        BuybackWatchlistItemFactory(
+            program=program, eve_type=eve_type, blocks_submission=False
+        )
         mock_esi_orders.return_value = _market_response(100.0)
 
         total, details = calculate_buyback_quote({eve_type: 1}, program)
@@ -276,7 +317,9 @@ class TestCalculateBuybackQuote:
         assert total == Decimal("0.00")
         assert details == []
 
-    def test_unrecognized_valuation_logs_and_returns_zero_not_raise(self, mock_esi_orders):
+    def test_unrecognized_valuation_logs_and_returns_zero_not_raise(
+        self, mock_esi_orders
+    ):
         program = BuybackProgramFactory()
         eve_type = EveTypeFactory()
         mock_esi_orders.return_value = _empty_response()

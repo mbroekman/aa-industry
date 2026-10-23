@@ -5,7 +5,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0027_industryfacility_is_production_facility"),
     ]

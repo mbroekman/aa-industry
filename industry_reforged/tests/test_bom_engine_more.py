@@ -21,7 +21,6 @@ from industry_reforged.utils.bom_engine import (
 
 @pytest.mark.django_db
 class TestBomEngineMore:
-
     @patch("industry_reforged.utils.bom_engine.get_sde_bom")
     @patch("industry_reforged.utils.bom_engine.get_blueprint_me")
     def test_calculate_order_bom(self, mock_bp_me, mock_get_sde):

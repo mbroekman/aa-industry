@@ -29,7 +29,6 @@ def reverse_restore_active_jobs(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0042_migrate_existing_transactions"),
     ]

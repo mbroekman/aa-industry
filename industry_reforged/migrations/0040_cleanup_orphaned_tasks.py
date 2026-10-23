@@ -31,7 +31,6 @@ def reverse_cleanup(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         (
             "industry_reforged",

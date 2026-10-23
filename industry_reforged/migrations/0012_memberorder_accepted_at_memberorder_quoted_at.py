@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0011_corpitemconfig_last_low_stock_warning_and_more"),
     ]

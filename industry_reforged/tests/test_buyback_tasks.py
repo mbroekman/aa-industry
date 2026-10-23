@@ -62,7 +62,11 @@ class TestBuybackPollContracts:
     def _setup_program_with_token(self, facility=None):
         user = UserFactory()
         character = EveCharacterFactory()
-        program = BuybackProgramFactory(facility=facility) if facility else BuybackProgramFactory()
+        program = (
+            BuybackProgramFactory(facility=facility)
+            if facility
+            else BuybackProgramFactory()
+        )
         CorporationSyncConfig.objects.create(
             corporation=program.corporation, sync_character=character
         )
@@ -171,8 +175,12 @@ class TestBuybackPollContracts:
         cache.clear()  # simulate the lock having expired before the second run
         buyback_poll_contracts()
 
-        assert BuybackContract.objects.filter(tracking_number="BB-ABCD1234").count() == 1
-        assert mock_notify.call_count == 1  # only notified once, not on the second match
+        assert (
+            BuybackContract.objects.filter(tracking_number="BB-ABCD1234").count() == 1
+        )
+        assert (
+            mock_notify.call_count == 1
+        )  # only notified once, not on the second match
 
 
 @pytest.mark.django_db

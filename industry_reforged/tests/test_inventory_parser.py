@@ -48,7 +48,7 @@ class TestParseInventoryPaste:
 
     def test_duplicate_item_name_quantities_summed(self):
         tritanium = EveTypeFactory(name="Tritanium")
-        text = "Tritanium\t100\n" "Tritanium\t50\n"
+        text = "Tritanium\t100\nTritanium\t50\n"
         parsed, _ = parse_inventory_paste(text)
         assert parsed == {tritanium: 150}
 

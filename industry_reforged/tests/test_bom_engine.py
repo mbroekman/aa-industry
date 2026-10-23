@@ -16,7 +16,6 @@ from industry_reforged.utils.bom_engine import (
 
 @pytest.mark.django_db
 class TestBomEngine:
-
     @patch(
         "industry_reforged.utils.bom_engine.EveIndustryActivityProduct.objects.filter"
     )

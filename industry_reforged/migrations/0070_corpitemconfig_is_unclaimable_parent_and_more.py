@@ -4,20 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0069_memberorder_output_container_outputlocation_and_more'),
+        (
+            "industry_reforged",
+            "0069_memberorder_output_container_outputlocation_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='corpitemconfig',
-            name='is_unclaimable_parent',
-            field=models.BooleanField(default=False, help_text='Do not allow this item to be claimed as a single task. Sub-components become claimable instead.'),
+            model_name="corpitemconfig",
+            name="is_unclaimable_parent",
+            field=models.BooleanField(
+                default=False,
+                help_text="Do not allow this item to be claimed as a single task. Sub-components become claimable instead.",
+            ),
         ),
         migrations.AddField(
-            model_name='productiontask',
-            name='is_claimable',
-            field=models.BooleanField(default=True, help_text='If False, this task cannot be claimed directly (used for large parent items)'),
+            model_name="productiontask",
+            name="is_claimable",
+            field=models.BooleanField(
+                default=True,
+                help_text="If False, this task cannot be claimed directly (used for large parent items)",
+            ),
         ),
     ]

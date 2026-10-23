@@ -22,7 +22,9 @@ def buyback_stats(request: WSGIRequest) -> HttpResponse:
         days = 30
     days = max(1, min(days, 365))
 
-    programs = BuybackProgram.objects.filter(is_active=True).select_related("corporation")
+    programs = BuybackProgram.objects.filter(is_active=True).select_related(
+        "corporation"
+    )
     program_stats = [get_program_stats(program, days=days) for program in programs]
 
     chart_data = {

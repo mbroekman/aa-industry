@@ -15,7 +15,6 @@ from industry_reforged.tests.factories import EveCharacterFactory, UserFactory
 
 @pytest.mark.django_db
 class TestPITasks:
-
     @patch("industry_reforged.tasks.pi.esi")
     @patch("eveuniverse.models.EvePlanet.objects.get_or_create_esi")
     @patch("eveuniverse.models.EveSolarSystem.objects.get_or_create_esi")

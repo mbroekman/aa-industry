@@ -5,7 +5,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0023_corpitemconfig_blacklist_from_orders_and_more"),
     ]

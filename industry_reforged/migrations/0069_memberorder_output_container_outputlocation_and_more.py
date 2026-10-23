@@ -5,34 +5,60 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('eveonline', '0025_remove_evecharacter_last_updated_and_more'),
-        ('industry_reforged', '0068_remove_corpitemconfig_bom_source'),
+        ("eveonline", "0025_remove_evecharacter_last_updated_and_more"),
+        ("industry_reforged", "0068_remove_corpitemconfig_bom_source"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='memberorder',
-            name='output_container',
-            field=models.CharField(blank=True, help_text='The name of the container where the goods will be placed.', max_length=255, null=True),
+            model_name="memberorder",
+            name="output_container",
+            field=models.CharField(
+                blank=True,
+                help_text="The name of the container where the goods will be placed.",
+                max_length=255,
+                null=True,
+            ),
         ),
         migrations.CreateModel(
-            name='OutputLocation',
+            name="OutputLocation",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('corporation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='output_locations', to='eveonline.evecorporationinfo')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "corporation",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="output_locations",
+                        to="eveonline.evecorporationinfo",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Output Location',
-                'verbose_name_plural': 'Output Locations',
-                'unique_together': {('corporation', 'name')},
+                "verbose_name": "Output Location",
+                "verbose_name_plural": "Output Locations",
+                "unique_together": {("corporation", "name")},
             },
         ),
         migrations.AddField(
-            model_name='memberorder',
-            name='output_location',
-            field=models.ForeignKey(blank=True, help_text='The destination where the finished goods will be delivered.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='orders', to='industry_reforged.outputlocation'),
+            model_name="memberorder",
+            name="output_location",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="The destination where the finished goods will be delivered.",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="orders",
+                to="industry_reforged.outputlocation",
+            ),
         ),
     ]

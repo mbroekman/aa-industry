@@ -247,4 +247,3 @@ def toggle_order_item_bought(request: WSGIRequest, item_id: int) -> HttpResponse
     status_str = _("bought") if item.is_bought else _("not bought")
     messages.success(request, _(f"Marked {item.item_type.name} as {status_str}."))
     return redirect("industry_reforged:view_quote", order_id=order.id)
-

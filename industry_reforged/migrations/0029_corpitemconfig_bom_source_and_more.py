@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("eveuniverse", "0012_alter_evebloodline_eve_ship_type"),
         ("industry_reforged", "0028_remove_corpitemconfig_bom_source"),

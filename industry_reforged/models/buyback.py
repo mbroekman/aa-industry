@@ -72,7 +72,9 @@ class BuybackProgram(models.Model):
     )
     price_density_tax_percent = models.FloatField(
         default=0.0,
-        help_text=_("Percentage deducted from items below the price density threshold."),
+        help_text=_(
+            "Percentage deducted from items below the price density threshold."
+        ),
     )
     contract_expiry_days = models.IntegerField(
         default=7,
@@ -133,7 +135,9 @@ class BuybackWatchlistItem(models.Model):
     reason = models.CharField(max_length=255, blank=True)
     blocks_submission = models.BooleanField(
         default=False,
-        help_text=_("If True, this item cannot be submitted at all; if False, it is flagged for review."),
+        help_text=_(
+            "If True, this item cannot be submitted at all; if False, it is flagged for review."
+        ),
     )
 
     class Meta:
@@ -183,13 +187,17 @@ class BuybackContract(models.Model):
         max_digits=20,
         decimal_places=2,
         default=0.00,
-        help_text=_("Net amount after any donation - this is what the member should put on the in-game contract."),
+        help_text=_(
+            "Net amount after any donation - this is what the member should put on the in-game contract."
+        ),
     )
     donation_amount = models.DecimalField(
         max_digits=20,
         decimal_places=2,
         default=0.00,
-        help_text=_("ISK voluntarily donated to the corp from this contract's appraisal, chosen by the member at submission time. Already deducted from quoted_price."),
+        help_text=_(
+            "ISK voluntarily donated to the corp from this contract's appraisal, chosen by the member at submission time. Already deducted from quoted_price."
+        ),
     )
     contract_price = models.DecimalField(
         max_digits=20, decimal_places=2, null=True, blank=True
@@ -267,11 +275,15 @@ class BuybackContractItem(models.Model):
         max_digits=20,
         decimal_places=2,
         default=0.00,
-        help_text=_("Appraised unit price before the program's price modifier and bulk-item tax were applied."),
+        help_text=_(
+            "Appraised unit price before the program's price modifier and bulk-item tax were applied."
+        ),
     )
     is_esi_verified = models.BooleanField(
         default=False,
-        help_text=_("Set True once the matching task confirms this exact type/qty in the real ESI contract."),
+        help_text=_(
+            "Set True once the matching task confirms this exact type/qty in the real ESI contract."
+        ),
     )
 
     class Meta:

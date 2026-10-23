@@ -51,7 +51,6 @@ def reverse_migration(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0041_add_ledger_transaction"),
     ]

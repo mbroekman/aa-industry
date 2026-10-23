@@ -146,7 +146,9 @@ class TestBuybackDirectorViews:
         with patch("industry_reforged.views.buyback.director.messages"):
             director_config_buyback_watchlist_edit(request)
 
-        assert BuybackWatchlistItem.objects.filter(program=program, eve_type=eve_type).exists()
+        assert BuybackWatchlistItem.objects.filter(
+            program=program, eve_type=eve_type
+        ).exists()
 
     def test_watchlist_delete(self, rf):
         user = _director_user()

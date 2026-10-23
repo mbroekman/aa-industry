@@ -4,15 +4,17 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0064_productiontask_origin'),
+        ("industry_reforged", "0064_productiontask_origin"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='industryfacility',
-            name='is_default_reaction',
-            field=models.BooleanField(default=False, help_text='Whether this is the default facility for reactions.'),
+            model_name="industryfacility",
+            name="is_default_reaction",
+            field=models.BooleanField(
+                default=False,
+                help_text="Whether this is the default facility for reactions.",
+            ),
         ),
     ]

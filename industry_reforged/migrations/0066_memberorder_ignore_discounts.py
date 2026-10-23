@@ -4,15 +4,17 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0065_industryfacility_is_default_reaction'),
+        ("industry_reforged", "0065_industryfacility_is_default_reaction"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='memberorder',
-            name='ignore_discounts',
-            field=models.BooleanField(default=False, help_text="If True, corp-level discounts are not applied to this order's items."),
+            model_name="memberorder",
+            name="ignore_discounts",
+            field=models.BooleanField(
+                default=False,
+                help_text="If True, corp-level discounts are not applied to this order's items.",
+            ),
         ),
     ]

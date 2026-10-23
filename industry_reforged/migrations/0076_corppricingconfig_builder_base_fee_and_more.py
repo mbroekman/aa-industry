@@ -5,55 +5,89 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0075_buybackprogram_price_type_and_more'),
+        ("industry_reforged", "0075_buybackprogram_price_type_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_base_fee',
-            field=models.DecimalField(decimal_places=2, default=Decimal('1000000.00'), help_text='Flat fee in ISK paid for installing and completing a job', max_digits=17),
+            model_name="corppricingconfig",
+            name="builder_base_fee",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=Decimal("1000000.00"),
+                help_text="Flat fee in ISK paid for installing and completing a job",
+                max_digits=17,
+            ),
         ),
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_high_multiplier',
-            field=models.FloatField(default=1.25, help_text='Multiplier applied to rewards for HIGH priority tasks'),
+            model_name="corppricingconfig",
+            name="builder_high_multiplier",
+            field=models.FloatField(
+                default=1.25,
+                help_text="Multiplier applied to rewards for HIGH priority tasks",
+            ),
         ),
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_hourly_rate',
-            field=models.DecimalField(decimal_places=2, default=Decimal('750000.00'), help_text='Hourly rate in ISK paid per slot-hour of manufacturing/reaction time', max_digits=17),
+            model_name="corppricingconfig",
+            name="builder_hourly_rate",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=Decimal("750000.00"),
+                help_text="Hourly rate in ISK paid per slot-hour of manufacturing/reaction time",
+                max_digits=17,
+            ),
         ),
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_low_multiplier',
-            field=models.FloatField(default=0.8, help_text='Multiplier applied to rewards for LOW priority tasks'),
+            model_name="corppricingconfig",
+            name="builder_low_multiplier",
+            field=models.FloatField(
+                default=0.8,
+                help_text="Multiplier applied to rewards for LOW priority tasks",
+            ),
         ),
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_max_reward',
-            field=models.DecimalField(decimal_places=2, default=Decimal('75000000.00'), help_text='Maximum cap payout in ISK per task', max_digits=17),
+            model_name="corppricingconfig",
+            name="builder_max_reward",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=Decimal("75000000.00"),
+                help_text="Maximum cap payout in ISK per task",
+                max_digits=17,
+            ),
         ),
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_min_reward',
-            field=models.DecimalField(decimal_places=2, default=Decimal('2500000.00'), help_text='Minimum floor payout in ISK per task', max_digits=17),
+            model_name="corppricingconfig",
+            name="builder_min_reward",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=Decimal("2500000.00"),
+                help_text="Minimum floor payout in ISK per task",
+                max_digits=17,
+            ),
         ),
         migrations.AddField(
-            model_name='corppricingconfig',
-            name='builder_urgent_multiplier',
-            field=models.FloatField(default=1.5, help_text='Multiplier applied to rewards for URGENT priority tasks'),
+            model_name="corppricingconfig",
+            name="builder_urgent_multiplier",
+            field=models.FloatField(
+                default=1.5,
+                help_text="Multiplier applied to rewards for URGENT priority tasks",
+            ),
         ),
         migrations.AddField(
-            model_name='productiontask',
-            name='estimated_duration_seconds',
-            field=models.IntegerField(default=0, help_text='Estimated manufacturing or reaction duration in seconds'),
+            model_name="productiontask",
+            name="estimated_duration_seconds",
+            field=models.IntegerField(
+                default=0,
+                help_text="Estimated manufacturing or reaction duration in seconds",
+            ),
         ),
         migrations.AlterField(
-            model_name='corppricingconfig',
-            name='builder_reward_percent',
-            field=models.FloatField(default=0.5, help_text='Percentage of the output item value given as incentive reward to the builder'),
+            model_name="corppricingconfig",
+            name="builder_reward_percent",
+            field=models.FloatField(
+                default=0.5,
+                help_text="Percentage of the output item value given as incentive reward to the builder",
+            ),
         ),
     ]

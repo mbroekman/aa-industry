@@ -68,23 +68,28 @@ def update_industry_facilities():
                 previous_ids = set()
                 while True:
                     assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
-                        corporation_id=config.corporation.corporation_id, token=token, page=page
+                        corporation_id=config.corporation.corporation_id,
+                        token=token,
+                        page=page,
                     ).results(use_etag=False)
-                    
+
                     if not assets_res:
                         break
-                        
+
                     # Prevent infinite loop if ESI ignores pagination
-                    current_ids = {getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res}
+                    current_ids = {
+                        getattr(a, "item_id", getattr(a, "id", None))
+                        for a in assets_res
+                    }
                     if current_ids and current_ids.issubset(previous_ids):
                         break
                     previous_ids.update(current_ids)
-                        
+
                     assets.extend(assets_res)
-                    
+
                     if len(assets_res) < 1000:
                         break
-                        
+
                     page += 1
 
                 item_locations = {}
@@ -285,21 +290,23 @@ def sync_facility_rigs():
                 assets_res = esi.client.Assets.GetCorporationsCorporationIdAssets(
                     corporation_id=corp_id, token=token, page=page
                 ).results(use_etag=False)
-                
+
                 if not assets_res:
                     break
-                    
+
                 # Prevent infinite loop if ESI ignores pagination
-                current_ids = {getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res}
+                current_ids = {
+                    getattr(a, "item_id", getattr(a, "id", None)) for a in assets_res
+                }
                 if current_ids and current_ids.issubset(previous_ids):
                     break
                 previous_ids.update(current_ids)
-                    
+
                 assets.extend(assets_res)
-                
+
                 if len(assets_res) < 1000:
                     break
-                    
+
                 page += 1
 
             facilities = facilities_by_corp.get(corp_id, [])
@@ -384,7 +391,11 @@ def task_sync_all_rigs():
             me, te = 0.0, 20.0
         elif "Efficiency II" in name or "Material Efficiency II" in name:
             me, te = 2.4, 24.0
-        elif "Efficiency I" in name or "Material Efficiency I" in name or "Efficiency" in name:
+        elif (
+            "Efficiency I" in name
+            or "Material Efficiency I" in name
+            or "Efficiency" in name
+        ):
             me, te = 2.0, 20.0
 
         # Groups: 334 = Construction Components, 873 = Capital Construction Components, 913 = Structure Components, 1955 = Advanced Capital Construction Components

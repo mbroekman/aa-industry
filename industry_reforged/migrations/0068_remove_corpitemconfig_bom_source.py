@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0067_memberorder_upfront_payment_plex'),
+        ("industry_reforged", "0067_memberorder_upfront_payment_plex"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='corpitemconfig',
-            name='bom_source',
+            model_name="corpitemconfig",
+            name="bom_source",
         ),
     ]

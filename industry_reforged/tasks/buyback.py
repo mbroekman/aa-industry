@@ -96,7 +96,9 @@ def buyback_poll_contracts():
     """
     from ..models import BuybackContract, BuybackProgram, CorporationSyncConfig
 
-    programs = BuybackProgram.objects.filter(is_active=True).select_related("corporation")
+    programs = BuybackProgram.objects.filter(is_active=True).select_related(
+        "corporation"
+    )
 
     for program in programs:
         lock_key = f"buyback_poll_lock_{program.corporation_id}"
@@ -104,11 +106,15 @@ def buyback_poll_contracts():
             continue
 
         try:
-            sync_config = CorporationSyncConfig.objects.filter(
-                corporation=program.corporation
-            ).select_related("sync_character").first()
+            sync_config = (
+                CorporationSyncConfig.objects.filter(corporation=program.corporation)
+                .select_related("sync_character")
+                .first()
+            )
             if not sync_config:
-                logger.warning(f"No sync config for corporation {program.corporation_id}")
+                logger.warning(
+                    f"No sync config for corporation {program.corporation_id}"
+                )
                 continue
 
             token = Token.objects.filter(
@@ -126,7 +132,9 @@ def buyback_poll_contracts():
                     corporation_id=program.corporation.corporation_id, token=token
                 ).results()
             except Exception as e:
-                logger.error(f"Failed to fetch contracts for {program.corporation_id}: {e}")
+                logger.error(
+                    f"Failed to fetch contracts for {program.corporation_id}: {e}"
+                )
                 continue
 
             for esi_contract in contracts:
@@ -139,9 +147,13 @@ def buyback_poll_contracts():
                 if not tracking_number:
                     continue
 
-                contract = BuybackContract.objects.filter(
-                    tracking_number=tracking_number, program=program
-                ).exclude(status__in=TERMINAL_STATUSES).first()
+                contract = (
+                    BuybackContract.objects.filter(
+                        tracking_number=tracking_number, program=program
+                    )
+                    .exclude(status__in=TERMINAL_STATUSES)
+                    .first()
+                )
                 if not contract:
                     continue
 
@@ -155,13 +167,17 @@ def buyback_poll_contracts():
                         token=token,
                     ).result()
                 except Exception as e:
-                    logger.error(f"Failed to fetch items for contract {esi_contract_id}: {e}")
+                    logger.error(
+                        f"Failed to fetch items for contract {esi_contract_id}: {e}"
+                    )
                     continue
 
                 esi_contract_dict = {
                     "title": title,
                     "price": getattr(esi_contract, "price", 0.0),
-                    "start_location_id": getattr(esi_contract, "start_location_id", None),
+                    "start_location_id": getattr(
+                        esi_contract, "start_location_id", None
+                    ),
                     "acceptor_id": getattr(esi_contract, "acceptor_id", None),
                     "assignee_id": getattr(esi_contract, "assignee_id", None),
                 }
@@ -173,12 +189,16 @@ def buyback_poll_contracts():
                     for i in items
                 ]
 
-                result = match_contract(_build_expectation(contract), esi_contract_dict, esi_items)
+                result = match_contract(
+                    _build_expectation(contract), esi_contract_dict, esi_items
+                )
 
                 BuybackContract.objects.filter(pk=contract.pk).update(
                     esi_contract_id=esi_contract_id,
                     esi_issuer_character_id=getattr(esi_contract, "issuer_id", None),
-                    esi_acceptor_character_id=getattr(esi_contract, "acceptor_id", None),
+                    esi_acceptor_character_id=getattr(
+                        esi_contract, "acceptor_id", None
+                    ),
                     contract_price=getattr(esi_contract, "price", None),
                     contract_title=title,
                     status=result.status,
@@ -207,7 +227,9 @@ def buyback_purge_stale_contracts():
     pending = BuybackContract.objects.filter(status="PENDING").select_related("program")
 
     for contract in pending:
-        deadline = contract.created_at + timezone.timedelta(days=contract.program.contract_expiry_days)
+        deadline = contract.created_at + timezone.timedelta(
+            days=contract.program.contract_expiry_days
+        )
         if timezone.now() > deadline:
             contract.status = "EXPIRED"
             contract.save(update_fields=["status"])

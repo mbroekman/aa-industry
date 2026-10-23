@@ -33,13 +33,12 @@ def get_corp_division_names() -> Dict[Optional[int], Dict[str, str]]:
     try:
         from corptools.models import EveLocation
 
-        for loc_id, loc_name, corp_id in (
-            EveLocation.objects.filter(location_id__lt=0)
-            .values_list(
-                "location_id",
-                "location_name",
-                "managed_corp__corporation__corporation_id",
-            )
+        for loc_id, loc_name, corp_id in EveLocation.objects.filter(
+            location_id__lt=0
+        ).values_list(
+            "location_id",
+            "location_name",
+            "managed_corp__corporation__corporation_id",
         ):
             div_num = abs(loc_id) % 10
             flag = f"CorpSAG{div_num}"
@@ -109,9 +108,9 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
     # 1. IndustryFacility
     from ..models.facilities import IndustryFacility
 
-    for fac_id, name in IndustryFacility.objects.filter(facility_id__in=ids).values_list(
-        "facility_id", "name"
-    ):
+    for fac_id, name in IndustryFacility.objects.filter(
+        facility_id__in=ids
+    ).values_list("facility_id", "name"):
         if name:
             names[fac_id] = name
 
@@ -142,7 +141,9 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
     try:
         from eveuniverse.models import EveStation
 
-        for st_id, name in EveStation.objects.filter(id__in=ids).values_list("id", "name"):
+        for st_id, name in EveStation.objects.filter(id__in=ids).values_list(
+            "id", "name"
+        ):
             if name:
                 names[st_id] = name
     except (ImportError, Exception):
@@ -174,7 +175,6 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
         pass
 
     return names
-
 
 
 def get_blueprint_asset_locations(item_ids: Iterable[int]) -> Dict[int, str]:
@@ -245,5 +245,3 @@ def get_blueprint_full_location(
     if flag_display:
         return f"Structure ({bp.location_id}) > {flag_display}"
     return f"Structure ({bp.location_id})"
-
-

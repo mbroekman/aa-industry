@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0066_memberorder_ignore_discounts'),
+        ("industry_reforged", "0066_memberorder_ignore_discounts"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='memberorder',
-            name='upfront_payment_plex',
-            field=models.IntegerField(default=0, help_text='Upfront payment required in PLEX'),
+            model_name="memberorder",
+            name="upfront_payment_plex",
+            field=models.IntegerField(
+                default=0, help_text="Upfront payment required in PLEX"
+            ),
         ),
     ]

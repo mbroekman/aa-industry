@@ -19,7 +19,6 @@ from industry_reforged.tests.factories import (
 
 @pytest.mark.django_db
 class TestWalletTasks:
-
     @patch("industry_reforged.tasks.wallets.esi")
     def test_task_sync_corp_wallets_success(self, mock_esi):
         user = UserFactory()
@@ -52,9 +51,7 @@ class TestWalletTasks:
         mock_divisions = MagicMock()
         mock_divisions.wallet = [mock_div_obj, mock_div_obj2]
 
-        mock_esi.client.Corporation.GetCorporationsCorporationIdDivisions.return_value.result.return_value = (
-            mock_divisions
-        )
+        mock_esi.client.Corporation.GetCorporationsCorporationIdDivisions.return_value.result.return_value = mock_divisions
 
         mock_wallet_obj = MagicMock()
         mock_wallet_obj.division = 1
@@ -68,9 +65,7 @@ class TestWalletTasks:
             mock_wallet_obj,
             mock_wallet_obj2,
         ]
-        mock_esi.client.Wallet.GetCorporationsCorporationIdWalletsDivisionJournal.return_value.result.return_value = (
-            []
-        )
+        mock_esi.client.Wallet.GetCorporationsCorporationIdWalletsDivisionJournal.return_value.result.return_value = []
 
         task_sync_corp_wallets()
 

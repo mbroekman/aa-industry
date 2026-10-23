@@ -105,14 +105,18 @@ def match_contract(
     # assignee_id is the intended recipient on a directed contract before
     # that. Whichever of the two is actually present on this contract is the
     # one checked - an absent field is unknown, not treated as a match.
-    actual_receiver_id = esi_contract.get("acceptor_id") or esi_contract.get("assignee_id")
+    actual_receiver_id = esi_contract.get("acceptor_id") or esi_contract.get(
+        "assignee_id"
+    )
     receiver_mismatch = (
         expected.expected_receiver_id is not None
         and actual_receiver_id is not None
         and actual_receiver_id != expected.expected_receiver_id
     )
     if receiver_mismatch:
-        notes.append("Contract was not issued to the expected receiving corp/character.")
+        notes.append(
+            "Contract was not issued to the expected receiving corp/character."
+        )
 
     price_mismatch = (
         abs(float(esi_contract.get("price", 0.0)) - expected.expected_price)
@@ -147,7 +151,9 @@ def match_contract(
 def _items_mismatch(expected_items: list[ExpectedItem], esi_items: list[dict]) -> bool:
     expected_by_type: dict[int, int] = {}
     for item in expected_items:
-        expected_by_type[item.type_id] = expected_by_type.get(item.type_id, 0) + item.quantity
+        expected_by_type[item.type_id] = (
+            expected_by_type.get(item.type_id, 0) + item.quantity
+        )
 
     actual_by_type: dict[int, int] = {}
     for item in esi_items:

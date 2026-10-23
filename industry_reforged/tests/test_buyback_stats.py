@@ -90,9 +90,13 @@ class TestGetProgramStats:
 
     def test_flag_rate_excludes_pending(self):
         program = BuybackProgramFactory()
-        BuybackContractFactory(program=program, status="PENDING", flag_price_mismatch=True)  # excluded
+        BuybackContractFactory(
+            program=program, status="PENDING", flag_price_mismatch=True
+        )  # excluded
         BuybackContractFactory(program=program, status="MATCHED")  # not flagged
-        BuybackContractFactory(program=program, status="FLAGGED", flag_item_mismatch=True)  # flagged
+        BuybackContractFactory(
+            program=program, status="FLAGGED", flag_item_mismatch=True
+        )  # flagged
 
         stats = get_program_stats(program)
         # resolved = MATCHED + FLAGGED = 2, flagged = 1 -> 50%
@@ -133,8 +137,12 @@ class TestGetProgramStats:
         paid = BuybackContractFactory(program=program, status="PAID")
         cheap = EveTypeFactory(name="Cheap Item")
         expensive = EveTypeFactory(name="Expensive Item")
-        BuybackContractItemFactory(contract=paid, eve_type=cheap, quantity=1000, unit_price=Decimal("1.00"))
-        BuybackContractItemFactory(contract=paid, eve_type=expensive, quantity=1, unit_price=Decimal("5000.00"))
+        BuybackContractItemFactory(
+            contract=paid, eve_type=cheap, quantity=1000, unit_price=Decimal("1.00")
+        )
+        BuybackContractItemFactory(
+            contract=paid, eve_type=expensive, quantity=1, unit_price=Decimal("5000.00")
+        )
 
         stats = get_program_stats(program, top_n=1)
         assert len(stats.top_items) == 1
@@ -184,8 +192,12 @@ class TestGetProgramStats:
 
     def test_total_donated_only_counts_paid_contracts(self):
         program = BuybackProgramFactory()
-        BuybackContractFactory(program=program, status="PAID", donation_amount=Decimal("500.00"))
-        BuybackContractFactory(program=program, status="PENDING", donation_amount=Decimal("999.00"))
+        BuybackContractFactory(
+            program=program, status="PAID", donation_amount=Decimal("500.00")
+        )
+        BuybackContractFactory(
+            program=program, status="PENDING", donation_amount=Decimal("999.00")
+        )
 
         stats = get_program_stats(program)
         assert stats.total_donated == Decimal("500.00")
@@ -195,9 +207,24 @@ class TestGetProgramStats:
         alice = EveCharacterFactory(character_name="Alice")
         bob = EveCharacterFactory(character_name="Bob")
         carol = EveCharacterFactory(character_name="Carol")
-        BuybackContractFactory(program=program, status="PAID", character=alice, donation_amount=Decimal("100.00"))
-        BuybackContractFactory(program=program, status="PAID", character=bob, donation_amount=Decimal("1000.00"))
-        BuybackContractFactory(program=program, status="PAID", character=carol, donation_amount=Decimal("0.00"))
+        BuybackContractFactory(
+            program=program,
+            status="PAID",
+            character=alice,
+            donation_amount=Decimal("100.00"),
+        )
+        BuybackContractFactory(
+            program=program,
+            status="PAID",
+            character=bob,
+            donation_amount=Decimal("1000.00"),
+        )
+        BuybackContractFactory(
+            program=program,
+            status="PAID",
+            character=carol,
+            donation_amount=Decimal("0.00"),
+        )
 
         stats = get_program_stats(program)
         donor_names = [d.character_name for d in stats.top_donors]

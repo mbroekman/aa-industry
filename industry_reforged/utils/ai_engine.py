@@ -129,20 +129,18 @@ def check_availability(eve_type, target_market=None, corporation_id=None):
 
     # Check active CorporationIndustryJobs that are not linked to a ProductionTask
     from ..models.jobs import CorporationIndustryJob, TaskJobLink
-    
+
     linked_job_ids = TaskJobLink.objects.filter(
         corporation_job__isnull=False
     ).values_list("corporation_job_id", flat=True)
 
     corp_jobs_qs = CorporationIndustryJob.objects.filter(
-        product_type=eve_type,
-        status__in=["active", "ready"],
-        activity_id__in=[1, 9]
+        product_type=eve_type, status__in=["active", "ready"], activity_id__in=[1, 9]
     ).exclude(job_id__in=linked_job_ids)
 
     if corporation_id:
         corp_jobs_qs = corp_jobs_qs.filter(corporation_id=corporation_id)
-        
+
     for job in corp_jobs_qs:
         in_flight += job.expected_output
 

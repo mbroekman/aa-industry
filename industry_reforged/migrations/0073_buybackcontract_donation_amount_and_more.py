@@ -4,20 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('industry_reforged', '0072_corporationwebhookconfig_buyback_webhook_and_more'),
+        ("industry_reforged", "0072_corporationwebhookconfig_buyback_webhook_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='buybackcontract',
-            name='donation_amount',
-            field=models.DecimalField(decimal_places=2, default=0.0, help_text="ISK voluntarily donated to the corp from this contract's appraisal, chosen by the member at submission time. Already deducted from quoted_price.", max_digits=20),
+            model_name="buybackcontract",
+            name="donation_amount",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=0.0,
+                help_text="ISK voluntarily donated to the corp from this contract's appraisal, chosen by the member at submission time. Already deducted from quoted_price.",
+                max_digits=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='buybackcontract',
-            name='quoted_price',
-            field=models.DecimalField(decimal_places=2, default=0.0, help_text='Net amount after any donation - this is what the member should put on the in-game contract.', max_digits=20),
+            model_name="buybackcontract",
+            name="quoted_price",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=0.0,
+                help_text="Net amount after any donation - this is what the member should put on the in-game contract.",
+                max_digits=20,
+            ),
         ),
     ]

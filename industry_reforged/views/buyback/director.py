@@ -10,7 +10,12 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from ...forms import BuybackProgramForm, BuybackWatchlistItemForm
-from ...models import BuybackContract, BuybackProgram, BuybackWatchlistItem, LedgerTransaction
+from ...models import (
+    BuybackContract,
+    BuybackProgram,
+    BuybackWatchlistItem,
+    LedgerTransaction,
+)
 from ...tasks.utils import notify_discord_user
 
 
@@ -37,7 +42,9 @@ def director_config_buyback_program_edit(
         request,
         "industry_reforged/director_config_form.html",
         {
-            "title": _("Edit Buyback Program") if program_id else _("Add Buyback Program"),
+            "title": _("Edit Buyback Program")
+            if program_id
+            else _("Add Buyback Program"),
             "form": form,
             "back_url": "industry_reforged:director_config",
             "back_hash": "#buyback",
@@ -90,7 +97,9 @@ def director_config_buyback_watchlist_edit(
 
 @login_required
 @permission_required("industry_reforged.corp_access")
-def director_config_buyback_watchlist_delete(request: WSGIRequest, item_id: int) -> HttpResponse:
+def director_config_buyback_watchlist_delete(
+    request: WSGIRequest, item_id: int
+) -> HttpResponse:
     item = get_object_or_404(BuybackWatchlistItem, id=item_id)
     item.delete()
     messages.success(request, _("Watchlist item deleted."))
@@ -139,7 +148,9 @@ def director_buyback_contract_resolve(
             contract.status = "PAID"
             contract.save(update_fields=["status"])
             messages.success(
-                request, _("Contract %(tracking_number)s paid out.") % {"tracking_number": contract.tracking_number}
+                request,
+                _("Contract %(tracking_number)s paid out.")
+                % {"tracking_number": contract.tracking_number},
             )
         elif action == "reject":
             reason = request.POST.get("reason", "").strip()
@@ -153,7 +164,9 @@ def director_buyback_contract_resolve(
                     f"Your buyback contract {contract.tracking_number} was rejected. {reason}".strip(),
                 )
             messages.success(
-                request, _("Contract %(tracking_number)s rejected.") % {"tracking_number": contract.tracking_number}
+                request,
+                _("Contract %(tracking_number)s rejected.")
+                % {"tracking_number": contract.tracking_number},
             )
     elif request.method == "POST":
         messages.error(request, _("This contract has already been resolved."))

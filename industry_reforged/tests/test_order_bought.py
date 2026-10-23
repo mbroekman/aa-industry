@@ -55,12 +55,16 @@ class TestOrderItemBought:
         item = OrderItemFactory(order=order)
 
         # 1. No blueprint exists in eveuniverse -> should be a buy product
-        with patch("eveuniverse.models.EveIndustryActivityProduct.objects.filter") as mock_filter:
+        with patch(
+            "eveuniverse.models.EveIndustryActivityProduct.objects.filter"
+        ) as mock_filter:
             mock_filter.return_value.exists.return_value = False
             assert item.is_buy_product is True
 
         # 2. Has blueprint, no CorpItemConfig -> not a buy product
-        with patch("eveuniverse.models.EveIndustryActivityProduct.objects.filter") as mock_filter:
+        with patch(
+            "eveuniverse.models.EveIndustryActivityProduct.objects.filter"
+        ) as mock_filter:
             mock_filter.return_value.exists.return_value = True
             assert item.is_buy_product is False
 
@@ -273,4 +277,3 @@ class TestOrderItemBought:
         item = OrderItemFactory()
         with patch.object(OrderItem, "is_buy_product", True):
             assert item.get_build_status() is None
-

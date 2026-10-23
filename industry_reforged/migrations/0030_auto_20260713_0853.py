@@ -82,7 +82,6 @@ def reverse_seed_rigs(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0029_corpitemconfig_bom_source_and_more"),
     ]

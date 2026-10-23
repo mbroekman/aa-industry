@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("industry_reforged", "0012_memberorder_accepted_at_memberorder_quoted_at"),
     ]

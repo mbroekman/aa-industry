@@ -36,7 +36,9 @@ def ai_market_manager_dashboard(request):
     except requests.exceptions.RequestException:
         messages.error(
             request,
-            _("AI Forecasting model is not available. Please check if the ai-forecasting service is running.")
+            _(
+                "AI Forecasting model is not available. Please check if the ai-forecasting service is running."
+            ),
         )
 
     user_corps = get_user_corps(request.user)

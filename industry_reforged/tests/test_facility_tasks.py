@@ -19,7 +19,6 @@ from industry_reforged.tests.factories import (
 
 @pytest.mark.django_db
 class TestFacilityTasks:
-
     @patch("industry_reforged.tasks.facilities.esi")
     @patch("allianceauth.services.hooks.get_extension_logger")
     def test_update_industry_facilities(self, mock_logger, mock_esi):
@@ -67,9 +66,7 @@ class TestFacilityTasks:
         mock_station_info.type_id = 1531
         mock_station_info.system_id = 30000142
 
-        mock_esi.client.Universe.GetUniverseStationsStationId.return_value.result.return_value = (
-            mock_station_info
-        )
+        mock_esi.client.Universe.GetUniverseStationsStationId.return_value.result.return_value = mock_station_info
 
         update_industry_facilities()
 
@@ -108,9 +105,7 @@ class TestFacilityTasks:
             mock_asset1,
             mock_asset2,
         ]
-        mock_esi.client.Corporation.GetCorporationsCorporationIdStructures.return_value.results.return_value = (
-            []
-        )
+        mock_esi.client.Corporation.GetCorporationsCorporationIdStructures.return_value.results.return_value = []
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200

@@ -107,9 +107,11 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             )
             for inv in inventory:
                 corp_stock[inv["item_type_id"]] = inv["total"]
-                
+
             bpc_inventory = (
-                CorpBlueprint.objects.filter(corporation=corp_info, quantity=-2, runs__gt=0)
+                CorpBlueprint.objects.filter(
+                    corporation=corp_info, quantity=-2, runs__gt=0
+                )
                 .values("eve_type_id")
                 .annotate(total_runs=Sum("runs"))
             )
@@ -148,8 +150,9 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         mat_ids = list(bom.keys())
 
         from ...utils.pricing_engine import get_prices_with_overrides
-        
+
         from eveuniverse.models import EveType
+
         blueprint_ids = set(
             EveType.objects.filter(
                 id__in=mat_ids, eve_group__eve_category_id=9
@@ -157,16 +160,16 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         )
 
         prices = get_prices_with_overrides(mat_ids, corp_info)
-        
+
         bom_materials_list = []
         bom_blueprints_list = []
-        
+
         for mat_id, data in bom.items():
             price = prices.get(mat_id, 0)
             data["price_per_unit"] = price
             data["total_price"] = price * data["quantity"]
             total_bom_price += data["total_price"]
-            
+
             if mat_id in blueprint_ids:
                 bom_blueprints_list.append(data)
             else:

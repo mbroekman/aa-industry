@@ -18,7 +18,15 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 TERMINAL_STATUSES = ("PAID", "REJECTED", "EXPIRED", "CANCELLED")
-RESOLVED_STATUSES = ("MATCHED", "FLAGGED", "ACCEPTED", "PAID", "REJECTED", "EXPIRED", "CANCELLED")
+RESOLVED_STATUSES = (
+    "MATCHED",
+    "FLAGGED",
+    "ACCEPTED",
+    "PAID",
+    "REJECTED",
+    "EXPIRED",
+    "CANCELLED",
+)
 
 
 @dataclass
@@ -89,9 +97,13 @@ def get_program_stats(program, days: int = 30, top_n: int = 10) -> ProgramStats:
     payout_qs = LedgerTransaction.objects.filter(
         buyback_contract__program=program, transaction_type="BUYBACK_PAYOUT"
     )
-    total_isk_paid = payout_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    total_isk_paid = payout_qs.aggregate(total=Sum("amount"))["total"] or Decimal(
+        "0.00"
+    )
     paid_count = paid_contracts_qs.count()
-    avg_contract_value = (total_isk_paid / paid_count) if paid_count else Decimal("0.00")
+    avg_contract_value = (
+        (total_isk_paid / paid_count) if paid_count else Decimal("0.00")
+    )
 
     total_items_sold = (
         BuybackContractItem.objects.filter(contract__in=paid_contracts_qs).aggregate(
@@ -100,9 +112,9 @@ def get_program_stats(program, days: int = 30, top_n: int = 10) -> ProgramStats:
         or 0
     )
 
-    total_donated = (
-        paid_contracts_qs.aggregate(total=Sum("donation_amount"))["total"] or Decimal("0.00")
-    )
+    total_donated = paid_contracts_qs.aggregate(total=Sum("donation_amount"))[
+        "total"
+    ] or Decimal("0.00")
 
     resolved_qs = contracts.filter(status__in=RESOLVED_STATUSES)
     resolved_count = resolved_qs.count()
@@ -132,7 +144,9 @@ def get_program_stats(program, days: int = 30, top_n: int = 10) -> ProgramStats:
         for created, updated in terminal_timestamps
         if updated and created
     ]
-    avg_turnaround_hours = (sum(durations_hours) / len(durations_hours)) if durations_hours else None
+    avg_turnaround_hours = (
+        (sum(durations_hours) / len(durations_hours)) if durations_hours else None
+    )
 
     top_items = [
         ItemStat(
