@@ -130,6 +130,60 @@ class TestSkillEligibility(TestCase):
         assert missing == []
 
     @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_alt_in_different_corp_is_excluded_from_user_eligibility(self, mock_skills):
+        """An alt with the skill but sitting in an unrelated corp has no access to
+        this corp's hangars/facilities and must not make the job look buildable."""
+        other_corp = EveCorporationInfo.objects.create(
+            corporation_id=98765501,
+            corporation_name="Unrelated Corp",
+            corporation_ticker="UNRL",
+        )
+        self.alt_character.corporation_id = other_corp.corporation_id
+        self.alt_character.corporation_name = other_corp.corporation_name
+        self.alt_character.save()
+
+        def skills_for(character_id):
+            if character_id == self.alt_character.character_id:
+                return {self.skill_type.id: 5}
+            return {}
+
+        mock_skills.side_effect = skills_for
+
+        eligible, missing = skill_service.check_user_eligibility(
+            self.user, self.item_type.id, 1
+        )
+        assert eligible is False
+        assert missing[0]["skill_name"] == "Capital Ship Construction"
+
+    def test_alt_in_different_corp_excluded_from_slot_count(self):
+        other_corp = EveCorporationInfo.objects.create(
+            corporation_id=98765502,
+            corporation_name="Unrelated Corp 2",
+            corporation_ticker="UNRL2",
+        )
+        self.alt_character.corporation_id = other_corp.corporation_id
+        self.alt_character.corporation_name = other_corp.corporation_name
+        self.alt_character.save()
+
+        # AA Industry App
+        from industry_reforged.utils.slot_service import get_user_available_slots
+
+        cache.set(
+            f"industry_reforged_char_slots_{self.main_character.character_id}",
+            {"mfg_slots": 5, "reaction_slots": 3, "science_slots": 2},
+            timeout=86400,
+        )
+        cache.set(
+            f"industry_reforged_char_slots_{self.alt_character.character_id}",
+            {"mfg_slots": 10, "reaction_slots": 8, "science_slots": 5},
+            timeout=86400,
+        )
+
+        result = get_user_available_slots(self.user, activity_id=1)
+        assert result["character_count"] == 1
+        assert result["mfg_total"] == 5
+
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
     def test_user_eligible_via_alt_even_when_main_lacks_skill(self, mock_skills):
         def skills_for(character_id):
             if character_id == self.alt_character.character_id:

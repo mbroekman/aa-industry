@@ -100,16 +100,32 @@ def get_character_skill_levels(character_id: int) -> dict[int, int]:
         return {}
 
 
-def get_user_skill_levels(user: User) -> dict[int, int]:
-    """Max trained level per skill across every character the user owns."""
+def get_user_industry_characters(user: User) -> list:
+    """
+    Characters the user owns that are actually in the operating corp (same corp as
+    their main character) - alts sitting in an unrelated corp have no access to the
+    corp's hangars/facilities, so they can't execute a job here regardless of skills
+    or slots, and must not be counted for either.
+    """
     if not user or not user.is_authenticated:
-        return {}
+        return []
 
+    main_character = getattr(getattr(user, "profile", None), "main_character", None)
+    if not main_character:
+        return []
+
+    return [
+        ownership.character
+        for ownership in user.character_ownerships.select_related("character").all()
+        if ownership.character
+        and ownership.character.corporation_id == main_character.corporation_id
+    ]
+
+
+def get_user_skill_levels(user: User) -> dict[int, int]:
+    """Max trained level per skill across the user's characters in the operating corp."""
     merged: dict[int, int] = {}
-    for ownership in user.character_ownerships.select_related("character").all():
-        character = getattr(ownership, "character", None)
-        if not character:
-            continue
+    for character in get_user_industry_characters(user):
         for skill_id, level in get_character_skill_levels(
             character.character_id
         ).items():

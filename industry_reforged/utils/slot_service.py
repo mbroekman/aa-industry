@@ -13,7 +13,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 
 from ..models import CharacterIndustryJob
-from .skill_service import get_character_skill_levels
+from .skill_service import get_character_skill_levels, get_user_industry_characters
 
 logger = logging.getLogger(__name__)
 
@@ -135,12 +135,11 @@ def get_user_available_slots(user: User, activity_id: int = 1) -> dict[str, Any]
     if not user or not user.is_authenticated:
         return empty_result
 
-    ownerships = user.character_ownerships.select_related("character").all()
-    char_ids = [
-        o.character.character_id
-        for o in ownerships
-        if getattr(o, "character", None) is not None
-    ]
+    # Only characters in the same corp as the user's main - alts sitting in an
+    # unrelated corp have no access to the corp's hangars/facilities and can't
+    # actually execute a job here, regardless of skills or free slots.
+    characters = get_user_industry_characters(user)
+    char_ids = [c.character_id for c in characters]
 
     if not char_ids:
         return empty_result
@@ -160,10 +159,7 @@ def get_user_available_slots(user: User, activity_id: int = 1) -> dict[str, Any]
     science_total = 0
     char_summaries = []
 
-    for ownership in ownerships:
-        c = getattr(ownership, "character", None)
-        if not c:
-            continue
+    for c in characters:
         slots = get_character_industry_slots(c.character_id)
         mfg_total += slots["mfg_slots"]
         reaction_total += slots["reaction_slots"]
