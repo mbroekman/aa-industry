@@ -196,15 +196,27 @@ def _missing_for(
     ]
 
 
+def check_eligibility_with_levels(
+    skill_levels: dict[int, int], item_type_id: int, activity_id: int
+) -> tuple[bool, list[dict[str, Any]]]:
+    """Same comparison as check_user_eligibility, but takes pre-fetched skill levels so
+    a caller evaluating many items for the same user in one request (e.g. the Job Market
+    dashboard rendering a whole BOM tree) can fetch get_user_skill_levels() once and reuse
+    it, instead of refetching per task."""
+    required = get_required_skills(item_type_id, activity_id)
+    if not required:
+        return True, []
+    missing = _missing_for(skill_levels, required)
+    return not missing, missing
+
+
 def check_user_eligibility(
     user: User, item_type_id: int, activity_id: int
 ) -> tuple[bool, list[dict[str, Any]]]:
     """Can ANY character the user owns run this job? (Job Market visibility check.)"""
-    required = get_required_skills(item_type_id, activity_id)
-    if not required:
-        return True, []
-    missing = _missing_for(get_user_skill_levels(user), required)
-    return not missing, missing
+    return check_eligibility_with_levels(
+        get_user_skill_levels(user), item_type_id, activity_id
+    )
 
 
 def check_character_eligibility(

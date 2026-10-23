@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **claims**: Surface buildable BOM sub-components for skill-gated jobs (TASK-261):
+  - When a parent task is skill-gated and unbuildable for the viewing user, its already-persisted BOM child `ProductionTask` rows (created recursively at order acceptance) now become independently visible/claimable in the Job Market, even though the parent's static `is_claimable` admin flag stays unchanged - purely additive, per-viewer visibility.
+  - Cascades to arbitrary depth automatically: if a released child is itself skill-gated for this viewer, its own children are released in turn, with no new admin configuration per BOM level.
+  - A skilled corpmate still sees and can claim the parent directly as before; this never changes what's claimable, only what's additionally visible for members who can't do the parent themselves.
+  - Released rows show a small "Released: parent needs a skill most members lack" note.
+  - `skill_service.py`: new `check_eligibility_with_levels` so the dashboard fetches each viewer's skill levels once per page load instead of once per task.
 - **claims**: Implemented skill-gated job eligibility in the Job Market (TASK-260):
   - Added `skill_service.py`: checks real EVE blueprint skill requirements (django-eveuniverse's `EveIndustryActivitySkill`, sourced from the EVE SDE, already populated) against character skill levels, independent of slot availability - capital/supercapital/T3/advanced-reaction blueprints are hard-gated behind specific skills that pure slot counts don't capture.
   - `slot_service.py` refactored to source skill levels from the new shared `get_character_skill_levels` instead of its own embedded ESI fetch - one raw-ESI call per character now serves both slot counting and skill eligibility.

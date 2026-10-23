@@ -73,11 +73,17 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         output_field=IntegerField(),
     )
 
-    # Unclaimed tasks
-    unclaimed_tasks_qs = (
+    # AA Industry App
+    from ..utils import skill_service
+
+    # Unclaimed tasks. Fetched unfiltered by BOM position - visibility is decided below in
+    # Python, since it now also depends on the per-viewer skill-eligibility of each task's
+    # parent, not just the static is_claimable flag SQL can express directly.
+    all_unclaimed_qs = (
         ProductionTask.objects.filter(status="UNCLAIMED")
-        .filter(Q(bom_parent__isnull=True) | Q(bom_parent__is_claimable=False))
-        .select_related("item_type", "bom_parent", "created_from_order")
+        .select_related(
+            "item_type", "bom_parent", "bom_parent__item_type", "created_from_order"
+        )
         .annotate(
             incomplete_children_count=Count(
                 "bom_children", filter=~Q(bom_children__status="COMPLETED")
@@ -86,21 +92,56 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         )
         .order_by("prio_rank", "created_from_order__created_at", "id")
     )
-    unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
+    all_unclaimed = list(all_unclaimed_qs)
+
+    # One skill fetch for the whole page, reused across every task via this memo - cheap
+    # even for a large Job Market since the underlying lookups are themselves cached.
+    user_skill_levels = skill_service.get_user_skill_levels(request.user)
+    eligibility_memo: dict[tuple[int, int], tuple[bool, list]] = {}
+
+    def get_buildable(item_type_id: int, activity_id: int):
+        key = (item_type_id, activity_id)
+        if key not in eligibility_memo:
+            eligibility_memo[key] = skill_service.check_eligibility_with_levels(
+                user_skill_levels, item_type_id, activity_id
+            )
+        return eligibility_memo[key]
+
+    def is_directly_visible(t) -> bool:
+        if t.bom_parent_id is None:
+            return True
+        if not t.bom_parent.is_claimable:
+            return True
+        parent_buildable, _ = get_buildable(
+            t.bom_parent.item_type_id, t.bom_parent.activity_id
+        )
+        return not parent_buildable
+
+    visible_unclaimed = [t for t in all_unclaimed if is_directly_visible(t)]
+    unclaimed_tasks = build_task_tree(visible_unclaimed)
 
     # Skill-gated eligibility: disable (not hide) tasks no character the user owns could
     # ever build, independent of slot availability (e.g. capital/T3/advanced-reaction
-    # blueprints hard-gated behind specific skills). Cached per blueprint, so this is cheap
-    # even with many tasks on the page.
-    from ..utils import skill_service
-
+    # blueprints hard-gated behind specific skills). Tasks released above specifically
+    # because their parent is skill-gated get a small explanatory note in the template.
     for task in unclaimed_tasks:
-        task.buildable, task.missing_skills = skill_service.check_user_eligibility(
-            request.user, task.item_type_id, task.activity_id
+        task.buildable, task.missing_skills = get_buildable(
+            task.item_type_id, task.activity_id
         )
         task.missing_skills_text = skill_service.missing_skills_text(
             task.missing_skills
         )
+
+        task.released_by_parent_skill_gate = False
+        if task.bom_parent_id and task.bom_parent.is_claimable:
+            parent_buildable, parent_missing = get_buildable(
+                task.bom_parent.item_type_id, task.bom_parent.activity_id
+            )
+            if not parent_buildable:
+                task.released_by_parent_skill_gate = True
+                task.parent_missing_skills_text = skill_service.missing_skills_text(
+                    parent_missing
+                )
 
     # My active tasks
     # Django

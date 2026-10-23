@@ -203,6 +203,11 @@
                                                                         <span class="badge bg-info ms-1" title="Runs per copy"><i class="fas fa-layer-group"></i> {{ task.created_from_blueprint_request.requested_runs }} Runs</span>
                                                                     {% endif %}
                                                                 </span>
+                                                                {% if task.released_by_parent_skill_gate %}
+                                                                <br><small class="text-info" title="{{ task.parent_missing_skills_text }}">
+                                                                    <i class="fas fa-unlock"></i> {% trans "Released: parent needs a skill most members lack" %}
+                                                                </small>
+                                                                {% endif %}
                                                             </div>
                                                         </div>
                                                     </td>
