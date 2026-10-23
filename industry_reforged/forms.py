@@ -20,6 +20,7 @@ from .models import (
     IndustryFacility,
     IndustryFacilityRig,
     IndustryRig,
+    JobTrackingConfig,
     TaxConfig,
     UserPIConfig,
 )
@@ -408,6 +409,26 @@ class CorporationPricingConfigForm(forms.ModelForm):
             "material_valuation_method": forms.Select(attrs={"class": "form-select"}),
             "minimum_margin_floor": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["corporation"].disabled = True
+
+
+class JobTrackingConfigForm(forms.ModelForm):
+    class Meta:
+        model = JobTrackingConfig
+        fields = [
+            "corporation",
+            "completion_buffer_hours",
+        ]
+        widgets = {
+            "corporation": forms.Select(attrs={"class": "form-select"}),
+            "completion_buffer_hours": forms.NumberInput(
+                attrs={"class": "form-control", "min": "1"}
             ),
         }
 

@@ -291,6 +291,16 @@ urlpatterns = [
         name="director_config_pricing_method_edit",
     ),
     path(
+        "director/config/job-tracking/add/",
+        director.director_config_job_tracking_edit,
+        name="director_config_job_tracking_add",
+    ),
+    path(
+        "director/config/job-tracking/<int:config_id>/edit/",
+        director.director_config_job_tracking_edit,
+        name="director_config_job_tracking_edit",
+    ),
+    path(
         "director/config/tax/add/",
         director.director_config_tax_edit,
         name="director_config_tax_add",

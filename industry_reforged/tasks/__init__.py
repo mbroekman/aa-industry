@@ -15,6 +15,7 @@ from .facilities import (
 from .inventory import (
     task_sync_corp_inventory,
 )
+from .job_tracking import check_overdue_production_tasks
 from .jobs import (
     update_character_jobs,
     update_corporation_jobs,
@@ -51,4 +52,5 @@ __all__ = [
     "run_all_active_scanners",
     "buyback_poll_contracts",
     "buyback_purge_stale_contracts",
+    "check_overdue_production_tasks",
 ]

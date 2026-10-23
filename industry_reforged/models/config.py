@@ -142,3 +142,26 @@ class CorporationPricingConfig(models.Model):
 
     def __str__(self):
         return f"{self.corporation.corporation_name} Pricing Config"
+
+
+class JobTrackingConfig(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo,
+        on_delete=models.CASCADE,
+        related_name="job_tracking_config",
+    )
+    completion_buffer_hours = models.PositiveIntegerField(
+        default=2,
+        help_text=_(
+            "Grace period added on top of a claimed job's estimated completion time "
+            "before it's flagged as overdue. Also used as the interval between "
+            "repeat reminders while a job stays overdue."
+        ),
+    )
+
+    class Meta:
+        verbose_name = _("Job Tracking Configuration")
+        verbose_name_plural = _("Job Tracking Configurations")
+
+    def __str__(self):
+        return f"{self.corporation.corporation_name} Job Tracking Config"

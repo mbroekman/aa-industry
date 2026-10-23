@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **claims**: Claimed-job ETA tracking, overview and overdue alerting (TASK-262):
+  - `utils/eta_service.py`: estimates when a claimed job should be done, preferring the real ESI-reported `end_date` of the linked EVE industry job once one exists, falling back to `assigned_at + estimated_duration_seconds`, and treating an unknown ETA (no claim timestamp, or a build duration that was never successfully computed) as "unknown" rather than guessing.
+  - New `JobTrackingConfig` per-corp setting (`completion_buffer_hours`, frontend-editable from a new "Job Alerts" card on Director Configuration): the grace period after the estimated completion before a job is flagged overdue, and also the interval between repeat reminders while it stays overdue.
+  - The Director Dashboard's existing "Production Tasks" table gains Claimed At and Estimated Done columns (ESI-confirmed vs. estimated badge, red highlight once overdue) instead of a duplicate new tab - filtering it to `IN_PRODUCTION` already gives the "who's got what and when" overview.
+  - New periodic Celery task `check_overdue_production_tasks` (every 30 min): notifies the claimant individually (AA in-app notification + Discord DM) on first overdue and again each time the buffer interval re-elapses while still overdue, plus one batched `directors_webhook` embed per corp per run.
+  - `last_overdue_notified_at` resets whenever a task is unclaimed, so a reclaimed job starts its overdue clock fresh.
 - **claims**: Surface buildable BOM sub-components for skill-gated jobs (TASK-261):
   - When a parent task is skill-gated and unbuildable for the viewing user, its already-persisted BOM child `ProductionTask` rows (created recursively at order acceptance) now become independently visible/claimable in the Job Market, even though the parent's static `is_claimable` admin flag stays unchanged - purely additive, per-viewer visibility.
   - Cascades to arbitrary depth automatically: if a released child is itself skill-gated for this viewer, its own children are released in turn, with no new admin configuration per BOM level.

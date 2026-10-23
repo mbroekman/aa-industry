@@ -1,0 +1,14 @@
+{% load i18n %}
+{% if eta %}
+    <span class="{% if overdue %}text-danger fw-bold{% else %}text-light{% endif %}">{{ eta|date:"Y-m-d H:i" }}</span>
+    {% if eta_confirmed %}
+        <span class="badge bg-success ms-1" title="{% trans 'Confirmed by the real EVE industry job timer' %}"><i class="fas fa-check"></i> {% trans "ESI" %}</span>
+    {% else %}
+        <span class="badge bg-secondary ms-1" title="{% trans 'Estimated from claim time + build duration - not yet confirmed by a linked EVE job' %}">{% trans "Est." %}</span>
+    {% endif %}
+    {% if overdue %}
+        <br><span class="badge bg-danger mt-1"><i class="fas fa-exclamation-triangle"></i> {% trans "Overdue" %}</span>
+    {% endif %}
+{% else %}
+    <span class="text-muted">{% trans "Unknown" %}</span>
+{% endif %}

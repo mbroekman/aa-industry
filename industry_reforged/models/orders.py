@@ -597,6 +597,14 @@ class ProductionTask(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     assigned_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    last_overdue_notified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "When the claimant was last notified this job ran past its estimated "
+            "completion time. Reset whenever the task is unclaimed."
+        ),
+    )
 
     payout_batch = models.ForeignKey(
         "BuilderPayoutBatch",

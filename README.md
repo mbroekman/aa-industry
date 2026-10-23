@@ -259,6 +259,11 @@ CELERYBEAT_SCHEDULE["industry_buyback_purge_stale_contracts"] = {
     "task": "industry_reforged.tasks.buyback_purge_stale_contracts",
     "schedule": crontab(minute="30", hour="12"),  # once daily, after EVE downtime
 }
+
+CELERYBEAT_SCHEDULE["industry_check_overdue_production_tasks"] = {
+    "task": "industry_reforged.tasks.check_overdue_production_tasks",
+    "schedule": crontab(minute="*/30"),  # matches the job-sync/linker cadence
+}
 ```
 
 After updating `local.py`, be sure to restart your Celery worker and Celery Beat services.

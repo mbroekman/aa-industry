@@ -944,6 +944,7 @@ def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 t.status = "UNCLAIMED"
                 t.assigned_to = None
                 t.assigned_at = None
+                t.last_overdue_notified_at = None
                 t.builder_reward, _ = calculate_task_builder_reward(
                     eve_type=t.item_type,
                     quantity=t.quantity,
@@ -1075,6 +1076,7 @@ def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
                     t.status = "UNCLAIMED"
                     t.assigned_to = None
                     t.assigned_at = None
+                    t.last_overdue_notified_at = None
                     t.builder_reward, _ = calculate_task_builder_reward(
                         eve_type=t.item_type,
                         quantity=t.quantity,

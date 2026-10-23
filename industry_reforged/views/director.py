@@ -1021,6 +1021,12 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         program__corporation=corporation
     ).select_related("program", "eve_type")
 
+    from ..models import JobTrackingConfig
+
+    job_tracking_configs = JobTrackingConfig.objects.filter(
+        corporation=corporation
+    ).select_related("corporation")
+
     context = {
         "title": "Configurations",
         "configs": item_configs,
@@ -1034,6 +1040,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "output_locations": output_locations,
         "buyback_programs": buyback_programs,
         "buyback_watchlist_items": buyback_watchlist_items,
+        "job_tracking_configs": job_tracking_configs,
     }
     return render(request, "industry_reforged/director_config.html", context)
 
@@ -1278,6 +1285,44 @@ def director_config_pricing_method_edit(
                 _("Edit Pricing Method & Margin")
                 if config_id
                 else _("Add Pricing Method & Margin")
+            ),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#pricing",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_job_tracking_edit(
+    request: WSGIRequest, config_id: int = None
+) -> HttpResponse:
+    from ..forms import JobTrackingConfigForm
+    from ..models import JobTrackingConfig
+
+    if config_id:
+        instance = get_object_or_404(JobTrackingConfig, id=config_id)
+    else:
+        instance = JobTrackingConfig()
+
+    if request.method == "POST":
+        form = JobTrackingConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Job alert settings saved."))
+            return redirect(reverse("industry_reforged:director_config") + "#pricing")
+    else:
+        form = JobTrackingConfigForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": (
+                _("Edit Job Alert Settings")
+                if config_id
+                else _("Add Job Alert Settings")
             ),
             "form": form,
             "back_url": "industry_reforged:director_config",

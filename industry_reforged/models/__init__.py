@@ -11,6 +11,7 @@ from .config import (
     CorporationPricingConfig,
     CorporationSyncConfig,
     CorporationWebhookConfig,
+    JobTrackingConfig,
 )
 from .core import General, TaskExecutionLog
 from .facilities import (
@@ -84,6 +85,7 @@ __all__ = [
     "CorporationSyncConfig",
     "CorporationWebhookConfig",
     "CorporationPricingConfig",
+    "JobTrackingConfig",
     "CorpMOTD",
     "CorpInventory",
     "LedgerTransaction",

@@ -211,6 +211,8 @@
                                     <th>Origin</th>
                                     <th>Priority</th>
                                     <th>{% trans "Claimed By" %}</th>
+                                    <th>{% trans "Claimed At" %}</th>
+                                    <th>{% trans "Estimated Done" %}</th>
                                     <th class="text-end">Reward</th>
                                     <th class="text-end">{% translate "Action" %}</th>
                                 </tr>
@@ -575,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
-                { "orderable": false, "targets": [7] }
+                { "orderable": false, "targets": [7, 9] }
             ]
         });
     }

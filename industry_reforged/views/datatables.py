@@ -10,6 +10,7 @@ from django.utils.timesince import timesince, timeuntil
 
 from ..models import CorpBuyOrder, LedgerTransaction, MemberOrder, ProductionTask
 from ..templatetags.industry_tags import eve_isk
+from ..utils import eta_service
 
 
 def get_datatables_params(request):
@@ -198,7 +199,8 @@ def dt_director_tasks(request):
 
     # Ordering
     if task_type == "all":
-        # 0: type, 1: qty, 2: status, 3: origin, 4: priority, 5: assignee, 6: reward, 7: actions
+        # 0: type, 1: qty, 2: status, 3: origin, 4: priority, 5: assignee, 6: claimed at,
+        # 7: estimated done, 8: reward, 9: actions
         order_map = {
             "0": "item_type__name",
             "1": "quantity",
@@ -206,7 +208,8 @@ def dt_director_tasks(request):
             "3": "origin",
             "4": "priority",
             "5": "assigned_to__character_name",
-            "6": "builder_reward",
+            "6": "assigned_at",
+            "8": "builder_reward",
         }
     else:
         # Payout / Recent tasks
@@ -226,10 +229,42 @@ def dt_director_tasks(request):
     qs = qs.order_by(order_field)
     if length > 0:
         qs = qs[start : start + length]
+    if task_type == "all":
+        qs = qs.select_related("item_type", "assigned_to").prefetch_related(
+            "linked_jobs__character_job", "linked_jobs__corporation_job"
+        )
+
+    buffer_hours_by_corp: dict[int, int] = {}
 
     data = []
     for task in qs:
         if task_type == "all":
+            eta = None
+            eta_confirmed = False
+            overdue = False
+            if task.status == "IN_PRODUCTION":
+                eta = eta_service.get_task_eta(task)
+                eta_confirmed = bool(
+                    eta
+                    and any(
+                        (link.character_job or link.corporation_job)
+                        and (link.character_job or link.corporation_job).end_date == eta
+                        for link in task.linked_jobs.all()
+                    )
+                )
+                corp = None
+                if task.assigned_to:
+                    try:
+                        corp = task.assigned_to.corporation
+                    except Exception:  # noqa: BLE001
+                        corp = None
+                corp_id = corp.corporation_id if corp else None
+                if corp_id not in buffer_hours_by_corp:
+                    buffer_hours_by_corp[corp_id] = eta_service.get_corp_buffer_hours(
+                        corp
+                    )
+                overdue = eta_service.is_overdue(task, buffer_hours_by_corp[corp_id])
+
             data.append(
                 [
                     render_to_string(
@@ -250,6 +285,18 @@ def dt_director_tasks(request):
                     render_to_string(
                         "industry_reforged/partials/dt_character.html",
                         {"character": task.assigned_to},
+                    ),
+                    render_to_string(
+                        "industry_reforged/partials/dt_task_claimed_at.html",
+                        {"task": task},
+                    ),
+                    render_to_string(
+                        "industry_reforged/partials/dt_task_eta.html",
+                        {
+                            "eta": eta,
+                            "eta_confirmed": eta_confirmed,
+                            "overdue": overdue,
+                        },
                     ),
                     render_to_string(
                         "industry_reforged/partials/dt_isk.html",
