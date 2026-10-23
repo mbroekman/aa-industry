@@ -13,7 +13,11 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 
 from ..models import CharacterIndustryJob
-from .skill_service import get_character_skill_levels, get_user_industry_characters
+from .skill_service import (
+    get_character_skill_levels,
+    get_required_skills,
+    get_user_industry_characters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +98,9 @@ def get_character_industry_slots(character_id: int) -> dict[str, int]:
     return slots
 
 
-def get_user_available_slots(user: User, activity_id: int = 1) -> dict[str, Any]:
+def get_user_available_slots(
+    user: User, activity_id: int = 1, item_type_id: int | None = None
+) -> dict[str, Any]:
     """
     Calculates total, active, and available slots across all characters owned by the user
     without any dependency on corptools.
@@ -102,6 +108,10 @@ def get_user_available_slots(user: User, activity_id: int = 1) -> dict[str, Any]
     Args:
         user: Django User instance
         activity_id: EVE industry activity ID (1=Manufacturing, 9/11=Reactions, 3/4/5/8=Science)
+        item_type_id: optional - when given, only characters that are actually skill-eligible
+            to run this specific item/activity are counted (same hard-gate check as
+            skill_service.check_character_eligibility). Without it, the result is the
+            generic account-wide total, unrelated to any specific item's skill requirements.
 
     Returns:
         dict: {
@@ -139,6 +149,22 @@ def get_user_available_slots(user: User, activity_id: int = 1) -> dict[str, Any]
     # unrelated corp have no access to the corp's hangars/facilities and can't
     # actually execute a job here, regardless of skills or free slots.
     characters = get_user_industry_characters(user)
+
+    if item_type_id is not None:
+        required = get_required_skills(item_type_id, activity_id)
+        if required:
+            characters = [
+                c
+                for c in characters
+                if all(
+                    get_character_skill_levels(c.character_id).get(
+                        r["skill_type_id"], 0
+                    )
+                    >= r["level"]
+                    for r in required
+                )
+            ]
+
     char_ids = [c.character_id for c in characters]
 
     if not char_ids:

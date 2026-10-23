@@ -32,6 +32,7 @@ from industry_reforged.tests.factories import (
     UserFactory,
 )
 from industry_reforged.utils import skill_service
+from industry_reforged.utils.slot_service import get_user_available_slots
 from industry_reforged.views.industrialist import claim_task, industrialist_dashboard
 
 
@@ -154,6 +155,40 @@ class TestSkillEligibility(TestCase):
         )
         assert eligible is False
         assert missing[0]["skill_name"] == "Capital Ship Construction"
+
+    @patch("industry_reforged.utils.slot_service.get_character_skill_levels")
+    def test_slot_count_scoped_to_item_excludes_unskilled_characters(self, mock_skills):
+        """The generic account-wide slot total must not be confused with the number
+        of slots actually usable for a specific skill-gated item (TASK-260 follow-up:
+        user reported seeing 69 generic slots for an item only 1 toon can build)."""
+
+        def skills_for(character_id):
+            if character_id == self.main_character.character_id:
+                return {self.skill_type.id: 5}
+            return {}  # alt lacks the skill
+
+        mock_skills.side_effect = skills_for
+
+        cache.set(
+            f"industry_reforged_char_slots_{self.main_character.character_id}",
+            {"mfg_slots": 3, "reaction_slots": 1, "science_slots": 1},
+            timeout=86400,
+        )
+        cache.set(
+            f"industry_reforged_char_slots_{self.alt_character.character_id}",
+            {"mfg_slots": 10, "reaction_slots": 1, "science_slots": 1},
+            timeout=86400,
+        )
+
+        generic = get_user_available_slots(self.user, activity_id=1)
+        assert generic["character_count"] == 2
+        assert generic["mfg_total"] == 13
+
+        scoped = get_user_available_slots(
+            self.user, activity_id=1, item_type_id=self.item_type.id
+        )
+        assert scoped["character_count"] == 1
+        assert scoped["mfg_total"] == 3
 
     def test_alt_in_different_corp_excluded_from_slot_count(self):
         other_corp = EveCorporationInfo.objects.create(

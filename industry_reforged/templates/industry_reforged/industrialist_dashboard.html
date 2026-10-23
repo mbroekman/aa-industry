@@ -1433,6 +1433,20 @@
                             document.getElementById('claimModalBatchReward').innerText = data.reward_claimed_formatted;
                             document.getElementById('claimModalRemainingQty').innerText = data.rem_quantity.toLocaleString() + ' units';
                             document.getElementById('claimModalRemainingReward').innerText = data.rem_reward_formatted;
+
+                            // Replace the generic account-wide slot count with the real
+                            // number usable for THIS item (corp + skill eligible characters).
+                            if (typeof data.eligible_available_slots === 'number' && currentClaimTask) {
+                                currentClaimTask.freeSlots = data.eligible_available_slots;
+                                const badge = document.getElementById('claimModalFreeSlotsBadge');
+                                badge.innerText = data.eligible_available_slots + ' free (' + data.eligible_character_count + ' eligible toon' + (data.eligible_character_count === 1 ? '' : 's') + ')';
+                                if (!data.eligible) {
+                                    badge.title = data.missing_skills_text;
+                                }
+                                document.getElementById('claimModalSlotPresetMax').innerText = 'All Free (' + data.eligible_available_slots + ')';
+                                const slotsInput = document.getElementById('claimModalSlotsInput');
+                                slotsInput.max = Math.max(data.eligible_available_slots, 1, 100);
+                            }
                         }
                     })
                     .catch(function() {});

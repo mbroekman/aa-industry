@@ -6,7 +6,7 @@ title: >-
 status: Done
 assignee: []
 created_date: '2026-10-23 06:31'
-updated_date: '2026-10-23 08:46'
+updated_date: '2026-10-23 09:20'
 labels: []
 dependencies: []
 modified_files:
@@ -43,4 +43,6 @@ ordinal: 434000
 Confirmed live on devauth before implementing: EveIndustryActivitySkill already has 22,101 rows populated (no new SDE sync needed). New skill_service.py shares the raw-ESI anti-304 skill fetch with slot_service.py (one call per character for both slots and eligibility). Job Market: account-wide check (any owned character) drives the disabled/tooltip UI; claim_task hard-stops on the specific main_character being attributed, even if an alt qualifies - deliberate asymmetry documented in the approved plan (lucky-sparking-cosmos.md). Required-skills lookup short-circuits to 'eligible' with zero DB/ESI cost whenever a blueprint has no hard requirement (the vast majority of items) - no change in behavior or performance for ordinary T1/T2 jobs. Full suite: 310/310 passing. ruff check clean; ruff format clean on all new/changed lines (pre-existing unrelated formatting debt elsewhere in industrialist.py left untouched, not part of this change).
 
 Follow-up fix (user reported after live test): characters not in the same corp as the user's main were being counted both for skill-eligibility AND for the raw slot total (84 slots included alts in unrelated corps with no access to this corp's hangars/facilities). Added get_user_industry_characters(user) in skill_service.py - filters to character_ownerships where corporation_id matches the main character's corp - and wired it into both get_user_skill_levels and slot_service.get_user_available_slots. 2 new regression tests added. Also clarified for the user: the header's slot badge is a global per-account total, not scoped to a specific task - the per-row disabled Claim button/tooltip is what reflects per-task skill eligibility. 312/312 tests passing, ruff clean. Redeployed to devauth via sandbox-sync.ps1.
+
+Second follow-up (user still saw 'too many slots' after the corp-membership fix): confirmed live that was two separate things being conflated. (1) Eligibility boolean was correct - at least one of Maddog's 28 in-corp characters has Capital Ship Construction IV against a level-1 requirement, so the task is genuinely claimable. (2) The Claim modal's slot badge was showing the generic account-wide total (69, after the corp fix) for every item regardless of that item's skill gate - confusing for items only a few toons can actually build. Added an optional item_type_id param to get_user_available_slots that restricts the count to corp+skill-eligible characters only; claim_task_preview now returns this scoped number (eligible_available_slots, eligible_character_count) and the modal JS updates the badge/preset/max once the AJAX response lands, replacing the initial generic estimate. User confirmed via AskUserQuestion this should live in the Claim modal only, not as an extra Job Market column. 313/313 tests passing (1 new regression test), ruff clean.
 <!-- SECTION:NOTES:END -->

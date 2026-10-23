@@ -562,6 +562,7 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
 
     # AA Industry App
     from ..utils import skill_service
+    from ..utils.slot_service import get_user_available_slots
 
     main_character = request.user.profile.main_character
     eligible, missing = (
@@ -570,6 +571,13 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
         )
         if main_character
         else (True, [])
+    )
+
+    # Slots realistically usable for THIS item (corp + skill eligible characters
+    # only) - distinct from the generic account-wide total shown elsewhere, which
+    # includes characters that could never build this specific item.
+    eligible_slots = get_user_available_slots(
+        request.user, activity_id=task.activity_id, item_type_id=task.item_type_id
     )
 
     corp = None
@@ -630,6 +638,8 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
             else "0.00 ISK",
             "eligible": eligible,
             "missing_skills_text": skill_service.missing_skills_text(missing),
+            "eligible_available_slots": eligible_slots["available_slots"],
+            "eligible_character_count": eligible_slots["character_count"],
         }
     )
 
