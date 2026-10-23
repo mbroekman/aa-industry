@@ -1,6 +1,6 @@
 # Architecture Overview — aa-industry (`industry_reforged`)
 
-> **Status:** Current as of 2026-10-16, app version 0.15.7.
+> **Status:** Current as of 2026-10-23, app version 0.15.7 (pending release - TASK-260/261/262 shipped on `main`, not yet tagged).
 > **Scope:** Whole-plugin architectural reference. For deep dives on specific subsystems, see the cross-references at the end of each section and the index in §9.
 
 ## 1. What this plugin is
@@ -39,14 +39,16 @@ Models live under `industry_reforged/models/`, one file per subsystem, all re-ex
 | Member orders & production | `orders.py` | `CorpPricingConfig`, `CorpTypeDiscount`, `OutputLocation`, `MemberOrder`, `OrderItem`, `OrderFit`, `BuilderPayoutBatch`, `ProductionTask`, `CorpItemConfig`, `OrderBlueprintOverride`, `CorpBuyOrder` |
 | Wallet/ledger | `wallet.py` | `WalletJournalSyncState`, `TaxConfig`, `CorpWalletDivision`, `CorpWalletJournal`, `LedgerTransaction` |
 | Buyback | `buyback.py` | `BuybackProgram`, `BuybackWatchlistItem`, `BuybackContract`, `BuybackContractItem` |
-| Director/corp config | `config.py` | `CorporationSyncConfig`, `CorporationWebhookConfig`, `CorpMOTD`, `CorporationPricingConfig` |
+| Director/corp config | `config.py` | `CorporationSyncConfig`, `CorporationWebhookConfig`, `CorpMOTD`, `CorporationPricingConfig`, `JobTrackingConfig` (overdue-alert grace/reminder buffer, TASK-262) |
 | Inventory | `inventory.py` | `CorpInventory` |
 | AI Market Manager | `ai_manager.py` | `Basket`, `BasketItem`, `AIMarketLog`, `MarketOpportunity`, `OpportunityScanner`, `OpportunityScannerLog`, `MissingBlueprintOpportunity` |
 | Planetary Interaction | `pi.py` | `UserPIConfig`, `CharacterPlanet`, `PlanetPin`, `PISchematic` (+ Input/Output) |
 
 ### Central model: `ProductionTask`
 
-The "Job Market" claimable unit. Carries `status` (UNCLAIMED → IN_PRODUCTION → COMPLETED), `priority`, and an `origin` tag (MANUAL / MEMBER_ORDER / BASKET / BOM / BLUEPRINT) recording which subsystem spawned it. A self-FK `bom_parent` lets a BOM explosion build a tree of sub-tasks. `gamification_value`/`builder_reward` drive payout; `payout_batch` links to `BuilderPayoutBatch` once settled.
+The "Job Market" claimable unit. Carries `status` (UNCLAIMED → IN_PRODUCTION → COMPLETED), `priority`, and an `origin` tag (MANUAL / MEMBER_ORDER / BASKET / BOM / BLUEPRINT) recording which subsystem spawned it. A self-FK `bom_parent` lets a BOM explosion build a tree of sub-tasks. `gamification_value`/`builder_reward` drive payout; `payout_batch` links to `BuilderPayoutBatch` once settled. `assigned_at`/`estimated_duration_seconds` (pre-existing) plus `last_overdue_notified_at` (TASK-262) drive the ETA/overdue-alert system in `utils/eta_service.py` - see §6.
+
+**Job Market visibility is a one-hop, per-row rule, not a tree-walk** (TASK-260/261): a task is directly claimable in the Job Market if `bom_parent is None`, OR `bom_parent.is_claimable == False` (the pre-existing static admin flag, `CorpItemConfig.is_unclaimable_parent`, baked in once at creation time in `quotes.py:accept_quote`), OR `bom_parent` is skill-ineligible for the viewing user (`utils/skill_service.py`, computed live, per-viewer). The third clause cascades to arbitrary depth for free, since a released child that's itself skill-gated passes the same test against its own children next render. `dt_director_tasks` (`views/datatables.py`) and `industrialist_dashboard` (`views/industrialist.py`) both implement this rule independently against the same `skill_service`/`eta_service` helpers.
 
 ### Central model: `MemberOrder`
 
@@ -87,7 +89,7 @@ All ESI access funnels through one shared client in `tasks/utils.py`:
 - **`log_task_execution(task_name)`** — decorator wrapping every scheduled task, writing start/success/failure/duration to `TaskExecutionLog` (feeds System Health + the Director-menu failure alert).
 - **`resolve_unknown_locations(location_ids=None)`** — a *helper* task with a required parameter; deliberately **not** in `CELERYBEAT_SCHEDULE` per this plugin's own `AGENTS.md` convention (periodic tasks take no required args).
 
-**Scheduled tasks** (`README.md`'s `CELERYBEAT_SCHEDULE`, 15 entries — the authoritative list; any new periodic task must be added here in the same commit):
+**Scheduled tasks** (`README.md`'s `CELERYBEAT_SCHEDULE`, 16 entries — the authoritative list; any new periodic task must be added here in the same commit):
 
 | Task | Schedule | File |
 |---|---|---|
@@ -107,10 +109,11 @@ All ESI access funnels through one shared client in `tasks/utils.py`:
 | `sync_market_data_to_ml_service` | every 12h | `tasks/ai_manager.py` |
 | `buyback_poll_contracts` | `*/15` min | `tasks/buyback.py` |
 | `buyback_purge_stale_contracts` | 12:30 daily | `tasks/buyback.py` |
+| `check_overdue_production_tasks` | `*/30` min | `tasks/job_tracking.py` |
 
 Note: `tasks/pi.py` also defines `update_pi_schematics_from_sde()`, which is **not** in the README's schedule table — likely intentionally manual (SDE-triggered), but worth confirming it isn't a forgotten-to-document periodic task next time `pi.py` is touched.
 
-Per-file one-line summaries: `ai_manager.py` (basket/scanner evaluation + ML sync), `blueprints.py` (corp blueprint sync), `buyback.py` (contract polling/matching/expiry), `facilities.py` (facility names + rig detection), `inventory.py` (corp asset sync), `jobs.py` (ESI job sync + orphan reconciliation), `orders.py` (market pre-warm + BOM explosion), `pi.py` (PI sync + expiry notifications), `wallets.py` (wallet/journal sync + payment matching).
+Per-file one-line summaries: `ai_manager.py` (basket/scanner evaluation + ML sync), `blueprints.py` (corp blueprint sync), `buyback.py` (contract polling/matching/expiry), `facilities.py` (facility names + rig detection), `inventory.py` (corp asset sync), `jobs.py` (ESI job sync + orphan reconciliation), `job_tracking.py` (overdue-claim detection + claimant/director notifications, TASK-262), `orders.py` (market pre-warm + BOM explosion), `pi.py` (PI sync + expiry notifications), `wallets.py` (wallet/journal sync + payment matching).
 
 ## 6. Business logic layer (`utils/`)
 
@@ -122,6 +125,8 @@ Pure logic deliberately kept out of views and tasks so it can be unit-tested wit
 - **`buyback_matching.py`** (158 lines) — pure, DB/ESI-free contract-matching and abuse-detection (tracking-number extraction, price-tolerance checks); `tasks/buyback.py` is kept as a thin fetch-and-write wrapper around it so the hard logic is independently testable.
 - **`buyback_stats.py`** (241 lines) — per-program operational stats (flag/rejection/expiry rates, average turnaround, daily trend) beyond plain leaderboards.
 - **`discord.py`** (26 lines) — the one shared `send_discord_webhook()` helper used by every feature's notification call-sites.
+- **`skill_service.py`** (TASK-260) — live skill-gated job eligibility: resolves a blueprint's hard skill requirements via `django-eveuniverse`'s `EveIndustryActivitySkill` (EVE SDE, already populated - no new sync infra), compares against character skill levels fetched live via the same raw-ESI anti-304 pattern `slot_service.py` uses for slot counting (shared fetch, one ESI call per character serves both). `check_user_eligibility` scopes to characters in the same corp as the user's main (`get_user_industry_characters`); `check_character_eligibility` checks one specific character (the claim-time hard-stop).
+- **`eta_service.py`** (TASK-262) — `get_task_eta()` prefers a claimed task's linked EVE industry job's real ESI `end_date` (via `TaskJobLink`) over the claim-time estimate (`assigned_at + estimated_duration_seconds`), returning `None` ("unknown") rather than guessing when neither is available. `is_overdue()`/`get_corp_buffer_hours()` apply the per-corp `JobTrackingConfig.completion_buffer_hours` grace/reminder interval.
 - **`fit_parser.py`** / **`inventory_parser.py`** — EFT fit text and pasted inventory-list parsing respectively (order creation and buyback calculator).
 - **`locations.py`** — hangar/location-flag display formatting.
 - **`pi_schematics.py`** — large SDE-derived PI schematic reference dict.
