@@ -101,7 +101,7 @@ class TestPartialClaimingAndSlots(TestCase):
         req._messages = FallbackStorage(req)
         return req
 
-    @patch("industry_reforged.utils.slot_service.esi")
+    @patch("industry_reforged.utils.skill_service.esi")
     def test_get_character_industry_slots_live_esi_and_caching(self, mock_esi):
         """Test skill parsing from live ESI skills and caching mechanism."""
         mock_skill_mp = MagicMock(skill_id=SKILL_MASS_PRODUCTION, active_skill_level=5)

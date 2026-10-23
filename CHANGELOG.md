@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **claims**: Implemented skill-gated job eligibility in the Job Market (TASK-260):
+  - Added `skill_service.py`: checks real EVE blueprint skill requirements (django-eveuniverse's `EveIndustryActivitySkill`, sourced from the EVE SDE, already populated) against character skill levels, independent of slot availability - capital/supercapital/T3/advanced-reaction blueprints are hard-gated behind specific skills that pure slot counts don't capture.
+  - `slot_service.py` refactored to source skill levels from the new shared `get_character_skill_levels` instead of its own embedded ESI fetch - one raw-ESI call per character now serves both slot counting and skill eligibility.
+  - Job Market disables (not hides) any unclaimed task no character the user owns could ever build, with a tooltip naming the missing skill(s); `claim_task` adds a server-side hard-stop checking the specific claiming character (main character) even if a qualifying alt exists on the account.
 - **claims**: Implemented Interactive Slot-Based Partial Claiming and Task Splitting (TASK-255):
   - Created `slot_service.py` to calculate available industry slots live from ESI character skills (Mass Production, Advanced Mass Production, Mass Reactions, Advanced Mass Reactions, Laboratory Operation, Advanced Laboratory Operation) and `CharacterIndustryJob` across all user-owned characters without Corptools dependency, with 24-hour Django caching.
   - Added `allocated_slots` field to `ProductionTask` model (migration `0080`) and `portion_size` property.

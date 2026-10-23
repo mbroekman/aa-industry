@@ -12,12 +12,8 @@ from typing import Any
 from django.contrib.auth.models import User
 from django.core.cache import cache
 
-# Alliance Auth
-from esi.exceptions import HTTPNotModified
-from esi.models import Token
-
 from ..models import CharacterIndustryJob
-from ..tasks.utils import esi
+from .skill_service import get_character_skill_levels
 
 logger = logging.getLogger(__name__)
 
@@ -68,75 +64,34 @@ def get_character_industry_slots(character_id: int) -> dict[str, int]:
         "science_slots": 1,
     }
 
-    token = Token.objects.filter(
-        character_id=character_id, scopes__name="esi-skills.read_skills.v1"
-    ).first()
-
-    if not token:
+    # Shared with skill_service.py's eligibility checks - one raw-ESI anti-304 fetch per
+    # character serves both slot counting and skill-gated job eligibility.
+    skills = get_character_skill_levels(character_id)
+    if not skills:
         cache.set(cache_key, default_slots, timeout=CACHE_TTL_FALLBACK)
         return default_slots
 
-    try:
-        skills = {}
-        # Try direct ESI skills fetch with valid OAuth bearer token to bypass django-esi 304 cache issues
-        try:
-            import requests
+    mfg = (
+        1
+        + skills.get(SKILL_MASS_PRODUCTION, 0)
+        + skills.get(SKILL_ADV_MASS_PRODUCTION, 0)
+    )
+    reactions = (
+        1
+        + skills.get(SKILL_MASS_REACTIONS, 0)
+        + skills.get(SKILL_ADV_MASS_REACTIONS, 0)
+    )
+    science = (
+        1 + skills.get(SKILL_LAB_OPERATION, 0) + skills.get(SKILL_ADV_LAB_OPERATION, 0)
+    )
 
-            access_token = token.valid_access_token()
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "User-Agent": "AA-Industry Slot Service",
-            }
-            url = f"https://esi.evetech.net/latest/characters/{character_id}/skills/"
-            resp = requests.get(url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                skills_data = resp.json().get("skills", [])
-                for s in skills_data:
-                    skills[s.get("skill_id", 0)] = s.get("active_skill_level", 0)
-        except Exception:  # noqa: BLE001
-            skills = {}
-
-        if not skills:
-            res = esi.client.Skills.GetCharactersCharacterIdSkills(
-                character_id=character_id,
-                token=token,
-            ).results()
-
-            for s in getattr(res, "skills", []):
-                skills[getattr(s, "skill_id", 0)] = getattr(s, "active_skill_level", 0)
-
-        mfg = (
-            1
-            + skills.get(SKILL_MASS_PRODUCTION, 0)
-            + skills.get(SKILL_ADV_MASS_PRODUCTION, 0)
-        )
-        reactions = (
-            1
-            + skills.get(SKILL_MASS_REACTIONS, 0)
-            + skills.get(SKILL_ADV_MASS_REACTIONS, 0)
-        )
-        science = (
-            1
-            + skills.get(SKILL_LAB_OPERATION, 0)
-            + skills.get(SKILL_ADV_LAB_OPERATION, 0)
-        )
-
-        slots = {
-            "mfg_slots": min(max(mfg, 1), 11),
-            "reaction_slots": min(max(reactions, 1), 11),
-            "science_slots": min(max(science, 1), 11),
-        }
-        cache.set(cache_key, slots, timeout=CACHE_TTL_CHAR_SLOTS)
-        return slots
-
-    except HTTPNotModified:
-        return default_slots
-    except Exception as e:  # noqa: BLE001
-        logger.warning(
-            f"Failed to fetch live skills from ESI for character {character_id}: {e}"
-        )
-        cache.set(cache_key, default_slots, timeout=CACHE_TTL_FALLBACK)
-        return default_slots
+    slots = {
+        "mfg_slots": min(max(mfg, 1), 11),
+        "reaction_slots": min(max(reactions, 1), 11),
+        "science_slots": min(max(science, 1), 11),
+    }
+    cache.set(cache_key, slots, timeout=CACHE_TTL_CHAR_SLOTS)
+    return slots
 
 
 def get_user_available_slots(user: User, activity_id: int = 1) -> dict[str, Any]:

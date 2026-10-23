@@ -189,7 +189,7 @@
                                                     <td class="text-center">
                                                         <input type="checkbox" name="task_ids" value="{{ task.id }}"
                                                             class="unclaimed-checkbox" data-task-id="{{ task.id }}"
-                                                            {% if not task.is_claimable and task.incomplete_children_count > 0 %}disabled title="{% trans 'Cannot claim until sub-jobs are complete' %}"{% endif %}>
+                                                            {% if not task.is_claimable and task.incomplete_children_count > 0 %}disabled title="{% trans 'Cannot claim until sub-jobs are complete' %}"{% elif not task.buildable %}disabled title="{{ task.missing_skills_text }}"{% endif %}>
                                                     </td>
                                                     <td>
                                                         <div class="d-flex align-items-center" style="margin-left: calc({{ task.depth|default:0 }} * 1.5rem);">
@@ -267,22 +267,31 @@
                                                     <td class="text-end">
                                                         <div class="d-flex justify-content-end gap-1">
                                                             {% if task.is_claimable or task.incomplete_children_count == 0 %}
-                                                            <button type="button"
-                                                                class="btn btn-sm btn-success"
-                                                                data-task-id="{{ task.id }}"
-                                                                data-item-name="{{ task.item_type.name }}"
-                                                                data-type-id="{{ task.item_type.id }}"
-                                                                data-quantity="{{ task.quantity }}"
-                                                                data-activity-id="{{ task.activity_id }}"
-                                                                data-activity-name="{{ task.activity_name }}"
-                                                                data-priority="{{ task.priority }}"
-                                                                data-duration-sec="{{ task.estimated_duration_seconds }}"
-                                                                data-reward="{{ task.builder_reward }}"
-                                                                data-portion-size="{{ task.portion_size|default:1 }}"
-                                                                data-claim-url="{% url 'industry_reforged:claim_task' task.id %}"
-                                                                onclick="openClaimModal(this)">
-                                                                <i class="fas fa-hand-holding-usd me-1"></i>{% trans "Claim" %}
-                                                            </button>
+                                                                {% if task.buildable %}
+                                                                <button type="button"
+                                                                    class="btn btn-sm btn-success"
+                                                                    data-task-id="{{ task.id }}"
+                                                                    data-item-name="{{ task.item_type.name }}"
+                                                                    data-type-id="{{ task.item_type.id }}"
+                                                                    data-quantity="{{ task.quantity }}"
+                                                                    data-activity-id="{{ task.activity_id }}"
+                                                                    data-activity-name="{{ task.activity_name }}"
+                                                                    data-priority="{{ task.priority }}"
+                                                                    data-duration-sec="{{ task.estimated_duration_seconds }}"
+                                                                    data-reward="{{ task.builder_reward }}"
+                                                                    data-portion-size="{{ task.portion_size|default:1 }}"
+                                                                    data-claim-url="{% url 'industry_reforged:claim_task' task.id %}"
+                                                                    onclick="openClaimModal(this)">
+                                                                    <i class="fas fa-hand-holding-usd me-1"></i>{% trans "Claim" %}
+                                                                </button>
+                                                                {% else %}
+                                                                <button type="button"
+                                                                    class="btn btn-sm btn-outline-secondary disabled"
+                                                                    title="{{ task.missing_skills_text }}"
+                                                                    disabled>
+                                                                    <i class="fas fa-lock me-1"></i>{% trans "Claim" %}
+                                                                </button>
+                                                                {% endif %}
                                                             {% endif %}
                                                             {% if perms.industry_reforged.corp_access %}
                                                             <form method="post"

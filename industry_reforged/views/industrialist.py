@@ -88,6 +88,20 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     )
     unclaimed_tasks = build_task_tree(unclaimed_tasks_qs)
 
+    # Skill-gated eligibility: disable (not hide) tasks no character the user owns could
+    # ever build, independent of slot availability (e.g. capital/T3/advanced-reaction
+    # blueprints hard-gated behind specific skills). Cached per blueprint, so this is cheap
+    # even with many tasks on the page.
+    from ..utils import skill_service
+
+    for task in unclaimed_tasks:
+        task.buildable, task.missing_skills = skill_service.check_user_eligibility(
+            request.user, task.item_type_id, task.activity_id
+        )
+        task.missing_skills_text = skill_service.missing_skills_text(
+            task.missing_skills
+        )
+
     # My active tasks
     # Django
     from django.db.models import Count, Q
@@ -546,6 +560,18 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
     runs_per_slot = max(1, math.ceil(runs_total / allocated_slots))
     wall_clock_sec = int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
 
+    # AA Industry App
+    from ..utils import skill_service
+
+    main_character = request.user.profile.main_character
+    eligible, missing = (
+        skill_service.check_character_eligibility(
+            main_character.character_id, task.item_type_id, task.activity_id
+        )
+        if main_character
+        else (True, [])
+    )
+
     corp = None
     if (
         task.created_from_order
@@ -602,6 +628,8 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
             "rem_reward_formatted": f"{reward_rem:,.2f} ISK"
             if rem_qty > 0
             else "0.00 ISK",
+            "eligible": eligible,
+            "missing_skills_text": skill_service.missing_skills_text(missing),
         }
     )
 
@@ -626,6 +654,28 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 messages.error(
                     request,
                     _("Cannot claim this task until all sub-jobs are completed."),
+                )
+                return redirect("industry_reforged:industrialist_dashboard")
+
+            # Skill-gated hard-stop: re-check server-side against the specific character
+            # the claim will be attributed to, regardless of what the dashboard rendered -
+            # a direct POST must not be able to bypass this.
+            from ..utils import skill_service
+
+            eligible, missing = skill_service.check_character_eligibility(
+                character.character_id, task.item_type_id, task.activity_id
+            )
+            if not eligible:
+                messages.error(
+                    request,
+                    _(
+                        "Cannot claim this task: %(character)s lacks the required "
+                        "skill(s). %(skills)s"
+                    )
+                    % {
+                        "character": character.character_name,
+                        "skills": skill_service.missing_skills_text(missing),
+                    },
                 )
                 return redirect("industry_reforged:industrialist_dashboard")
 
