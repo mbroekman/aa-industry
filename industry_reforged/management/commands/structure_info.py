@@ -16,7 +16,7 @@ Usage:
 import logging
 
 import requests
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from ...tasks.utils import _get_security_space
 
@@ -49,10 +49,14 @@ class Command(BaseCommand):
             timeout=10,
         )
         if resp.status_code != 200:
-            raise CommandError(
-                f"ESI returned {resp.status_code} for station {station_id}: "
-                f"{resp.text[:200]}"
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  ESI returned {resp.status_code} for station {station_id}: "
+                    f"{resp.text[:200]} - falling back to whatever was cached "
+                    "locally, below."
+                )
             )
+            return
 
         data = resp.json()
         system_id = data.get("system_id")
@@ -84,9 +88,14 @@ class Command(BaseCommand):
             ).all()
         )
         if not configs:
-            raise CommandError(
-                "No CorporationSyncConfig rows exist - nothing to authenticate with."
+            self.stdout.write(
+                self.style.WARNING(
+                    "  No CorporationSyncConfig rows exist - nothing to "
+                    "authenticate with live. Falling back to whatever was "
+                    "cached locally, below."
+                )
             )
+            return
 
         basic_data = None
         for config in configs:
@@ -121,12 +130,17 @@ class Command(BaseCommand):
                 break
 
         if basic_data is None:
-            raise CommandError(
-                f"Structure {structure_id} is not accessible with any of the "
-                f"{len(configs)} configured sync character token(s) - the "
-                "structure may not exist, or none of those characters can "
-                "currently see/dock at it."
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  Not accessible live with any of the {len(configs)} "
+                    "configured sync character token(s) right now (the "
+                    "structure may not exist, or none of those characters "
+                    "can currently see/dock at it) - falling back to "
+                    "whatever was cached locally from a previous sync, below."
+                )
             )
+            self._show_corp_structure_detail(structure_id, configs)
+            return
 
         system_id = basic_data.get("solar_system_id")
         self.stdout.write(f"  Name:          {basic_data.get('name')}")
@@ -194,6 +208,14 @@ class Command(BaseCommand):
                     f"  Corp detail (via {config.corporation.corporation_name})"
                 )
             )
+            self.stdout.write(
+                f"    Solar System:    "
+                f"{self._resolve_system(getattr(match, 'system_id', None))}"
+            )
+            self.stdout.write(
+                f"    Type:            "
+                f"{self._resolve_type_name(getattr(match, 'type_id', None))}"
+            )
             self.stdout.write(f"    State:           {getattr(match, 'state', '-')}")
             self.stdout.write(
                 f"    Fuel Expires:    {getattr(match, 'fuel_expires', '-')}"
@@ -238,6 +260,15 @@ class Command(BaseCommand):
             self.style.MIGRATE_HEADING("\nLocally Cached IndustryFacility")
         )
         self.stdout.write(f"  Name:                  {facility.name}")
+        self.stdout.write(
+            f"  Solar System:          {self._resolve_system(facility.solar_system_id)}"
+        )
+        self.stdout.write(
+            f"  Type:                  {self._resolve_type_name(facility.type_id)}"
+        )
+        self.stdout.write(
+            f"  Owner:                 {self._resolve_name(facility.owner_id)}"
+        )
         self.stdout.write(f"  Security Space:        {facility.security_space}")
         self.stdout.write(f"  Production Facility:   {facility.is_production_facility}")
         self.stdout.write(f"  Default Facility:      {facility.is_default}")
