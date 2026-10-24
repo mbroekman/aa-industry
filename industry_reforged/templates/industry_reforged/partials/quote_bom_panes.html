@@ -4,28 +4,85 @@
     <!-- TAB 2: BOM -->
     {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
     <div class="tab-pane fade" id="bom-pane" role="tabpanel" aria-labelledby="bom-tab" tabindex="0">
+        {% if perms.industry_reforged.corp_access and missing_order_materials %}
         <div class="row">
             <div class="col-12 mb-4">
-                <div class="card border-0 h-100">
-                    <div class="card-header border-bottom border-secondary bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h3 class="card-title mb-0"><i class="fas fa-boxes text-warning me-2"></i> {% trans "Required Raw Materials" %}</h3>
-                        {% if perms.industry_reforged.corp_access %}
+                <div class="card border-danger h-100">
+                    <div class="card-header border-bottom border-danger bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h3 class="card-title mb-0"><i class="fas fa-exclamation-triangle text-danger me-2"></i> {% trans "Missing Materials" %}</h3>
                         <form method="post" action="{% url 'industry_reforged:create_buy_orders_from_order' order.id %}" id="createBuyOrdersForm">
                             {% csrf_token %}
                             <button type="button" class="btn btn-sm btn-outline-warning" onclick="submitCreateBuyOrders()">
                                 <i class="fas fa-shopping-cart me-1"></i> {% trans "Create Buy Order" %}
                             </button>
                         </form>
-                        {% endif %}
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped m-0" id="order-missing-materials-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="selectAllOrderMissingMaterials" title="{% trans 'Select all' %}"></th>
+                                        <th>{% trans "Material" %}</th>
+                                        <th class="text-end">{% trans "Corp Stock" %}</th>
+                                        <th class="text-end">{% trans "Required" %}</th>
+                                        <th class="text-end">{% trans "Shortfall" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mat in missing_order_materials %}
+                                    <tr>
+                                        <td><input type="checkbox" class="order-missing-material-checkbox" data-type-id="{{ mat.type_id }}"></td>
+                                        <td data-order="{{ mat.name }}">
+                                            <div class="d-flex align-items-center">
+                                                <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
+                                                <span>{{ mat.name }}</span>
+                                                <span class="badge bg-secondary ms-2">{{ mat.group_name }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end numeric text-danger" data-order="{{ mat.corp_stock|default:0 }}">{{ mat.corp_stock|default:0|intcomma }}</td>
+                                        <td class="text-end numeric" data-order="{{ mat.quantity }}">{{ mat.quantity|intcomma }}</td>
+                                        <td class="text-end numeric fw-bold text-danger" data-order="{{ mat.shortfall }}">{{ mat.shortfall|intcomma }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- End Missing Materials -->
+
+        <!-- Buy Order Selection Required Modal -->
+        <div class="modal fade" id="buyOrderSelectionRequiredModal" tabindex="-1" aria-labelledby="buyOrderSelectionRequiredModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="buyOrderSelectionRequiredModalLabel">{% trans "Selection Required" %}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% trans "Select at least one material first." %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% trans "OK" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card border-0 h-100">
+                    <div class="card-header border-bottom border-secondary bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h3 class="card-title mb-0"><i class="fas fa-boxes text-warning me-2"></i> {% trans "Required Raw Materials" %}</h3>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-striped m-0" id="required-raw-materials-table">
                                 <thead>
                                     <tr>
-                                        {% if perms.industry_reforged.corp_access %}
-                                        <th><input type="checkbox" id="selectAllShortageMaterials" title="{% trans 'Select all shortages' %}"></th>
-                                        {% endif %}
                                         <th>{% trans "Type" %}</th>
                                         <th>{% trans "Material" %}</th>
                                         <th class="text-end">{% trans "Corp Stock" %}</th>
@@ -41,13 +98,6 @@
                                 <tbody>
                                     {% for mat in bom_materials %}
                                     <tr {% if mat.corp_stock < mat.quantity %}data-shortage="true"{% endif %}>
-                                        {% if perms.industry_reforged.corp_access %}
-                                        <td>
-                                            {% if mat.corp_stock < mat.quantity %}
-                                            <input type="checkbox" class="buy-order-material-checkbox" data-type-id="{{ mat.type_id }}">
-                                            {% endif %}
-                                        </td>
-                                        {% endif %}
                                         <td>{{ mat.group_name }}</td>
                                         <td data-order="{{ mat.name }}">
                                             <div class="d-flex align-items-center">
@@ -92,9 +142,6 @@
                                     {% if bom_blueprints %}
                                     {% for mat in bom_blueprints %}
                                     <tr {% if mat.corp_stock < mat.quantity %}data-shortage="true"{% endif %}>
-                                        {% if perms.industry_reforged.corp_access %}
-                                        <td></td>
-                                        {% endif %}
                                         <td>Blueprints</td>
                                         <td data-order="{{ mat.name }}">
                                             <div class="d-flex align-items-center">
@@ -149,14 +196,14 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th colspan="{% if perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="text-end text-muted">
+                                        <th colspan="6" class="text-end text-muted">
                                             {% trans "Original Jita Price (Est.):" %}
                                             <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{% trans 'Live Jita 5% Sell Price fetched via direct ESI market orders' %}"></i>
                                         </th>
                                         <th class="text-end text-muted numeric">{{ original_price|eve_isk }}</th>
                                     </tr>
                                     <tr>
-                                        <th colspan="{% if perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
+                                        <th colspan="6" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
                                         <th class="text-end fs-5 text-warning numeric">{{ total_bom_price|eve_isk }}</th>
                                     </tr>
                                 </tfoot>
@@ -167,26 +214,6 @@
             </div>
         </div> <!-- End Row -->
     </div> <!-- End Tab 2 -->
-
-    {% if perms.industry_reforged.corp_access %}
-    <!-- Buy Order Selection Required Modal -->
-    <div class="modal fade" id="buyOrderSelectionRequiredModal" tabindex="-1" aria-labelledby="buyOrderSelectionRequiredModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="buyOrderSelectionRequiredModalLabel">{% trans "Selection Required" %}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    {% trans "Select at least one short material first." %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% trans "OK" %}</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     {% endif %}
 
     <!-- TAB 3: TREE -->
@@ -235,16 +262,14 @@
 
 <script>
     var expandedGroups = new Set();
-    var bomGroupColIndex = {% if perms.industry_reforged.corp_access %}1{% else %}0{% endif %};
-    var bomGroupColspan = {% if perms.industry_reforged.corp_access %}7{% else %}6{% endif %};
 
     function initBomTable() {
         if (!$.fn.DataTable.isDataTable('#required-raw-materials-table')) {
             $('#required-raw-materials-table').DataTable({
                 "paging": false,
-                "order": [[ bomGroupColIndex, 'asc' ], [ bomGroupColIndex + 1, 'asc' ]],
+                "order": [[ 0, 'asc' ], [ 1, 'asc' ]],
                 "columnDefs": [
-                    { "visible": false, "targets": bomGroupColIndex },
+                    { "visible": false, "targets": 0 },
                     { "orderable": false, "targets": '_all' }
                 ],
                 "drawCallback": function ( settings ) {
@@ -255,7 +280,7 @@
                     var searchTerm = api.search();
                     var isSearching = searchTerm && searchTerm.trim().length > 0;
 
-                    api.column(bomGroupColIndex, {page:'current'} ).data().each( function ( group, i ) {
+                    api.column(0, {page:'current'} ).data().each( function ( group, i ) {
                         var groupId = group.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
                         var shouldShow = isSearching || expandedGroups.has(groupId);
 
@@ -265,7 +290,7 @@
                             var chevronIcon = shouldShow ? 'fa-chevron-down' : 'fa-chevron-right';
 
                             $(rows).eq( i ).before(
-                                '<tr class="table-dark group" style="cursor: pointer;" data-group-target="' + groupId + '"><th colspan="' + bomGroupColspan + '" class="text-info"><i class="fas ' + chevronIcon + ' me-2 toggle-icon"></i><i class="fas ' + icon + ' me-2"></i>' + title + '</th></tr>'
+                                '<tr class="table-dark group" style="cursor: pointer;" data-group-target="' + groupId + '"><th colspan="6" class="text-info"><i class="fas ' + chevronIcon + ' me-2 toggle-icon"></i><i class="fas ' + icon + ' me-2"></i>' + title + '</th></tr>'
                             );
                             last = group;
                         }
@@ -307,14 +332,25 @@
                 }
             });
 
-            $('#selectAllShortageMaterials').on('change', function () {
-                $('.buy-order-material-checkbox').prop('checked', $(this).is(':checked'));
+        }
+
+        if ($('#order-missing-materials-table').length && !$.fn.DataTable.isDataTable('#order-missing-materials-table')) {
+            $('#order-missing-materials-table').DataTable({
+                "paging": false,
+                "order": [[ 4, 'desc' ]],
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 }
+                ]
             });
         }
+
+        $('#selectAllOrderMissingMaterials').off('change').on('change', function () {
+            $('.order-missing-material-checkbox').prop('checked', $(this).is(':checked'));
+        });
     }
 
     function submitCreateBuyOrders() {
-        var selectedTypeIds = $('.buy-order-material-checkbox:checked').map(function () {
+        var selectedTypeIds = $('.order-missing-material-checkbox:checked').map(function () {
             return $(this).data('type-id');
         }).get();
 

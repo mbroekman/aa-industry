@@ -227,6 +227,68 @@ class TestQuotesViews:
             assert context["bom_blueprints"][0]["is_corp_owned"] is False
             assert context["total_bom_price"] == 50_000_500.0
 
+    def test_view_quote_missing_order_materials_excludes_sufficient_stock(self, rf):
+        # Django
+        from django.contrib.auth.models import Permission
+
+        # AA Industry App
+        from industry_reforged.tests.factories import (
+            EveCorporationInfoFactory,
+            EveTypeFactory,
+        )
+
+        corp = EveCorporationInfoFactory(corporation_id=1)
+        order = MemberOrderFactory(id=4, status="REQUESTED")
+        order.character.corporation_id = corp.corporation_id
+        order.character.save()
+        request = rf.get("/")
+        user = UserFactory()
+        user.profile.main_character = order.character
+        perm = Permission.objects.get(codename="corp_access")
+        user.user_permissions.add(perm)
+        user = user.__class__.objects.get(pk=user.pk)
+        request.user = user
+
+        short_type = EveTypeFactory(name="Tritanium")
+        sufficient_type = EveTypeFactory(name="Pyerite")
+
+        mock_bom = {
+            short_type.id: {
+                "type_id": short_type.id,
+                "name": short_type.name,
+                "group_name": "Minerals",
+                "quantity": 1000,
+                "corp_stock": 200,
+            },
+            sufficient_type.id: {
+                "type_id": sufficient_type.id,
+                "name": sufficient_type.name,
+                "group_name": "Minerals",
+                "quantity": 500,
+                "corp_stock": 900,
+            },
+        }
+
+        with (
+            patch(
+                "industry_reforged.views.orders.quotes.calculate_order_bom",
+                return_value=mock_bom,
+            ),
+            patch(
+                "industry_reforged.views.orders.quotes.get_detailed_prices",
+                return_value={},
+            ),
+            patch("industry_reforged.views.orders.quotes.render") as mock_render,
+            patch("industry_reforged.views.orders.quotes.messages"),
+        ):
+            view_quote(request, 4)
+            mock_render.assert_called()
+            context = mock_render.call_args[0][2]
+            missing = context["missing_order_materials"]
+            assert len(missing) == 1
+            assert missing[0]["type_id"] == short_type.id
+            assert missing[0]["shortfall"] == 800
+
     def test_accept_quote(self, rf):
         # AA Industry App
         from industry_reforged.tests.factories import EveCorporationInfoFactory

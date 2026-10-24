@@ -32,6 +32,21 @@ from ...utils.pricing_engine import (
 )
 
 
+def _filter_missing_materials(bom_materials_list):
+    """Raw materials (never blueprints - those have their own Corp-Owned/Unowned
+    workflow) from a BOM materials list that are actually short, each annotated
+    with a shortfall = max(0, required - corp stock). Used for the order page's
+    dedicated Missing Materials overview, kept separate from the full Required
+    Raw Materials cost breakdown so buy-order selection never gets tangled up
+    with materials that are already fully stocked."""
+    missing = []
+    for mat in bom_materials_list:
+        shortfall = max(0, mat.get("quantity", 0) - mat.get("corp_stock", 0))
+        if shortfall > 0:
+            missing.append({**mat, "shortfall": shortfall})
+    return missing
+
+
 def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     """View details of a quote/order"""
     user_characters = request.user.character_ownerships.all().values_list(
@@ -414,6 +429,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "display_child_orders": is_privileged,
         "bom_materials": bom_materials_list,
         "bom_blueprints": bom_blueprints_list,
+        "missing_order_materials": _filter_missing_materials(bom_materials_list),
         "total_bom_price": total_bom_price,
         "structure_job_costs": structure_job_costs,
         "estimated_build_cost": estimated_build_cost,
@@ -826,6 +842,7 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
         "order": order,
         "bom_materials": bom_materials_list,
         "bom_blueprints": bom_blueprints_list,
+        "missing_order_materials": _filter_missing_materials(bom_materials_list),
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": recursive_bom_tree,
     }
