@@ -283,12 +283,19 @@ class Command(BaseCommand):
             logger.debug(
                 "No local EveSolarSystem for %s, falling back to ESI", system_id
             )
-        name = self._resolve_name(system_id)
+        name = self._resolve_bare_name(entity_id=system_id)
         return f"{name} ({system_id}, {security_space})"
 
     def _resolve_name(self, entity_id):
         if not entity_id:
             return "-"
+        return f"{self._resolve_bare_name(entity_id)} ({entity_id})"
+
+    def _resolve_bare_name(self, entity_id):
+        """Just the name, no '(id)' suffix - callers that already build their own
+        '(id, ...)' tail use this to avoid duplicating the ID."""
+        if not entity_id:
+            return "Unknown"
         try:
             resp = requests.post(
                 "https://esi.evetech.net/latest/universe/names/?datasource=tranquility",
@@ -296,7 +303,7 @@ class Command(BaseCommand):
                 timeout=10,
             )
             if resp.status_code == 200 and resp.json():
-                return f"{resp.json()[0].get('name')} ({entity_id})"
+                return resp.json()[0].get("name") or "Unknown"
         except Exception:  # noqa: BLE001
             logger.debug("Failed to resolve name for %s via ESI", entity_id)
-        return f"Unknown ({entity_id})"
+        return "Unknown"
