@@ -47,6 +47,57 @@ def _filter_missing_materials(bom_materials_list):
     return missing
 
 
+# ESI job statuses in which EVE has already consumed the blueprint runs. A cancelled or
+# reverted job hands the blueprint back, so those runs are still available.
+_RUNS_CONSUMED_JOB_STATUSES = {"active", "paused", "ready", "delivered"}
+
+
+def _built_blueprint_runs(order_ids, bp_products_map) -> dict[int, int]:
+    """
+    Blueprint runs per blueprint type that this order family no longer needs, because
+    the product is already built or already in an EVE job.
+
+    COMPLETED tasks count by quantity (converted to runs via the blueprint's yield).
+    Tasks that aren't marked complete yet count the runs of their linked EVE jobs: once
+    a job starts, EVE has consumed those blueprint runs, so the corp's BPC stock has
+    already dropped and must not be reported as a shortage.
+    """
+    # Standard Library
+    import math
+    from collections import defaultdict
+
+    from ...models import TaskJobLink
+
+    completed_qty = defaultdict(int)
+    for item_type_id, quantity in ProductionTask.objects.filter(
+        created_from_order_id__in=order_ids, status="COMPLETED"
+    ).values_list("item_type_id", "quantity"):
+        completed_qty[item_type_id] += quantity
+
+    job_runs = defaultdict(int)
+    links = (
+        TaskJobLink.objects.filter(task__created_from_order_id__in=order_ids)
+        .exclude(task__status="COMPLETED")
+        .select_related("task", "character_job", "corporation_job")
+    )
+    for link in links:
+        job = link.corporation_job or link.character_job
+        if job and job.status in _RUNS_CONSUMED_JOB_STATUSES:
+            job_runs[link.task.item_type_id] += link.linked_runs
+
+    built = {}
+    for bp_type_id, products in bp_products_map.items():
+        runs = 0
+        for ap in products:
+            product_id = ap["product_eve_type_id"]
+            qty = completed_qty.get(product_id, 0)
+            if qty > 0:
+                runs += math.ceil(qty / max(1, ap["quantity"] or 1))
+            runs += job_runs.get(product_id, 0)
+        built[bp_type_id] = runs
+    return built
+
+
 def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     """View details of a quote/order"""
     user_characters = request.user.character_ownerships.all().values_list(
@@ -248,7 +299,6 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     actual_missing_count = 0
 
     if corp_info and bom_blueprints_list:
-        import math
         from collections import defaultdict
         from django.db.models import Q
         from ...models import CorpBlueprint
@@ -263,14 +313,6 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             order.id,
         }
 
-        completed_tasks = ProductionTask.objects.filter(
-            created_from_order_id__in=related_order_ids,
-            status="COMPLETED",
-        )
-        product_completed_qty = defaultdict(int)
-        for t in completed_tasks:
-            product_completed_qty[t.item_type_id] += t.quantity
-
         bp_type_ids = [
             bp.get("type_id") for bp in bom_blueprints_list if bp.get("type_id")
         ]
@@ -281,20 +323,15 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             ).values("eve_type_id", "product_eve_type_id", "quantity"):
                 bp_products_map[ap["eve_type_id"]].append(ap)
 
+        built_runs_by_bp = _built_blueprint_runs(related_order_ids, bp_products_map)
+
         has_corp_bp_cache = {}
         for bp in bom_blueprints_list:
             bp_type_id = bp.get("type_id")
             req_runs = bp.get("quantity", 0)
             stock_runs = bp.get("corp_stock", 0)
 
-            completed_runs = 0
-            if bp_type_id in bp_products_map:
-                for ap in bp_products_map[bp_type_id]:
-                    p_id = ap["product_eve_type_id"]
-                    yield_qty = ap["quantity"] or 1
-                    c_qty = product_completed_qty.get(p_id, 0)
-                    if c_qty > 0:
-                        completed_runs += math.ceil(c_qty / max(1, yield_qty))
+            completed_runs = built_runs_by_bp.get(bp_type_id, 0)
 
             remaining_runs = max(0, req_runs - completed_runs)
             shortage = max(0, remaining_runs - stock_runs)
