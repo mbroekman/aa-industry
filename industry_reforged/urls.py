@@ -78,6 +78,11 @@ urlpatterns = [
     path("orders/create/", orders.create_order, name="create_order"),
     path("orders/shopping-list/", orders.shopping_list, name="shopping_list"),
     path("orders/<int:order_id>/", orders.view_quote, name="view_quote"),
+    path(
+        "orders/<int:order_id>/create-buy-orders/",
+        orders.create_buy_orders_from_order,
+        name="create_buy_orders_from_order",
+    ),
     path("orders/<int:order_id>/accept/", orders.accept_quote, name="accept_quote"),
     path("orders/<int:order_id>/reject/", orders.reject_quote, name="reject_quote"),
     path(

@@ -2,6 +2,7 @@
 
 # Django
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from ...models import (
+    CorpBuyOrder,
     CorpInventory,
     CorporationWebhookConfig,
     CorpPricingConfig,
@@ -449,6 +451,102 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     context["output_locations"] = output_locations
 
     return render(request, "industry_reforged/view_quote.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def create_buy_orders_from_order(request: WSGIRequest, order_id: int) -> HttpResponse:
+    """Spawn/merge CorpBuyOrder rows for the shortfall of one or more materials
+    selected from an order's Required Raw Materials table."""
+    order = MemberOrder.objects.filter(id=order_id).first()
+    if not order:
+        messages.error(request, _("Order not found."))
+        return redirect("industry_reforged:orders_dashboard")
+
+    if request.method != "POST":
+        return redirect("industry_reforged:view_quote", order_id=order.id)
+
+    corp_info = None
+    if order.character and order.character.corporation:
+        corp_info = order.character.corporation
+
+    if not corp_info:
+        messages.error(request, _("Could not determine the order's corporation."))
+        return redirect(
+            reverse("industry_reforged:view_quote", kwargs={"order_id": order.id})
+            + "#bom-pane"
+        )
+
+    try:
+        selected_type_ids = {int(t) for t in request.POST.getlist("type_ids")}
+    except ValueError:
+        selected_type_ids = set()
+
+    if not selected_type_ids:
+        messages.warning(request, _("No materials were selected."))
+        return redirect(
+            reverse("industry_reforged:view_quote", kwargs={"order_id": order.id})
+            + "#bom-pane"
+        )
+
+    # Recompute fresh server-side - never trust client-submitted quantities.
+    bom_materials = calculate_order_bom(order)
+
+    created, updated, skipped = 0, 0, 0
+    for type_id in selected_type_ids:
+        mat = bom_materials.get(type_id)
+        if not mat:
+            continue
+        shortfall = max(0, mat["quantity"] - mat.get("corp_stock", 0))
+        if shortfall <= 0:
+            skipped += 1
+            continue
+
+        existing = CorpBuyOrder.objects.filter(
+            corporation=corp_info,
+            item_type_id=type_id,
+            status__in=["OPEN", "IN_PROGRESS"],
+        ).first()
+        if existing:
+            existing.quantity += shortfall
+            existing.save(update_fields=["quantity", "updated_at"])
+            updated += 1
+        else:
+            CorpBuyOrder.objects.create(
+                corporation=corp_info,
+                item_type_id=type_id,
+                quantity=shortfall,
+                status="OPEN",
+            )
+            created += 1
+
+    if created or updated:
+        messages.success(
+            request,
+            _(
+                "Buy orders: %(created)s created, %(updated)s updated with the "
+                "additional shortfall."
+            )
+            % {"created": created, "updated": updated},
+        )
+    if skipped:
+        messages.info(
+            request,
+            _(
+                "%(skipped)s selected material(s) were skipped - corp stock already "
+                "covers the required quantity."
+            )
+            % {"skipped": skipped},
+        )
+    if not (created or updated or skipped):
+        messages.warning(
+            request, _("None of the selected materials are part of this order's BOM.")
+        )
+
+    return redirect(
+        reverse("industry_reforged:view_quote", kwargs={"order_id": order.id})
+        + "#bom-pane"
+    )
 
 
 def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:

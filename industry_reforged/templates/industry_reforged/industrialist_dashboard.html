@@ -43,6 +43,15 @@
                         type="button" role="tab" aria-controls="member-pane" aria-selected="false">Claimed Jobs</button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="missingmaterials-tab" data-bs-toggle="tab" data-bs-target="#missingmaterials-pane"
+                        type="button" role="tab" aria-controls="missingmaterials-pane" aria-selected="false">
+                        <i class="fas fa-boxes"></i> {% trans "Missing Materials" %}
+                        {% if my_missing_materials_shortage_count %}
+                        <span class="badge bg-danger ms-1">{{ my_missing_materials_shortage_count }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-pane"
                         type="button" role="tab" aria-controls="summary-pane" aria-selected="false">Build Steps</button>
                 </li>
@@ -599,6 +608,59 @@
                                     </div>
                                 </div>
                     </div> <!-- End Tab 2 -->
+
+                <!-- TAB 2b: MISSING MATERIALS -->
+                <div class="tab-pane fade" id="missingmaterials-pane" role="tabpanel" aria-labelledby="missingmaterials-tab" tabindex="0">
+                    <div class="card border-0 mb-4 h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="card-title mb-0"><i class="fas fa-boxes"></i> {% trans "Missing Materials for My Claimed Jobs" %}</h4>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if not my_tasks %}
+                            <p class="text-muted p-4 mb-0">{% trans "You have no claimed jobs right now." %}</p>
+                            {% elif not my_missing_materials_shortage_count %}
+                            <p class="text-success p-4 mb-0"><i class="fas fa-check-circle me-2"></i>{% trans "Corp stock covers everything your claimed jobs still need." %}</p>
+                            {% else %}
+                            <div class="table-responsive">
+                                <table class="table table-striped m-0" id="missing-materials-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{% trans "Material" %}</th>
+                                            <th class="text-end">{% trans "Corp Stock" %}</th>
+                                            <th class="text-end">{% trans "Required" %}</th>
+                                            <th class="text-end">{% trans "Shortfall" %}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for mat in my_missing_materials %}
+                                        <tr {% if mat.shortfall > 0 %}data-shortage="true"{% endif %}>
+                                            <td data-order="{{ mat.name }}">
+                                                <div class="d-flex align-items-center">
+                                                    <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
+                                                    <span>{{ mat.name }}</span>
+                                                    <span class="badge bg-secondary ms-2">{{ mat.group_name }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end numeric" data-order="{{ mat.corp_stock|default:0 }}">
+                                                {% if mat.shortfall > 0 %}
+                                                    <span class="text-danger">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                                {% else %}
+                                                    <span class="text-success">{{ mat.corp_stock|default:0|intcomma }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end numeric" data-order="{{ mat.quantity }}">{{ mat.quantity|intcomma }}</td>
+                                            <td class="text-end numeric fw-bold {% if mat.shortfall > 0 %}text-danger{% else %}text-success{% endif %}" data-order="{{ mat.shortfall }}">
+                                                {% if mat.shortfall > 0 %}{{ mat.shortfall|intcomma }}{% else %}&mdash;{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div> <!-- End Tab 2b -->
 
                 <!-- TAB 3: TASK SUMMARY -->
                 <div class="tab-pane fade" id="summary-pane" role="tabpanel" aria-labelledby="summary-tab" tabindex="0">
@@ -1869,6 +1931,12 @@
                     $('#jobmarket-table').DataTable(config2);
                 }
             } catch (e) { console.error("Error init jobmarket table:", e); }
+
+            try {
+                if ($('#missing-materials-table').length) {
+                    $('#missing-materials-table').DataTable($.extend(true, {}, baseConfig));
+                }
+            } catch (e) { console.error("Error init missing materials table:", e); }
 
             try {
                 if ($('#completed-tasks-table').length) {

@@ -15,6 +15,7 @@ from ..models import (
     MemberOrder,
     ProductionTask,
 )
+from ..utils.bom_engine import calculate_tasks_bom
 from .orders.notifications import notify_order_ready
 
 
@@ -533,6 +534,22 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     user_slots = get_user_available_slots(request.user)
 
+    # Materials still missing to finish the member's own claimed jobs - same
+    # BOM engine already used for the order-page and shopping-list materials
+    # tables, just scoped to this member's claimed ProductionTasks.
+    my_missing_materials = []
+    my_missing_materials_shortage_count = 0
+    if my_tasks:
+        my_missing_materials = sorted(
+            calculate_tasks_bom(my_tasks, corp_info=corporation).values(),
+            key=lambda m: (m.get("group_name") or "", m.get("name") or ""),
+        )
+        for mat in my_missing_materials:
+            mat["shortfall"] = max(0, mat.get("quantity", 0) - mat.get("corp_stock", 0))
+        my_missing_materials_shortage_count = sum(
+            1 for m in my_missing_materials if m["shortfall"] > 0
+        )
+
     context = {
         "title": "Industrialist Dashboard",
         "motd": motd,
@@ -545,6 +562,8 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "my_claimed_summary": my_claimed_summary,
         "my_payout_tasks": my_payout_tasks,
         "user_slots": user_slots,
+        "my_missing_materials": my_missing_materials,
+        "my_missing_materials_shortage_count": my_missing_materials_shortage_count,
     }
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
 
@@ -643,7 +662,9 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
     # Pro-rata reward distribution based on the original task's builder_reward
     if task.builder_reward and task.builder_reward > 0:
         reward_claimed = (task.builder_reward * ratio).quantize(Decimal("0.01"))
-        reward_rem = (task.builder_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+        reward_rem = (
+            (task.builder_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+        )
     else:
         # Fallback if task had no builder_reward stored
         full_reward, _dur = calculate_task_builder_reward(
@@ -793,8 +814,14 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
                 # Pro-rata reward distribution based on the original task's builder_reward
                 if task.builder_reward and task.builder_reward > 0:
-                    reward_claimed = (task.builder_reward * ratio).quantize(Decimal("0.01"))
-                    reward_rem = (task.builder_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+                    reward_claimed = (task.builder_reward * ratio).quantize(
+                        Decimal("0.01")
+                    )
+                    reward_rem = (
+                        (task.builder_reward - reward_claimed)
+                        if rem_qty > 0
+                        else Decimal("0.00")
+                    )
                 else:
                     full_reward, _dur = calculate_task_builder_reward(
                         task.item_type,
@@ -805,14 +832,20 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                         task.gamification_value,
                     )
                     reward_claimed = (full_reward * ratio).quantize(Decimal("0.01"))
-                    reward_rem = (full_reward - reward_claimed) if rem_qty > 0 else Decimal("0.00")
+                    reward_rem = (
+                        (full_reward - reward_claimed)
+                        if rem_qty > 0
+                        else Decimal("0.00")
+                    )
 
                 base_dur_sec, portion_size = get_item_production_details(
                     task.item_type_id, task.activity_id
                 )
                 runs_total = max(1, math.ceil(claim_qty / max(portion_size, 1)))
                 runs_per_slot = max(1, math.ceil(runs_total / allocated_slots))
-                dur_claimed = int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
+                dur_claimed = (
+                    int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
+                )
                 rem_runs = max(1, math.ceil(rem_qty / max(portion_size, 1)))
                 dur_rem = int(base_dur_sec * rem_runs * 0.75) if base_dur_sec > 0 else 0
 

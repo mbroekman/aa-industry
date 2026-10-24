@@ -7,14 +7,25 @@
         <div class="row">
             <div class="col-12 mb-4">
                 <div class="card border-0 h-100">
-                    <div class="card-header border-bottom border-secondary bg-dark text-white">
+                    <div class="card-header border-bottom border-secondary bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h3 class="card-title mb-0"><i class="fas fa-boxes text-warning me-2"></i> {% trans "Required Raw Materials" %}</h3>
+                        {% if perms.industry_reforged.corp_access %}
+                        <form method="post" action="{% url 'industry_reforged:create_buy_orders_from_order' order.id %}" id="createBuyOrdersForm">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="submitCreateBuyOrders()">
+                                <i class="fas fa-shopping-cart me-1"></i> {% trans "Create Buy Order" %}
+                            </button>
+                        </form>
+                        {% endif %}
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-striped m-0" id="required-raw-materials-table">
                                 <thead>
                                     <tr>
+                                        {% if perms.industry_reforged.corp_access %}
+                                        <th><input type="checkbox" id="selectAllShortageMaterials" title="{% trans 'Select all shortages' %}"></th>
+                                        {% endif %}
                                         <th>{% trans "Type" %}</th>
                                         <th>{% trans "Material" %}</th>
                                         <th class="text-end">{% trans "Corp Stock" %}</th>
@@ -30,6 +41,13 @@
                                 <tbody>
                                     {% for mat in bom_materials %}
                                     <tr {% if mat.corp_stock < mat.quantity %}data-shortage="true"{% endif %}>
+                                        {% if perms.industry_reforged.corp_access %}
+                                        <td>
+                                            {% if mat.corp_stock < mat.quantity %}
+                                            <input type="checkbox" class="buy-order-material-checkbox" data-type-id="{{ mat.type_id }}">
+                                            {% endif %}
+                                        </td>
+                                        {% endif %}
                                         <td>{{ mat.group_name }}</td>
                                         <td data-order="{{ mat.name }}">
                                             <div class="d-flex align-items-center">
@@ -74,6 +92,9 @@
                                     {% if bom_blueprints %}
                                     {% for mat in bom_blueprints %}
                                     <tr {% if mat.corp_stock < mat.quantity %}data-shortage="true"{% endif %}>
+                                        {% if perms.industry_reforged.corp_access %}
+                                        <td></td>
+                                        {% endif %}
                                         <td>Blueprints</td>
                                         <td data-order="{{ mat.name }}">
                                             <div class="d-flex align-items-center">
@@ -128,14 +149,14 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th colspan="6" class="text-end text-muted">
+                                        <th colspan="{% if perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="text-end text-muted">
                                             {% trans "Original Jita Price (Est.):" %}
                                             <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{% trans 'Live Jita 5% Sell Price fetched via direct ESI market orders' %}"></i>
                                         </th>
                                         <th class="text-end text-muted numeric">{{ original_price|eve_isk }}</th>
                                     </tr>
                                     <tr>
-                                        <th colspan="6" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
+                                        <th colspan="{% if perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="text-end fs-5">{% trans "Estimated Total Materials Cost:" %}</th>
                                         <th class="text-end fs-5 text-warning numeric">{{ total_bom_price|eve_isk }}</th>
                                     </tr>
                                 </tfoot>
@@ -194,35 +215,37 @@
 
 <script>
     var expandedGroups = new Set();
-    
+    var bomGroupColIndex = {% if perms.industry_reforged.corp_access %}1{% else %}0{% endif %};
+    var bomGroupColspan = {% if perms.industry_reforged.corp_access %}7{% else %}6{% endif %};
+
     function initBomTable() {
         if (!$.fn.DataTable.isDataTable('#required-raw-materials-table')) {
             $('#required-raw-materials-table').DataTable({
                 "paging": false,
-                "order": [[ 0, 'asc' ], [ 1, 'asc' ]],
+                "order": [[ bomGroupColIndex, 'asc' ], [ bomGroupColIndex + 1, 'asc' ]],
                 "columnDefs": [
-                    { "visible": false, "targets": 0 },
+                    { "visible": false, "targets": bomGroupColIndex },
                     { "orderable": false, "targets": '_all' }
                 ],
                 "drawCallback": function ( settings ) {
                     var api = this.api();
                     var rows = api.rows( {page:'current'} ).nodes();
                     var last = null;
-                    
+
                     var searchTerm = api.search();
                     var isSearching = searchTerm && searchTerm.trim().length > 0;
-                    
-                    api.column(0, {page:'current'} ).data().each( function ( group, i ) {
+
+                    api.column(bomGroupColIndex, {page:'current'} ).data().each( function ( group, i ) {
                         var groupId = group.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
                         var shouldShow = isSearching || expandedGroups.has(groupId);
-                        
+
                         if ( last !== group ) {
                             var title = group;
                             var icon = group === 'Blueprints' ? 'fa-microchip text-info' : 'fa-boxes text-warning';
                             var chevronIcon = shouldShow ? 'fa-chevron-down' : 'fa-chevron-right';
-                            
+
                             $(rows).eq( i ).before(
-                                '<tr class="table-dark group" style="cursor: pointer;" data-group-target="' + groupId + '"><th colspan="6" class="text-info"><i class="fas ' + chevronIcon + ' me-2 toggle-icon"></i><i class="fas ' + icon + ' me-2"></i>' + title + '</th></tr>'
+                                '<tr class="table-dark group" style="cursor: pointer;" data-group-target="' + groupId + '"><th colspan="' + bomGroupColspan + '" class="text-info"><i class="fas ' + chevronIcon + ' me-2 toggle-icon"></i><i class="fas ' + icon + ' me-2"></i>' + title + '</th></tr>'
                             );
                             last = group;
                         }
@@ -263,9 +286,35 @@
                     expandedGroups.add(target);
                 }
             });
+
+            $('#selectAllShortageMaterials').on('change', function () {
+                $('.buy-order-material-checkbox').prop('checked', $(this).is(':checked'));
+            });
         }
     }
-    
+
+    function submitCreateBuyOrders() {
+        var selectedTypeIds = $('.buy-order-material-checkbox:checked').map(function () {
+            return $(this).data('type-id');
+        }).get();
+
+        if (selectedTypeIds.length === 0) {
+            alert("{% trans 'Select at least one short material first.' %}");
+            return;
+        }
+
+        var form = document.getElementById('createBuyOrdersForm');
+        form.querySelectorAll('input[name="type_ids"]').forEach(function (el) { el.remove(); });
+        selectedTypeIds.forEach(function (typeId) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'type_ids';
+            input.value = typeId;
+            form.appendChild(input);
+        });
+        form.submit();
+    }
+
     $(document).ready(function() {
         initBomTable();
     });
