@@ -181,7 +181,7 @@ class Command(BaseCommand):
                     esi.client.Corporation.GetCorporationsCorporationIdStructures(
                         corporation_id=config.corporation.corporation_id,
                         token=token,
-                    ).results()
+                    ).results(use_etag=False)
                 )
             except Exception as e:  # noqa: BLE001
                 self.stdout.write(
