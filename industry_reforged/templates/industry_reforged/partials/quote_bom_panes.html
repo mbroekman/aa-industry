@@ -167,6 +167,26 @@
             </div>
         </div> <!-- End Row -->
     </div> <!-- End Tab 2 -->
+
+    {% if perms.industry_reforged.corp_access %}
+    <!-- Buy Order Selection Required Modal -->
+    <div class="modal fade" id="buyOrderSelectionRequiredModal" tabindex="-1" aria-labelledby="buyOrderSelectionRequiredModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="buyOrderSelectionRequiredModalLabel">{% trans "Selection Required" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% trans "Select at least one short material first." %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% trans "OK" %}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 
     <!-- TAB 3: TREE -->
@@ -299,7 +319,8 @@
         }).get();
 
         if (selectedTypeIds.length === 0) {
-            alert("{% trans 'Select at least one short material first.' %}");
+            var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('buyOrderSelectionRequiredModal'));
+            errorModal.show();
             return;
         }
 
