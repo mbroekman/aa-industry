@@ -75,6 +75,17 @@
 
                 <!-- TAB 0: OVERVIEW -->
                 <div class="tab-pane fade show active" id="overview-pane" role="tabpanel" aria-labelledby="overview-tab" tabindex="0">
+                    {% if unauthed_characters %}
+                    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>{% trans "Action required:" %}</strong>
+                        {% blocktrans with characters=unauthed_characters|join:", " %}
+                        {{ characters }} still need(s) the Skills ESI permission re-authed. Until this is fixed, your trained skills and available production slots are shown incorrectly (as 0 / base-only), and you cannot claim new jobs.
+                        {% endblocktrans %}
+                        <a href="{% url 'industry_reforged:add_personal_token' %}" class="alert-link">{% trans "Fix this now" %}</a>.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
                     <div class="card border-info bg-dark mb-4 shadow-sm" style="border: 1px solid #17a2b8;">
                         <div class="card-body pb-2">
                             <h4 class="card-title text-white mb-3"><i class="fas fa-bullhorn text-warning"></i> {% trans "Message of the Day & Industry Status" %}</h4>

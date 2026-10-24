@@ -122,6 +122,23 @@ def get_user_industry_characters(user: User) -> list:
     ]
 
 
+def get_unauthed_characters(user: User) -> list:
+    """
+    Characters in the operating corp (see get_user_industry_characters) that have no
+    esi-skills.read_skills.v1 token - these silently contribute 0 skills / base 1/1/1
+    slots to the user's totals rather than their real numbers. A cheap DB existence
+    check only (no live ESI call), safe to use on the claim path.
+    """
+    return [
+        character
+        for character in get_user_industry_characters(user)
+        if not Token.objects.filter(
+            character_id=character.character_id,
+            scopes__name="esi-skills.read_skills.v1",
+        ).exists()
+    ]
+
+
 def get_user_skill_levels(user: User) -> dict[int, int]:
     """Max trained level per skill across the user's characters in the operating corp."""
     merged: dict[int, int] = {}

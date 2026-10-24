@@ -19,6 +19,7 @@ from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+from esi.models import Scope, Token
 from eveuniverse.models import (
     EveIndustryActivity,
     EveIndustryActivityProduct,
@@ -74,6 +75,17 @@ class TestSkillEligibility(TestCase):
         CharacterOwnership.objects.create(
             user=self.user, character=self.alt_character, owner_hash="althash"
         )
+        scope, _ = Scope.objects.get_or_create(name="esi-skills.read_skills.v1")
+        for character in (self.main_character, self.alt_character):
+            token = Token.objects.create(
+                character_id=character.character_id,
+                character_name=character.character_name,
+                character_owner_hash=f"ownerhash_{character.character_id}",
+                user=self.user,
+                access_token="fake_token",
+                refresh_token="fake_refresh",
+            )
+            token.scopes.add(scope)
 
         # A fake "capital component" blueprint requiring Capital Ship Construction V.
         self.activity = EveIndustryActivity.objects.get_or_create(
@@ -373,6 +385,15 @@ class TestSkillGatedBomRelease(TestCase):
         CharacterOwnership.objects.create(
             user=self.user, character=self.main_character, owner_hash="bommainhash"
         )
+        token = Token.objects.create(
+            character_id=self.main_character.character_id,
+            character_name=self.main_character.character_name,
+            user=self.user,
+            access_token="fake_token",
+            refresh_token="fake_refresh",
+        )
+        scope, _ = Scope.objects.get_or_create(name="esi-skills.read_skills.v1")
+        token.scopes.add(scope)
 
         self.activity = EveIndustryActivity.objects.get_or_create(
             id=1, defaults={"name": "Manufacturing", "description": "Manufacturing"}

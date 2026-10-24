@@ -77,6 +77,8 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     # AA Industry App
     from ..utils import skill_service
 
+    unauthed_characters = skill_service.get_unauthed_characters(request.user)
+
     # Unclaimed tasks. Fetched unfiltered by BOM position - visibility is decided below in
     # Python, since it now also depends on the per-viewer skill-eligibility of each task's
     # parent, not just the static is_claimable flag SQL can express directly.
@@ -564,6 +566,7 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "user_slots": user_slots,
         "my_missing_materials": my_missing_materials,
         "my_missing_materials_shortage_count": my_missing_materials_shortage_count,
+        "unauthed_characters": unauthed_characters,
     }
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
 
@@ -717,6 +720,23 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             )
             return redirect("industry_reforged:industrialist_dashboard")
 
+        from ..utils import skill_service
+
+        unauthed = skill_service.get_unauthed_characters(request.user)
+        if unauthed:
+            messages.error(
+                request,
+                _(
+                    "Cannot claim tasks: %(characters)s still need(s) the Skills "
+                    "permission re-authed, or your skills/slots will be shown "
+                    "incorrectly. Use the link on your dashboard to fix this."
+                )
+                % {
+                    "characters": ", ".join(c.character_name for c in unauthed),
+                },
+            )
+            return redirect("industry_reforged:industrialist_dashboard")
+
         task = ProductionTask.objects.filter(id=task_id, status="UNCLAIMED").first()
         if task:
             if (
@@ -732,8 +752,6 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
             # Skill-gated hard-stop: re-check server-side against the specific character
             # the claim will be attributed to, regardless of what the dashboard rendered -
             # a direct POST must not be able to bypass this.
-            from ..utils import skill_service
-
             eligible, missing = skill_service.check_character_eligibility(
                 character.character_id, task.item_type_id, task.activity_id
             )
@@ -1010,6 +1028,23 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
         if not character:
             messages.error(
                 request, _("You must have a main character set to claim tasks.")
+            )
+            return redirect("industry_reforged:industrialist_dashboard")
+
+        from ..utils import skill_service
+
+        unauthed = skill_service.get_unauthed_characters(request.user)
+        if unauthed:
+            messages.error(
+                request,
+                _(
+                    "Cannot claim tasks: %(characters)s still need(s) the Skills "
+                    "permission re-authed, or your skills/slots will be shown "
+                    "incorrectly. Use the link on your dashboard to fix this."
+                )
+                % {
+                    "characters": ", ".join(c.character_name for c in unauthed),
+                },
             )
             return redirect("industry_reforged:industrialist_dashboard")
 

@@ -17,6 +17,7 @@ from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
 from django.utils import timezone
+from esi.models import Scope, Token
 
 from industry_reforged.models import CorporationWebhookConfig, JobTrackingConfig
 from industry_reforged.tasks.job_tracking import check_overdue_production_tasks
@@ -267,6 +268,15 @@ class TestResetOnReclaim(TestCase):
         CharacterOwnership.objects.create(
             user=self.user, character=self.character, owner_hash="resethash"
         )
+        token = Token.objects.create(
+            character_id=self.character.character_id,
+            character_name=self.character.character_name,
+            user=self.user,
+            access_token="fake_token",
+            refresh_token="fake_refresh",
+        )
+        scope, _ = Scope.objects.get_or_create(name="esi-skills.read_skills.v1")
+        token.scopes.add(scope)
         self.item_type = EveTypeFactory(name="Reset Widget")
 
     def _prepare_post_request(self, url):

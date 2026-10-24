@@ -23,7 +23,11 @@ from ..tasks.wallets import task_sync_corp_wallets
 
 @login_required
 @token_required(
-    scopes=["esi-industry.read_character_jobs.v1", "esi-planets.manage_planets.v1"]
+    scopes=[
+        "esi-industry.read_character_jobs.v1",
+        "esi-planets.manage_planets.v1",
+        "esi-skills.read_skills.v1",
+    ]
 )
 def add_personal_token(request: WSGIRequest, token) -> HttpResponse:
     """View to request a personal token"""
