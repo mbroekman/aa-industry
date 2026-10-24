@@ -98,7 +98,7 @@ class TestMissingMaterialsOverview(TestCase):
         side_effect=lambda path, algorithm_type=None: "sha256-dummy",
     )
     @patch("industry_reforged.views.industrialist.calculate_tasks_bom")
-    def test_shortage_rows_are_highlighted_and_counted(
+    def test_only_short_materials_are_listed(
         self, mock_bom, mock_sri, mock_stored, mock_url
     ):
         item_type = EveTypeFactory(name="Rifter")
@@ -128,9 +128,11 @@ class TestMissingMaterialsOverview(TestCase):
         resp = industrialist_dashboard(self._request())
         assert resp.status_code == 200
         content = resp.content.decode("utf-8")
+        # Tritanium (1000 required vs 200 in stock) is short and listed.
         assert "Tritanium" in content
-        assert "Pyerite" in content
-        # Only Tritanium (1000 required vs 200 in stock) is actually short.
+        # Pyerite has sufficient stock (900 >= 500) - it must NOT be listed,
+        # this tab is "what's missing," not a full BOM breakdown.
+        assert "Pyerite" not in content
         assert '<span class="badge bg-danger ms-1">1</span>' in content
 
 

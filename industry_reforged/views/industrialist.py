@@ -536,19 +536,19 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
 
     # Materials still missing to finish the member's own claimed jobs - same
     # BOM engine already used for the order-page and shopping-list materials
-    # tables, just scoped to this member's claimed ProductionTasks.
+    # tables, just scoped to this member's claimed ProductionTasks and
+    # filtered down to only the materials actually short (this tab is about
+    # what's missing, not a full BOM breakdown - that's what Shopping List is for).
     my_missing_materials = []
-    my_missing_materials_shortage_count = 0
     if my_tasks:
+        all_materials = calculate_tasks_bom(my_tasks, corp_info=corporation).values()
+        for mat in all_materials:
+            mat["shortfall"] = max(0, mat.get("quantity", 0) - mat.get("corp_stock", 0))
         my_missing_materials = sorted(
-            calculate_tasks_bom(my_tasks, corp_info=corporation).values(),
+            (m for m in all_materials if m["shortfall"] > 0),
             key=lambda m: (m.get("group_name") or "", m.get("name") or ""),
         )
-        for mat in my_missing_materials:
-            mat["shortfall"] = max(0, mat.get("quantity", 0) - mat.get("corp_stock", 0))
-        my_missing_materials_shortage_count = sum(
-            1 for m in my_missing_materials if m["shortfall"] > 0
-        )
+    my_missing_materials_shortage_count = len(my_missing_materials)
 
     context = {
         "title": "Industrialist Dashboard",

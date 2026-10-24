@@ -633,7 +633,7 @@
                                     </thead>
                                     <tbody>
                                         {% for mat in my_missing_materials %}
-                                        <tr {% if mat.shortfall > 0 %}data-shortage="true"{% endif %}>
+                                        <tr data-shortage="true">
                                             <td data-order="{{ mat.name }}">
                                                 <div class="d-flex align-items-center">
                                                     <img onerror="this.onerror=function(){this.onerror=null; this.src='https://images.evetech.net/types/3514/icon?size=32';}; this.src='https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32';" src="https://images.evetech.net/types/{{ mat.type_id }}/icon?size=32" alt="{{ mat.name }}" width="24" height="24" class="me-2 rounded">
@@ -641,17 +641,9 @@
                                                     <span class="badge bg-secondary ms-2">{{ mat.group_name }}</span>
                                                 </div>
                                             </td>
-                                            <td class="text-end numeric" data-order="{{ mat.corp_stock|default:0 }}">
-                                                {% if mat.shortfall > 0 %}
-                                                    <span class="text-danger">{{ mat.corp_stock|default:0|intcomma }}</span>
-                                                {% else %}
-                                                    <span class="text-success">{{ mat.corp_stock|default:0|intcomma }}</span>
-                                                {% endif %}
-                                            </td>
+                                            <td class="text-end numeric text-danger" data-order="{{ mat.corp_stock|default:0 }}">{{ mat.corp_stock|default:0|intcomma }}</td>
                                             <td class="text-end numeric" data-order="{{ mat.quantity }}">{{ mat.quantity|intcomma }}</td>
-                                            <td class="text-end numeric fw-bold {% if mat.shortfall > 0 %}text-danger{% else %}text-success{% endif %}" data-order="{{ mat.shortfall }}">
-                                                {% if mat.shortfall > 0 %}{{ mat.shortfall|intcomma }}{% else %}&mdash;{% endif %}
-                                            </td>
+                                            <td class="text-end numeric fw-bold text-danger" data-order="{{ mat.shortfall }}">{{ mat.shortfall|intcomma }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
