@@ -73,47 +73,46 @@ class Command(BaseCommand):
     # -- Upwell structures (authenticated) --------------------------------
 
     def _show_upwell_structure(self, structure_id):
-        # Alliance Auth
-        from esi.models import Token as EveToken
-
-        from ...models import CorporationSyncConfig
+        # AA Industry App
+        from ...models import IndustryFacility
 
         self.stdout.write(
             self.style.MIGRATE_HEADING(f"Upwell Structure {structure_id}")
         )
 
-        configs = list(
-            CorporationSyncConfig.objects.select_related(
-                "sync_character", "corporation"
-            ).all()
+        # If we already know this structure's owner from a previous sync,
+        # try that corp's characters first - they're statistically most
+        # likely to still have docking rights. Either way, this is not
+        # limited to our own corp's configured sync character(s): any
+        # character anywhere in this Alliance Auth install with the right
+        # scope may be the one that can actually see this structure.
+        cached = IndustryFacility.objects.filter(facility_id=structure_id).first()
+        owner_corp_id = cached.owner_id if cached else None
+
+        tokens = self._find_tokens(
+            "esi-universe.read_structures.v1", corporation_id=owner_corp_id
         )
-        if not configs:
+        tokens += self._find_tokens("esi-universe.read_structures.v1")
+        tokens = self._dedupe_tokens(tokens)
+
+        if not tokens:
             self.stdout.write(
                 self.style.WARNING(
-                    "  No CorporationSyncConfig rows exist - nothing to "
-                    "authenticate with live. Falling back to whatever was "
-                    "cached locally, below."
+                    "  No character anywhere in this Alliance Auth install "
+                    "has the esi-universe.read_structures.v1 scope at all - "
+                    "falling back to whatever was cached locally, below."
                 )
             )
             return
 
         basic_data = None
-        for config in configs:
-            token = EveToken.objects.filter(
-                character_id=config.sync_character.character_id,
-                scopes__name="esi-universe.read_structures.v1",
-            ).first()
-            if not token:
-                continue
+        tried = []
+        for token in tokens:
+            tried.append(token.character_name)
             try:
                 access_token = token.valid_access_token()
-            except Exception as e:  # noqa: BLE001
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"  Token refresh failed for "
-                        f"{config.sync_character.character_name}: {e}"
-                    )
-                )
+            except Exception:  # noqa: BLE001
+                logger.debug("Token refresh failed for %s", token.character_name)
                 continue
 
             resp = requests.get(
@@ -132,25 +131,24 @@ class Command(BaseCommand):
         if basic_data is None:
             self.stdout.write(
                 self.style.WARNING(
-                    f"  Not accessible live with any of the {len(configs)} "
-                    "configured sync character token(s) right now (the "
-                    "structure may not exist, or none of those characters "
-                    "can currently see/dock at it) - falling back to "
-                    "whatever was cached locally from a previous sync, below."
+                    f"  Not accessible live - tried {len(tried)} character(s) "
+                    f"across the whole install ({', '.join(tried[:10])}"
+                    f"{', ...' if len(tried) > 10 else ''}) and none can "
+                    "currently see/dock at it - falling back to whatever was "
+                    "cached locally from a previous sync, below."
                 )
             )
-            self._show_corp_structure_detail(structure_id, configs)
+            self._show_corp_structure_detail(structure_id, owner_corp_id)
             return
 
         system_id = basic_data.get("solar_system_id")
+        owner_id = basic_data.get("owner_id")
         self.stdout.write(f"  Name:          {basic_data.get('name')}")
         self.stdout.write(
             f"  Type:          {self._resolve_type_name(basic_data.get('type_id'))}"
         )
         self.stdout.write(f"  Solar System:  {self._resolve_system(system_id)}")
-        self.stdout.write(
-            f"  Owner:         {self._resolve_name(basic_data.get('owner_id'))}"
-        )
+        self.stdout.write(f"  Owner:         {self._resolve_name(owner_id)}")
         position = basic_data.get("position") or {}
         if position:
             self.stdout.write(
@@ -158,36 +156,38 @@ class Command(BaseCommand):
                 f"x={position.get('x')}, y={position.get('y')}, z={position.get('z')}"
             )
 
-        self._show_corp_structure_detail(structure_id, configs)
+        self._show_corp_structure_detail(structure_id, owner_id or owner_corp_id)
 
-    def _show_corp_structure_detail(self, structure_id, configs):
+    def _show_corp_structure_detail(self, structure_id, corporation_id):
         """Richer detail from GET /corporations/{id}/structures/ (services, fuel,
         reinforcement timers) - only visible to characters with director roles in
-        the owning corp."""
-        # Alliance Auth
-        from esi.models import Token as EveToken
+        the owning corp. Tries any character in that corp with the needed scope,
+        not just our own plugin's configured sync character(s)."""
+        if not corporation_id:
+            return
 
         from ...tasks.utils import esi
 
-        for config in configs:
-            token = EveToken.objects.filter(
-                character_id=config.sync_character.character_id,
-                scopes__name="esi-corporations.read_structures.v1",
-            ).first()
-            if not token:
-                continue
+        tokens = self._dedupe_tokens(
+            self._find_tokens(
+                "esi-corporations.read_structures.v1", corporation_id=corporation_id
+            )
+        )
+        if not tokens:
+            return
+
+        for token in tokens:
             try:
                 structures = (
                     esi.client.Corporation.GetCorporationsCorporationIdStructures(
-                        corporation_id=config.corporation.corporation_id,
+                        corporation_id=corporation_id,
                         token=token,
                     ).results(use_etag=False)
                 )
             except Exception as e:  # noqa: BLE001
                 self.stdout.write(
                     self.style.WARNING(
-                        f"  Could not list structures for "
-                        f"{config.corporation.corporation_name}: {e}"
+                        f"  Could not list structures via {token.character_name}: {e}"
                     )
                 )
                 continue
@@ -205,7 +205,7 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.MIGRATE_HEADING(
-                    f"  Corp detail (via {config.corporation.corporation_name})"
+                    f"  Corp detail (via {token.character_name})"
                 )
             )
             self.stdout.write(
@@ -239,7 +239,52 @@ class Command(BaseCommand):
                         f"      - {getattr(svc, 'name', '?')}: "
                         f"{getattr(svc, 'state', '?')}"
                     )
-            return  # found it, no need to check other corps
+            return  # found it
+
+    # -- Token search helpers ----------------------------------------------
+
+    def _find_tokens(self, scope_name, corporation_id=None, limit=100):
+        """Characters anywhere in this Alliance Auth install with a token
+        carrying the given ESI scope, optionally narrowed to one corporation.
+        Deliberately not scoped to CorporationSyncConfig - that model only
+        tracks this plugin's own designated background-sync character(s),
+        which is too narrow for an ad-hoc "can ANY of our members see this
+        structure" lookup."""
+        # Alliance Auth
+        from esi.models import Token as EveToken
+
+        char_ids = (
+            EveToken.objects.filter(scopes__name=scope_name)
+            .values_list("character_id", flat=True)
+            .distinct()
+        )
+
+        if corporation_id is not None:
+            # Alliance Auth
+            from allianceauth.eveonline.models import EveCharacter
+
+            char_ids = EveCharacter.objects.filter(
+                character_id__in=list(char_ids), corporation_id=corporation_id
+            ).values_list("character_id", flat=True)
+
+        tokens = []
+        for char_id in list(char_ids)[:limit]:
+            token = EveToken.objects.filter(
+                character_id=char_id, scopes__name=scope_name
+            ).first()
+            if token:
+                tokens.append(token)
+        return tokens
+
+    def _dedupe_tokens(self, tokens):
+        seen = set()
+        unique = []
+        for token in tokens:
+            if token.character_id in seen:
+                continue
+            seen.add(token.character_id)
+            unique.append(token)
+        return unique
 
     # -- Locally cached data ----------------------------------------------
 
