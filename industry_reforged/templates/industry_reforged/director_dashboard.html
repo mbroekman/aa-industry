@@ -382,13 +382,20 @@
                     <div class="alert alert-info shadow-sm mb-4">
                         <i class="fas fa-info-circle"></i> Procurement Buy Orders are generated from Low Stock deficits when the item is marked as <strong>"Buy"</strong> in the Item Configuration.
                     </div>
-                    <div class="d-flex justify-content-end align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
+                    <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
+                        <form method="post" action="{% url 'industry_reforged:bulk_delete_buy_orders' %}" id="bulkDeleteBuyOrdersForm" class="require-confirmation d-inline" data-action-msg="{% translate 'Are you sure you want to delete the selected Buy Orders?' %}" data-btn-class="btn-danger">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="submitBulkDeleteBuyOrders()">
+                                <i class="fas fa-trash-alt me-1"></i> {% translate "Delete Selected" %}
+                            </button>
+                        </form>
                         <div class="dt-search-placeholder" data-table-target="#buy-orders-table"></div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover m-0 w-100 dataTable" id="buy-orders-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="selectAllBuyOrders"></th>
                                     <th>ID</th>
                                     <th>{% translate "Item" %}</th>
                                     <th class="text-end">Quantity Needed</th>
@@ -469,6 +476,24 @@
                     <button type="submit" class="btn btn-success">{% trans "Save Payment" %}</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Buy Orders Selection Required Modal -->
+<div class="modal fade" id="buyOrderBulkSelectionRequiredModal" tabindex="-1" aria-labelledby="buyOrderBulkSelectionRequiredModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="buyOrderBulkSelectionRequiredModalLabel">{% translate "Selection Required" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% translate "Select at least one Buy Order first." %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% translate "OK" %}</button>
+            </div>
         </div>
     </div>
 </div>
@@ -603,11 +628,41 @@ document.addEventListener('DOMContentLoaded', function() {
             "serverSide": true,
             "ajax": "{% url 'industry_reforged:dt_director_buy_orders' %}",
             "autoWidth": false,
-            "order": [[ 4, "desc" ]],
+            "order": [[ 5, "desc" ]],
             "columnDefs": [
-                { "orderable": false, "targets": [5] }
+                { "orderable": false, "targets": [0, 6] }
             ]
         });
+        $('#selectAllBuyOrders').on('change', function () {
+            $('.buy-order-row-checkbox').prop('checked', $(this).is(':checked'));
+        });
+
+        window.submitBulkDeleteBuyOrders = function () {
+            var selectedIds = $('.buy-order-row-checkbox:checked').map(function () {
+                return $(this).val();
+            }).get();
+
+            if (selectedIds.length === 0) {
+                var errorModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('buyOrderBulkSelectionRequiredModal'));
+                errorModal.show();
+                return;
+            }
+
+            var form = document.getElementById('bulkDeleteBuyOrdersForm');
+            form.querySelectorAll('input[name="buy_order_ids"]').forEach(function (el) { el.remove(); });
+            selectedIds.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'buy_order_ids';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            // The form has the require-confirmation class, so dispatching its
+            // own submit event (not form.submit(), which bypasses listeners)
+            // routes through the global confirm-dialog handler in base.html.
+            form.requestSubmit ? form.requestSubmit() : $(form).trigger('submit');
+        };
     }
     if ($('#transactions-table').length) {
         $('#transactions-table').DataTable({

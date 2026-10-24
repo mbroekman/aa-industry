@@ -361,13 +361,13 @@ def dt_director_buy_orders(request):
 
     filtered_records = qs.count()
 
-    # Columns: 0: id, 1: item, 2: qty, 3: status, 4: created_at, 5: actions
+    # Columns: 0: select, 1: id, 2: item, 3: qty, 4: status, 5: created_at, 6: actions
     order_map = {
-        "0": "id",
-        "1": "item_type__name",
-        "2": "quantity",
-        "3": "status",
-        "4": "created_at",
+        "1": "id",
+        "2": "item_type__name",
+        "3": "quantity",
+        "4": "status",
+        "5": "created_at",
     }
 
     order_field = order_map.get(str(order_col), "created_at")
@@ -382,6 +382,7 @@ def dt_director_buy_orders(request):
     for order in qs:
         data.append(
             [
+                f'<input type="checkbox" class="buy-order-row-checkbox" value="{order.id}">',
                 f"#{order.id}",
                 render_to_string(
                     "industry_reforged/partials/dt_item_type.html",

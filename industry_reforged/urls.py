@@ -193,6 +193,11 @@ urlpatterns = [
         name="delete_buy_order",
     ),
     path(
+        "director/buy-orders/bulk-delete/",
+        director.bulk_delete_buy_orders,
+        name="bulk_delete_buy_orders",
+    ),
+    path(
         "director/task/<int:task_id>/delete/",
         director.delete_production_task,
         name="delete_production_task",

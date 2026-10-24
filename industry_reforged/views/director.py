@@ -163,6 +163,29 @@ def delete_buy_order(request: WSGIRequest, order_id: int) -> HttpResponse:
 
 @login_required
 @permission_required("industry_reforged.corp_access")
+def bulk_delete_buy_orders(request: WSGIRequest) -> HttpResponse:
+    """Delete multiple corporate buy orders selected on the Director Dashboard."""
+    if request.method == "POST":
+        from ..models import CorpBuyOrder
+
+        try:
+            order_ids = {int(i) for i in request.POST.getlist("buy_order_ids")}
+        except ValueError:
+            order_ids = set()
+
+        if order_ids:
+            deleted_count, _details = CorpBuyOrder.objects.filter(
+                id__in=order_ids
+            ).delete()
+            messages.success(request, f"Deleted {deleted_count} Buy Order(s).")
+        else:
+            messages.warning(request, _("No Buy Orders were selected."))
+
+    return redirect(reverse("industry_reforged:director_dashboard") + "?tab=buy-orders")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
 def delete_production_task(request: WSGIRequest, task_id: int) -> HttpResponse:
     """Delete a ProductionTask. Used by directors to clean up spawned restock jobs, basket jobs, or any production task."""
     if request.method == "POST":
