@@ -7,7 +7,10 @@ when an alt on the account would qualify.
 """
 
 # Standard Library
+import json
+import re
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 # Alliance Auth
@@ -34,7 +37,12 @@ from industry_reforged.tests.factories import (
 )
 from industry_reforged.utils import skill_service
 from industry_reforged.utils.slot_service import get_user_available_slots
-from industry_reforged.views.industrialist import claim_task, industrialist_dashboard
+from industry_reforged.views.industrialist import (
+    bulk_claim_tasks,
+    claim_task,
+    claim_task_preview,
+    industrialist_dashboard,
+)
 
 
 class TestSkillEligibility(TestCase):
@@ -292,6 +300,67 @@ class TestSkillEligibility(TestCase):
 
         task.refresh_from_db()
         assert task.status == "IN_PRODUCTION"
+
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_bulk_claim_refuses_task_main_cannot_build(self, mock_skills):
+        """Bulk claim must apply the same hard-stop as a single claim."""
+
+        def skills_for(character_id):
+            if character_id == self.alt_character.character_id:
+                return {self.skill_type.id: 5}
+            return {}
+
+        mock_skills.side_effect = skills_for
+
+        gated = ProductionTaskFactory(
+            item_type=self.item_type, activity_id=1, quantity=1, status="UNCLAIMED"
+        )
+        plain = ProductionTaskFactory(
+            item_type=EveTypeFactory(name="Plain Module"),
+            activity_id=1,
+            quantity=1,
+            status="UNCLAIMED",
+        )
+
+        req = self._prepare_post_request(
+            "/industry/industrialist/bulk-claim/",
+            {"task_ids": [gated.id, plain.id]},
+        )
+        bulk_claim_tasks(req)
+
+        gated.refresh_from_db()
+        plain.refresh_from_db()
+        assert gated.status == "UNCLAIMED"
+        assert plain.status == "IN_PRODUCTION"
+        texts = [str(m) for m in req._messages]
+        assert any("Capital Component" in t and "Requires" in t for t in texts)
+
+    @patch("industry_reforged.utils.skill_service.esi")
+    @patch("requests.get", side_effect=Exception("ESI down"))
+    def test_skill_lookup_failure_blocks_gated_claim(self, mock_get, mock_esi):
+        """A failed skill lookup must block skill-gated claims, never allow them."""
+        mock_esi.client.Skills.GetCharactersCharacterIdSkills.side_effect = Exception(
+            "ESI down"
+        )
+
+        gated = ProductionTaskFactory(
+            item_type=self.item_type, activity_id=1, quantity=1, status="UNCLAIMED"
+        )
+        req = self._prepare_post_request(f"/industry/industrialist/claim/{gated.id}/")
+        claim_task(req, gated.id)
+        gated.refresh_from_db()
+        assert gated.status == "UNCLAIMED"
+
+        plain = ProductionTaskFactory(
+            item_type=EveTypeFactory(name="Plain Module"),
+            activity_id=1,
+            quantity=1,
+            status="UNCLAIMED",
+        )
+        req = self._prepare_post_request(f"/industry/industrialist/claim/{plain.id}/")
+        claim_task(req, plain.id)
+        plain.refresh_from_db()
+        assert plain.status == "IN_PRODUCTION"
 
     @patch(
         "django.contrib.staticfiles.storage.staticfiles_storage.url",
@@ -739,3 +808,135 @@ class TestSkillGatedBomRelease(TestCase):
         child.refresh_from_db()
         assert child.status == "IN_PRODUCTION"
         assert child.assigned_to == self.main_character  # untouched by the cascade
+
+    def _parent_with_gated_sub_task(self, sub_task_status="UNCLAIMED"):
+        parent = ProductionTaskFactory(
+            item_type=self.parent_item,
+            activity_id=1,
+            quantity=1,
+            status="UNCLAIMED",
+            is_claimable=True,
+        )
+        gated_child = ProductionTaskFactory(
+            item_type=self.gated_child_item,
+            activity_id=1,
+            quantity=1,
+            status=sub_task_status,
+            is_claimable=True,
+            bom_parent=parent,
+        )
+        grandchild = ProductionTaskFactory(
+            item_type=self.child_item,
+            activity_id=1,
+            quantity=5,
+            status="UNCLAIMED",
+            is_claimable=True,
+            bom_parent=gated_child,
+        )
+        return parent, gated_child, grandchild
+
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_claim_parent_refused_when_sub_task_not_buildable(self, mock_skills):
+        mock_skills.return_value = {self.skill_a.id: 5}  # parent yes, sub-task no
+        parent, gated_child, grandchild = self._parent_with_gated_sub_task()
+
+        req = self._prepare_post_request(f"/industry/industrialist/claim/{parent.id}/")
+        claim_task(req, parent.id)
+
+        for task in (parent, gated_child, grandchild):
+            task.refresh_from_db()
+            assert task.status == "UNCLAIMED"
+        texts = [str(m) for m in req._messages]
+        assert any("Gated Sub-Component" in t for t in texts)
+
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_claim_parent_succeeds_when_whole_tree_buildable(self, mock_skills):
+        mock_skills.return_value = {self.skill_a.id: 5, self.skill_b.id: 1}
+        parent, gated_child, grandchild = self._parent_with_gated_sub_task()
+
+        req = self._prepare_post_request(f"/industry/industrialist/claim/{parent.id}/")
+        claim_task(req, parent.id)
+
+        for task in (parent, gated_child, grandchild):
+            task.refresh_from_db()
+            assert task.status == "IN_PRODUCTION"
+            assert task.assigned_to == self.main_character
+
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_already_claimed_sub_task_does_not_block_parent(self, mock_skills):
+        """Only sub-tasks the claim would actually take along are checked."""
+        mock_skills.return_value = {self.skill_a.id: 5}
+        parent, gated_child, _ = self._parent_with_gated_sub_task(
+            sub_task_status="IN_PRODUCTION"
+        )
+
+        req = self._prepare_post_request(f"/industry/industrialist/claim/{parent.id}/")
+        claim_task(req, parent.id)
+
+        parent.refresh_from_db()
+        gated_child.refresh_from_db()
+        assert parent.status == "IN_PRODUCTION"
+        assert gated_child.assigned_to is None  # not taken over
+
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_bulk_claim_skips_task_with_unbuildable_sub_task(self, mock_skills):
+        mock_skills.return_value = {self.skill_a.id: 5}
+        parent, gated_child, _ = self._parent_with_gated_sub_task()
+        plain = ProductionTaskFactory(
+            item_type=self.plain_item, activity_id=1, quantity=1, status="UNCLAIMED"
+        )
+
+        req = self._prepare_post_request(
+            "/industry/industrialist/bulk-claim/",
+            {"task_ids": [parent.id, plain.id]},
+        )
+        bulk_claim_tasks(req)
+
+        parent.refresh_from_db()
+        gated_child.refresh_from_db()
+        plain.refresh_from_db()
+        assert parent.status == "UNCLAIMED"
+        assert gated_child.status == "UNCLAIMED"
+        assert plain.status == "IN_PRODUCTION"
+
+    @patch(
+        "industry_reforged.utils.slot_service.get_user_available_slots",
+        return_value={"available_slots": 1, "character_count": 1},
+    )
+    @patch(
+        "industry_reforged.utils.pricing_engine.get_item_production_details",
+        return_value=(3600, 1),
+    )
+    @patch("industry_reforged.utils.skill_service.get_character_skill_levels")
+    def test_preview_reports_ineligible_for_unbuildable_sub_task(
+        self, mock_skills, _mock_details, _mock_slots
+    ):
+        mock_skills.return_value = {self.skill_a.id: 5}
+        parent, _, _ = self._parent_with_gated_sub_task()
+        parent.builder_reward = Decimal("1000000.00")
+        parent.save()
+
+        req = self.rf.get("/industry/industrialist/claim-preview/", {"task_id": parent.id})
+        req.user = self.user
+        data = json.loads(claim_task_preview(req).content)
+
+        assert data["eligible"] is False
+        assert "Gated Sub-Component" in data["missing_skills_text"]
+
+
+def test_every_scope_the_code_uses_is_requested_by_a_token_view():
+    """Guards against a feature filtering tokens on a scope no SSO flow ever asks for
+    (the Buyback contracts scope was missing this way)."""
+    package = Path(skill_service.__file__).resolve().parent.parent
+    scope_re = re.compile(r"esi-[a-z]+\.[a-z_]+\.v\d")
+
+    used = set()
+    for path in package.rglob("*.py"):
+        if {"tests", "migrations"} & set(path.relative_to(package).parts):
+            continue
+        used |= set(scope_re.findall(path.read_text(encoding="utf-8")))
+
+    requested = set(
+        scope_re.findall((package / "views" / "api.py").read_text(encoding="utf-8"))
+    )
+    assert used - requested == set()

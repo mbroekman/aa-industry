@@ -131,12 +131,16 @@ This plugin requires specific ESI scopes depending on the features you want to u
 
 - **`esi-industry.read_character_jobs.v1`**: Required for Personal Dashboard. Users grant this via the "Add Personal Token" button.
 - **`esi-industry.read_corporation_jobs.v1`**: Required for Corporate Dashboard. Directors grant this via the "Add Corporate Token" button.
-- **`esi-planets.manage_planets.v1`**: Required for Planetary Interaction tracking. Users grant this via the AA Tokens page.
+- **`esi-planets.manage_planets.v1`**: Required for Planetary Interaction tracking. Users grant this via the "Add Personal Token" button.
+- **`esi-skills.read_skills.v1`**: Required to claim jobs on the Job Market. Every character in the member's corp needs it: claims are blocked until all of them are authorized, and a job can only be claimed when the main character has the skills for it and for every sub-job claimed along with it. Users grant this via the "Add Personal Token" button.
 - **`esi-assets.read_corporation_assets.v1`**: Required for the Core Engine to synchronize Corporate Inventory Hangars. Directors grant this via the "Add Corporate Token" button.
 - **`esi-universe.read_structures.v1`**: Required to resolve public Upwell structure names in EVE. Directors grant this via the "Add Corporate Token" button.
 - **`esi-corporations.read_structures.v1`**: Required for the Director Control Panel to discover and resolve names for structures owned by the corporation. Directors grant this via the "Add Corporate Token" button.
 - **`esi-wallet.read_corporation_wallets.v1`**: Required to track corporate wallet balances and journal transactions. Directors grant this via the "Add Corporate Token" button.
-- **`esi-contracts.read_corporation_contracts.v1`**: Required for the Buyback Program to poll and match corporation item-exchange contracts. Directors grant this via the "Add Corporate Token" button.
+- **`esi-corporations.read_divisions.v1`**: Required to name corporate wallet and hangar divisions. Directors grant this via the "Add Corporate Token" button.
+- **`esi-corporations.read_blueprints.v1`**: Required to sync the Corp Blueprint Library. Directors grant this via the "Add Corporate Token" button.
+- **`esi-markets.structure_markets.v1`**: Required for the AI Market Manager to read markets in player-owned structures. Directors grant this via the "Add Corporate Token" button.
+- **`esi-contracts.read_corporation_contracts.v1`**: Required for the Buyback Program to poll and match corporation item-exchange contracts. Directors grant this via the "Add Corporate Token" button. Older corporate tokens may lack this scope; if Buyback contracts never get matched, re-add the corporate token once.
 
 #### Automating Scopes for all Users
 To prevent members from having to manually authorize additional PI or Industry tokens, you can configure Alliance Auth to **automatically request these scopes** during the standard "Add Character" login flow. Add the following to your `myauth/settings/local.py`:
@@ -146,6 +150,7 @@ LOGIN_TOKEN_SCOPES = [
     'publicData',
     'esi-planets.manage_planets.v1',
     'esi-industry.read_character_jobs.v1',
+    'esi-skills.read_skills.v1',
 ]
 ```
 *(This ensures every character added to your Auth natively supports the personal dashboards without requiring a separate "Grant Token" button click).*

@@ -42,9 +42,9 @@ def get_character_skill_levels(character_id: int) -> dict[int, int]:
     Full map of {skill_type_id: trained_level} for a character, fetched live via ESI.
 
     Cached 24h on success, 5 min on missing token/transient failure (empty dict). An empty
-    dict means "couldn't verify" - callers should treat that as "don't block" (fail open),
-    the same philosophy slot_service already applies by falling back to a safe default
-    slot count rather than blocking production when ESI is flaky.
+    dict means "couldn't verify" and is deliberately treated as "no skills trained", so
+    skill-gated claims fail closed: a member can't claim a job they can't prove they can
+    build. Items with no skill requirement are unaffected.
     """
     cache_key = f"industry_reforged_char_skills_{character_id}"
     cached = cache.get(cache_key)
@@ -245,6 +245,42 @@ def check_character_eligibility(
         return True, []
     missing = _missing_for(get_character_skill_levels(character_id), required)
     return not missing, missing
+
+
+def check_claim_tree_eligibility(
+    character_id: int, task
+) -> list[tuple[Any, list[dict[str, Any]]]]:
+    """
+    Every task a claim of `task` would assign to this character that they can't build,
+    as [(task, missing_skills)]; empty means the claim may proceed.
+
+    Mirrors the claim views' claim_recursive walk: it descends through every BOM child
+    regardless of status but only claims UNCLAIMED ones, so only those are checked.
+    """
+    skill_levels = get_character_skill_levels(character_id)
+    failures = []
+    visited = set()
+    stack = [task]
+    while stack:
+        current = stack.pop()
+        if current.id in visited:
+            continue
+        visited.add(current.id)
+        if current.status == "UNCLAIMED":
+            eligible, missing = check_eligibility_with_levels(
+                skill_levels, current.item_type_id, current.activity_id
+            )
+            if not eligible:
+                failures.append((current, missing))
+        stack.extend(current.bom_children.all())
+    return failures
+
+
+def claim_tree_failure_text(failures: list[tuple[Any, list[dict[str, Any]]]]) -> str:
+    """'Item A (Requires: X V); Item B (Requires: Y III)' for claim error messages."""
+    return "; ".join(
+        f"{t.item_type.name} ({missing_skills_text(missing)})" for t, missing in failures
+    )
 
 
 def missing_skills_text(missing: list[dict[str, Any]]) -> str:

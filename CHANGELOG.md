@@ -91,6 +91,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **claims**: Skill eligibility is now enforced on every claim path (TASK-269). Bulk claim previously skipped the per-task skill hard-stop that a single claim applies, so it could claim jobs the member couldn't build. Both single and bulk claim now also check every unclaimed BOM sub-task that would be claimed along with the job: if the main character can't build any of them, the job isn't claimed (bulk claim skips it with a warning naming the item and missing skills). Members still see every job. The claim-preview modal reports the same verdict. A failed skill lookup (no token or ESI error) blocks skill-gated claims; the misleading "fail open" docstring now describes this.
+- **buyback**: The "Add Corporate Token" flow now requests `esi-contracts.read_corporation_contracts.v1`. Without it, `buyback_poll_contracts` never found a usable token and silently matched nothing. Existing corporate tokens must be re-added once. A new test fails if any code path filters tokens on a scope that no token view requests. The README scope list now also documents `read_skills`, `read_divisions`, `read_blueprints` and `structure_markets`.
 - **rewards**: Implemented pro-rata reward splitting for partial claims (TASK-259):
   - Updated `claim_task_preview` and `claim_task` endpoints in `views/industrialist.py` to distribute `task.builder_reward` pro-rata based on claimed quantity ratio (`claim_qty / task.quantity`).
   - Resolved issue where partial claims recalculated rewards as independent tasks and consumed the full corporate maximum reward cap (e.g. 75M ISK) on both the claimed batch and the remainder.

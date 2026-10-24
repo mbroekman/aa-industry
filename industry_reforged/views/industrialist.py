@@ -628,13 +628,12 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
     from ..utils.slot_service import get_user_available_slots
 
     main_character = request.user.profile.main_character
-    eligible, missing = (
-        skill_service.check_character_eligibility(
-            main_character.character_id, task.item_type_id, task.activity_id
-        )
+    failures = (
+        skill_service.check_claim_tree_eligibility(main_character.character_id, task)
         if main_character
-        else (True, [])
+        else []
     )
+    eligible = not failures
 
     # Slots realistically usable for THIS item (corp + skill eligible characters
     # only) - distinct from the generic account-wide total shown elsewhere, which
@@ -702,7 +701,7 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
             if rem_qty > 0
             else "0.00 ISK",
             "eligible": eligible,
-            "missing_skills_text": skill_service.missing_skills_text(missing),
+            "missing_skills_text": skill_service.claim_tree_failure_text(failures),
             "eligible_available_slots": eligible_slots["available_slots"],
             "eligible_character_count": eligible_slots["character_count"],
         }
@@ -751,11 +750,12 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
             # Skill-gated hard-stop: re-check server-side against the specific character
             # the claim will be attributed to, regardless of what the dashboard rendered -
-            # a direct POST must not be able to bypass this.
-            eligible, missing = skill_service.check_character_eligibility(
-                character.character_id, task.item_type_id, task.activity_id
+            # a direct POST must not be able to bypass this. Covers every UNCLAIMED BOM
+            # sub-task the claim would take along, not just the task itself.
+            failures = skill_service.check_claim_tree_eligibility(
+                character.character_id, task
             )
-            if not eligible:
+            if failures:
                 messages.error(
                     request,
                     _(
@@ -764,7 +764,7 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     )
                     % {
                         "character": character.character_name,
-                        "skills": skill_service.missing_skills_text(missing),
+                        "skills": skill_service.claim_tree_failure_text(failures),
                     },
                 )
                 return redirect("industry_reforged:industrialist_dashboard")
@@ -1086,6 +1086,24 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
                         request,
                         _("Skipped %(item)s because sub-jobs are incomplete.")
                         % {"item": task.item_type.name},
+                    )
+                    continue
+                # Same skill hard-stop as claim_task - bulk must not be a bypass.
+                failures = skill_service.check_claim_tree_eligibility(
+                    character.character_id, task
+                )
+                if failures:
+                    messages.warning(
+                        request,
+                        _(
+                            "Skipped %(item)s: %(character)s lacks the required "
+                            "skill(s). %(skills)s"
+                        )
+                        % {
+                            "item": task.item_type.name,
+                            "character": character.character_name,
+                            "skills": skill_service.claim_tree_failure_text(failures),
+                        },
                     )
                     continue
                 claim_recursive(task, character)
