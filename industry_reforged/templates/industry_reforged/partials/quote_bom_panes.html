@@ -333,6 +333,14 @@
             input.value = typeId;
             form.appendChild(input);
         });
+
+        var loadingModalEl = document.getElementById('loadingModal');
+        if (loadingModalEl) {
+            document.getElementById('loadingModalText').textContent = "{% trans 'Creating Buy Order...' %}";
+            document.getElementById('loadingModalDesc').textContent = "{% trans 'Spawning procurement buy order(s) for the selected materials.' %}";
+            bootstrap.Modal.getOrCreateInstance(loadingModalEl).show();
+        }
+
         form.submit();
     }
 
