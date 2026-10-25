@@ -312,8 +312,7 @@ def monthly_leaderboard(program, year: int, month: int) -> list[LeaderboardRow]:
         LeaderboardRow(
             rank=index,
             character_id=row["buyback_contract__character_id"],
-            character_name=row["buyback_contract__character__character_name"]
-            or "-",
+            character_name=row["buyback_contract__character__character_name"] or "-",
             isk_paid=row["isk_paid"] or Decimal("0.00"),
             donated=row["donated"] or Decimal("0.00"),
             contract_count=row["contract_count"],
