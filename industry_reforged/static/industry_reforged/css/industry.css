@@ -85,8 +85,8 @@
 }
 
 /* Inactive tabs and secondary buttons: readable in light and dark themes.
-   Neutral translucent greys instead of theme variables, because the dark
-   Alliance Auth theme does not define all Bootstrap 5.3 colour variables. */
+    Neutral translucent greys instead of theme variables, because the dark
+    Alliance Auth theme does not define all Bootstrap 5.3 colour variables. */
 .allianceauth-industry-plugin .nav-tabs .nav-link:not(.active),
 .allianceauth-industry-plugin .nav-pills .nav-link:not(.active) {
     color: inherit;
