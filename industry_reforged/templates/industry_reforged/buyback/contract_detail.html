@@ -19,6 +19,72 @@
         </div>
     </div>
 
+    {% if contract.status == "PENDING" %}
+    <div class="card border-primary border-2 mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0"><i class="fas fa-file-contract"></i> {% trans "Create this contract in EVE" %}</h4>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">{% trans "Create an <strong>Item Exchange</strong> contract with exactly these details. Use the copy buttons to avoid typos." %}</p>
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 border rounded h-100">
+                        <div class="text-muted small text-uppercase mb-1">1. {% trans "Make it out to" %}</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4 fw-bold text-break">{{ contract.program.recipient_name }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary buyback-copy" data-copy="{{ contract.program.recipient_name }}" title="{% trans 'Copy to clipboard' %}"><i class="far fa-copy"></i></button>
+                        </div>
+                        <div class="text-muted small">{% if contract.program.recipient_type == "CHARACTER" %}{% trans "Character" %}{% else %}{% trans "Corporation" %}{% endif %}</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 border rounded h-100 border-success">
+                        <div class="text-muted small text-uppercase mb-1">2. {% trans "Ask exactly (I will receive)" %}</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4 fw-bold text-success">{{ contract.quoted_price|floatformat:"2g" }} ISK</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary buyback-copy" data-copy="{{ contract.quoted_price|floatformat:"2" }}" title="{% trans 'Copy to clipboard' %}"><i class="far fa-copy"></i></button>
+                        </div>
+                        {% if contract.donation_amount %}<div class="text-muted small">{% trans "Already net of your donation" %}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 border rounded h-100 border-warning">
+                        <div class="text-muted small text-uppercase mb-1">3. {% trans "Title (reference)" %}</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4 fw-bold font-monospace">{{ contract.tracking_number }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary buyback-copy" data-copy="{{ contract.tracking_number }}" title="{% trans 'Copy to clipboard' %}"><i class="far fa-copy"></i></button>
+                        </div>
+                        <div class="text-muted small">{% trans "Put this in the contract description" %}</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 border rounded h-100">
+                        <div class="text-muted small text-uppercase mb-1">4. {% if contract.program.drop_off_names|length > 1 %}{% trans "Location (one of)" %}{% else %}{% trans "Location" %}{% endif %}</div>
+                        {% for name in contract.program.drop_off_names %}
+                        <div class="fw-bold">{{ name }}</div>
+                        {% empty %}
+                        <div class="fw-bold">-</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+                <div>
+                    <i class="far fa-clock"></i> {% trans "Create it before" %} <strong>{{ contract.deadline|date:"Y-m-d H:i" }}</strong>
+                    <span class="text-muted small">({% trans "EVE time" %})</span>
+                    &middot; {% trans "Include exactly the items listed below." %}
+                </div>
+                {% if not public %}
+                <form method="post" action="{% url 'industry_reforged:buyback_contract_cancel' contract.tracking_number %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-times"></i> {% trans "Cancel" %}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card border-0 mb-4">
         <div class="card-body">
             <dl class="row mb-0">
@@ -87,23 +153,6 @@
             </div>
             {% endif %}
 
-            {% if contract.status == "PENDING" %}
-            <div class="alert alert-info mt-3">
-                {% trans "Create an in-game item-exchange contract with this exact tracking number in the title:" %}
-                <strong>{{ contract.tracking_number }}</strong><br>
-                {% trans "Set the contract price to:" %} <strong>{{ contract.quoted_price|eve_isk }}</strong>
-                {% if contract.donation_amount %}({% trans "already net of your donation" %}){% endif %}<br>
-                {% if contract.program.drop_off_names|length > 1 %}{% trans "Create it at one of:" %}{% else %}{% trans "Create it at:" %}{% endif %}
-                <strong>{{ contract.program.drop_off_name }}</strong><br>
-                {% trans "Address the contract to:" %} <strong>{{ contract.program.recipient_name }}</strong>
-            </div>
-            {% if not public %}
-            <form method="post" action="{% url 'industry_reforged:buyback_contract_cancel' contract.tracking_number %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-times"></i> {% trans "Cancel" %}</button>
-            </form>
-            {% endif %}
-            {% endif %}
         </div>
     </div>
 
@@ -163,4 +212,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+<script>
+    document.querySelectorAll(".buyback-copy").forEach(function (button) {
+        button.addEventListener("click", function () {
+            navigator.clipboard.writeText(button.dataset.copy).then(function () {
+                var icon = button.querySelector("i");
+                icon.className = "fas fa-check text-success";
+                setTimeout(function () { icon.className = "far fa-copy"; }, 1500);
+            });
+        });
+    });
+</script>
 {% endblock %}

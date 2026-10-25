@@ -3,6 +3,7 @@ App Models
 """
 
 # Standard Library
+from datetime import timedelta
 from decimal import Decimal
 
 # Third Party
@@ -577,6 +578,11 @@ class BuybackContract(models.Model):
     def gross_appraisal(self):
         """The full appraisal before any donation - quoted_price + donation_amount."""
         return self.quoted_price + self.donation_amount
+
+    @property
+    def deadline(self):
+        """When a PENDING tracking number expires if no in-game contract shows up."""
+        return self.created_at + timedelta(days=self.program.contract_expiry_days)
 
     @property
     def base_appraisal_total(self):

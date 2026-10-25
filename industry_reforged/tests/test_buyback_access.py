@@ -3,6 +3,7 @@ programs, director scoping of contract pages, tracking prefixes and the
 character-recipient contract source."""
 
 # Standard Library
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 # Third Party
@@ -278,6 +279,36 @@ class TestPublicCalculator:
         assert contract.tracking_number in html
         assert "internal reviewer note" not in html
         assert "/cancel/" not in html
+
+    def test_pending_contract_shows_separate_contract_instructions(self):
+        program = BuybackProgramFactory(is_public=True, contract_expiry_days=3)
+        contract = BuybackContractFactory(
+            program=program,
+            character=None,
+            status="PENDING",
+            quoted_price=Decimal("236938860.00"),
+        )
+
+        html = buyback_public_contract(
+            _request(RequestFactory(), AnonymousUser()), contract.tracking_number
+        ).content.decode()
+
+        assert "Create this contract in EVE" in html
+        assert program.recipient_name in html
+        assert "236,938,860.00 ISK" in html
+        assert 'data-copy="236938860.00"' in html
+        assert f'data-copy="{contract.tracking_number}"' in html
+        assert contract.deadline.strftime("%Y-%m-%d %H:%M") in html
+
+    def test_paid_contract_has_no_contract_instructions(self):
+        program = BuybackProgramFactory(is_public=True)
+        contract = BuybackContractFactory(
+            program=program, character=None, status="PAID"
+        )
+        html = buyback_public_contract(
+            _request(RequestFactory(), AnonymousUser()), contract.tracking_number
+        ).content.decode()
+        assert "Create this contract in EVE" not in html
 
     def test_public_contract_page_is_404_for_private_programs(self):
         contract = BuybackContractFactory()
