@@ -427,7 +427,10 @@ class OrderItem(models.Model):
     @property
     def build_status_info(self):
         if not hasattr(self, "_cached_build_status_info"):
-            self._cached_build_status_info = self.get_build_status()
+            # Lazy cache; views may also prefill it from a bulk task query.
+            self._cached_build_status_info = (  # pylint: disable=attribute-defined-outside-init
+                self.get_build_status()
+            )
         return self._cached_build_status_info
 
     @property

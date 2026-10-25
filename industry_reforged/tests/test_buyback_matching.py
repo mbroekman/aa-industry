@@ -8,24 +8,24 @@ from industry_reforged.utils.buyback_matching import (
 
 
 def _expectation(**overrides):
-    defaults = dict(
-        tracking_number="BB-ABCD1234",
-        expected_items=[ExpectedItem(type_id=34, quantity=1000)],
-        expected_price=1000.0,
-        expected_location_id=60003760,
-        expected_receiver_id=98000001,
-    )
+    defaults = {
+        "tracking_number": "BB-ABCD1234",
+        "expected_items": [ExpectedItem(type_id=34, quantity=1000)],
+        "expected_price": 1000.0,
+        "expected_location_id": 60003760,
+        "expected_receiver_id": 98000001,
+    }
     defaults.update(overrides)
     return BuybackContractExpectation(**defaults)
 
 
 def _esi_contract(**overrides):
-    defaults = dict(
-        title="BB-ABCD1234",
-        price=1000.0,
-        start_location_id=60003760,
-        acceptor_id=98000001,
-    )
+    defaults = {
+        "title": "BB-ABCD1234",
+        "price": 1000.0,
+        "start_location_id": 60003760,
+        "acceptor_id": 98000001,
+    }
     defaults.update(overrides)
     return defaults
 

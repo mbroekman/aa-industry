@@ -27,6 +27,7 @@ ci:
 exclude: |
   (?x)(
     .github/|
+    backlog/|
     LICENSE|
     README\.md|
     .min(.css|.css.map|.js|.js.map)|

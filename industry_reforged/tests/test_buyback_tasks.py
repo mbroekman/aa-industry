@@ -30,16 +30,16 @@ from .factories import (
 
 
 def _esi_contract(**overrides):
-    defaults = dict(
-        type="item_exchange",
-        title="BB-ABCD1234",
-        price=1000.0,
-        start_location_id=None,
-        acceptor_id=None,
-        assignee_id=None,
-        issuer_id=None,
-        contract_id=555,
-    )
+    defaults = {
+        "type": "item_exchange",
+        "title": "BB-ABCD1234",
+        "price": 1000.0,
+        "start_location_id": None,
+        "acceptor_id": None,
+        "assignee_id": None,
+        "issuer_id": None,
+        "contract_id": 555,
+    }
     defaults.update(overrides)
     mock = MagicMock()
     for key, value in defaults.items():

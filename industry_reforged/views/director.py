@@ -604,8 +604,8 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
             breakdown_by_item[item_id] = []
         breakdown_by_item[item_id].append({"location_name": loc_name, "quantity": qty})
 
-    for item_id in breakdown_by_item:
-        breakdown_by_item[item_id].sort(key=lambda x: x["quantity"], reverse=True)
+    for entries in breakdown_by_item.values():
+        entries.sort(key=lambda x: x["quantity"], reverse=True)
 
     configs = CorpItemConfig.objects.filter(
         corporation=corporation, target_threshold__gt=0

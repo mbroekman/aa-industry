@@ -71,7 +71,9 @@ messages_control.disable = [
     "E0606", # possibly-used-before-assignment
     "E0611", # no-name-in-module
     "E1101", # no-member (common in Django)
+    "C1803", # use-implicit-booleaness-not-comparison (`assert x == []` also checks the type)
     "R0801", # duplicate-code
+    "R0902", # too-many-instance-attributes (dataclasses and test fixtures)
     "R0903", # too-few-public-methods
     "R0911", # too-many-return-statements
     "R0912", # too-many-branches

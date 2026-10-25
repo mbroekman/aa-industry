@@ -487,6 +487,7 @@ def calculate_structure_job_costs(
                 type_id=eve_type.id,
                 name=eve_type.name,
                 quantity=quantity,
+                config_dict={},
                 corp_info=corporation,
                 target_facility=target_facility,
             )
