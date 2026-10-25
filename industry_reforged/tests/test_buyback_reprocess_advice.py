@@ -21,10 +21,13 @@ PRICES = "industry_reforged.utils.reprocess_advice._market_unit_prices"
 
 @pytest.fixture(autouse=True)
 def _no_esi():
-    with patch(
-        "industry_reforged.utils.buyback_data.ensure_sections",
-        side_effect=lambda types, section: {t.id: t for t in types},
-    ), patch.object(reprocess_advice, "_velocity", return_value=0.0):
+    with (
+        patch(
+            "industry_reforged.utils.buyback_data.ensure_sections",
+            side_effect=lambda types, section: {t.id: t for t in types},
+        ),
+        patch.object(reprocess_advice, "_velocity", return_value=0.0),
+    ):
         yield
 
 
@@ -316,6 +319,7 @@ def _contract_with_module(corp, seller=None):
 @pytest.mark.usefixtures("mock_static")
 class TestAdviceOnPages:
     def test_programs_directors_see_the_advice_card(self):
+        # AA Industry App
         from industry_reforged.views.buyback.member import buyback_contract_detail
 
         corp = EveCorporationInfoFactory()
@@ -330,6 +334,7 @@ class TestAdviceOnPages:
         assert "Sell or reprocess?" in html and "Scrap Module" in html
 
     def test_seller_does_not_see_the_advice_card(self):
+        # AA Industry App
         from industry_reforged.views.buyback.member import buyback_contract_detail
 
         corp = EveCorporationInfoFactory()
@@ -343,6 +348,7 @@ class TestAdviceOnPages:
         assert "Sell or reprocess?" not in html
 
     def test_review_queue_shows_the_advice_column(self):
+        # AA Industry App
         from industry_reforged.views.buyback.director import director_buyback_review
 
         corp = EveCorporationInfoFactory()
@@ -351,15 +357,14 @@ class TestAdviceOnPages:
 
         # Pyerite worth far more than the module: reprocessing gains.
         pyerite_id = EveTypeMaterial.objects.get().material_eve_type_id
-        prices = _prices(
-            {contract.items.get().eve_type_id: 1.0, pyerite_id: 100.0}, {}
-        )
+        prices = _prices({contract.items.get().eve_type_id: 1.0, pyerite_id: 100.0}, {})
         with patch(PRICES, side_effect=prices):
             html = director_buyback_review(_request(director)).content.decode()
 
         assert "Reprocess some" in html and "#sell-or-reprocess" in html
 
     def test_settings_are_saved_for_the_directors_corporation(self):
+        # AA Industry App
         from industry_reforged.views.buyback.director import (
             director_config_buyback_reprocessing,
         )

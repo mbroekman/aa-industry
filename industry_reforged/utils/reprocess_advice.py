@@ -271,13 +271,9 @@ def advise(items, corporation, config=None, deficits=None) -> ContractAdvice:
         result.items.append(item)
         result.sell_all += sell_value
         result.reprocess_all += reprocess_value if materials else sell_value
-        result.best_mix += (
-            reprocess_value if item.advice == REPROCESS else sell_value
-        )
+        result.best_mix += reprocess_value if item.advice == REPROCESS else sell_value
 
-    result.materials = sorted(
-        combined.values(), key=lambda m: m.eve_type.name.lower()
-    )
+    result.materials = sorted(combined.values(), key=lambda m: m.eve_type.name.lower())
     return result
 
 

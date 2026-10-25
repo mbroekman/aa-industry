@@ -4,13 +4,13 @@ from .buyback import (
     BuybackContract,
     BuybackContractItem,
     BuybackFaq,
-    CorpReprocessingConfig,
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
     BuybackUntrackedContract,
     BuybackUserSettings,
     BuybackWatchlistItem,
+    CorpReprocessingConfig,
 )
 from .config import (
     CorpMOTD,

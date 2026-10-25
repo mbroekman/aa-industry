@@ -809,7 +809,7 @@ class CorpReprocessingConfig(models.Model):
     margin_percent = models.FloatField(
         default=2.0,
         validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
-        help_text=_("Below this difference (%) the advice is \"either way\"."),
+        help_text=_('Below this difference (%) the advice is "either way".'),
     )
     use_stock_needs = models.BooleanField(
         default=True,

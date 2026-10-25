@@ -1052,7 +1052,9 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "market_groups_loaded": market_groups_loaded,
         "buyback_faqs": buyback_faqs,
         "reprocessing_config": reprocessing_config,
-        "broker_fee_rate": reprocessing_tax_config.broker_fee_rate if reprocessing_tax_config else 0.0,
+        "broker_fee_rate": (
+            reprocessing_tax_config.broker_fee_rate if reprocessing_tax_config else 0.0
+        ),
         "job_tracking_configs": job_tracking_configs,
     }
     return render(request, "industry_reforged/director_config.html", context)
