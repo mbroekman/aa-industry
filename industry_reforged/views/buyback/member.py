@@ -14,7 +14,7 @@ from django.utils.translation import gettext as _
 
 from ...models import BuybackContract, BuybackContractItem, BuybackProgram
 from ...tasks.buyback import watchlist_flag_notes
-from ...utils.inventory_parser import parse_inventory_paste
+from ...utils.inventory_parser import parse_inventory_paste_with_unpacked
 from ...utils.pricing_engine import calculate_buyback_quote
 
 CALCULATOR_TEMPLATE = "industry_reforged/buyback/calculator.html"
@@ -93,8 +93,8 @@ def run_calculator(
         )
         return render(request, CALCULATOR_TEMPLATE, context)
 
-    parsed_items, unrecognized, unpacked_type_ids = parse_inventory_paste(
-        inventory_text, with_unpacked=True
+    parsed_items, unrecognized, unpacked_type_ids = parse_inventory_paste_with_unpacked(
+        inventory_text
     )
     if unrecognized:
         messages.warning(

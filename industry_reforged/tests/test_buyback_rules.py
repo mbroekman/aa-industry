@@ -37,7 +37,9 @@ from industry_reforged.models import (
     BuybackWatchlistItem,
 )
 from industry_reforged.utils import buyback_data
-from industry_reforged.utils.inventory_parser import parse_inventory_paste
+from industry_reforged.utils.inventory_parser import (
+    parse_inventory_paste_with_unpacked,
+)
 from industry_reforged.utils.pricing_engine import calculate_buyback_quote
 from industry_reforged.views.buyback.director import (
     director_config_buyback_rule_edit,
@@ -421,8 +423,8 @@ class TestParserUnpacked:
     def test_lines_without_quantity_are_reported_as_unpacked(self):
         rifter = EveTypeFactory(name="Rifter")
         trit = EveTypeFactory(name="Tritanium")
-        parsed, _, unpacked = parse_inventory_paste(
-            "Rifter\tFrigate\nTritanium\t100", with_unpacked=True
+        parsed, _, unpacked = parse_inventory_paste_with_unpacked(
+            "Rifter\tFrigate\nTritanium\t100"
         )
         assert parsed == {rifter: 1, trit: 100}
         assert unpacked == {rifter.id}

@@ -96,6 +96,8 @@ __all__ = [
     "AIMarketLog",
     "BuybackProgram",
     "BuybackWatchlistItem",
+    "BuybackItemRule",
+    "BuybackStaticPrice",
     "BuybackContract",
     "BuybackContractItem",
 ]

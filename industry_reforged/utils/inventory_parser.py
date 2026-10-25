@@ -25,7 +25,7 @@ def _parse_quantity(raw: str) -> int | None:
     return int(digits)
 
 
-def parse_inventory_paste(text: str, with_unpacked: bool = False):
+def parse_inventory_paste(text: str) -> tuple[dict[EveType, int], list[str]]:
     """
     Parses an EVE client "Copy as List" inventory export and returns a
     dict of {EveType: quantity} plus a list of unrecognized item names.
@@ -34,11 +34,16 @@ def parse_inventory_paste(text: str, with_unpacked: bool = False):
     client window (commonly Name/Quantity/Group/Category/Size/Volume, or a
     plain Name/Quantity from some windows). Only column 0 (name) and column 1
     (quantity, if present and numeric) are used; the rest are ignored.
-
-    The client leaves the quantity empty for assembled (unpacked) items. With
-    `with_unpacked=True` a third value is returned: the ids of the types that
-    appeared on such a line.
     """
+    parsed_items, unrecognized, _ = parse_inventory_paste_with_unpacked(text)
+    return parsed_items, unrecognized
+
+
+def parse_inventory_paste_with_unpacked(
+    text: str,
+) -> tuple[dict[EveType, int], list[str], set[int]]:
+    """Like parse_inventory_paste, plus the ids of the types that appeared on a
+    line without a quantity: the client leaves it empty for assembled items."""
     items_counts: dict[str, int] = {}
     unpacked_names: set[str] = set()
 
@@ -80,6 +85,4 @@ def parse_inventory_paste(text: str, with_unpacked: bool = False):
         else:
             unrecognized.append(name)
 
-    if with_unpacked:
-        return parsed_items, unrecognized, unpacked_type_ids
-    return parsed_items, unrecognized
+    return parsed_items, unrecognized, unpacked_type_ids
