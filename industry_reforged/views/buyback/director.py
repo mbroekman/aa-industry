@@ -399,7 +399,9 @@ def director_config_buyback_faq_edit(
 @login_required
 @permission_required("industry_reforged.corp_access")
 @require_POST
-def director_config_buyback_faq_delete(request: WSGIRequest, faq_id: int) -> HttpResponse:
+def director_config_buyback_faq_delete(
+    request: WSGIRequest, faq_id: int
+) -> HttpResponse:
     corporation = _director_corporation(request)
     if not corporation:
         return _no_corporation(request)

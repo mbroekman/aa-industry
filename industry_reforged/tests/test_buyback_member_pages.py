@@ -50,7 +50,9 @@ def mock_static(monkeypatch):
         from sri.templatetags import sri
 
         monkeypatch.setattr(
-            sri, "sri_integrity_static", lambda path, algorithm_type=None: "sha256-dummy"
+            sri,
+            "sri_integrity_static",
+            lambda path, algorithm_type=None: "sha256-dummy",
         )
     except ImportError:
         pass
@@ -91,7 +93,9 @@ class TestProgramRulesPage:
             price_modifier_percent=-15.0,
         )
         BuybackStaticPrice.objects.create(
-            program=program, eve_type=EveTypeFactory(name="PLEX"), price=Decimal("5000000")
+            program=program,
+            eve_type=EveTypeFactory(name="PLEX"),
+            price=Decimal("5000000"),
         )
 
         html = buyback_program_rules(_request(_user()), program.id).content.decode()
@@ -124,7 +128,10 @@ class TestProgramRulesPage:
 @pytest.mark.django_db
 class TestFaqPage:
     def test_shows_faq_of_corporations_whose_programs_are_visible(self):
-        visible_corp, hidden_corp = EveCorporationInfoFactory(), EveCorporationInfoFactory()
+        visible_corp, hidden_corp = (
+            EveCorporationInfoFactory(),
+            EveCorporationInfoFactory(),
+        )
         BuybackProgramFactory(corporation=visible_corp)
         hidden = BuybackProgramFactory(corporation=hidden_corp)
         hidden.restricted_to_groups.add(Group.objects.create(name="Closed"))
