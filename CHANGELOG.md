@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## Unreleased
 
+### Fix
+
+- **ui**: Inactive tabs and grey (secondary) buttons now have a visible background, border and readable text, also in the dark theme; disabled buttons are less washed out.
+
 ### Feat
 
 - **buyback**: Statistics from the original buyback plugin (TASK-277, phase 5):

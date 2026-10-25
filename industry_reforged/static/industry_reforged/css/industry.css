@@ -83,3 +83,41 @@
 [data-bs-theme="dark"] .sticky-table-header th {
     background-color: var(--bs-dark);
 }
+
+/* Inactive tabs and secondary buttons: readable in light and dark themes */
+.allianceauth-industry-plugin .nav-tabs .nav-link:not(.active),
+.allianceauth-industry-plugin .nav-pills .nav-link:not(.active) {
+    color: var(--bs-body-color);
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    opacity: 0.9;
+}
+
+.allianceauth-industry-plugin .nav-tabs .nav-link:not(.active) {
+    border-bottom-color: transparent;
+    margin-right: 2px;
+}
+
+.allianceauth-industry-plugin .nav-tabs .nav-link:not(.active):hover,
+.allianceauth-industry-plugin .nav-pills .nav-link:not(.active):hover {
+    opacity: 1;
+    color: var(--bs-primary);
+    background-color: var(--bs-secondary-bg);
+}
+
+.allianceauth-industry-plugin .btn-outline-secondary {
+    --bs-btn-color: var(--bs-body-color);
+    --bs-btn-border-color: var(--bs-secondary-color);
+    --bs-btn-bg: var(--bs-tertiary-bg);
+}
+
+.allianceauth-industry-plugin .btn-outline-secondary.active,
+.allianceauth-industry-plugin .btn-check:checked + .btn-outline-secondary {
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--bs-secondary);
+}
+
+.allianceauth-industry-plugin .btn:disabled,
+.allianceauth-industry-plugin .btn.disabled {
+    opacity: 0.75;
+}
