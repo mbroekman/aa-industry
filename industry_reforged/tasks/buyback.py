@@ -18,13 +18,13 @@ from django.utils import timezone
 # Alliance Auth
 from esi.models import Token
 
+from ..utils import buyback_notify
 from ..utils.buyback_matching import (
     BuybackContractExpectation,
     ExpectedItem,
     extract_tracking_number,
     match_contract,
 )
-from ..utils import buyback_notify
 from .utils import esi, log_task_execution
 
 logger = logging.getLogger(__name__)
@@ -129,6 +129,7 @@ def _contract_source(program) -> _ContractSource | None:
 def watchlist_flag_notes(program, type_ids) -> list[str]:
     """One note per watchlist entry in flag mode (not blocking) that matches an
     item directly or through its item group."""
+    # Third Party
     from eveuniverse.models import EveType
 
     from ..models import BuybackWatchlistItem
@@ -175,7 +176,10 @@ def _record_untracked(program, esi_contract, tracking_number):
     tracking number that was never issued: record it once and warn."""
     from ..models import BuybackContract, BuybackUntrackedContract
 
-    if getattr(esi_contract, "status", "outstanding") not in ("outstanding", "in_progress"):
+    if getattr(esi_contract, "status", "outstanding") not in (
+        "outstanding",
+        "in_progress",
+    ):
         return
     if getattr(esi_contract, "assignee_id", None) != program.recipient_id:
         return

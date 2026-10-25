@@ -548,9 +548,7 @@ class BuybackContract(models.Model):
     esi_items = models.JSONField(
         default=list,
         blank=True,
-        help_text=_(
-            "Items of the matched in-game contract, as [{type_id, quantity}]."
-        ),
+        help_text=_("Items of the matched in-game contract, as [{type_id, quantity}]."),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -714,7 +712,9 @@ class BuybackUserSettings(models.Model):
     )
     disable_notifications = models.BooleanField(
         default=False,
-        help_text=_("Don't send me Discord DMs or Auth notifications about my contracts."),
+        help_text=_(
+            "Don't send me Discord DMs or Auth notifications about my contracts."
+        ),
     )
 
     class Meta:

@@ -245,9 +245,11 @@ def buyback_notification_settings(request: WSGIRequest) -> HttpResponse:
     )
     messages.success(
         request,
-        _("Buyback notifications turned off.")
-        if disabled
-        else _("Buyback notifications turned on."),
+        (
+            _("Buyback notifications turned off.")
+            if disabled
+            else _("Buyback notifications turned on.")
+        ),
     )
     return redirect("industry_reforged:buyback_dashboard")
 
@@ -309,6 +311,7 @@ def item_comparison(contract) -> list[dict]:
     Empty until the poller has stored the in-game contract's items."""
     if not contract.esi_items:
         return []
+    # Third Party
     from eveuniverse.models import EveType
 
     quoted = {}

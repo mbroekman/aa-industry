@@ -24,7 +24,7 @@ EMBED_FIELD_LIMIT = 1024
 def _user_of(character):
     try:
         return character.character_ownership.user
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -38,10 +38,11 @@ def _notifications_disabled(user) -> bool:
 
 def _auth_notify(user, title: str, message: str, level: str = "info"):
     try:
+        # Alliance Auth
         from allianceauth.notifications import notify
 
         notify(user, title, message, level)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning(f"Could not create Auth notification for {user}: {e}")
 
 
@@ -79,7 +80,9 @@ def _item_list(contract) -> str:
     ]
     text = "\n".join(lines)
     if len(text) > EMBED_FIELD_LIMIT:
-        text = text[: EMBED_FIELD_LIMIT - 30].rsplit("\n", 1)[0] + "\n... (see the link)"
+        text = (
+            text[: EMBED_FIELD_LIMIT - 30].rsplit("\n", 1)[0] + "\n... (see the link)"
+        )
     return text
 
 
@@ -113,7 +116,10 @@ def notify_new_contract(contract):
         ]
         if contract.flag_notes:
             fields.append(
-                {"name": "Review notes", "value": contract.flag_notes[:EMBED_FIELD_LIMIT]}
+                {
+                    "name": "Review notes",
+                    "value": contract.flag_notes[:EMBED_FIELD_LIMIT],
+                }
             )
         if contract.seller_note:
             fields.append(
