@@ -435,6 +435,41 @@ urlpatterns = [
         name="director_config_buyback_watchlist_delete",
     ),
     path(
+        "director/buyback/rule/add/",
+        buyback.director_config_buyback_rule_edit,
+        name="director_config_buyback_rule_add",
+    ),
+    path(
+        "director/buyback/rule/<int:rule_id>/edit/",
+        buyback.director_config_buyback_rule_edit,
+        name="director_config_buyback_rule_edit",
+    ),
+    path(
+        "director/buyback/rule/<int:rule_id>/delete/",
+        buyback.director_config_buyback_rule_delete,
+        name="director_config_buyback_rule_delete",
+    ),
+    path(
+        "director/buyback/static-price/add/",
+        buyback.director_config_buyback_static_price_edit,
+        name="director_config_buyback_static_price_add",
+    ),
+    path(
+        "director/buyback/static-price/<int:price_id>/edit/",
+        buyback.director_config_buyback_static_price_edit,
+        name="director_config_buyback_static_price_edit",
+    ),
+    path(
+        "director/buyback/static-price/<int:price_id>/delete/",
+        buyback.director_config_buyback_static_price_delete,
+        name="director_config_buyback_static_price_delete",
+    ),
+    path(
+        "director/buyback/load-market-groups/",
+        buyback.director_buyback_load_market_groups,
+        name="director_buyback_load_market_groups",
+    ),
+    path(
         "director/buyback/review/",
         buyback.director_buyback_review,
         name="director_buyback_review",

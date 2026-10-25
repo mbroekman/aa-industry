@@ -1039,7 +1039,14 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "name"
     )
 
-    from ..models import BuybackProgram, BuybackWatchlistItem
+    from eveuniverse.models import EveMarketGroup
+
+    from ..models import (
+        BuybackItemRule,
+        BuybackProgram,
+        BuybackStaticPrice,
+        BuybackWatchlistItem,
+    )
 
     buyback_programs = (
         BuybackProgram.objects.filter(corporation=corporation)
@@ -1048,7 +1055,14 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     )
     buyback_watchlist_items = BuybackWatchlistItem.objects.filter(
         program__corporation=corporation
+    ).select_related("program", "eve_type", "eve_group")
+    buyback_item_rules = BuybackItemRule.objects.filter(
+        program__corporation=corporation
+    ).select_related("program", "eve_type", "eve_market_group")
+    buyback_static_prices = BuybackStaticPrice.objects.filter(
+        program__corporation=corporation
     ).select_related("program", "eve_type")
+    market_groups_loaded = EveMarketGroup.objects.exists()
 
     from ..models import JobTrackingConfig
 
@@ -1069,6 +1083,9 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "output_locations": output_locations,
         "buyback_programs": buyback_programs,
         "buyback_watchlist_items": buyback_watchlist_items,
+        "buyback_item_rules": buyback_item_rules,
+        "buyback_static_prices": buyback_static_prices,
+        "market_groups_loaded": market_groups_loaded,
         "job_tracking_configs": job_tracking_configs,
     }
     return render(request, "industry_reforged/director_config.html", context)

@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: Item rules and pricing options from the original buyback plugin (TASK-274, phase 2):
+  - **Item rules**: raise, lower or block the price of one item or a whole market group (a group rule covers the groups below it; the most specific rule wins). An allowlist mode accepts only items that have a rule.
+  - **Fixed prices** per item, without any modifier, rule or density tax.
+  - **Watchlist** entries can now cover a whole item group.
+  - **Ore, ice and moon ore**: raw, compressed and refined value can each be switched on or off; the highest enabled value is paid.
+  - **T1 scrap value**: ships, modules, charges, drones and subsystems up to meta level 4 can also be valued as scrap minerals, at their own yield.
+  - **NPC prices** for Sleeper Components, Triglavian Survey Databases, Overseer's Personal Effects and SCC Encrypted Bonds (each its own switch; the original's bonds switch read the wrong setting).
+  - **Hauling cost** per m³, optionally on compressed ore volume, shown separately in the calculator and on the contract.
+  - Assembled items are refused unless allowed, blueprints are always refused, and a program can refuse the whole appraisal when any item isn't accepted.
+  - The calculator explains each price (which valuation won, which rule applied, density tax).
+  - The EVE data these options need (reprocessing yields, meta levels, market groups) is fetched per item on first use; directors load all market groups once with a button.
+  - **Behaviour change**: items other than ore are no longer compared against their reprocessed value by default; that's now the opt-in T1 scrap option. Ore keeps using the higher of market and refined value.
+
 - **buyback**: Access and visibility options from the original buyback plugin (TASK-273, phase 1):
   - Programs can be limited to Alliance Auth groups and/or states. This is enforced everywhere: dashboard, calculator (including a direct POST), statistics and contract pages. Directors always see their own corporation's programs, and directors of another corporation can no longer open a contract's page.
   - A program can be made public: its calculator then works without logging in, and the visitor gets a private status page through the tracking number. Requires `APPS_WITH_PUBLIC_VIEWS = ["industry_reforged"]` in `local.py`; without it a login is still required.
@@ -98,6 +111,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **buyback**: Reprocessing yields are now divided by the item's portion size. EVE lists ore yields per 100 units, so refined ore would have been valued about 100x too high once reprocessing data was present.
 - **buyback**: Closed gaps in the Buyback Program (TASK-272, phase 0 of bringing it level with the original plugin):
   - Directors can now only see, edit, delete and resolve programs, watchlist entries and contracts of their own corporation. Before, the review queue showed every corporation's contracts and any program could be edited or deleted by id. Deleting now requires a POST, and a program that already has contracts can't be deleted (it previously crashed); deactivate it instead.
   - The in-game contract status is now followed: when the receiver accepts the contract in EVE it's marked Paid with one payout ledger entry (shared with the director's Pay button, so it's never recorded twice), rejected in EVE becomes Rejected, an outstanding contract past its in-game expiry becomes Expired, and a contract the seller deletes goes back to Pending so a corrected contract with the same tracking number can still match. Members get a DM when they're paid.

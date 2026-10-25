@@ -6,11 +6,11 @@ App Models
 from decimal import Decimal
 
 # Third Party
-from eveuniverse.models import EveCategory, EveType
+from eveuniverse.models import EveCategory, EveGroup, EveMarketGroup, EveType
 
 # Django
 from django.contrib.auth.models import Group
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.db.models import Q, Sum
 from django.utils.translation import gettext_lazy as _
@@ -170,8 +170,87 @@ class BuybackProgram(models.Model):
     refining_rate = models.FloatField(
         default=90.0,
         help_text=_(
-            "Refining efficiency (%) used to value reprocessable items (ore, loot) "
-            "that have no direct market price. No real reprocessing setup hits 100%%."
+            "Refining efficiency (%) used to value ore, ice and moon ore by their "
+            "refined minerals. No real reprocessing setup hits 100%%."
+        ),
+    )
+    allow_all_items = models.BooleanField(
+        default=True,
+        help_text=_(
+            "Accept every item that no rule disallows. When off, only items and "
+            "market groups that have a rule are accepted."
+        ),
+    )
+    use_raw_ore_value = models.BooleanField(
+        default=True,
+        help_text=_("Ore, ice and moon ore: value at the ore's own market price."),
+    )
+    use_compressed_value = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Ore, ice and moon ore: value at the compressed variant's market price."
+        ),
+    )
+    use_refined_value = models.BooleanField(
+        default=True,
+        help_text=_(
+            "Ore, ice and moon ore: value by the refined minerals, at the refining rate."
+        ),
+    )
+    use_reprocessed_value_for_t1 = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Ships, modules, charges, drones and subsystems up to meta level 4: also "
+            "value them as scrap minerals and pay the higher of market and scrap."
+        ),
+    )
+    t1_refining_rate = models.FloatField(
+        default=50.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text=_("Scrap reprocessing yield (%) for that T1 valuation."),
+    )
+    npc_price_blue_loot = models.BooleanField(
+        default=False,
+        help_text=_("Value Sleeper Components at their NPC (average) price."),
+    )
+    npc_price_red_loot = models.BooleanField(
+        default=False,
+        help_text=_("Value Triglavian Survey Databases at their NPC (average) price."),
+    )
+    npc_price_ope = models.BooleanField(
+        default=False,
+        help_text=_("Value Overseer's Personal Effects at their NPC (average) price."),
+    )
+    npc_price_bonds = models.BooleanField(
+        default=False,
+        help_text=_("Value SCC Encrypted Bonds at their NPC (average) price."),
+    )
+    hauling_fuel_cost = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0)],
+        help_text=_(
+            "ISK per m3 deducted for hauling (0 = none). Don't combine with the "
+            "density tax; both penalise bulky items."
+        ),
+    )
+    compression_density_modifier = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Use the compressed volume of ore, ice and moon ore for hauling and the "
+            "density tax."
+        ),
+    )
+    allow_unpacked_items = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Accept assembled items (inventory lines pasted without a quantity)."
+        ),
+    )
+    reject_appraisal_on_disallowed = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Refuse the whole appraisal when any pasted item isn't accepted, instead "
+            "of leaving that item out."
         ),
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -221,15 +300,20 @@ class BuybackProgram(models.Model):
 
 class BuybackWatchlistItem(models.Model):
     """
-    Per-program manual-review flag for a specific item type. `blocks_submission`
-    True rejects the item at calculator time; False allows it but flags the
-    resulting contract for director review.
+    Per-program manual-review flag for one item type or a whole item group.
+    `blocks_submission` True rejects the item at calculator time; False allows
+    it but flags the resulting contract for director review.
     """
 
     program = models.ForeignKey(
         BuybackProgram, on_delete=models.CASCADE, related_name="watchlist_items"
     )
-    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    eve_type = models.ForeignKey(
+        EveType, on_delete=models.CASCADE, related_name="+", null=True, blank=True
+    )
+    eve_group = models.ForeignKey(
+        EveGroup, on_delete=models.CASCADE, related_name="+", null=True, blank=True
+    )
     reason = models.CharField(max_length=255, blank=True)
     blocks_submission = models.BooleanField(
         default=False,
@@ -242,9 +326,118 @@ class BuybackWatchlistItem(models.Model):
         verbose_name = _("Buyback Watchlist Item")
         verbose_name_plural = _("Buyback Watchlist Items")
         unique_together = (("program", "eve_type"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["program", "eve_group"],
+                condition=Q(eve_group__isnull=False),
+                name="buyback_watchlist_unique_group",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(eve_type__isnull=False, eve_group__isnull=True)
+                    | Q(eve_type__isnull=True, eve_group__isnull=False)
+                ),
+                name="buyback_watchlist_type_xor_group",
+            ),
+        ]
+
+    @property
+    def target_name(self) -> str:
+        if self.eve_type_id:
+            return self.eve_type.name
+        return f"{self.eve_group.name} ({_('group')})"
 
     def __str__(self):
-        return f"{self.eve_type.name} - {self.program.name}"
+        return f"{self.target_name} - {self.program.name}"
+
+
+class BuybackItemRule(models.Model):
+    """A per-program price adjustment or ban for one item or a market group.
+
+    A market-group rule also covers every group below it; the most specific
+    rule wins (the item itself, then the nearest market group).
+    """
+
+    program = models.ForeignKey(
+        BuybackProgram, on_delete=models.CASCADE, related_name="item_rules"
+    )
+    eve_type = models.ForeignKey(
+        EveType, on_delete=models.CASCADE, related_name="+", null=True, blank=True
+    )
+    eve_market_group = models.ForeignKey(
+        EveMarketGroup,
+        on_delete=models.CASCADE,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+    price_modifier_percent = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(-100.0), MaxValueValidator(100.0)],
+        help_text=_(
+            "Added to the program's price modifier for this item or group, e.g. -10 "
+            "pays 10% less, +5 pays 5% more."
+        ),
+    )
+    disallow = models.BooleanField(
+        default=False, help_text=_("Don't accept this item or group at all.")
+    )
+
+    class Meta:
+        verbose_name = _("Buyback Item Rule")
+        verbose_name_plural = _("Buyback Item Rules")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["program", "eve_type"],
+                condition=Q(eve_type__isnull=False),
+                name="buyback_rule_unique_type",
+            ),
+            models.UniqueConstraint(
+                fields=["program", "eve_market_group"],
+                condition=Q(eve_market_group__isnull=False),
+                name="buyback_rule_unique_market_group",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(eve_type__isnull=False, eve_market_group__isnull=True)
+                    | Q(eve_type__isnull=True, eve_market_group__isnull=False)
+                ),
+                name="buyback_rule_type_xor_market_group",
+            ),
+        ]
+
+    @property
+    def target_name(self) -> str:
+        if self.eve_type_id:
+            return self.eve_type.name
+        return f"{self.eve_market_group.name} ({_('market group')})"
+
+    def __str__(self):
+        return f"{self.target_name} - {self.program.name}"
+
+
+class BuybackStaticPrice(models.Model):
+    """A fixed ISK price for one item in a program. It replaces the market
+    valuation; no price modifier, rule or density tax applies to it."""
+
+    program = models.ForeignKey(
+        BuybackProgram, on_delete=models.CASCADE, related_name="static_prices"
+    )
+    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    price = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=_("ISK paid per unit."),
+    )
+
+    class Meta:
+        verbose_name = _("Buyback Static Price")
+        verbose_name_plural = _("Buyback Static Prices")
+        unique_together = (("program", "eve_type"),)
+
+    def __str__(self):
+        return f"{self.eve_type.name}: {self.price} - {self.program.name}"
 
 
 class BuybackContract(models.Model):
@@ -296,6 +489,15 @@ class BuybackContract(models.Model):
             "ISK voluntarily donated to the corp from this contract's appraisal, chosen by the member at submission time. Already deducted from quoted_price."
         ),
     )
+    hauling_cost = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=0.00,
+        help_text=_(
+            "ISK deducted for hauling (program's ISK/m3 x volume). Already deducted "
+            "from quoted_price."
+        ),
+    )
     contract_price = models.DecimalField(
         max_digits=20, decimal_places=2, null=True, blank=True
     )
@@ -344,10 +546,12 @@ class BuybackContract(models.Model):
 
     @property
     def modifier_impact(self):
-        """ISK difference the program's price modifier + bulk-item tax made to
-        this contract: gross_appraisal (pre-donation) minus base_appraisal_total.
-        Negative means the modifier reduced the payout (e.g. a -5% modifier)."""
-        return self.gross_appraisal - self.base_appraisal_total
+        """ISK difference the price modifiers, item rules and bulk-item tax made
+        to this contract: the items' appraised total (before hauling and
+        donation) minus base_appraisal_total. Negative means they reduced the
+        payout (e.g. a -5% modifier)."""
+        hauling = Decimal(str(self.hauling_cost or 0))
+        return self.gross_appraisal + hauling - self.base_appraisal_total
 
     @property
     def has_flags(self):

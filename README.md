@@ -153,6 +153,12 @@ APPS_WITH_PUBLIC_VIEWS = ["industry_reforged"]
 
 Without this setting, public programs still work but require a login. Directors find the public link under the program on the Buyback tab of Director Configurations.
 
+#### Buyback pricing data
+
+Some Buyback pricing options need EVE data that a default eveuniverse install doesn't load: refined ore value and T1 scrap value need reprocessing yields, T1 scrap needs each item's meta level, and market-group rules need market groups. No import step is required. The calculator fetches what it needs for the pasted items the first time it sees them and stores it, so the first appraisal of a new item can take a few seconds longer.
+
+Market groups are the exception: to choose one for an item rule they must all exist first. Click **Load market groups** in the Item Rules section of the Buyback tab once; this runs `industry_reforged.tasks.buyback_load_market_groups` in the background (not a scheduled task). The "NPC price" options use CCP's average prices, which the daily `task_pull_market_data` run refreshes.
+
 #### Automating Scopes for all Users
 To prevent members from having to manually authorize additional PI or Industry tokens, you can configure Alliance Auth to **automatically request these scopes** during the standard "Add Character" login flow. Add the following to your `myauth/settings/local.py`:
 

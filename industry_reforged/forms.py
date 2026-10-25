@@ -3,7 +3,7 @@ import re
 
 # Third Party
 import requests
-from eveuniverse.models import EveType
+from eveuniverse.models import EveGroup, EveMarketGroup, EveType
 
 # Django
 from django import forms
@@ -14,7 +14,9 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     Basket,
     BasketItem,
+    BuybackItemRule,
     BuybackProgram,
+    BuybackStaticPrice,
     BuybackWatchlistItem,
     CorpItemConfig,
     CorporationPricingConfig,
@@ -911,8 +913,45 @@ class BuybackProgramForm(forms.ModelForm):
             "contract_expiry_days",
             "price_type",
             "refining_rate",
+            "allow_all_items",
+            "use_raw_ore_value",
+            "use_compressed_value",
+            "use_refined_value",
+            "use_reprocessed_value_for_t1",
+            "t1_refining_rate",
+            "npc_price_blue_loot",
+            "npc_price_red_loot",
+            "npc_price_ope",
+            "npc_price_bonds",
+            "hauling_fuel_cost",
+            "compression_density_modifier",
+            "allow_unpacked_items",
+            "reject_appraisal_on_disallowed",
         ]
         widgets = {
+            **{
+                name: forms.CheckboxInput(attrs={"class": "form-check-input"})
+                for name in (
+                    "allow_all_items",
+                    "use_raw_ore_value",
+                    "use_compressed_value",
+                    "use_refined_value",
+                    "use_reprocessed_value_for_t1",
+                    "npc_price_blue_loot",
+                    "npc_price_red_loot",
+                    "npc_price_ope",
+                    "npc_price_bonds",
+                    "compression_density_modifier",
+                    "allow_unpacked_items",
+                    "reject_appraisal_on_disallowed",
+                )
+            },
+            "t1_refining_rate": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1", "min": "0", "max": "100"}
+            ),
+            "hauling_fuel_cost": forms.NumberInput(
+                attrs={"class": "form-control isk-input", "step": "1", "min": "0"}
+            ),
             "corporation": forms.Select(attrs={"class": "form-select"}),
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -996,23 +1035,8 @@ class BuybackProgramForm(forms.ModelForm):
         return cleaned_data
 
 
-class BuybackWatchlistItemForm(forms.ModelForm):
-    item_name = forms.CharField(
-        max_length=100,
-        help_text=_("Exact name of the item (e.g. PLEX)"),
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "PLEX"}),
-    )
-
-    class Meta:
-        model = BuybackWatchlistItem
-        fields = ["program", "item_name", "reason", "blocks_submission"]
-        widgets = {
-            "program": forms.Select(attrs={"class": "form-select"}),
-            "reason": forms.TextInput(attrs={"class": "form-control"}),
-            "blocks_submission": forms.CheckboxInput(
-                attrs={"class": "form-check-input"}
-            ),
-        }
+class _BuybackProgramChildForm(forms.ModelForm):
+    """Shared setup for forms that belong to one of the director's programs."""
 
     def __init__(self, *args, corporation=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1023,26 +1047,177 @@ class BuybackWatchlistItemForm(forms.ModelForm):
         self.fields["program"].label_from_instance = lambda obj: obj.name
         if self.instance and self.instance.pk:
             self.fields["program"].disabled = True
-            if self.instance.eve_type:
+
+    def _check_unique(self, model, **lookup):
+        qs = model.objects.filter(program=self.cleaned_data.get("program"), **lookup)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        return not qs.exists()
+
+
+class BuybackWatchlistItemForm(_BuybackProgramChildForm):
+    item_name = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Exact name of one item (e.g. PLEX)."),
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "PLEX"}),
+    )
+    group_name = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_(
+            "Or the exact name of an item group, to watch every item in it "
+            "(e.g. Salvaged Materials)."
+        ),
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+
+    class Meta:
+        model = BuybackWatchlistItem
+        fields = ["program", "item_name", "group_name", "reason", "blocks_submission"]
+        widgets = {
+            "program": forms.Select(attrs={"class": "form-select"}),
+            "reason": forms.TextInput(attrs={"class": "form-control"}),
+            "blocks_submission": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            if self.instance.eve_type_id:
                 self.fields["item_name"].initial = self.instance.eve_type.name
+            if self.instance.eve_group_id:
+                self.fields["group_name"].initial = self.instance.eve_group.name
 
     def clean(self):
         cleaned_data = super().clean()
-        item_name = cleaned_data.get("item_name")
+        item_name = (cleaned_data.get("item_name") or "").strip()
+        group_name = (cleaned_data.get("group_name") or "").strip()
+        if bool(item_name) == bool(group_name):
+            raise ValidationError(_("Enter either an item name or a group name."))
+
         if item_name:
             eve_type = resolve_eve_type(item_name)
-
-            program = cleaned_data.get("program")
-            if not program:
-                return cleaned_data
-
-            qs = BuybackWatchlistItem.objects.filter(program=program, eve_type=eve_type)
-            if self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
-            if qs.exists():
+            if not self._check_unique(BuybackWatchlistItem, eve_type=eve_type):
                 self.add_error(
                     "item_name", _("A watchlist entry for this item already exists.")
                 )
+            self.instance.eve_type, self.instance.eve_group = eve_type, None
+        else:
+            groups = list(EveGroup.objects.filter(name__iexact=group_name)[:2])
+            if len(groups) != 1:
+                self.add_error(
+                    "group_name",
+                    _("No single item group is called '%(name)s'.")
+                    % {"name": group_name},
+                )
+                return cleaned_data
+            if not self._check_unique(BuybackWatchlistItem, eve_group=groups[0]):
+                self.add_error(
+                    "group_name", _("A watchlist entry for this group already exists.")
+                )
+            self.instance.eve_type, self.instance.eve_group = None, groups[0]
+        return cleaned_data
 
+
+class _MarketGroupChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        parent = obj.parent_market_group
+        return f"{parent.name} > {obj.name}" if parent else obj.name
+
+
+class BuybackItemRuleForm(_BuybackProgramChildForm):
+    item_name = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Exact name of one item."),
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    eve_market_group = _MarketGroupChoiceField(
+        queryset=EveMarketGroup.objects.select_related("parent_market_group").order_by(
+            "name"
+        ),
+        required=False,
+        label=_("Market group"),
+        help_text=_(
+            "Or a market group; the rule then covers every group below it too. "
+            "The most specific rule wins."
+        ),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    class Meta:
+        model = BuybackItemRule
+        fields = [
+            "program",
+            "item_name",
+            "eve_market_group",
+            "price_modifier_percent",
+            "disallow",
+        ]
+        widgets = {
+            "program": forms.Select(attrs={"class": "form-select"}),
+            "price_modifier_percent": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.1"}
+            ),
+            "disallow": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.eve_type_id:
+            self.fields["item_name"].initial = self.instance.eve_type.name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item_name = (cleaned_data.get("item_name") or "").strip()
+        market_group = cleaned_data.get("eve_market_group")
+        if bool(item_name) == bool(market_group):
+            raise ValidationError(_("Choose either an item or a market group."))
+
+        if item_name:
+            eve_type = resolve_eve_type(item_name)
+            if not self._check_unique(BuybackItemRule, eve_type=eve_type):
+                self.add_error("item_name", _("This item already has a rule."))
+            self.instance.eve_type = eve_type
+            cleaned_data["eve_market_group"] = None
+        else:
+            if not self._check_unique(BuybackItemRule, eve_market_group=market_group):
+                self.add_error("eve_market_group", _("This group already has a rule."))
+            self.instance.eve_type = None
+        return cleaned_data
+
+
+class BuybackStaticPriceForm(_BuybackProgramChildForm):
+    item_name = forms.CharField(
+        max_length=100,
+        help_text=_("Exact name of the item."),
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+
+    class Meta:
+        model = BuybackStaticPrice
+        fields = ["program", "item_name", "price"]
+        widgets = {
+            "program": forms.Select(attrs={"class": "form-select"}),
+            "price": forms.NumberInput(
+                attrs={"class": "form-control isk-input", "step": "0.01", "min": "0"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields["item_name"].initial = self.instance.eve_type.name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item_name = (cleaned_data.get("item_name") or "").strip()
+        if item_name:
+            eve_type = resolve_eve_type(item_name)
+            if not self._check_unique(BuybackStaticPrice, eve_type=eve_type):
+                self.add_error("item_name", _("This item already has a fixed price."))
             self.instance.eve_type = eve_type
         return cleaned_data

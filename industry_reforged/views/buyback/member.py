@@ -93,7 +93,9 @@ def run_calculator(
         )
         return render(request, CALCULATOR_TEMPLATE, context)
 
-    parsed_items, unrecognized = parse_inventory_paste(inventory_text)
+    parsed_items, unrecognized, unpacked_type_ids = parse_inventory_paste(
+        inventory_text, with_unpacked=True
+    )
     if unrecognized:
         messages.warning(
             request,
@@ -105,9 +107,25 @@ def run_calculator(
         messages.error(request, _("No valid items found in the pasted list."))
         return render(request, CALCULATOR_TEMPLATE, context)
 
-    gross_total, item_details = calculate_buyback_quote(parsed_items, program)
+    gross_total, item_details = calculate_buyback_quote(
+        parsed_items, program, unpacked_type_ids=unpacked_type_ids
+    )
     base_total = sum((d["base_line_total"] for d in item_details), Decimal("0.00"))
-    modifier_impact = gross_total - base_total
+    hauling_total = sum(
+        (d.get("hauling_cost", Decimal("0.00")) for d in item_details),
+        Decimal("0.00"),
+    )
+    modifier_impact = gross_total + hauling_total - base_total
+    any_blocked = any(d["blocked"] for d in item_details)
+    whole_appraisal_refused = program.reject_appraisal_on_disallowed and any_blocked
+    if whole_appraisal_refused:
+        messages.error(
+            request,
+            _(
+                "This program only accepts an appraisal when every item is accepted. "
+                "Remove the items marked as not accepted and try again."
+            ),
+        )
 
     donation_mode = request.POST.get("donation_mode", "isk")
     donation_amount = _compute_donation(
@@ -121,6 +139,8 @@ def run_calculator(
             "item_details": item_details,
             "base_total": base_total,
             "modifier_impact": modifier_impact,
+            "hauling_total": hauling_total,
+            "whole_appraisal_refused": whole_appraisal_refused,
             "donation_mode": donation_mode,
             "donation_value": request.POST.get("donation_value", ""),
             "donation_amount": donation_amount,
@@ -128,7 +148,7 @@ def run_calculator(
         }
     )
 
-    if request.POST.get("confirm") != "1":
+    if request.POST.get("confirm") != "1" or whole_appraisal_refused:
         # Preview only - nothing is persisted and no ESI call is made here.
         return render(request, CALCULATOR_TEMPLATE, context)
 
@@ -149,6 +169,7 @@ def run_calculator(
         character=character,
         quoted_price=net_total,
         donation_amount=donation_amount,
+        hauling_cost=hauling_total,
         status="PENDING",
         flag_watchlist=bool(watchlist_notes),
         flag_notes="\n".join(watchlist_notes),

@@ -374,3 +374,15 @@ def buyback_purge_stale_contracts():
                 contract,
                 f"Your buyback contract {contract.tracking_number} expired - no matching contract was seen in time.",
             )
+
+
+@shared_task(name="industry_reforged.tasks.buyback_load_market_groups")
+@log_task_execution("Buyback Load Market Groups")
+def buyback_load_market_groups():
+    """Load every EVE market group, so directors can pick one for an item rule.
+
+    Started from the Buyback tab, not scheduled: market groups barely change.
+    """
+    from eveuniverse.models import EveMarketGroup
+
+    EveMarketGroup.objects.update_or_create_all_esi()

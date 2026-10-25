@@ -42,10 +42,15 @@
                 <dd class="col-sm-9">{{ contract.base_appraisal_total|eve_isk }}</dd>
 
                 {% if contract.modifier_impact %}
-                <dt class="col-sm-3">{% trans "Price Modifier / Bulk Tax" %}</dt>
+                <dt class="col-sm-3">{% trans "Price Modifier / Item Rules / Bulk Tax" %}</dt>
                 <dd class="col-sm-9 {% if contract.modifier_impact < 0 %}text-danger{% else %}text-success{% endif %}">
                     {% if contract.modifier_impact > 0 %}+{% endif %}{{ contract.modifier_impact|eve_isk }}
                 </dd>
+                {% endif %}
+
+                {% if contract.hauling_cost %}
+                <dt class="col-sm-3">{% trans "Hauling" %}</dt>
+                <dd class="col-sm-9 text-danger">-{{ contract.hauling_cost|eve_isk }}</dd>
                 {% endif %}
 
                 {% if contract.donation_amount %}

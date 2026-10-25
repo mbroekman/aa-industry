@@ -91,6 +91,8 @@ class TestBuybackDirectorViews:
                 "contract_expiry_days": "7",
                 "price_type": "SELL",
                 "refining_rate": "90.0",
+                "t1_refining_rate": "50",
+                "hauling_fuel_cost": "0",
             },
         )
         request.user = user
@@ -121,6 +123,8 @@ class TestBuybackDirectorViews:
                 "contract_expiry_days": "7",
                 "price_type": "SELL",
                 "refining_rate": "90.0",
+                "t1_refining_rate": "50",
+                "hauling_fuel_cost": "0",
             },
         )
         request.user = user
@@ -149,6 +153,8 @@ class TestBuybackDirectorViews:
                 "contract_expiry_days": "7",
                 "price_type": "SELL",
                 "refining_rate": "90.0",
+                "t1_refining_rate": "50",
+                "hauling_fuel_cost": "0",
             },
         )
         request.user = user

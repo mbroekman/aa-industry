@@ -9,6 +9,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# Django
+from django.db.models import Q
+
 logger = logging.getLogger(__name__)
 
 ESI_MARKET_ORDERS_URL = "https://esi.evetech.net/latest/markets/{region_id}/orders/"
@@ -708,58 +711,95 @@ def _market_unit_prices(type_ids, order_type="sell") -> dict:
 
 
 def get_reprocessing_value(
-    eve_type, quantity, efficiency=1.0, order_type="sell"
+    eve_type, quantity, efficiency=1.0, order_type="sell", price_overrides=None
 ) -> Decimal | None:
     """
     Reprocessing valuation via eveuniverse's EveType.materials (SDE reprocessing
     yield), with the materials valued at the same price basis (buy/sell/split)
-    as the item itself. Returns None (never False/0) when the item has no
+    as the item itself; `price_overrides` ({type_id: Decimal}) wins over the
+    market for a material. Returns None (never False/0) when the item has no
     reprocessing output at all, so callers never hit a "0 vs. unset" ambiguity.
+
+    SDE yields are per portion (100 units for ore), so they're divided by the
+    item's portion size to get the yield of a single unit.
     """
     materials = list(eve_type.materials.all())
     if not materials:
         return None
 
+    overrides = price_overrides or {}
     material_ids = [m.material_eve_type_id for m in materials]
     prices = _market_unit_prices(material_ids, order_type=order_type)
 
+    portion = Decimal(str(eve_type.portion_size or 1))
     total = Decimal("0.00")
     for mat in materials:
-        unit_price = Decimal(str(prices.get(mat.material_eve_type_id, 0.0)))
-        yielded_per_unit = Decimal(str(mat.quantity)) * Decimal(str(efficiency))
+        unit_price = overrides.get(mat.material_eve_type_id)
+        if unit_price is None:
+            unit_price = Decimal(str(prices.get(mat.material_eve_type_id, 0.0)))
+        yielded_per_unit = (
+            Decimal(str(mat.quantity)) * Decimal(str(efficiency)) / portion
+        )
         total += unit_price * yielded_per_unit
 
     return total * quantity
 
 
-def get_item_value_variants(
-    eve_type, quantity, order_type="sell", refining_efficiency=1.0
-) -> dict:
+def get_buyback_value_variants(eve_type, quantity, program, static_prices=None) -> dict:
     """
-    Single parameterized replacement for the "raw/compressed/refined/NPC
-    best-of" concept: returns only the valuation keys that actually apply to
-    this item, using explicit `is not None` checks rather than a `False`-as-
-    sentinel pattern. Compressed/raw ore items are themselves distinct
-    EveTypes with their own market price, so "best of market vs. reprocessed"
-    already covers raw ore without any ore-specific special-casing.
+    Every valuation the program allows for this item, as {source: line value}.
+    The calculator pays the highest. Ore, ice and moon ore can be valued raw,
+    compressed and refined (each switchable per program); other items at
+    their market price, plus scrap value for T1 gear when the program asks.
+    """
+    from . import buyback_data
 
-    `order_type` is "buy", "sell", or "split" (average of both) - the pricing
-    basis for the direct market valuation. `refining_efficiency` (0.0-1.0)
-    scales the reprocessed valuation to a realistic refining rate.
-    """
+    order_type = (program.price_type or "SELL").lower()
     variants = {}
+    ore = buyback_data.is_ore(eve_type)
 
-    market_price = _market_unit_prices([eve_type.id], order_type=order_type).get(
-        eve_type.id, 0.0
-    )
-    if market_price and market_price > 0.0:
-        variants["market"] = Decimal(str(market_price)) * quantity
+    if not ore or program.use_raw_ore_value:
+        market_price = _market_unit_prices([eve_type.id], order_type=order_type).get(
+            eve_type.id, 0.0
+        )
+        if market_price and market_price > 0.0:
+            variants["market"] = Decimal(str(market_price)) * quantity
 
-    reprocessed = get_reprocessing_value(
-        eve_type, quantity, efficiency=refining_efficiency, order_type=order_type
-    )
-    if reprocessed is not None and reprocessed > 0:
-        variants["reprocessed"] = reprocessed
+    if ore and program.use_compressed_value:
+        compressed = buyback_data.compressed_variant(eve_type)
+        if compressed:
+            price = _market_unit_prices([compressed.id], order_type=order_type).get(
+                compressed.id, 0.0
+            )
+            if price and price > 0.0:
+                variants["compressed"] = Decimal(str(price)) * quantity
+
+    if ore and program.use_refined_value:
+        refined = get_reprocessing_value(
+            eve_type,
+            quantity,
+            efficiency=float(program.refining_rate or 0.0) / 100.0,
+            order_type=order_type,
+            price_overrides=static_prices,
+        )
+        if refined is not None and refined > 0:
+            variants["refined"] = refined
+
+    if (
+        not ore
+        and program.use_reprocessed_value_for_t1
+        and buyback_data.is_t1_scrap_candidate(eve_type)
+        and buyback_data.is_t1(eve_type)
+    ):
+        scrap = get_reprocessing_value(
+            eve_type,
+            quantity,
+            efficiency=float(program.t1_refining_rate or 0.0) / 100.0,
+            order_type=order_type,
+            price_overrides=static_prices,
+        )
+        if scrap is not None and scrap > 0:
+            variants["scrap"] = scrap
 
     return variants
 
@@ -795,36 +835,131 @@ def calculate_price_density_tax(
     )
 
 
-def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]:
+_SOURCE_NOTES = {
+    "market": "market price",
+    "compressed": "compressed ore price",
+    "refined": "refined mineral value",
+    "scrap": "scrap mineral value",
+    "static": "fixed program price",
+    "npc": "NPC price",
+}
+
+
+class _BuybackRules:
+    """A program's item rules, static prices and watchlist, loaded once per quote."""
+
+    def __init__(self, program, eve_types):
+        from ..models.buyback import (
+            BuybackItemRule,
+            BuybackStaticPrice,
+            BuybackWatchlistItem,
+        )
+
+        type_ids = [t.id for t in eve_types]
+        group_ids = {t.eve_group_id for t in eve_types}
+        self.accepted_category_ids = (
+            set(program.accepted_categories.values_list("id", flat=True))
+            if program.pk
+            else set()
+        )
+        self.watch_by_type, self.watch_by_group = {}, {}
+        for entry in BuybackWatchlistItem.objects.filter(program=program).filter(
+            Q(eve_type_id__in=type_ids) | Q(eve_group_id__in=group_ids)
+        ):
+            if entry.eve_type_id:
+                self.watch_by_type[entry.eve_type_id] = entry
+            else:
+                self.watch_by_group[entry.eve_group_id] = entry
+
+        self.rule_by_type, self.rule_by_group = {}, {}
+        for rule in BuybackItemRule.objects.filter(program=program).select_related(
+            "eve_type", "eve_market_group"
+        ):
+            if rule.eve_type_id:
+                self.rule_by_type[rule.eve_type_id] = rule
+            else:
+                self.rule_by_group[rule.eve_market_group_id] = rule
+
+        self.static_prices = {
+            sp.eve_type_id: sp.price
+            for sp in BuybackStaticPrice.objects.filter(program=program)
+        }
+
+    @property
+    def needs_market_groups(self) -> bool:
+        return bool(self.rule_by_group)
+
+    def watchlist_entry(self, eve_type):
+        return self.watch_by_type.get(eve_type.id) or self.watch_by_group.get(
+            eve_type.eve_group_id
+        )
+
+    def rule_for(self, eve_type):
+        """The item's own rule, else the nearest market group's rule."""
+        from . import buyback_data
+
+        rule = self.rule_by_type.get(eve_type.id)
+        if rule or not self.rule_by_group:
+            return rule
+        for group_id in buyback_data.market_group_ancestry(eve_type):
+            if group_id in self.rule_by_group:
+                return self.rule_by_group[group_id]
+        return None
+
+
+def _load_buyback_data(parsed_items, program, rules) -> dict:
+    """Fetch the EVE data the program's options need, for just these items."""
+    from eveuniverse.models import EveType
+
+    from . import buyback_data
+
+    eve_types = {t.id: t for t in parsed_items}
+    if rules.needs_market_groups:
+        eve_types.update(
+            buyback_data.ensure_sections(
+                list(eve_types.values()), EveType.Section.MARKET_GROUPS
+            )
+        )
+    if program.use_refined_value:
+        ores = [t for t in eve_types.values() if buyback_data.is_ore(t)]
+        eve_types.update(
+            buyback_data.ensure_sections(ores, EveType.Section.TYPE_MATERIALS)
+        )
+    if program.use_reprocessed_value_for_t1:
+        candidates = [
+            t for t in eve_types.values() if buyback_data.is_t1_scrap_candidate(t)
+        ]
+        eve_types.update(buyback_data.ensure_sections(candidates, EveType.Section.DOGMAS))
+        eve_types.update(
+            buyback_data.ensure_sections(
+                [t for t in candidates if buyback_data.is_t1(eve_types[t.id])],
+                EveType.Section.TYPE_MATERIALS,
+            )
+        )
+    return eve_types
+
+
+def calculate_buyback_quote(
+    parsed_items, program, unpacked_type_ids=frozenset()
+) -> tuple[Decimal, list[dict]]:
     """
     The buyback calculator's entry point: takes {EveType: quantity} and a
-    BuybackProgram, returns (total_price, item_details) in the same shape
-    calculate_quote() already uses, so the calculator view can be built the
-    same way views/orders/create.py already builds on calculate_quote().
+    BuybackProgram, returns (total_price, item_details). total_price is the sum
+    of the accepted lines minus hauling; every detail carries its own
+    "hauling_cost" and plain-language "notes" explaining the price.
 
     Never raises on an unrecognized valuation path (the source project's
     `raise f"Unknown pricing method: ..."` bug - raising a string isn't valid
     exception semantics) - logs a warning and returns a 0-value line instead.
     """
-    from ..models.buyback import BuybackWatchlistItem
+    from . import buyback_data
 
-    watchlist = {
-        w.eve_type_id: w
-        for w in BuybackWatchlistItem.objects.filter(
-            program=program, eve_type_id__in=[t.id for t in parsed_items.keys()]
-        )
-    }
-
-    accepted_category_ids = (
-        set(program.accepted_categories.values_list("id", flat=True))
-        if program.pk
-        else set()
-    )
+    rules = _BuybackRules(program, list(parsed_items.keys()))
+    fresh_types = _load_buyback_data(parsed_items, program, rules)
+    hauling_rate = Decimal(str(program.hauling_fuel_cost or 0.0))
 
     total_price = Decimal("0.00")
     item_details = []
-    order_type = (program.price_type or "SELL").lower()
-    refining_efficiency = float(program.refining_rate or 0.0) / 100.0
 
     def blocked_line(eve_type, quantity, reason, watchlist_reason=""):
         return {
@@ -834,15 +969,34 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
             "line_total": Decimal("0.00"),
             "base_unit_price": Decimal("0.00"),
             "base_line_total": Decimal("0.00"),
+            "hauling_cost": Decimal("0.00"),
             "value_source": None,
             "blocked": True,
             "blocked_reason": reason,
             "flagged": False,
             "watchlist_reason": watchlist_reason,
+            "notes": [],
         }
 
-    for eve_type, quantity in parsed_items.items():
-        watchlist_entry = watchlist.get(eve_type.id)
+    for original_type, quantity in parsed_items.items():
+        eve_type = fresh_types.get(original_type.id, original_type)
+
+        if buyback_data.is_blueprint(eve_type):
+            item_details.append(
+                blocked_line(eve_type, quantity, "Blueprints aren't accepted.")
+            )
+            continue
+        if eve_type.id in unpacked_type_ids and not program.allow_unpacked_items:
+            item_details.append(
+                blocked_line(
+                    eve_type,
+                    quantity,
+                    "Assembled items aren't accepted. Repackage them and paste again.",
+                )
+            )
+            continue
+
+        watchlist_entry = rules.watchlist_entry(eve_type)
         if watchlist_entry and watchlist_entry.blocks_submission:
             item_details.append(
                 blocked_line(
@@ -854,10 +1008,10 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
             )
             continue
 
-        category_id = (
-            eve_type.eve_group.eve_category_id if eve_type.eve_group_id else None
-        )
-        if accepted_category_ids and category_id not in accepted_category_ids:
+        if (
+            rules.accepted_category_ids
+            and buyback_data.category_id(eve_type) not in rules.accepted_category_ids
+        ):
             item_details.append(
                 blocked_line(
                     eve_type,
@@ -867,40 +1021,91 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
             )
             continue
 
-        variants = get_item_value_variants(
-            eve_type,
-            quantity,
-            order_type=order_type,
-            refining_efficiency=refining_efficiency,
-        )
-        if not variants:
-            logger.warning(
-                f"No valuation method applies to {eve_type.name} ({eve_type.id}) - valuing at 0."
+        rule = rules.rule_for(eve_type)
+        if rule and rule.disallow:
+            item_details.append(
+                blocked_line(eve_type, quantity, "Not accepted by this program.")
             )
-            line_total = Decimal("0.00")
-            value_source = None
+            continue
+        if not program.allow_all_items and rule is None:
+            item_details.append(
+                blocked_line(
+                    eve_type,
+                    quantity,
+                    "This program only accepts the items on its list.",
+                )
+            )
+            continue
+
+        notes = []
+        static_price = rules.static_prices.get(eve_type.id)
+        npc = (
+            buyback_data.npc_price(eve_type)
+            if static_price is None
+            and buyback_data.npc_price_applies(program, eve_type)
+            else None
+        )
+        if static_price is not None:
+            value_source = "static"
+            base_unit_price = Decimal(static_price).quantize(Decimal("0.01"))
+        elif npc is not None:
+            value_source = "npc"
+            base_unit_price = Decimal(str(npc)).quantize(Decimal("0.01"))
         else:
-            value_source, line_total = max(variants.items(), key=lambda kv: kv[1])
+            variants = get_buyback_value_variants(
+                eve_type, quantity, program, static_prices=rules.static_prices
+            )
+            if not variants:
+                logger.warning(
+                    f"No valuation method applies to {eve_type.name} ({eve_type.id}) - valuing at 0."
+                )
+                value_source = None
+                line_value = Decimal("0.00")
+                notes.append("No price data available.")
+            else:
+                value_source, line_value = max(variants.items(), key=lambda kv: kv[1])
+            base_unit_price = (
+                (line_value / quantity).quantize(Decimal("0.01"))
+                if quantity
+                else Decimal("0.00")
+            )
+        if value_source:
+            notes.append(f"Valued at {_SOURCE_NOTES[value_source]}.")
 
-        base_unit_price = (
-            (line_total / quantity).quantize(Decimal("0.01"))
-            if quantity
-            else Decimal("0.00")
+        compressed = (
+            buyback_data.compressed_variant(eve_type)
+            if buyback_data.is_ore(eve_type)
+            and (value_source == "compressed" or program.compression_density_modifier)
+            else None
         )
+        if compressed:
+            unit_volume = compressed.packaged_volume or compressed.volume or 0.0
+        else:
+            unit_volume = eve_type.packaged_volume or eve_type.volume or 0.0
 
-        modifier = Decimal(str(program.price_modifier_percent or 0.0)) / Decimal(
-            "100.00"
-        )
-        unit_price = (base_unit_price * (Decimal("1.00") + modifier)).quantize(
+        if value_source == "static":
+            unit_price = base_unit_price
+        else:
+            modifier_percent = float(program.price_modifier_percent or 0.0)
+            if rule and rule.price_modifier_percent:
+                modifier_percent += rule.price_modifier_percent
+                notes.append(
+                    f"{rule.target_name}: {rule.price_modifier_percent:+g}% item rule."
+                )
+            modifier = Decimal(str(modifier_percent)) / Decimal("100.00")
+            unit_price = (base_unit_price * (Decimal("1.00") + modifier)).quantize(
+                Decimal("0.01")
+            )
+            density_tax = calculate_price_density_tax(unit_price, unit_volume, program)
+            if density_tax:
+                notes.append("Bulky low-value item: density tax applied.")
+            unit_price = max(Decimal("0.00"), unit_price - density_tax)
+
+        hauling_cost = (Decimal(str(unit_volume)) * hauling_rate * quantity).quantize(
             Decimal("0.01")
         )
-
-        packaged_volume = eve_type.packaged_volume or eve_type.volume
-        density_tax = calculate_price_density_tax(unit_price, packaged_volume, program)
-        unit_price = max(Decimal("0.00"), unit_price - density_tax)
-
         line_total = unit_price * quantity
-        total_price += line_total
+        total_price += line_total - hauling_cost
 
         item_details.append(
             {
@@ -910,15 +1115,17 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
                 "line_total": line_total,
                 "base_unit_price": base_unit_price,
                 "base_line_total": base_unit_price * quantity,
+                "hauling_cost": hauling_cost,
                 "value_source": value_source,
                 "blocked": False,
                 "blocked_reason": "",
                 "flagged": bool(watchlist_entry),
                 "watchlist_reason": watchlist_entry.reason if watchlist_entry else "",
+                "notes": notes,
             }
         )
 
-    return total_price, item_details
+    return max(Decimal("0.00"), total_price), item_details
 
 
 def get_item_production_details(type_id: int, activity_id: int = 1) -> tuple[int, int]:

@@ -4,21 +4,30 @@ from unittest.mock import MagicMock, patch
 
 # Third Party
 import pytest
-from eveuniverse.models import EveTypeMaterial
+from eveuniverse.models import EveCategory, EveTypeMaterial
 
 # AA Industry App
 from industry_reforged.utils.pricing_engine import (
     calculate_buyback_quote,
     calculate_price_density_tax,
-    get_item_value_variants,
+    get_buyback_value_variants,
     get_reprocessing_value,
 )
 
 from .factories import (
     BuybackProgramFactory,
     BuybackWatchlistItemFactory,
+    EveGroupFactory,
     EveTypeFactory,
 )
+
+
+def _ore_type(**kwargs):
+    """An item in EVE's Asteroid category (ore, ice, moon ore)."""
+    asteroid, _ = EveCategory.objects.get_or_create(
+        id=25, defaults={"name": "Asteroid", "published": True}
+    )
+    return EveTypeFactory(eve_group=EveGroupFactory(eve_category=asteroid), **kwargs)
 
 
 @pytest.fixture
@@ -83,6 +92,31 @@ class TestGetReprocessingValue:
         # 100 tritanium/unit * 10.0 isk * 2 units * 0.5 efficiency = 1000.0
         assert value == Decimal("1000.00") or value == Decimal("1000")
 
+    def test_yield_is_per_portion(self, mock_esi_orders):
+        """Ore yields are per 100 units; one unit yields a hundredth."""
+        ore = _ore_type(portion_size=100)
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=ore, material_eve_type=tritanium, quantity=400
+        )
+        mock_esi_orders.return_value = _market_response(5.0)
+
+        # 400 tritanium per 100 ore -> 4 per unit * 5 ISK * 1000 units = 20,000
+        assert get_reprocessing_value(ore, 1000) == Decimal("20000")
+
+    def test_price_overrides_win_over_market(self, mock_esi_orders):
+        eve_type = EveTypeFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=eve_type, material_eve_type=tritanium, quantity=10
+        )
+        mock_esi_orders.return_value = _market_response(5.0)
+
+        value = get_reprocessing_value(
+            eve_type, 1, price_overrides={tritanium.id: Decimal("7.00")}
+        )
+        assert value == Decimal("70.00")
+
 
 @pytest.mark.django_db
 class TestReprocessingPriceBasis:
@@ -115,15 +149,22 @@ class TestReprocessingPriceBasis:
 
 
 @pytest.mark.django_db
-class TestGetItemValueVariants:
-    def test_market_only_when_not_reprocessable(self, mock_esi_orders):
+class TestGetBuybackValueVariants:
+    def test_non_ore_is_valued_at_market_only(self, mock_esi_orders):
+        program = BuybackProgramFactory()
         eve_type = EveTypeFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=eve_type, material_eve_type=tritanium, quantity=10
+        )
         mock_esi_orders.return_value = _market_response(50.0)
 
-        variants = get_item_value_variants(eve_type, 1)
-        assert variants == {"market": Decimal("50.0")}
+        assert get_buyback_value_variants(eve_type, 1, program) == {
+            "market": Decimal("50.0")
+        }
 
     def test_order_type_buy_uses_buy_price(self, mock_esi_orders):
+        program = BuybackProgramFactory(price_type="BUY")
         eve_type = EveTypeFactory()
         mock_esi_orders.return_value = MagicMock(
             status_code=200,
@@ -143,33 +184,79 @@ class TestGetItemValueVariants:
             ],
         )
 
-        variants = get_item_value_variants(eve_type, 1, order_type="buy")
-        assert variants == {"market": Decimal("80.0")}
+        assert get_buyback_value_variants(eve_type, 1, program) == {
+            "market": Decimal("80.0")
+        }
 
-    def test_reprocessed_only_when_no_market_price(self, mock_esi_orders):
-        eve_type = EveTypeFactory()
+    def test_ore_offers_raw_and_refined(self, mock_esi_orders):
+        program = BuybackProgramFactory(refining_rate=100.0)
+        ore = _ore_type(portion_size=100)
         tritanium = EveTypeFactory(name="Tritanium")
         EveTypeMaterial.objects.create(
-            eve_type=eve_type, material_eve_type=tritanium, quantity=10
+            eve_type=ore, material_eve_type=tritanium, quantity=400
         )
 
         def side_effect(url, params=None, **kwargs):
-            if params.get("type_id") == eve_type.id:
-                return _empty_response()
-            return _market_response(5.0)
+            price = 15.0 if params.get("type_id") == ore.id else 5.0
+            return _market_response(price)
 
         mock_esi_orders.side_effect = side_effect
 
-        variants = get_item_value_variants(eve_type, 1)
-        assert "market" not in variants
-        assert variants["reprocessed"] == Decimal("50.00") or variants[
-            "reprocessed"
-        ] == Decimal("50.0")
+        variants = get_buyback_value_variants(ore, 100, program)
+        assert variants == {"market": Decimal("1500.0"), "refined": Decimal("2000")}
 
-    def test_empty_when_no_market_and_not_reprocessable(self, mock_esi_orders):
-        eve_type = EveTypeFactory()
-        mock_esi_orders.return_value = _empty_response()
-        assert get_item_value_variants(eve_type, 1) == {}
+    def test_ore_toggles_switch_variants_off(self, mock_esi_orders):
+        program = BuybackProgramFactory(
+            use_raw_ore_value=False, use_refined_value=False
+        )
+        ore = _ore_type()
+        mock_esi_orders.return_value = _market_response(15.0)
+
+        assert get_buyback_value_variants(ore, 1, program) == {}
+
+    def test_compressed_variant(self, mock_esi_orders):
+        program = BuybackProgramFactory(
+            use_raw_ore_value=False, use_refined_value=False, use_compressed_value=True
+        )
+        ore = _ore_type(name="Veldspar")
+        compressed = _ore_type(name="Compressed Veldspar")
+
+        def side_effect(url, params=None, **kwargs):
+            if params.get("type_id") == compressed.id:
+                return _market_response(30.0)
+            return _empty_response()
+
+        mock_esi_orders.side_effect = side_effect
+
+        assert get_buyback_value_variants(ore, 10, program) == {
+            "compressed": Decimal("300.0")
+        }
+
+    def test_t1_scrap_only_for_meta_level_up_to_four(self, mock_esi_orders):
+        program = BuybackProgramFactory(
+            use_reprocessed_value_for_t1=True, t1_refining_rate=50.0
+        )
+        module_category, _ = EveCategory.objects.get_or_create(
+            id=7, defaults={"name": "Module", "published": True}
+        )
+        module = EveTypeFactory(
+            eve_group=EveGroupFactory(eve_category=module_category)
+        )
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=module, material_eve_type=tritanium, quantity=1000
+        )
+        mock_esi_orders.return_value = _market_response(1.0)
+
+        meta_level = "industry_reforged.utils.buyback_data.meta_level"
+        with patch(meta_level, return_value=0):
+            assert get_buyback_value_variants(module, 1, program)["scrap"] == Decimal(
+                "500"
+            )
+        with patch(meta_level, return_value=8):
+            assert "scrap" not in get_buyback_value_variants(module, 1, program)
+        with patch(meta_level, return_value=None):
+            assert "scrap" not in get_buyback_value_variants(module, 1, program)
 
 
 class TestCalculatePriceDensityTax:
@@ -202,9 +289,9 @@ class TestCalculatePriceDensityTax:
 
 @pytest.mark.django_db
 class TestCalculateBuybackQuote:
-    def test_picks_best_of_market_and_reprocessed(self, mock_esi_orders):
+    def test_picks_best_of_market_and_refined(self, mock_esi_orders):
         program = BuybackProgramFactory()
-        eve_type = EveTypeFactory()
+        eve_type = _ore_type()
         tritanium = EveTypeFactory(name="Tritanium")
         EveTypeMaterial.objects.create(
             eve_type=eve_type, material_eve_type=tritanium, quantity=1000
@@ -220,14 +307,14 @@ class TestCalculateBuybackQuote:
         mock_esi_orders.side_effect = side_effect
 
         total, details = calculate_buyback_quote({eve_type: 1}, program)
-        assert details[0]["value_source"] == "reprocessed"
-        # reprocessed is 1000.0/unit at 100% efficiency, scaled by the program's
+        assert details[0]["value_source"] == "refined"
+        # refined is 1000.0/unit at 100% efficiency, scaled by the program's
         # default 90% refining_rate
         assert total == Decimal("900.00")
 
-    def test_refining_rate_scales_reprocessed_value(self, mock_esi_orders):
+    def test_refining_rate_scales_refined_value(self, mock_esi_orders):
         program = BuybackProgramFactory(refining_rate=50.0)
-        eve_type = EveTypeFactory()
+        eve_type = _ore_type()
         tritanium = EveTypeFactory(name="Tritanium")
         EveTypeMaterial.objects.create(
             eve_type=eve_type, material_eve_type=tritanium, quantity=1000
@@ -243,7 +330,7 @@ class TestCalculateBuybackQuote:
         mock_esi_orders.side_effect = side_effect
 
         total, details = calculate_buyback_quote({eve_type: 1}, program)
-        assert details[0]["value_source"] == "reprocessed"
+        assert details[0]["value_source"] == "refined"
         assert total == Decimal("500.00")
 
     def test_price_type_split_averages_buy_and_sell(self, mock_esi_orders):

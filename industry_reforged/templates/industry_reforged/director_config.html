@@ -689,7 +689,7 @@
                                 {% for item in buyback_watchlist_items %}
                                 <tr>
                                     <td>{{ item.program.name }}</td>
-                                    <td class="fw-bold">{{ item.eve_type.name }}</td>
+                                    <td class="fw-bold">{{ item.target_name }}</td>
                                     <td>{{ item.reason }}</td>
                                     <td>
                                         {% if item.blocks_submission %}
@@ -713,6 +713,99 @@
                     </div>
                 </div>
             </div>
+
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-percent text-primary"></i> {% trans "Item Rules" %}</h5>
+                    <div class="d-flex gap-2">
+                        {% if not market_groups_loaded %}
+                        <form method="post" action="{% url 'industry_reforged:director_buyback_load_market_groups' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="{% trans 'Needed to make a rule for a whole market group' %}"><i class="fas fa-download"></i> {% trans "Load market groups" %}</button>
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'industry_reforged:director_config_buyback_rule_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Rule" %}</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <p class="small text-muted px-3 pt-3 mb-2">{% trans "Raise, lower or block the price of one item or a whole market group. A group rule covers every group below it; the most specific rule wins." %}</p>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{% trans "Program" %}</th>
+                                    <th>{% trans "Item or market group" %}</th>
+                                    <th>{% trans "Price modifier" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in buyback_item_rules %}
+                                <tr>
+                                    <td>{{ rule.program.name }}</td>
+                                    <td class="fw-bold">{{ rule.target_name }}</td>
+                                    <td>
+                                        {% if rule.disallow %}
+                                        <span class="badge bg-danger">{% trans "Not accepted" %}</span>
+                                        {% else %}
+                                        <span class="badge {% if rule.price_modifier_percent < 0 %}bg-danger{% elif rule.price_modifier_percent > 0 %}bg-success{% else %}bg-secondary{% endif %}">{% if rule.price_modifier_percent > 0 %}+{% endif %}{{ rule.price_modifier_percent }}%</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_buyback_rule_edit' rule.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_rule_delete' rule.id %}"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">{% trans "No item rules configured." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-tag text-primary"></i> {% trans "Fixed Prices" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_buyback_static_price_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Fixed Price" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <p class="small text-muted px-3 pt-3 mb-2">{% trans "Pay a fixed ISK price per unit instead of the market value. No price modifier, item rule or density tax applies." %}</p>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{% trans "Program" %}</th>
+                                    <th>{% trans "Item" %}</th>
+                                    <th class="text-end">{% trans "Price per unit" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sp in buyback_static_prices %}
+                                <tr>
+                                    <td>{{ sp.program.name }}</td>
+                                    <td class="fw-bold">{{ sp.eve_type.name }}</td>
+                                    <td class="text-end">{{ sp.price|eve_isk }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_buyback_static_price_edit' sp.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_static_price_delete' sp.id %}"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">{% trans "No fixed prices configured." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div class="text-end">
                 <a href="{% url 'industry_reforged:buyback_stats' %}" class="btn btn-outline-secondary"><i class="fas fa-chart-line"></i> {% trans "Statistics" %}</a>
                 <a href="{% url 'industry_reforged:director_buyback_review' %}" class="btn btn-warning"><i class="fas fa-flag"></i> {% trans "Review Flagged Contracts" %}</a>

@@ -13,8 +13,19 @@ from django.views.decorators.http import require_POST
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
-from ...forms import BuybackProgramForm, BuybackWatchlistItemForm
-from ...models import BuybackContract, BuybackProgram, BuybackWatchlistItem
+from ...forms import (
+    BuybackItemRuleForm,
+    BuybackProgramForm,
+    BuybackStaticPriceForm,
+    BuybackWatchlistItemForm,
+)
+from ...models import (
+    BuybackContract,
+    BuybackItemRule,
+    BuybackProgram,
+    BuybackStaticPrice,
+    BuybackWatchlistItem,
+)
 from ...tasks.utils import notify_discord_user
 
 
@@ -104,42 +115,61 @@ def director_config_buyback_program_delete(
     return _back_to_config()
 
 
-@login_required
-@permission_required("industry_reforged.corp_access")
-def director_config_buyback_watchlist_edit(
-    request: WSGIRequest, item_id: int = None
-) -> HttpResponse:
+def _edit_program_child(request, model, form_class, obj_id, titles, saved_message):
+    """Add/edit view for a watchlist entry, item rule or static price, limited
+    to programs of the director's own corporation."""
     corporation = _director_corporation(request)
     if not corporation:
         return _no_corporation(request)
 
-    if item_id:
-        instance = get_object_or_404(
-            BuybackWatchlistItem, id=item_id, program__corporation=corporation
-        )
+    if obj_id:
+        instance = get_object_or_404(model, id=obj_id, program__corporation=corporation)
     else:
-        instance = BuybackWatchlistItem()
+        instance = model()
 
     if request.method == "POST":
-        form = BuybackWatchlistItemForm(
-            request.POST, instance=instance, corporation=corporation
-        )
+        form = form_class(request.POST, instance=instance, corporation=corporation)
         if form.is_valid():
             form.save()
-            messages.success(request, _("Watchlist item saved successfully."))
+            messages.success(request, saved_message)
             return _back_to_config()
     else:
-        form = BuybackWatchlistItemForm(instance=instance, corporation=corporation)
+        form = form_class(instance=instance, corporation=corporation)
 
     return render(
         request,
         "industry_reforged/director_config_form.html",
         {
-            "title": _("Edit Watchlist Item") if item_id else _("Add Watchlist Item"),
+            "title": titles[1] if obj_id else titles[0],
             "form": form,
             "back_url": "industry_reforged:director_config",
             "back_hash": "#buyback",
         },
+    )
+
+
+def _delete_program_child(request, model, obj_id, deleted_message):
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    get_object_or_404(model, id=obj_id, program__corporation=corporation).delete()
+    messages.success(request, deleted_message)
+    return _back_to_config()
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_buyback_watchlist_edit(
+    request: WSGIRequest, item_id: int = None
+) -> HttpResponse:
+    return _edit_program_child(
+        request,
+        BuybackWatchlistItem,
+        BuybackWatchlistItemForm,
+        item_id,
+        (_("Add Watchlist Item"), _("Edit Watchlist Item")),
+        _("Watchlist item saved successfully."),
     )
 
 
@@ -149,15 +179,78 @@ def director_config_buyback_watchlist_edit(
 def director_config_buyback_watchlist_delete(
     request: WSGIRequest, item_id: int
 ) -> HttpResponse:
-    corporation = _director_corporation(request)
-    if not corporation:
-        return _no_corporation(request)
-
-    item = get_object_or_404(
-        BuybackWatchlistItem, id=item_id, program__corporation=corporation
+    return _delete_program_child(
+        request, BuybackWatchlistItem, item_id, _("Watchlist item deleted.")
     )
-    item.delete()
-    messages.success(request, _("Watchlist item deleted."))
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_buyback_rule_edit(
+    request: WSGIRequest, rule_id: int = None
+) -> HttpResponse:
+    return _edit_program_child(
+        request,
+        BuybackItemRule,
+        BuybackItemRuleForm,
+        rule_id,
+        (_("Add Item Rule"), _("Edit Item Rule")),
+        _("Item rule saved."),
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_config_buyback_rule_delete(
+    request: WSGIRequest, rule_id: int
+) -> HttpResponse:
+    return _delete_program_child(
+        request, BuybackItemRule, rule_id, _("Item rule deleted.")
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_buyback_static_price_edit(
+    request: WSGIRequest, price_id: int = None
+) -> HttpResponse:
+    return _edit_program_child(
+        request,
+        BuybackStaticPrice,
+        BuybackStaticPriceForm,
+        price_id,
+        (_("Add Fixed Price"), _("Edit Fixed Price")),
+        _("Fixed price saved."),
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_config_buyback_static_price_delete(
+    request: WSGIRequest, price_id: int
+) -> HttpResponse:
+    return _delete_program_child(
+        request, BuybackStaticPrice, price_id, _("Fixed price deleted.")
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_buyback_load_market_groups(request: WSGIRequest) -> HttpResponse:
+    """Queue loading every EVE market group, needed to pick one for a rule."""
+    from ...tasks.buyback import buyback_load_market_groups
+
+    buyback_load_market_groups.delay()
+    messages.success(
+        request,
+        _(
+            "Loading market groups in the background. This takes a few minutes; "
+            "reload this page afterwards."
+        ),
+    )
     return _back_to_config()
 
 

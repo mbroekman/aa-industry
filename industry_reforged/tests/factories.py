@@ -37,7 +37,9 @@ class EveCategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = EveCategory
 
-    id = factory.Sequence(lambda n: n + 1)
+    # Far above real EVE ids, so a random test category is never "Blueprint" (9)
+    # or "Asteroid" (25), which the buyback treats specially.
+    id = factory.Sequence(lambda n: n + 100000)
     name = factory.Sequence(lambda n: f"Category {n}")
     published = True
 
@@ -46,7 +48,8 @@ class EveGroupFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = EveGroup
 
-    id = factory.Sequence(lambda n: n + 1)
+    # Far above real EVE group ids (see EveCategoryFactory).
+    id = factory.Sequence(lambda n: n + 100000)
     name = factory.Sequence(lambda n: f"Group {n}")
     eve_category = factory.SubFactory(EveCategoryFactory)
     published = True

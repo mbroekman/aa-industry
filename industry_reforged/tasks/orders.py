@@ -16,8 +16,17 @@ logger = logging.getLogger(__name__)
 def task_pull_market_data():
     """Pre-warm Jita 5% sell prices for common materials (minerals, PI, gas, salvage) via direct ESI."""
     logger.info("Market Data Pull initiated via direct ESI.")
+    from eveuniverse.models import EveMarketPrice
+
     from ..models import CorpItemConfig
     from ..utils.pricing_engine import get_market_prices
+
+    # CCP's average prices: the pricing fallback and the Buyback "NPC price"
+    # options read these. One ESI call covers every type.
+    try:
+        EveMarketPrice.objects.update_from_esi()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not refresh CCP average prices: {e}")
 
     # Fetch all item type IDs configured in CorpItemConfig or active orders
     configured_ids = list(CorpItemConfig.objects.values_list("item_type_id", flat=True))

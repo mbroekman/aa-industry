@@ -92,6 +92,7 @@
                                         {{ detail.eve_type.name }}
                                         {% if detail.blocked %}<span class="badge bg-danger ms-1">{% trans "Not accepted" %}</span>{% elif detail.flagged %}<span class="badge bg-warning text-dark ms-1">{% trans "Manual review" %}</span>{% endif %}
                                         {% if detail.blocked and detail.blocked_reason %}<div class="small text-danger">{{ detail.blocked_reason }}</div>{% elif detail.flagged and detail.watchlist_reason %}<div class="small text-body-secondary">{{ detail.watchlist_reason }}</div>{% endif %}
+                                        {% if not detail.blocked and detail.notes %}<div class="small text-body-secondary">{{ detail.notes|join:" " }}</div>{% endif %}
                                     </td>
                                     <td class="text-end">{{ detail.quantity }}</td>
                                     <td class="text-end">{{ detail.unit_price|eve_isk }}</td>
@@ -106,8 +107,14 @@
                                 </tr>
                                 {% if modifier_impact %}
                                 <tr class="{% if modifier_impact < 0 %}text-danger{% else %}text-success{% endif %}">
-                                    <td colspan="3">{% trans "Price modifier / bulk tax adjustment" %}</td>
+                                    <td colspan="3">{% trans "Price modifier / item rules / bulk tax" %}</td>
                                     <td class="text-end">{% if modifier_impact > 0 %}+{% endif %}{{ modifier_impact|eve_isk }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if hauling_total %}
+                                <tr class="text-danger">
+                                    <td colspan="3">{% trans "Hauling" %} ({{ selected_program.hauling_fuel_cost|floatformat:"-2" }} ISK/m³)</td>
+                                    <td class="text-end">-{{ hauling_total|eve_isk }}</td>
                                 </tr>
                                 {% endif %}
                                 <tr class="border-top">
@@ -131,6 +138,7 @@
                         </table>
                     </div>
                 </div>
+                {% if not whole_appraisal_refused %}
                 <div class="card-footer text-end">
                     <form method="post">
                         {% csrf_token %}
@@ -142,6 +150,7 @@
                         <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Confirm & Get Tracking Number" %}</button>
                     </form>
                 </div>
+                {% endif %}
             </div>
             {% else %}
             <div class="alert alert-info">{% trans "Paste your inventory and submit to see an appraisal here." %}</div>
