@@ -6,6 +6,8 @@ from .buyback import (
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
+    BuybackUntrackedContract,
+    BuybackUserSettings,
     BuybackWatchlistItem,
 )
 from .config import (
@@ -98,6 +100,8 @@ __all__ = [
     "BuybackWatchlistItem",
     "BuybackItemRule",
     "BuybackStaticPrice",
+    "BuybackUntrackedContract",
+    "BuybackUserSettings",
     "BuybackContract",
     "BuybackContractItem",
 ]

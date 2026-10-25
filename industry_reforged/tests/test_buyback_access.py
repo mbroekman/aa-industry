@@ -326,7 +326,7 @@ class TestCharacterRecipientPolling:
     def setup_method(self):
         cache.clear()
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_character_recipient_reads_that_characters_contracts(
         self, mock_esi, _notify

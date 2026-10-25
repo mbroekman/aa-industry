@@ -157,7 +157,7 @@ class TestBuybackPollContracts:
         buyback_poll_contracts()
         mock_esi.client.Contracts.GetCorporationsCorporationIdContracts.assert_not_called()
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_rerun_on_unchanged_data_is_idempotent(self, mock_esi, mock_notify):
         program = self._setup_program_with_token()
@@ -232,7 +232,7 @@ class TestBuybackPollFollowsInGameStatus:
         cache.clear()
         buyback_poll_contracts()
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_items_are_only_fetched_on_first_match(self, mock_esi, _notify):
         program, eve_type, contract, _ = self._setup()
@@ -244,7 +244,7 @@ class TestBuybackPollFollowsInGameStatus:
         assert items_call.call_count == 1
 
     @patch("industry_reforged.utils.discord.send_discord_webhook")
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_flagged_webhook_is_sent_once(self, mock_esi, _notify, mock_webhook):
         program, eve_type, _, _ = self._setup()
@@ -259,7 +259,7 @@ class TestBuybackPollFollowsInGameStatus:
 
         assert mock_webhook.call_count == 1
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_finished_in_game_marks_paid_once(self, mock_esi, mock_notify):
         program, eve_type, contract, _ = self._setup()
@@ -277,7 +277,7 @@ class TestBuybackPollFollowsInGameStatus:
         assert payouts.first().director is None
         assert any("accepted and paid" in c.args[1] for c in mock_notify.call_args_list)
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_director_pay_then_finished_does_not_pay_twice(self, mock_esi, _notify):
         program, eve_type, contract, _ = self._setup()
@@ -291,7 +291,7 @@ class TestBuybackPollFollowsInGameStatus:
 
         assert LedgerTransaction.objects.filter(buyback_contract=contract).count() == 1
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_rejected_in_game(self, mock_esi, _notify):
         program, eve_type, contract, _ = self._setup()
@@ -303,7 +303,7 @@ class TestBuybackPollFollowsInGameStatus:
         assert contract.status == "REJECTED"
         assert LedgerTransaction.objects.filter(buyback_contract=contract).count() == 0
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_withdrawn_contract_can_be_replaced_by_a_corrected_one(
         self, mock_esi, _notify
@@ -326,7 +326,7 @@ class TestBuybackPollFollowsInGameStatus:
         assert contract.status == "MATCHED"
         assert contract.esi_contract_id == 556
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_outstanding_past_in_game_expiry_expires(self, mock_esi, _notify):
         program, eve_type, contract, _ = self._setup()
@@ -342,7 +342,7 @@ class TestBuybackPollFollowsInGameStatus:
         contract.refresh_from_db()
         assert contract.status == "EXPIRED"
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_watchlist_flag_item_flags_an_otherwise_clean_contract(
         self, mock_esi, _notify
@@ -360,7 +360,7 @@ class TestBuybackPollFollowsInGameStatus:
         assert contract.flag_watchlist is True
         assert "audit" in contract.flag_notes
 
-    @patch("industry_reforged.tasks.buyback.notify_discord_user")
+    @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")
     def test_matching_items_are_marked_esi_verified(self, mock_esi, _notify):
         program, eve_type, contract, item = self._setup(quantity=10)

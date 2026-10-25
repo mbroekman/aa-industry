@@ -50,6 +50,10 @@
                             </div>
                             <div class="form-text">{% trans "Leave at 0 to keep the full payout." %}</div>
                         </div>
+                        <div class="mb-3">
+                            <label for="seller_note" class="form-label">{% trans "Note for the buyer (optional)" %}</label>
+                            <textarea name="seller_note" id="seller_note" rows="2" maxlength="500" class="form-control">{{ seller_note|default:'' }}</textarea>
+                        </div>
                         <button type="submit" class="btn btn-primary"><i class="fas fa-calculator"></i> {% trans "Get Appraisal" %}</button>
                     </form>
                 </div>
@@ -146,6 +150,7 @@
                         <input type="hidden" name="inventory_text" value="{{ inventory_text }}">
                         <input type="hidden" name="donation_mode" value="{{ donation_mode }}">
                         <input type="hidden" name="donation_value" value="{{ donation_value }}">
+                        <input type="hidden" name="seller_note" value="{{ seller_note }}">
                         <input type="hidden" name="confirm" value="1">
                         <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Confirm & Get Tracking Number" %}</button>
                     </form>

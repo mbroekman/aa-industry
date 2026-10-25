@@ -46,6 +46,9 @@ class ContractMatchResult:
     receiver_mismatch: bool = False
     title_tampered: bool = False
     no_tracking: bool = False
+    # Asked less than quoted: noted, but not a reason for review - the seller
+    # only shortchanges themselves.
+    price_low: bool = False
     notes: str = ""
 
     @property
@@ -126,14 +129,18 @@ def match_contract(
             "Contract was not issued to the expected receiving corp/character."
         )
 
-    price_mismatch = (
-        abs(float(esi_contract.get("price", 0.0)) - expected.expected_price)
-        > PRICE_TOLERANCE
-    )
+    price_diff = float(esi_contract.get("price", 0.0)) - expected.expected_price
+    price_mismatch = price_diff > PRICE_TOLERANCE
+    price_low = price_diff < -PRICE_TOLERANCE
     if price_mismatch:
         notes.append(
-            f"Contract price ({esi_contract.get('price', 0.0)}) does not match "
-            f"the quoted price ({expected.expected_price})."
+            f"Contract asks {esi_contract.get('price', 0.0):,.2f} ISK, more than "
+            f"the quoted {expected.expected_price:,.2f} ISK."
+        )
+    elif price_low:
+        notes.append(
+            f"Contract asks {esi_contract.get('price', 0.0):,.2f} ISK, less than "
+            f"the quoted {expected.expected_price:,.2f} ISK; the seller receives less."
         )
 
     item_mismatch = _items_mismatch(expected.expected_items, esi_contract_items)
@@ -148,6 +155,7 @@ def match_contract(
         receiver_mismatch=receiver_mismatch,
         title_tampered=title_tampered,
         no_tracking=no_tracking,
+        price_low=price_low,
         notes=" ".join(notes),
     )
     if result.has_any_flag:

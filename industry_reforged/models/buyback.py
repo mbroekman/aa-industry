@@ -246,6 +246,28 @@ class BuybackProgram(models.Model):
             "Accept assembled items (inventory lines pasted without a quantity)."
         ),
     )
+    notify_new_contracts = models.BooleanField(
+        default=True,
+        help_text=_(
+            "Post every newly matched contract to the corporation's buyback Discord "
+            "webhook. Flagged contracts are always posted."
+        ),
+    )
+    notify_show_item_list = models.BooleanField(
+        default=False,
+        help_text=_("Include the item list in Discord posts."),
+    )
+    notify_manager_character = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text=_(
+            "Also send this character a Discord DM and an Auth notification for "
+            "every new contract."
+        ),
+    )
     reject_appraisal_on_disallowed = models.BooleanField(
         default=False,
         help_text=_(
@@ -518,6 +540,18 @@ class BuybackContract(models.Model):
         default=False,
         help_text=_("Created through a program's public calculator, without login."),
     )
+    seller_note = models.TextField(
+        blank=True,
+        max_length=500,
+        help_text=_("Optional note from the seller to the buyer."),
+    )
+    esi_items = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_(
+            "Items of the matched in-game contract, as [{type_id, quantity}]."
+        ),
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -640,3 +674,52 @@ class BuybackContractItem(models.Model):
     @property
     def base_line_total(self):
         return self.base_unit_price * self.quantity
+
+
+class BuybackUntrackedContract(models.Model):
+    """An in-game contract to a program's recipient whose title uses the
+    program's tracking prefix, but whose tracking number was never issued.
+    Usually a typo, sometimes an attempt to get paid for an unappraised load."""
+
+    program = models.ForeignKey(
+        BuybackProgram, on_delete=models.CASCADE, related_name="untracked_contracts"
+    )
+    esi_contract_id = models.BigIntegerField(unique=True)
+    title = models.CharField(max_length=255, blank=True)
+    issuer_id = models.IntegerField(null=True, blank=True)
+    price = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    start_location_id = models.BigIntegerField(null=True, blank=True)
+    dismissed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Buyback Untracked Contract")
+        verbose_name_plural = _("Buyback Untracked Contracts")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.esi_contract_id})"
+
+    @property
+    def issuer_name(self) -> str:
+        character = EveCharacter.objects.filter(character_id=self.issuer_id).first()
+        return character.character_name if character else str(self.issuer_id or "-")
+
+
+class BuybackUserSettings(models.Model):
+    """A member's buyback preferences."""
+
+    user = models.OneToOneField(
+        "auth.User", on_delete=models.CASCADE, related_name="buyback_settings"
+    )
+    disable_notifications = models.BooleanField(
+        default=False,
+        help_text=_("Don't send me Discord DMs or Auth notifications about my contracts."),
+    )
+
+    class Meta:
+        verbose_name = _("Buyback User Settings")
+        verbose_name_plural = _("Buyback User Settings")
+
+    def __str__(self):
+        return f"{self.user} buyback settings"

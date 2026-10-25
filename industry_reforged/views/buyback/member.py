@@ -11,8 +11,14 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
-from ...models import BuybackContract, BuybackContractItem, BuybackProgram
+from ...models import (
+    BuybackContract,
+    BuybackContractItem,
+    BuybackProgram,
+    BuybackUserSettings,
+)
 from ...tasks.buyback import watchlist_flag_notes
 from ...utils.inventory_parser import parse_inventory_paste_with_unpacked
 from ...utils.pricing_engine import calculate_buyback_quote
@@ -127,6 +133,7 @@ def run_calculator(
             ),
         )
 
+    seller_note = request.POST.get("seller_note", "").strip()[:500]
     donation_mode = request.POST.get("donation_mode", "isk")
     donation_amount = _compute_donation(
         gross_total, donation_mode, request.POST.get("donation_value", "")
@@ -143,6 +150,7 @@ def run_calculator(
             "whole_appraisal_refused": whole_appraisal_refused,
             "donation_mode": donation_mode,
             "donation_value": request.POST.get("donation_value", ""),
+            "seller_note": seller_note,
             "donation_amount": donation_amount,
             "net_total": net_total,
         }
@@ -174,6 +182,7 @@ def run_calculator(
         flag_watchlist=bool(watchlist_notes),
         flag_notes="\n".join(watchlist_notes),
         is_public_submission=public and character is None,
+        seller_note=seller_note,
     )
     BuybackContractItem.objects.bulk_create(
         [
@@ -218,8 +227,29 @@ def buyback_dashboard(request: WSGIRequest) -> HttpResponse:
         "title": _("Buyback Program"),
         "programs": _visible_programs(request.user),
         "my_contracts": my_contracts,
+        "notifications_disabled": BuybackUserSettings.objects.filter(
+            user=request.user, disable_notifications=True
+        ).exists(),
     }
     return render(request, "industry_reforged/buyback/dashboard.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.basic_access")
+@require_POST
+def buyback_notification_settings(request: WSGIRequest) -> HttpResponse:
+    """Turn the member's buyback DMs and Auth notifications on or off."""
+    disabled = request.POST.get("notifications") == "off"
+    BuybackUserSettings.objects.update_or_create(
+        user=request.user, defaults={"disable_notifications": disabled}
+    )
+    messages.success(
+        request,
+        _("Buyback notifications turned off.")
+        if disabled
+        else _("Buyback notifications turned on."),
+    )
+    return redirect("industry_reforged:buyback_dashboard")
 
 
 @login_required
@@ -269,8 +299,37 @@ def buyback_contract_detail(request: WSGIRequest, tracking_number: str) -> HttpR
         % {"tracking_number": contract.tracking_number},
         "contract": contract,
         "items": contract.items.select_related("eve_type"),
+        "comparison": item_comparison(contract),
     }
     return render(request, "industry_reforged/buyback/contract_detail.html", context)
+
+
+def item_comparison(contract) -> list[dict]:
+    """Appraised vs. in-game quantity per item, once the contract is matched.
+    Empty until the poller has stored the in-game contract's items."""
+    if not contract.esi_items:
+        return []
+    from eveuniverse.models import EveType
+
+    quoted = {}
+    for item in contract.items.select_related("eve_type"):
+        quoted[item.eve_type_id] = quoted.get(item.eve_type_id, 0) + item.quantity
+    actual = {}
+    for item in contract.esi_items:
+        actual[item["type_id"]] = actual.get(item["type_id"], 0) + item["quantity"]
+
+    type_ids = set(quoted) | set(actual)
+    names = dict(EveType.objects.filter(id__in=type_ids).values_list("id", "name"))
+    rows = [
+        {
+            "name": names.get(type_id, str(type_id)),
+            "quoted": quoted.get(type_id, 0),
+            "actual": actual.get(type_id, 0),
+            "matches": quoted.get(type_id, 0) == actual.get(type_id, 0),
+        }
+        for type_id in type_ids
+    ]
+    return sorted(rows, key=lambda row: (row["matches"], row["name"]))
 
 
 @login_required

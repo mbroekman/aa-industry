@@ -104,10 +104,12 @@ class TestMatchContract:
         assert result.status == "FLAGGED"
         assert result.price_mismatch is True
 
-    def test_wrong_price_under(self):
+    def test_lower_price_is_noted_but_not_flagged(self):
         result = match_contract(_expectation(), _esi_contract(price=10.0), _esi_items())
-        assert result.status == "FLAGGED"
-        assert result.price_mismatch is True
+        assert result.status == "MATCHED"
+        assert result.price_mismatch is False
+        assert result.price_low is True
+        assert "less than the quoted" in result.notes
 
     def test_price_within_tolerance_not_flagged(self):
         result = match_contract(

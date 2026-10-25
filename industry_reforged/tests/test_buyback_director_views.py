@@ -312,7 +312,7 @@ class TestBuybackDirectorViews:
         assert {c.status for c in contracts} == {"FLAGGED", "MATCHED"}
         assert all(c.program.corporation_id == corp.id for c in contracts)
 
-    @patch("industry_reforged.views.buyback.director.notify_discord_user")
+    @patch("industry_reforged.utils.buyback_notify.notify_seller")
     def test_accept_and_pay_creates_ledger_transaction_and_pays(self, mock_notify, rf):
         user, corp = _director_user()
         contract = _own_contract(corp, status="MATCHED", quoted_price=5000)
@@ -340,7 +340,7 @@ class TestBuybackDirectorViews:
         request.user = user
 
         with patch("industry_reforged.views.buyback.director.messages"):
-            with patch("industry_reforged.views.buyback.director.notify_discord_user"):
+            with patch("industry_reforged.utils.buyback_notify.notify_seller"):
                 director_buyback_contract_resolve(request, contract.tracking_number)
 
         contract.refresh_from_db()

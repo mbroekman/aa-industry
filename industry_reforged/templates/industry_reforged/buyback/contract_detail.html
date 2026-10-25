@@ -73,6 +73,13 @@
                 <dd class="col-sm-9">{{ contract.created_at|date:"Y-m-d H:i" }}</dd>
             </dl>
 
+            {% if contract.seller_note %}
+            <div class="alert alert-secondary mt-3 mb-0">
+                <strong><i class="fas fa-comment"></i> {% trans "Note from the seller" %}</strong>
+                <p class="mb-0" style="white-space: pre-line;">{{ contract.seller_note }}</p>
+            </div>
+            {% endif %}
+
             {% if contract.has_flags and not public %}
             <div class="alert alert-warning mt-3">
                 <strong><i class="fas fa-exclamation-triangle"></i> {% trans "This contract needs review" %}</strong>
@@ -99,6 +106,34 @@
             {% endif %}
         </div>
     </div>
+
+    {% if comparison and not public %}
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{% trans "Appraisal vs. in-game contract" %}</h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm m-0">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Item" %}</th>
+                            <th class="text-end">{% trans "Appraised" %}</th>
+                            <th class="text-end">{% trans "In contract" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in comparison %}
+                        <tr class="{% if not row.matches %}table-danger{% endif %}">
+                            <td>{{ row.name }}{% if not row.matches %} <span class="badge bg-danger ms-1">{% if not row.actual %}{% trans "Missing" %}{% elif not row.quoted %}{% trans "Not appraised" %}{% else %}{% trans "Quantity differs" %}{% endif %}</span>{% endif %}</td>
+                            <td class="text-end">{{ row.quoted }}</td>
+                            <td class="text-end">{{ row.actual }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="card border-0 mb-4">
         <div class="card-header"><h5 class="card-title mb-0">{% trans "Items" %}</h5></div>

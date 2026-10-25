@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: Contract handling and notifications from the original buyback plugin (TASK-275, phase 3):
+  - Sellers can add a note for the buyer; it shows on the contract page, in the review queue and in the Discord post.
+  - A contract asking more than the quote is flagged; asking less is only noted, since the seller only shortchanges themselves.
+  - **Suspicious contracts**: an in-game contract to the program's recipient that uses its tracking prefix, but a tracking number that was never issued, is recorded once, posted to Discord and listed in the review queue until a director dismisses it.
+  - Per program: post every new contract to the buyback webhook (flagged ones always), optionally with the item list, and DM a manager character for each new contract.
+  - Sellers now also get an Alliance Auth notification next to the Discord DM, and can turn both off with the bell on the Buyback dashboard.
+  - The contract page compares the appraisal with the items of the in-game contract and highlights missing items and quantity differences.
+  - Watchlist entries for a whole item group now also send matching contracts to review.
+
 - **buyback**: Item rules and pricing options from the original buyback plugin (TASK-274, phase 2):
   - **Item rules**: raise, lower or block the price of one item or a whole market group (a group rule covers the groups below it; the most specific rule wins). An allowlist mode accepts only items that have a rule.
   - **Fixed prices** per item, without any modifier, rule or density tax.

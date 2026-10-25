@@ -395,6 +395,11 @@ urlpatterns = [
     path("buyback/calculator/", buyback.buyback_calculator, name="buyback_calculator"),
     path("buyback/stats/", buyback.buyback_stats, name="buyback_stats"),
     path(
+        "buyback/notifications/",
+        buyback.buyback_notification_settings,
+        name="buyback_notification_settings",
+    ),
+    path(
         "buyback/<str:tracking_number>/",
         buyback.buyback_contract_detail,
         name="buyback_contract_detail",
@@ -473,6 +478,11 @@ urlpatterns = [
         "director/buyback/review/",
         buyback.director_buyback_review,
         name="director_buyback_review",
+    ),
+    path(
+        "director/buyback/untracked/<int:untracked_id>/dismiss/",
+        buyback.director_buyback_untracked_dismiss,
+        name="director_buyback_untracked_dismiss",
     ),
     path(
         "director/buyback/review/<str:tracking_number>/resolve/",

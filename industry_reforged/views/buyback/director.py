@@ -24,9 +24,10 @@ from ...models import (
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
+    BuybackUntrackedContract,
     BuybackWatchlistItem,
 )
-from ...tasks.utils import notify_discord_user
+from ...utils import buyback_notify
 
 
 def _director_corporation(request: WSGIRequest):
@@ -270,11 +271,36 @@ def director_buyback_review(request: WSGIRequest) -> HttpResponse:
         .prefetch_related("items__eve_type")
         .order_by("-created_at")
     )
+    untracked_contracts = BuybackUntrackedContract.objects.filter(
+        program__corporation=corporation, dismissed=False
+    ).select_related("program")
     context = {
         "title": _("Buyback Review Queue"),
         "contracts": contracts,
+        "untracked_contracts": untracked_contracts,
     }
     return render(request, "industry_reforged/buyback/director_review.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_buyback_untracked_dismiss(
+    request: WSGIRequest, untracked_id: int
+) -> HttpResponse:
+    """Mark a suspicious contract as handled; it stays recorded so the poller
+    never reports the same in-game contract again."""
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    untracked = get_object_or_404(
+        BuybackUntrackedContract, id=untracked_id, program__corporation=corporation
+    )
+    untracked.dismissed = True
+    untracked.save(update_fields=["dismissed"])
+    messages.success(request, _("Suspicious contract dismissed."))
+    return redirect("industry_reforged:director_buyback_review")
 
 
 @login_required
@@ -299,11 +325,12 @@ def director_buyback_contract_resolve(
         action = request.POST.get("action")
         if action == "accept_and_pay":
             if contract.mark_paid(director=request.user):
-                if contract.character:
-                    notify_discord_user(
-                        contract.character,
-                        f"Your buyback contract {contract.tracking_number} was paid out.",
-                    )
+                buyback_notify.notify_seller(
+                    contract,
+                    f"Buyback contract {contract.tracking_number}",
+                    f"Your buyback contract {contract.tracking_number} was paid out.",
+                    "success",
+                )
                 messages.success(
                     request,
                     _("Contract %(tracking_number)s paid out.")
@@ -315,11 +342,12 @@ def director_buyback_contract_resolve(
             if reason:
                 contract.flag_notes = reason
             contract.save(update_fields=["status", "flag_notes", "updated_at"])
-            if contract.character:
-                notify_discord_user(
-                    contract.character,
-                    f"Your buyback contract {contract.tracking_number} was rejected. {reason}".strip(),
-                )
+            buyback_notify.notify_seller(
+                contract,
+                f"Buyback contract {contract.tracking_number}",
+                f"Your buyback contract {contract.tracking_number} was rejected. {reason}".strip(),
+                "danger",
+            )
             messages.success(
                 request,
                 _("Contract %(tracking_number)s rejected.")
