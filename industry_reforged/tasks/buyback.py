@@ -77,7 +77,9 @@ def _contract_source(program) -> _ContractSource | None:
             character_id=character.character_id, scopes__name=CHARACTER_CONTRACTS_SCOPE
         ).first()
         if not token:
-            logger.warning(f"No character-contracts token for {character.character_name}")
+            logger.warning(
+                f"No character-contracts token for {character.character_name}"
+            )
             return None
         contracts_api = esi.client.Contracts
         return _ContractSource(

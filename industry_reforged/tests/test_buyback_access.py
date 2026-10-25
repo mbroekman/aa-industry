@@ -54,7 +54,9 @@ def mock_static(monkeypatch):
         from sri.templatetags import sri
 
         monkeypatch.setattr(
-            sri, "sri_integrity_static", lambda path, algorithm_type=None: "sha256-dummy"
+            sri,
+            "sri_integrity_static",
+            lambda path, algorithm_type=None: "sha256-dummy",
         )
     except ImportError:
         pass
@@ -148,7 +150,11 @@ class TestCalculatorRespectsRestrictions:
             RequestFactory(),
             _member(),
             "post",
-            {"program_id": program.id, "inventory_text": "Tritanium\t100", "confirm": "1"},
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t100",
+                "confirm": "1",
+            },
         )
         with pytest.raises(Http404):
             buyback_calculator(request)
@@ -184,7 +190,11 @@ class TestCalculatorRespectsRestrictions:
             RequestFactory(),
             _member(),
             "post",
-            {"program_id": program.id, "inventory_text": "Tritanium\t100", "confirm": "1"},
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t100",
+                "confirm": "1",
+            },
         )
         buyback_calculator(request)
 
@@ -220,7 +230,11 @@ class TestPublicCalculator:
             RequestFactory(),
             AnonymousUser(),
             "post",
-            {"program_id": program.id, "inventory_text": "Tritanium\t100", "confirm": "1"},
+            {
+                "program_id": program.id,
+                "inventory_text": "Tritanium\t100",
+                "confirm": "1",
+            },
         )
         response = buyback_public_calculator(request, program.id)
 

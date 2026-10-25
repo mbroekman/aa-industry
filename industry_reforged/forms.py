@@ -1,6 +1,7 @@
-# Third Party
+# Standard Library
 import re
 
+# Third Party
 import requests
 from eveuniverse.models import EveType
 
