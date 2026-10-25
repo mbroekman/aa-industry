@@ -78,12 +78,63 @@
                         {% endif %}
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
+                    <table class="table table-sm mb-3">
+                        <tbody>
+                            <tr>
+                                <td>{% trans "Base Market Value" %}</td>
+                                <td class="text-end">{{ base_total|eve_isk }}</td>
+                            </tr>
+                            {% if modifier_impact %}
+                            <tr class="{% if modifier_impact < 0 %}text-danger{% else %}text-success{% endif %}">
+                                <td>{% trans "Price modifier / item rules / bulk tax" %}</td>
+                                <td class="text-end">{% if modifier_impact > 0 %}+{% endif %}{{ modifier_impact|eve_isk }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if hauling_total %}
+                            <tr class="text-danger">
+                                <td>{% trans "Hauling" %} ({{ selected_program.hauling_fuel_cost|floatformat:"-2" }} ISK/m³)</td>
+                                <td class="text-end">-{{ hauling_total|eve_isk }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td>{% trans "Appraisal Subtotal" %}</td>
+                                <td class="text-end">{{ total_price|eve_isk }}</td>
+                            </tr>
+                            {% if donation_amount %}
+                            <tr class="text-danger">
+                                <td>
+                                    {% trans "Donation to corp" %}
+                                    {% if donation_mode == "percent" %}({{ donation_value }}%){% endif %}
+                                </td>
+                                <td class="text-end">-{{ donation_amount|eve_isk }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr class="fw-bold fs-5">
+                                <td>{% trans "You Receive" %}</td>
+                                <td class="text-end text-success">{{ net_total|eve_isk }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    {% if not whole_appraisal_refused %}
+                    <form method="post" class="text-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="program_id" value="{{ selected_program.id }}">
+                        <input type="hidden" name="inventory_text" value="{{ inventory_text }}">
+                        <input type="hidden" name="donation_mode" value="{{ donation_mode }}">
+                        <input type="hidden" name="donation_value" value="{{ donation_value }}">
+                        <input type="hidden" name="seller_note" value="{{ seller_note }}">
+                        <input type="hidden" name="confirm" value="1">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Confirm & Get Tracking Number" %}</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0 border-top">
                     <div class="table-responsive">
                         <table class="table table-striped m-0">
                             <thead>
                                 <tr>
-                                    <th>{% trans "Item" %}</th>
+                                    <th>{% trans "Item" %} <span class="text-muted fw-normal">({{ item_details|length }})</span></th>
                                     <th class="text-end">{% trans "Qty" %}</th>
                                     <th class="text-end">{% trans "Unit Price" %}</th>
                                     <th class="text-end">{% trans "Total" %}</th>
@@ -104,58 +155,9 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3">{% trans "Base Market Value" %}</td>
-                                    <td class="text-end">{{ base_total|eve_isk }}</td>
-                                </tr>
-                                {% if modifier_impact %}
-                                <tr class="{% if modifier_impact < 0 %}text-danger{% else %}text-success{% endif %}">
-                                    <td colspan="3">{% trans "Price modifier / item rules / bulk tax" %}</td>
-                                    <td class="text-end">{% if modifier_impact > 0 %}+{% endif %}{{ modifier_impact|eve_isk }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if hauling_total %}
-                                <tr class="text-danger">
-                                    <td colspan="3">{% trans "Hauling" %} ({{ selected_program.hauling_fuel_cost|floatformat:"-2" }} ISK/m³)</td>
-                                    <td class="text-end">-{{ hauling_total|eve_isk }}</td>
-                                </tr>
-                                {% endif %}
-                                <tr class="border-top">
-                                    <td colspan="3">{% trans "Appraisal Subtotal" %}</td>
-                                    <td class="text-end">{{ total_price|eve_isk }}</td>
-                                </tr>
-                                {% if donation_amount %}
-                                <tr class="text-danger">
-                                    <td colspan="3">
-                                        {% trans "Donation to corp" %}
-                                        {% if donation_mode == "percent" %}({{ donation_value }}%){% endif %}
-                                    </td>
-                                    <td class="text-end">-{{ donation_amount|eve_isk }}</td>
-                                </tr>
-                                {% endif %}
-                                <tr class="fw-bold border-top">
-                                    <td colspan="3">{% trans "You Receive" %}</td>
-                                    <td class="text-end">{{ net_total|eve_isk }}</td>
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>
-                {% if not whole_appraisal_refused %}
-                <div class="card-footer text-end">
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="program_id" value="{{ selected_program.id }}">
-                        <input type="hidden" name="inventory_text" value="{{ inventory_text }}">
-                        <input type="hidden" name="donation_mode" value="{{ donation_mode }}">
-                        <input type="hidden" name="donation_value" value="{{ donation_value }}">
-                        <input type="hidden" name="seller_note" value="{{ seller_note }}">
-                        <input type="hidden" name="confirm" value="1">
-                        <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> {% trans "Confirm & Get Tracking Number" %}</button>
-                    </form>
-                </div>
-                {% endif %}
             </div>
             {% else %}
             <div class="alert alert-info">{% trans "Paste your inventory and submit to see an appraisal here." %}</div>

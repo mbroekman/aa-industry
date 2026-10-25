@@ -318,6 +318,38 @@ class TestCalculatorWithOptions:
         assert contract.quoted_price == Decimal("4900.00")
         assert contract.modifier_impact == Decimal("0.00")
 
+    def test_summary_and_confirm_come_before_the_item_list(self, monkeypatch):
+        # Django
+        from django.contrib.staticfiles.storage import staticfiles_storage
+
+        monkeypatch.setattr(staticfiles_storage, "url", lambda name: f"/static/{name}")
+        try:
+            # Third Party
+            from sri.templatetags import sri
+
+            monkeypatch.setattr(
+                sri, "sri_integrity_static", lambda path, algorithm_type=None: "x"
+            )
+        except ImportError:
+            pass
+
+        user, _ = _member()
+        program = BuybackProgramFactory()
+        EveTypeFactory(name="Zydrine")
+
+        with patch(PRICE, side_effect=_prices({}, default=5.0)):
+            html = buyback_calculator(
+                _post(
+                    user,
+                    {"program_id": program.id, "inventory_text": "Zydrine\t10"},
+                )
+            ).content.decode()
+
+        item_table = html.index("Unit Price")
+        assert html.index("You Receive") < item_table
+        assert html.index("Get Tracking Number") < item_table
+        assert "Zydrine" in html[item_table:]
+
 
 @pytest.mark.django_db
 class TestEnsureSections:
