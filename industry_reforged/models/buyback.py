@@ -268,6 +268,17 @@ class BuybackProgram(models.Model):
             "every new contract."
         ),
     )
+    wallet_division = models.ForeignKey(
+        "industry_reforged.CorpWalletDivision",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="buyback_programs",
+        help_text=_(
+            "Corporation wallet division that funds this program; its balance is "
+            "shown on the program's performance page."
+        ),
+    )
     reject_appraisal_on_disallowed = models.BooleanField(
         default=False,
         help_text=_(

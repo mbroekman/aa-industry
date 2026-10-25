@@ -931,6 +931,7 @@ class BuybackProgramForm(forms.ModelForm):
             "notify_new_contracts",
             "notify_show_item_list",
             "notify_manager_character",
+            "wallet_division",
         ]
         widgets = {
             **{
@@ -953,6 +954,7 @@ class BuybackProgramForm(forms.ModelForm):
                 )
             },
             "notify_manager_character": forms.Select(attrs={"class": "form-select"}),
+            "wallet_division": forms.Select(attrs={"class": "form-select"}),
             "t1_refining_rate": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1", "min": "0", "max": "100"}
             ),
@@ -1017,10 +1019,14 @@ class BuybackProgramForm(forms.ModelForm):
             self.fields["notify_manager_character"].queryset = self.fields[
                 "notify_manager_character"
             ].queryset.filter(corporation_id=corporation.corporation_id)
+            self.fields["wallet_division"].queryset = self.fields[
+                "wallet_division"
+            ].queryset.filter(corporation=corporation)
         if self.instance and self.instance.pk:
             self.fields["corporation"].disabled = True
         self.fields["recipient_character"].required = False
         self.fields["notify_manager_character"].required = False
+        self.fields["wallet_division"].required = False
         # Accept "bb" as "BB": validate after upper-casing, in clean_tracking_prefix.
         self.fields["tracking_prefix"].validators = []
 

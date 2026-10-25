@@ -394,6 +394,21 @@ urlpatterns = [
     path("buyback/", buyback.buyback_dashboard, name="buyback_dashboard"),
     path("buyback/calculator/", buyback.buyback_calculator, name="buyback_calculator"),
     path("buyback/stats/", buyback.buyback_stats, name="buyback_stats"),
+    path(
+        "buyback/stats/leaderboard/",
+        buyback.buyback_leaderboard,
+        name="buyback_leaderboard",
+    ),
+    path(
+        "buyback/program/<int:program_id>/performance/",
+        buyback.buyback_performance,
+        name="buyback_performance",
+    ),
+    path(
+        "buyback/program/<int:program_id>/export.csv",
+        buyback.buyback_export_csv,
+        name="buyback_export_csv",
+    ),
     path("buyback/faq/", buyback.buyback_faq, name="buyback_faq"),
     path(
         "buyback/program/<int:program_id>/rules/",

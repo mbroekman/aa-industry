@@ -1,0 +1,176 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+{% load industry_tags %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_stats' %}">{% trans "Statistics" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Performance" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h2 class="mb-0">{{ program.name }} &middot; {% trans "Performance" %}</h2>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'industry_reforged:buyback_export_csv' program.id %}">
+                    <i class="fas fa-file-csv"></i> {% trans "Export paid items (CSV)" %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-muted small mb-1">{% trans "Funding wallet" %}</div>
+                    {% if wallet %}
+                    <div class="h3 mb-0">{{ wallet.balance|eve_isk }}</div>
+                    <div class="small">{{ wallet }}</div>
+                    <div class="text-muted small">{% trans "Updated" %} {{ wallet.last_updated|date:"Y-m-d H:i" }}</div>
+                    {% else %}
+                    <div class="text-muted">{% trans "No wallet division linked. Choose one in the program settings." %}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <canvas id="buyback-performance-chart" height="110"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light"><h5 class="card-title mb-0">{% trans "Per month" %}</h5></div>
+        <div class="card-body">
+            <p class="text-muted small">{% trans "Contracts are counted in the month they were submitted; ISK and donations in the month they were paid." %}</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Month" %}</th>
+                            <th class="text-end">{% trans "Submitted" %}</th>
+                            {% for status in statuses %}<th class="text-end small">{{ status|title }}</th>{% endfor %}
+                            <th class="text-end">{% trans "Paid out" %}</th>
+                            <th class="text-end">{% trans "ISK Paid" %}</th>
+                            <th class="text-end">{% trans "ISK Donated" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row, counts in performance %}
+                        <tr>
+                            <td>{{ row.month|date:"F Y" }}</td>
+                            <td class="text-end">{{ row.submitted }}</td>
+                            {% for count in counts %}<td class="text-end {% if not count %}text-muted{% endif %}">{{ count }}</td>{% endfor %}
+                            <td class="text-end">{{ row.paid_count }}</td>
+                            <td class="text-end">{{ row.isk_paid|eve_isk }}</td>
+                            <td class="text-end">{{ row.donated|eve_isk }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light"><h5 class="card-title mb-0">{% trans "Top item groups (last 3 months)" %}</h5></div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>{% trans "Group" %}</th><th class="text-end">{% trans "Qty" %}</th><th class="text-end">ISK</th></tr></thead>
+                        <tbody>
+                            {% for row in top_groups %}
+                            <tr><td>{{ row.name }}</td><td class="text-end">{{ row.quantity }}</td><td class="text-end">{{ row.isk|eve_isk }}</td></tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted">{% trans "No paid contracts yet." %}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light"><h5 class="card-title mb-0">{% trans "Top items (last 3 months)" %}</h5></div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>{% trans "Item" %}</th><th class="text-end">{% trans "Qty" %}</th><th class="text-end">ISK</th></tr></thead>
+                        <tbody>
+                            {% for row in top_items %}
+                            <tr><td>{{ row.name }}</td><td class="text-end">{{ row.quantity }}</td><td class="text-end">{{ row.isk|eve_isk }}</td></tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted">{% trans "No paid contracts yet." %}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ chart_data|json_script:"buyback-performance-data" }}
+{% endblock %}
+
+{% block extra_javascript %}
+{{ block.super }}
+{% include 'bundles/chart-js.html' %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        function formatISK(val) {
+            var num = parseFloat(val);
+            if (!num) return "0";
+            if (num >= 1000000000) return (num / 1000000000).toFixed(2) + "b";
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + "m";
+            if (num >= 1000) return (num / 1000).toFixed(2) + "k";
+            return num.toFixed(2);
+        }
+        var data = JSON.parse(document.getElementById("buyback-performance-data").textContent);
+        var canvas = document.getElementById("buyback-performance-chart");
+        if (!canvas) return;
+        new Chart(canvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: data.labels,
+                datasets: [
+                    { type: "bar", label: "{% trans 'ISK paid out' %}", data: data.paidIsk, yAxisID: "y1", backgroundColor: "rgba(25, 135, 84, 0.6)" },
+                    { type: "bar", label: "{% trans 'ISK donated' %}", data: data.donated, yAxisID: "y1", backgroundColor: "rgba(255, 193, 7, 0.6)" },
+                    { type: "line", label: "{% trans 'Contracts submitted' %}", data: data.submitted, yAxisID: "y", borderColor: "#0d6efd", tension: 0.2 },
+                ],
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: "index", intersect: false },
+                scales: {
+                    y: { type: "linear", position: "left", beginAtZero: true, title: { display: true, text: "{% trans 'Contracts' %}" } },
+                    y1: {
+                        type: "linear", position: "right", beginAtZero: true, grid: { drawOnChartArea: false },
+                        ticks: { callback: function (value) { return formatISK(value) + " ISK"; } },
+                    },
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                if (context.dataset.yAxisID === "y1") {
+                                    return context.dataset.label + ": " + formatISK(context.parsed.y) + " ISK";
+                                }
+                                return context.dataset.label + ": " + context.parsed.y;
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    });
+</script>
+{% endblock %}

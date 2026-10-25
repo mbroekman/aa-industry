@@ -16,6 +16,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2 class="mb-0">{% trans "Buyback Statistics" %}</h2>
                 <form method="get" class="d-flex align-items-center gap-2">
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'industry_reforged:buyback_leaderboard' %}"><i class="fas fa-trophy"></i> {% trans "Monthly leaderboard" %}</a>
                     <label for="days" class="form-label mb-0">{% trans "Window" %}</label>
                     <select name="days" id="days" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
                         <option value="7" {% if days == 7 %}selected{% endif %}>{% trans "7 days" %}</option>
@@ -34,7 +35,15 @@
     {% for stats in program_stats %}
     <div class="card border-0 mb-4 shadow-sm">
         <div class="card-header bg-light">
-            <h4 class="card-title mb-0">{{ stats.program_name }}</h4>
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="card-title mb-0">{{ stats.program_name }}</h4>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'industry_reforged:buyback_leaderboard' %}?program={{ stats.program_id }}"><i class="fas fa-trophy"></i> {% trans "Leaderboard" %}</a>
+                    {% if stats.program_id in director_program_ids %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'industry_reforged:buyback_performance' stats.program_id %}"><i class="fas fa-chart-bar"></i> {% trans "Performance" %}</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="row row-cols-2 row-cols-md-5 g-3 mb-4 text-center">

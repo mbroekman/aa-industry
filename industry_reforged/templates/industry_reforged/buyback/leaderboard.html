@@ -1,0 +1,85 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+{% load industry_tags %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_stats' %}">{% trans "Statistics" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "Leaderboard" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h2 class="mb-0">{% trans "Monthly Leaderboard" %}</h2>
+                {% if program %}
+                <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+                    <select name="program" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()" aria-label="{% trans 'Program' %}">
+                        {% for p in programs %}
+                        <option value="{{ p.id }}" {% if p.id == program.id %}selected{% endif %}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="month" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()" aria-label="{% trans 'Month' %}">
+                        {% for m in months %}
+                        <option value="{{ m|date:'Y-m' }}" {% if m == month %}selected{% endif %}>{{ m|date:"F Y" }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if not program %}
+    <div class="alert alert-info">{% trans "No buyback programs available to you." %}</div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h4 class="card-title mb-0">{{ program.name }} &middot; {{ month|date:"F Y" }}</h4>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">{% trans "Sellers ranked by ISK paid out for contracts paid in this month." %}</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>{% trans "Character" %}</th>
+                            <th class="text-end">{% trans "Contracts" %}</th>
+                            <th class="text-end">{% trans "ISK Paid" %}</th>
+                            <th class="text-end">{% trans "ISK Donated" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            <td>{% if row.rank == 1 %}<i class="fas fa-trophy text-warning"></i>{% else %}{{ row.rank }}{% endif %}</td>
+                            <td>{{ row.character_name }}</td>
+                            <td class="text-end">{{ row.contract_count }}</td>
+                            <td class="text-end">{{ row.isk_paid|eve_isk }}</td>
+                            <td class="text-end">{{ row.donated|eve_isk }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted">{% trans "No payouts in this month." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if rows %}
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="3">{% trans "Total" %}</td>
+                            <td class="text-end">{{ total_isk|eve_isk }}</td>
+                            <td class="text-end">{{ total_donated|eve_isk }}</td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

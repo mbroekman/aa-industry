@@ -653,6 +653,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
+                                        <a href="{% url 'industry_reforged:buyback_performance' program.id %}" class="btn btn-sm btn-outline-secondary" title="{% trans 'Performance' %}"><i class="fas fa-chart-bar"></i></a>
                                         <a href="{% url 'industry_reforged:director_config_buyback_program_edit' program.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_buyback_program_delete' program.id %}"><i class="fas fa-trash"></i></button>
                                     </td>

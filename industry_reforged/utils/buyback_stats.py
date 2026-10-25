@@ -9,12 +9,12 @@ leaderboards and a daily activity trend.
 
 # Standard Library
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 # Django
 from django.db.models import Count, F, Q, Sum
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
 
 TERMINAL_STATUSES = ("PAID", "REJECTED", "EXPIRED", "CANCELLED")
@@ -252,3 +252,220 @@ def _build_daily_trend(contracts_qs, payout_qs, days: int) -> list:
             )
         )
     return trend
+
+
+# --- Monthly leaderboard, performance and export (TASK-277) -----------------
+#
+# Payouts are dated by their ledger entry (when the contract was paid), so a
+# contract submitted in March and paid in April counts for April.
+
+
+@dataclass
+class LeaderboardRow:
+    rank: int
+    character_id: int | None
+    character_name: str
+    isk_paid: Decimal
+    donated: Decimal
+    contract_count: int
+
+
+def _payouts(program):
+    from ..models import LedgerTransaction
+
+    return LedgerTransaction.objects.filter(
+        transaction_type="BUYBACK_PAYOUT", buyback_contract__program=program
+    )
+
+
+def available_months(program) -> list[date]:
+    """First day of every month with at least one payout, newest first."""
+    months = (
+        _payouts(program)
+        .annotate(month=TruncMonth("date"))
+        .values_list("month", flat=True)
+        .distinct()
+    )
+    return sorted({_as_date(m) for m in months if m}, reverse=True)
+
+
+def _as_date(value) -> date:
+    return value.date() if isinstance(value, datetime) else value
+
+
+def monthly_leaderboard(program, year: int, month: int) -> list[LeaderboardRow]:
+    rows = (
+        _payouts(program)
+        .filter(date__year=year, date__month=month)
+        .values(
+            "buyback_contract__character_id",
+            "buyback_contract__character__character_name",
+        )
+        .annotate(
+            isk_paid=Sum("amount"),
+            donated=Sum("buyback_contract__donation_amount"),
+            contract_count=Count("id"),
+        )
+        .order_by("-isk_paid")
+    )
+    return [
+        LeaderboardRow(
+            rank=index,
+            character_id=row["buyback_contract__character_id"],
+            character_name=row["buyback_contract__character__character_name"]
+            or "-",
+            isk_paid=row["isk_paid"] or Decimal("0.00"),
+            donated=row["donated"] or Decimal("0.00"),
+            contract_count=row["contract_count"],
+        )
+        for index, row in enumerate(rows, start=1)
+    ]
+
+
+@dataclass
+class MonthPerformance:
+    month: date
+    submitted: int = 0
+    by_status: dict = field(default_factory=dict)
+    paid_count: int = 0
+    isk_paid: Decimal = Decimal("0.00")
+    donated: Decimal = Decimal("0.00")
+
+
+def _month_starts(months: int) -> list[date]:
+    """First day of the last `months` months, oldest first, ending this month."""
+    today = timezone.localdate()
+    year, month = today.year, today.month
+    starts = []
+    for _ in range(months):
+        starts.append(date(year, month, 1))
+        month -= 1
+        if month == 0:
+            year, month = year - 1, 12
+    return list(reversed(starts))
+
+
+def monthly_performance(program, months: int = 12) -> list[MonthPerformance]:
+    """Per month: contracts submitted (by status) and ISK/donations paid out."""
+    from ..models import BuybackContract
+
+    starts = _month_starts(months)
+    rows = {start: MonthPerformance(month=start) for start in starts}
+    since = starts[0]
+
+    for row in (
+        BuybackContract.objects.filter(program=program, created_at__date__gte=since)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month", "status")
+        .annotate(count=Count("id"))
+    ):
+        perf = rows.get(_as_date(row["month"]))
+        if perf:
+            perf.submitted += row["count"]
+            perf.by_status[row["status"]] = row["count"]
+
+    for row in (
+        _payouts(program)
+        .filter(date__date__gte=since)
+        .annotate(month=TruncMonth("date"))
+        .values("month")
+        .annotate(
+            isk=Sum("amount"),
+            donated=Sum("buyback_contract__donation_amount"),
+            count=Count("id"),
+        )
+    ):
+        perf = rows.get(_as_date(row["month"]))
+        if perf:
+            perf.isk_paid = row["isk"] or Decimal("0.00")
+            perf.donated = row["donated"] or Decimal("0.00")
+            perf.paid_count = row["count"]
+
+    return [rows[start] for start in starts]
+
+
+@dataclass
+class ValueRow:
+    name: str
+    isk: Decimal
+    quantity: int
+
+
+def _paid_items(program, months: int):
+    from ..models import BuybackContractItem
+
+    since = _month_starts(months)[0]
+    return BuybackContractItem.objects.filter(
+        contract__program=program,
+        contract__status="PAID",
+        contract__ledger_transactions__transaction_type="BUYBACK_PAYOUT",
+        contract__ledger_transactions__date__date__gte=since,
+    )
+
+
+def top_item_groups(program, months: int = 3, limit: int = 10) -> list[ValueRow]:
+    """Item groups paid out most, by ISK, over the last `months` months."""
+    return _top_by(program, "eve_type__eve_group__name", months, limit)
+
+
+def top_items(program, months: int = 3, limit: int = 10) -> list[ValueRow]:
+    return _top_by(program, "eve_type__name", months, limit)
+
+
+def _top_by(program, name_field: str, months: int, limit: int) -> list[ValueRow]:
+    rows = (
+        _paid_items(program, months)
+        .values(name_field)
+        .annotate(isk=Sum(F("unit_price") * F("quantity")), quantity=Sum("quantity"))
+        .order_by("-isk")[:limit]
+    )
+    return [
+        ValueRow(
+            name=row[name_field] or "-",
+            isk=row["isk"] or Decimal("0.00"),
+            quantity=row["quantity"] or 0,
+        )
+        for row in rows
+    ]
+
+
+CSV_HEADER = [
+    "tracking_number",
+    "submitted",
+    "paid",
+    "seller",
+    "item",
+    "item_group",
+    "quantity",
+    "unit_price",
+    "line_isk",
+]
+
+
+def export_rows(program):
+    """One row per item of every paid contract, oldest payout first."""
+    from ..models import BuybackContractItem
+
+    items = (
+        BuybackContractItem.objects.filter(
+            contract__program=program,
+            contract__status="PAID",
+            contract__ledger_transactions__transaction_type="BUYBACK_PAYOUT",
+        )
+        .select_related("contract__character", "eve_type__eve_group")
+        .annotate(paid=F("contract__ledger_transactions__date"))
+        .order_by("paid", "contract_id", "id")
+    )
+    for item in items:
+        contract = item.contract
+        yield [
+            contract.tracking_number,
+            timezone.localtime(contract.created_at).strftime("%Y-%m-%d %H:%M"),
+            timezone.localtime(item.paid).strftime("%Y-%m-%d %H:%M"),
+            contract.character.character_name if contract.character else "",
+            item.eve_type.name,
+            item.eve_type.eve_group.name if item.eve_type.eve_group_id else "",
+            item.quantity,
+            f"{item.unit_price:.2f}",
+            f"{item.unit_price * item.quantity:.2f}",
+        ]

@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: Statistics from the original buyback plugin (TASK-277, phase 5):
+  - **Monthly leaderboard** (Statistics → Monthly leaderboard): sellers ranked by ISK paid out per month, with donations and contract count, and a program and month picker. Only programs you may use are shown.
+  - **Performance page** per program for its directors (Statistics or the chart icon on the Buyback tab): 12 months of submitted contracts by status, ISK paid out and donations, with a chart, plus the top item groups and items of the last 3 months.
+  - **CSV export** of every paid contract line (tracking number, dates, seller, item, group, quantity, price) for the program's directors.
+  - **Wallet balance**: choose the corporation wallet division that funds a program; its balance (from the existing wallet sync) shows on the performance page.
+
 - **buyback**: Pages for members (TASK-276, phase 4):
   - **Rules and prices** page per program (click the program name on the Buyback dashboard): how items are valued, what is accepted, item rules, fixed prices, drop-off, recipient and deadline. The program's own directors also see its watchlist there.
   - **FAQ** with a built-in "How it works" and questions each corporation's directors manage on the Buyback tab (no Django admin needed). Members see the FAQ of every corporation whose program they may use.
