@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **buyback**: Item icons on the contract page: in the item list, the sell-or-reprocess table and the material list.
 - **buyback**: The calculator shows the calculation (base value, modifier, hauling, donation, what you receive) and the confirm button above the item list instead of below it, so long appraisals no longer need scrolling.
 - **buyback**: The "one rule per item or market group" and "one watchlist entry per item group" checks are now real database constraints on MariaDB/MySQL too (migration 0089). Before, MariaDB skipped them with warning `models.W036`.
 - **buyback**: The contract page now shows a separate "Create this contract in EVE" block while a contract is pending: who to make it out to, the exact ISK to ask, the title (tracking number) and the drop-off location, each with a copy button, plus the contract type and the deadline.

@@ -217,7 +217,7 @@
                         {% for item in advice.items %}
                         <tr>
                             <td>
-                                {{ item.eve_type.name }}
+                                <img src="https://images.evetech.net/types/{{ item.eve_type.id }}/icon?size=32" alt="" class="rounded me-1" style="width:20px;height:20px;" loading="lazy" onerror="handleImageFallback(this, {{ item.eve_type.id }})">{{ item.eve_type.name }}
                                 {% if item.slow_sale %}<span class="badge bg-warning text-dark ms-1" title="{% trans 'More than 5 days of Jita trade volume; a sell order may take a while.' %}">{% trans "Slow to sell" %}</span>{% endif %}
                                 {% if item.leftover %}<div class="small text-muted">{% blocktrans with count=item.leftover %}{{ count }} left over (less than one reprocessing batch), counted as sold{% endblocktrans %}</div>{% endif %}
                             </td>
@@ -249,7 +249,7 @@
             <h6 class="mt-3">{% trans "Materials from the items to reprocess" %}</h6>
             <div class="d-flex flex-wrap gap-2 align-items-center">
                 {% for mat in advice.materials %}
-                <span class="badge {% if mat.in_house %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}" {% if mat.in_house %}title="{% blocktrans with count=mat.in_house %}{{ count }} fill a stock shortage{% endblocktrans %}"{% endif %}>{{ mat.eve_type.name }} {{ mat.quantity }}</span>
+                <span class="badge d-inline-flex align-items-center py-1 {% if mat.in_house %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}" {% if mat.in_house %}title="{% blocktrans with count=mat.in_house %}{{ count }} fill a stock shortage{% endblocktrans %}"{% endif %}><img src="https://images.evetech.net/types/{{ mat.eve_type.id }}/icon?size=32" alt="" class="rounded me-1" style="width:20px;height:20px;" loading="lazy" onerror="handleImageFallback(this, {{ mat.eve_type.id }})">{{ mat.eve_type.name }} <span class="fw-normal">{{ mat.quantity|floatformat:"0g" }}</span></span>
                 {% endfor %}
                 <button type="button" class="btn btn-sm btn-outline-secondary buyback-copy" data-copy="{% for mat in advice.materials %}{{ mat.eve_type.name }} {{ mat.quantity }}
 {% endfor %}" title="{% trans 'Copy as multibuy list' %}"><i class="far fa-copy"></i></button>
@@ -275,7 +275,7 @@
                     <tbody>
                         {% for item in items %}
                         <tr>
-                            <td>{{ item.eve_type.name }}</td>
+                            <td><img src="https://images.evetech.net/types/{{ item.eve_type.id }}/icon?size=32" alt="" class="rounded me-1" style="width:20px;height:20px;" loading="lazy" onerror="handleImageFallback(this, {{ item.eve_type.id }})">{{ item.eve_type.name }}</td>
                             <td class="text-end">{{ item.quantity }}</td>
                             <td class="text-end">{{ item.unit_price|eve_isk }}</td>
                             <td class="text-end">{{ item.line_total|eve_isk }}</td>
