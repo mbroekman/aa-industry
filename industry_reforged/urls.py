@@ -506,6 +506,11 @@ urlpatterns = [
         name="director_buyback_refresh_contracts",
     ),
     path(
+        "director/buyback/reprocessing/",
+        buyback.director_config_buyback_reprocessing,
+        name="director_config_buyback_reprocessing",
+    ),
+    path(
         "director/buyback/faq/add/",
         buyback.director_config_buyback_faq_edit,
         name="director_config_buyback_faq_add",

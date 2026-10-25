@@ -22,6 +22,7 @@ from .models import (
     CorpItemConfig,
     CorporationPricingConfig,
     CorpPricingConfig,
+    CorpReprocessingConfig,
     CorpTypeDiscount,
     IndustryFacility,
     IndustryFacilityRig,
@@ -1249,3 +1250,52 @@ class BuybackFaqForm(forms.ModelForm):
             "answer": forms.Textarea(attrs={"class": "form-control", "rows": 6}),
             "order": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
         }
+
+
+class CorpReprocessingConfigForm(forms.ModelForm):
+    """Reprocessing and selling assumptions for the "sell or reprocess" advice.
+    The broker fee lives on TaxConfig and is edited here as well."""
+
+    broker_fee_percent = forms.FloatField(
+        min_value=0.0,
+        max_value=100.0,
+        label=_("Broker fee (%)"),
+        help_text=_("Broker fee when selling through a sell order."),
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+    )
+
+    class Meta:
+        model = CorpReprocessingConfig
+        fields = [
+            "sell_route",
+            "ore_yield_percent",
+            "scrap_yield_percent",
+            "reprocessing_tax_percent",
+            "sales_tax_percent",
+            "margin_percent",
+            "use_stock_needs",
+        ]
+        number = {"class": "form-control", "step": "0.01"}
+        widgets = {
+            "sell_route": forms.Select(attrs={"class": "form-select"}),
+            "ore_yield_percent": forms.NumberInput(attrs=number),
+            "scrap_yield_percent": forms.NumberInput(attrs=number),
+            "reprocessing_tax_percent": forms.NumberInput(attrs=number),
+            "sales_tax_percent": forms.NumberInput(attrs=number),
+            "margin_percent": forms.NumberInput(attrs=number),
+            "use_stock_needs": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        tax = TaxConfig.objects.filter(corporation=self.instance.corporation).first()
+        self.fields["broker_fee_percent"].initial = tax.broker_fee_rate if tax else 0.0
+
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
+        if commit:
+            TaxConfig.objects.update_or_create(
+                corporation=instance.corporation,
+                defaults={"broker_fee_rate": self.cleaned_data["broker_fee_percent"]},
+            )
+        return instance

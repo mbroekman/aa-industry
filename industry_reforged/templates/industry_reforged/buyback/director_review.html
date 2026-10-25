@@ -34,6 +34,7 @@
                             <th>{% trans "Status" %}</th>
                             <th>{% trans "Notes" %}</th>
                             <th class="text-end">{% trans "Price" %}</th>
+                            <th>{% trans "Advice" %}</th>
                             <th class="text-end">{% trans "Actions" %}</th>
                         </tr>
                     </thead>
@@ -54,6 +55,13 @@
                                 {% if contract.seller_note %}<div class="small text-body-secondary mt-1"><i class="fas fa-comment"></i> {{ contract.seller_note }}</div>{% endif %}
                             </td>
                             <td class="text-end">{{ contract.quoted_price|eve_isk }}</td>
+                            <td>
+                                {% if contract.advice %}
+                                <a href="{% url 'industry_reforged:buyback_contract_detail' contract.tracking_number %}#sell-or-reprocess" class="text-decoration-none">
+                                    {% if contract.advice.gain > 0 %}<span class="badge bg-success">{% trans "Reprocess some" %}</span> <span class="small text-success">+{{ contract.advice.gain|eve_isk }}</span>{% else %}<span class="badge bg-primary">{% trans "Sell" %}</span>{% endif %}
+                                </a>
+                                {% else %}-{% endif %}
+                            </td>
                             <td class="text-end">
                                 <form method="post" action="{% url 'industry_reforged:director_buyback_contract_resolve' contract.tracking_number %}" class="d-inline">
                                     {% csrf_token %}
@@ -86,7 +94,7 @@
                             </div>
                         </div>
                         {% empty %}
-                        <tr><td colspan="6" class="text-center text-muted py-3">{% trans "Nothing to review right now." %}</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-3">{% trans "Nothing to review right now." %}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

@@ -1,6 +1,7 @@
 """App Views"""
 
 # Standard Library
+import logging
 from decimal import Decimal, InvalidOperation
 
 # Django
@@ -24,6 +25,8 @@ from ...utils.inventory_parser import parse_inventory_paste_with_unpacked
 from ...utils.pricing_engine import calculate_buyback_quote
 
 CALCULATOR_TEMPLATE = "industry_reforged/buyback/calculator.html"
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_tracking_number(prefix: str = "BB") -> str:
@@ -302,7 +305,15 @@ def buyback_contract_detail(request: WSGIRequest, tracking_number: str) -> HttpR
         "contract": contract,
         "items": contract.items.select_related("eve_type"),
         "comparison": item_comparison(contract),
+        "advice": None,
     }
+    if _is_program_director(request.user, contract.program):
+        from ...utils.reprocess_advice import advise_contract
+
+        try:
+            context["advice"] = advise_contract(contract)
+        except Exception:
+            logger.exception("Sell/reprocess advice failed for %s", tracking_number)
     return render(request, "industry_reforged/buyback/contract_detail.html", context)
 
 

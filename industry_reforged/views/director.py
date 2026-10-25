@@ -638,51 +638,9 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
             }
         )
 
-    low_stock = []
+    from ..utils.stock_needs import low_stock_rows
 
-    inv_dict = {item["item_type__id"]: item["total_qty"] for item in inventory}
-
-    from ..models import CorpBuyOrder, ProductionTask
-
-    open_tasks = (
-        ProductionTask.objects.filter(
-            created_from_order__isnull=True,
-            bom_parent__isnull=True,
-            status__in=["UNCLAIMED", "IN_PRODUCTION"],
-        )
-        .values("item_type_id")
-        .annotate(total=Sum("quantity"))
-    )
-    open_tasks_dict = {t["item_type_id"]: t["total"] for t in open_tasks}
-
-    open_buys = (
-        CorpBuyOrder.objects.filter(
-            corporation=corporation, status__in=["OPEN", "IN_PROGRESS"]
-        )
-        .values("item_type_id")
-        .annotate(total=Sum("quantity"))
-    )
-    open_buys_dict = {b["item_type_id"]: b["total"] for b in open_buys}
-
-    for config in configs:
-        current_qty = inv_dict.get(config.item_type.id, 0)
-        in_progress = open_tasks_dict.get(config.item_type.id, 0) + open_buys_dict.get(
-            config.item_type.id, 0
-        )
-
-        effective_qty = current_qty + in_progress
-
-        if effective_qty < config.target_threshold:
-            low_stock.append(
-                {
-                    "item_type": config.item_type,
-                    "current_qty": current_qty,
-                    "in_progress": in_progress,
-                    "target": config.target_threshold,
-                    "deficit": config.target_threshold - effective_qty,
-                    "build_or_buy": config.build_or_buy,
-                }
-            )
+    low_stock = low_stock_rows(corporation)
 
     # Django
     from django.db.models import Q
@@ -1065,6 +1023,10 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     ).select_related("program", "eve_type")
     market_groups_loaded = EveMarketGroup.objects.exists()
     buyback_faqs = corporation.buyback_faqs.all()
+    from ..models import CorpReprocessingConfig
+
+    reprocessing_config = CorpReprocessingConfig.for_corporation(corporation)
+    reprocessing_tax_config = TaxConfig.objects.filter(corporation=corporation).first()
 
     from ..models import JobTrackingConfig
 
@@ -1089,6 +1051,8 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "buyback_static_prices": buyback_static_prices,
         "market_groups_loaded": market_groups_loaded,
         "buyback_faqs": buyback_faqs,
+        "reprocessing_config": reprocessing_config,
+        "broker_fee_rate": reprocessing_tax_config.broker_fee_rate if reprocessing_tax_config else 0.0,
         "job_tracking_configs": job_tracking_configs,
     }
     return render(request, "industry_reforged/director_config.html", context)

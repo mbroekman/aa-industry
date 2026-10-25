@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: "Sell or reprocess?" advice per contract for the program's directors (TASK-279). Per item: the value sold straight to Jita buy orders or through a sell order (after broker fee and sales tax), and the same for its reprocessed materials (after reprocessing tax, whole batches only); advice Sell, Reprocess or Either way with the ISK difference. Materials the corporation is short of (low-stock targets) count as used in-house. Totals, gain over selling everything, a copyable material list, and an *Advice* column in the review queue. Settings per corporation in "Selling or reprocessing" on the Buyback tab (migration 0090).
+
 - **buyback**: Statistics from the original buyback plugin (TASK-277, phase 5):
   - **Monthly leaderboard** (Statistics → Monthly leaderboard): sellers ranked by ISK paid out per month, with donations and contract count, and a program and month picker. Only programs you may use are shown.
   - **Performance page** per program for its directors (Statistics or the chart icon on the Buyback tab): 12 months of submitted contracts by status, ISK paid out and donations, with a chart, plus the top item groups and items of the last 3 months.

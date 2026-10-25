@@ -9,6 +9,7 @@ from .director import (
     director_config_buyback_faq_edit,
     director_config_buyback_program_delete,
     director_config_buyback_program_edit,
+    director_config_buyback_reprocessing,
     director_config_buyback_rule_delete,
     director_config_buyback_rule_edit,
     director_config_buyback_static_price_delete,

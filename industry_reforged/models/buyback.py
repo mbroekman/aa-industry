@@ -762,3 +762,73 @@ class BuybackFaq(models.Model):
 
     def __str__(self):
         return self.question
+
+
+class CorpReprocessingConfig(models.Model):
+    """How a corporation reprocesses and sells, for the "sell or reprocess"
+    advice on buyback contracts. Without a row the field defaults apply."""
+
+    ROUTE_INSTANT = "INSTANT"
+    ROUTE_LISTED = "LISTED"
+    SELL_ROUTE_CHOICES = (
+        (ROUTE_INSTANT, _("Sell straight to Jita buy orders")),
+        (ROUTE_LISTED, _("List a sell order at the Jita sell price")),
+    )
+
+    corporation = models.OneToOneField(
+        EveCorporationInfo,
+        on_delete=models.CASCADE,
+        related_name="reprocessing_config",
+    )
+    ore_yield_percent = models.FloatField(
+        default=90.6,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text=_("Reprocessing yield (%) for ore, ice and moon ore."),
+    )
+    scrap_yield_percent = models.FloatField(
+        default=55.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text=_("Reprocessing yield (%) for everything else (modules, ships...)."),
+    )
+    reprocessing_tax_percent = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text=_("Structure reprocessing tax, as % of the materials' value."),
+    )
+    sales_tax_percent = models.FloatField(
+        default=3.37,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text=_("Sales tax (%) when selling through a sell order."),
+    )
+    sell_route = models.CharField(
+        max_length=8,
+        choices=SELL_ROUTE_CHOICES,
+        default=ROUTE_INSTANT,
+        help_text=_("The selling route the advice is based on."),
+    )
+    margin_percent = models.FloatField(
+        default=2.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text=_("Below this difference (%) the advice is \"either way\"."),
+    )
+    use_stock_needs = models.BooleanField(
+        default=True,
+        help_text=_(
+            "Count materials the corporation is short of (low-stock targets) as "
+            "used in-house, valued at what buying them would cost."
+        ),
+    )
+
+    class Meta:
+        verbose_name = _("Reprocessing Config")
+        verbose_name_plural = _("Reprocessing Configs")
+
+    def __str__(self):
+        return f"{self.corporation} reprocessing"
+
+    @classmethod
+    def for_corporation(cls, corporation) -> "CorpReprocessingConfig":
+        """The saved config, or an unsaved one with the defaults."""
+        return cls.objects.filter(corporation=corporation).first() or cls(
+            corporation=corporation
+        )

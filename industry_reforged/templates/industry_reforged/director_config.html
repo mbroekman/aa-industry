@@ -843,6 +843,26 @@
                 </div>
             </div>
 
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-recycle text-primary"></i> {% trans "Selling or reprocessing" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_buyback_reprocessing' %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> {% trans "Edit" %}</a>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">{% trans 'Used for the "Sell or reprocess?" advice that directors see on each buyback contract.' %}</p>
+                    <div class="row row-cols-2 row-cols-md-4 g-2 small">
+                        <div><span class="text-muted">{% trans "Advice based on" %}</span><br><strong>{{ reprocessing_config.get_sell_route_display }}</strong></div>
+                        <div><span class="text-muted">{% trans "Ore / ice / moon yield" %}</span><br><strong>{{ reprocessing_config.ore_yield_percent }}%</strong></div>
+                        <div><span class="text-muted">{% trans "Scrap yield" %}</span><br><strong>{{ reprocessing_config.scrap_yield_percent }}%</strong></div>
+                        <div><span class="text-muted">{% trans "Reprocessing tax" %}</span><br><strong>{{ reprocessing_config.reprocessing_tax_percent }}%</strong></div>
+                        <div><span class="text-muted">{% trans "Broker fee" %}</span><br><strong>{{ broker_fee_rate }}%</strong></div>
+                        <div><span class="text-muted">{% trans "Sales tax" %}</span><br><strong>{{ reprocessing_config.sales_tax_percent }}%</strong></div>
+                        <div><span class="text-muted">{% trans "Either way below" %}</span><br><strong>{{ reprocessing_config.margin_percent }}%</strong></div>
+                        <div><span class="text-muted">{% trans "Count stock shortages" %}</span><br><strong>{% if reprocessing_config.use_stock_needs %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</strong></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="text-end">
                 <a href="{% url 'industry_reforged:buyback_faq' %}" class="btn btn-outline-secondary"><i class="fas fa-question-circle"></i> {% trans "FAQ" %}</a>
                 <a href="{% url 'industry_reforged:buyback_stats' %}" class="btn btn-outline-secondary"><i class="fas fa-chart-line"></i> {% trans "Statistics" %}</a>

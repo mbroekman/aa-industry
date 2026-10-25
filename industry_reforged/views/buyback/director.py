@@ -1,5 +1,8 @@
 """App Views"""
 
+# Standard Library
+import logging
+
 # Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -19,6 +22,7 @@ from ...forms import (
     BuybackProgramForm,
     BuybackStaticPriceForm,
     BuybackWatchlistItemForm,
+    CorpReprocessingConfigForm,
 )
 from ...models import (
     BuybackContract,
@@ -30,6 +34,8 @@ from ...models import (
     BuybackWatchlistItem,
 )
 from ...utils import buyback_notify
+
+logger = logging.getLogger(__name__)
 
 
 def _director_corporation(request: WSGIRequest):
@@ -257,6 +263,24 @@ def director_buyback_load_market_groups(request: WSGIRequest) -> HttpResponse:
     return _back_to_config()
 
 
+def _attach_advice(contracts, corporation) -> None:
+    """Set contract.advice (sell/reprocess summary) for the review queue.
+    A failing price lookup leaves the column empty instead of breaking the page."""
+    from ...models import CorpReprocessingConfig
+    from ...utils.reprocess_advice import advise_contract
+    from ...utils.stock_needs import stock_deficits
+
+    try:
+        config = CorpReprocessingConfig.for_corporation(corporation)
+        deficits = stock_deficits(corporation) if config.use_stock_needs else {}
+        for contract in contracts:
+            contract.advice = advise_contract(contract, deficits=deficits)
+    except Exception:
+        logger.exception("Sell/reprocess advice failed for the review queue")
+        for contract in contracts:
+            contract.advice = None
+
+
 @login_required
 @permission_required("industry_reforged.corp_access")
 def director_buyback_review(request: WSGIRequest) -> HttpResponse:
@@ -276,6 +300,9 @@ def director_buyback_review(request: WSGIRequest) -> HttpResponse:
     untracked_contracts = BuybackUntrackedContract.objects.filter(
         program__corporation=corporation, dismissed=False
     ).select_related("program")
+
+    contracts = list(contracts)
+    _attach_advice(contracts, corporation)
     context = {
         "title": _("Buyback Review Queue"),
         "contracts": contracts,
@@ -427,3 +454,35 @@ def director_buyback_refresh_contracts(request: WSGIRequest) -> HttpResponse:
         ),
     )
     return redirect("industry_reforged:director_buyback_review")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_buyback_reprocessing(request: WSGIRequest) -> HttpResponse:
+    """Edit the corporation's reprocessing and selling assumptions."""
+    from ...models import CorpReprocessingConfig
+
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    instance = CorpReprocessingConfig.for_corporation(corporation)
+    if request.method == "POST":
+        form = CorpReprocessingConfigForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Reprocessing settings saved."))
+            return _back_to_config()
+    else:
+        form = CorpReprocessingConfigForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Selling or reprocessing"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#buyback",
+        },
+    )

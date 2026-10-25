@@ -4,6 +4,7 @@ from .buyback import (
     BuybackContract,
     BuybackContractItem,
     BuybackFaq,
+    CorpReprocessingConfig,
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
@@ -106,4 +107,5 @@ __all__ = [
     "BuybackContract",
     "BuybackContractItem",
     "BuybackFaq",
+    "CorpReprocessingConfig",
 ]
