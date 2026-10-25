@@ -11,7 +11,8 @@ pure so `tasks/buyback.py` stays a thin fetch-and-write layer around it.
 import re
 from dataclasses import dataclass
 
-TRACKING_NUMBER_RE = re.compile(r"\bBB-[A-Z0-9]{8}\b")
+# "<PREFIX>-<8 chars>", where each program picks its own 1-10 character prefix.
+TRACKING_NUMBER_RE = re.compile(r"\b([A-Z0-9]{1,10})-[A-Z0-9]{8}\b")
 
 # Tolerance for price mismatches, to absorb rounding differences between the
 # quoted appraisal and what a member actually typed into the in-game contract.
@@ -31,7 +32,8 @@ class BuybackContractExpectation:
     tracking_number: str
     expected_items: list[ExpectedItem]
     expected_price: float
-    expected_location_id: int | None
+    # Any of these drop-off locations is fine; empty means don't check.
+    expected_location_ids: set[int]
     expected_receiver_id: int | None = None
 
 
@@ -60,14 +62,18 @@ class ContractMatchResult:
         )
 
 
-def extract_tracking_number(contract_title: str) -> str | None:
-    """Extracts a BB-XXXXXXXX tracking number from a contract title, or None
-    if the title has no recognizable tracking number at all (a likely scam/
-    untracked contract, flagged separately from a tampered one)."""
+def extract_tracking_number(contract_title: str, prefixes=None) -> str | None:
+    """Extracts a <PREFIX>-XXXXXXXX tracking number from a contract title, or
+    None if there is none (a likely scam/untracked contract, flagged
+    separately from a tampered one). With `prefixes`, only tracking numbers
+    using one of those prefixes count, so ordinary words with a dash in the
+    title aren't mistaken for one."""
     if not contract_title:
         return None
-    match = TRACKING_NUMBER_RE.search(contract_title.upper())
-    return match.group(0) if match else None
+    for match in TRACKING_NUMBER_RE.finditer(contract_title.upper()):
+        if prefixes is None or match.group(1) in prefixes:
+            return match.group(0)
+    return None
 
 
 def match_contract(
@@ -81,7 +87,10 @@ def match_contract(
     """
     notes: list[str] = []
 
-    found_tracking = extract_tracking_number(esi_contract.get("title", ""))
+    expected_prefix = expected.tracking_number.upper().rsplit("-", 1)[0]
+    found_tracking = extract_tracking_number(
+        esi_contract.get("title", ""), prefixes={expected_prefix}
+    )
     no_tracking = found_tracking is None
     title_tampered = (
         not no_tracking and found_tracking != expected.tracking_number.upper()
@@ -94,9 +103,8 @@ def match_contract(
             f"expected one ({expected.tracking_number})."
         )
 
-    structure_mismatch = (
-        expected.expected_location_id is not None
-        and esi_contract.get("start_location_id") != expected.expected_location_id
+    structure_mismatch = bool(expected.expected_location_ids) and (
+        esi_contract.get("start_location_id") not in expected.expected_location_ids
     )
     if structure_mismatch:
         notes.append("Contract was created at the wrong structure/location.")

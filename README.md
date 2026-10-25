@@ -141,6 +141,17 @@ This plugin requires specific ESI scopes depending on the features you want to u
 - **`esi-corporations.read_blueprints.v1`**: Required to sync the Corp Blueprint Library. Directors grant this via the "Add Corporate Token" button.
 - **`esi-markets.structure_markets.v1`**: Required for the AI Market Manager to read markets in player-owned structures. Directors grant this via the "Add Corporate Token" button.
 - **`esi-contracts.read_corporation_contracts.v1`**: Required for the Buyback Program to poll and match corporation item-exchange contracts. Directors grant this via the "Add Corporate Token" button. Older corporate tokens may lack this scope; if Buyback contracts never get matched, re-add the corporate token once.
+- **`esi-contracts.read_character_contracts.v1`**: Only needed when a Buyback Program sends contracts to a character instead of the corporation. That character grants it via the "Add Personal Token" button.
+
+#### Public Buyback calculators
+
+A Buyback Program can be marked public, so anyone can use its calculator without logging in. Alliance Auth only allows that when the app is listed in `myauth/settings/local.py`:
+
+```python
+APPS_WITH_PUBLIC_VIEWS = ["industry_reforged"]
+```
+
+Without this setting, public programs still work but require a login. Directors find the public link under the program on the Buyback tab of Director Configurations.
 
 #### Automating Scopes for all Users
 To prevent members from having to manually authorize additional PI or Industry tokens, you can configure Alliance Auth to **automatically request these scopes** during the standard "Add Character" login flow. Add the following to your `myauth/settings/local.py`:

@@ -27,6 +27,7 @@ from ..tasks.wallets import task_sync_corp_wallets
         "esi-industry.read_character_jobs.v1",
         "esi-planets.manage_planets.v1",
         "esi-skills.read_skills.v1",
+        "esi-contracts.read_character_contracts.v1",
     ]
 )
 def add_personal_token(request: WSGIRequest, token) -> HttpResponse:

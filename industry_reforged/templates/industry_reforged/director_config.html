@@ -625,7 +625,16 @@
                             <tbody>
                                 {% for program in buyback_programs %}
                                 <tr>
-                                    <td class="fw-bold">{{ program.name }}</td>
+                                    <td>
+                                        <span class="fw-bold">{{ program.name }}</span>
+                                        <span class="badge bg-secondary ms-1" title="{% trans 'Tracking number prefix' %}">{{ program.tracking_prefix }}-</span>
+                                        {% if program.restricted_to_groups.exists or program.restricted_to_states.exists %}<span class="badge bg-warning text-dark ms-1">{% trans "Restricted" %}</span>{% endif %}
+                                        {% if program.is_public %}
+                                        <div class="small mt-1"><span class="badge bg-info text-dark">{% trans "Public" %}</span>
+                                            <code class="user-select-all">{{ request.scheme }}://{{ request.get_host }}{% url 'industry_reforged:buyback_public_calculator' program.id %}</code></div>
+                                        {% endif %}
+                                        <div class="small text-muted">{% trans "Contracts to:" %} {{ program.recipient_name }}</div>
+                                    </td>
                                     <td>{{ program.corporation.corporation_ticker }}</td>
                                     <td>{{ program.drop_off_name }}</td>
                                     <td>

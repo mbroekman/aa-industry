@@ -6,6 +6,7 @@
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-12">
+            {% if not public %}
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
@@ -13,6 +14,7 @@
                     <li class="breadcrumb-item active" aria-current="page">{{ contract.tracking_number }}</li>
                 </ol>
             </nav>
+            {% endif %}
             <h2 class="mb-0">{{ contract.tracking_number }}</h2>
         </div>
     </div>
@@ -66,7 +68,7 @@
                 <dd class="col-sm-9">{{ contract.created_at|date:"Y-m-d H:i" }}</dd>
             </dl>
 
-            {% if contract.has_flags %}
+            {% if contract.has_flags and not public %}
             <div class="alert alert-warning mt-3">
                 <strong><i class="fas fa-exclamation-triangle"></i> {% trans "This contract needs review" %}</strong>
                 <p class="mb-0">{{ contract.flag_notes }}</p>
@@ -79,13 +81,16 @@
                 <strong>{{ contract.tracking_number }}</strong><br>
                 {% trans "Set the contract price to:" %} <strong>{{ contract.quoted_price|eve_isk }}</strong>
                 {% if contract.donation_amount %}({% trans "already net of your donation" %}){% endif %}<br>
-                {% trans "Set the drop-off location to:" %} <strong>{{ contract.program.drop_off_name }}</strong><br>
-                {% trans "Address the contract to:" %} <strong>{{ contract.program.corporation.corporation_name }}</strong>
+                {% if contract.program.drop_off_names|length > 1 %}{% trans "Create it at one of:" %}{% else %}{% trans "Create it at:" %}{% endif %}
+                <strong>{{ contract.program.drop_off_name }}</strong><br>
+                {% trans "Address the contract to:" %} <strong>{{ contract.program.recipient_name }}</strong>
             </div>
+            {% if not public %}
             <form method="post" action="{% url 'industry_reforged:buyback_contract_cancel' contract.tracking_number %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-times"></i> {% trans "Cancel" %}</button>
             </form>
+            {% endif %}
             {% endif %}
         </div>
     </div>

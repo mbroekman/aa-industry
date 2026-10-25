@@ -1041,9 +1041,11 @@ def director_config(request: WSGIRequest) -> HttpResponse:
 
     from ..models import BuybackProgram, BuybackWatchlistItem
 
-    buyback_programs = BuybackProgram.objects.filter(
-        corporation=corporation
-    ).select_related("corporation", "facility", "known_location")
+    buyback_programs = (
+        BuybackProgram.objects.filter(corporation=corporation)
+        .select_related("corporation", "recipient_character")
+        .prefetch_related("facilities", "known_locations")
+    )
     buyback_watchlist_items = BuybackWatchlistItem.objects.filter(
         program__corporation=corporation
     ).select_related("program", "eve_type")

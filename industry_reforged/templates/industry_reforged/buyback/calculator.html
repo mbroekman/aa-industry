@@ -6,6 +6,9 @@
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-12">
+            {% if public %}
+            <h2 class="mb-0">{{ title }}</h2>
+            {% else %}
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
@@ -14,6 +17,7 @@
                 </ol>
             </nav>
             <h2 class="mb-0">{% trans "Buyback Calculator" %}</h2>
+            {% endif %}
         </div>
     </div>
 

@@ -82,7 +82,9 @@ class TestBuybackDirectorViews:
                 "corporation": corp.id,
                 "name": "Main Buyback",
                 "is_active": "on",
-                "facility": facility.facility_id,
+                "facilities": [facility.facility_id],
+                "recipient_type": "CORPORATION",
+                "tracking_prefix": "corp1",
                 "price_modifier_percent": "-5.0",
                 "price_density_threshold": "0",
                 "price_density_tax_percent": "0",
@@ -97,9 +99,38 @@ class TestBuybackDirectorViews:
             response = director_config_buyback_program_edit(request)
 
         assert response.status_code == 302
-        assert BuybackProgram.objects.filter(
-            name="Main Buyback", corporation=corp
-        ).exists()
+        program = BuybackProgram.objects.get(name="Main Buyback", corporation=corp)
+        assert program.tracking_prefix == "CORP1"
+        assert list(program.facilities.all()) == [facility]
+
+    def test_character_recipient_requires_a_character(self, rf):
+        user, corp = _director_user()
+        facility = IndustryFacilityFactory()
+
+        request = rf.post(
+            "/",
+            {
+                "corporation": corp.id,
+                "name": "To A Character",
+                "facilities": [facility.facility_id],
+                "recipient_type": "CHARACTER",
+                "tracking_prefix": "BB",
+                "price_modifier_percent": "0",
+                "price_density_threshold": "0",
+                "price_density_tax_percent": "0",
+                "contract_expiry_days": "7",
+                "price_type": "SELL",
+                "refining_rate": "90.0",
+            },
+        )
+        request.user = user
+
+        with patch("industry_reforged.views.buyback.director.render") as mock_render:
+            director_config_buyback_program_edit(request)
+
+        form = mock_render.call_args[0][2]["form"]
+        assert "recipient_character" in form.errors
+        assert not BuybackProgram.objects.filter(name="To A Character").exists()
 
     def test_program_cannot_be_created_for_another_corporation(self, rf):
         user, _ = _director_user()
@@ -111,7 +142,7 @@ class TestBuybackDirectorViews:
             {
                 "corporation": other_corp.id,
                 "name": "Foreign Buyback",
-                "facility": facility.facility_id,
+                "facilities": [facility.facility_id],
                 "price_modifier_percent": "0",
                 "price_density_threshold": "0",
                 "price_density_tax_percent": "0",

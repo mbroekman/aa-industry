@@ -12,7 +12,7 @@ def _expectation(**overrides):
         "tracking_number": "BB-ABCD1234",
         "expected_items": [ExpectedItem(type_id=34, quantity=1000)],
         "expected_price": 1000.0,
-        "expected_location_id": 60003760,
+        "expected_location_ids": {60003760},
         "expected_receiver_id": 98000001,
     }
     defaults.update(overrides)
@@ -47,8 +47,39 @@ class TestExtractTrackingNumber:
     def test_returns_none_for_empty_title(self):
         assert extract_tracking_number("") is None
 
+    def test_custom_prefix(self):
+        assert extract_tracking_number("GOONBUY-1A2B3C4D") == "GOONBUY-1A2B3C4D"
+
+    def test_prefix_filter_skips_other_dashed_words(self):
+        title = "T2-MODULES1 bb-abcd1234"
+        assert extract_tracking_number(title, prefixes={"BB"}) == "BB-ABCD1234"
+        assert extract_tracking_number("T2-MODULES1", prefixes={"BB"}) is None
+
 
 class TestMatchContract:
+    def test_any_of_several_drop_off_locations_is_accepted(self):
+        expectation = _expectation(expected_location_ids={60003760, 1022734985679})
+        result = match_contract(
+            expectation, _esi_contract(start_location_id=1022734985679), _esi_items()
+        )
+        assert result.structure_mismatch is False
+
+    def test_no_drop_off_locations_skips_the_location_check(self):
+        result = match_contract(
+            _expectation(expected_location_ids=set()),
+            _esi_contract(start_location_id=1),
+            _esi_items(),
+        )
+        assert result.structure_mismatch is False
+
+    def test_custom_prefix_matches(self):
+        result = match_contract(
+            _expectation(tracking_number="CORP-ABCD1234"),
+            _esi_contract(title="CORP-ABCD1234"),
+            _esi_items(),
+        )
+        assert result.status == "MATCHED"
+
     def test_exact_match_no_flags(self):
         result = match_contract(_expectation(), _esi_contract(), _esi_items())
         assert result.status == "MATCHED"

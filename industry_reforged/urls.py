@@ -444,4 +444,17 @@ urlpatterns = [
         buyback.director_buyback_contract_resolve,
         name="director_buyback_contract_resolve",
     ),
+    # Login-free views must stay LAST: Alliance Auth's decorate_url_patterns
+    # stops decorating at the first excluded view it meets, so any route after
+    # these would lose its main-character requirement.
+    path(
+        "buyback/public/<int:program_id>/",
+        buyback.buyback_public_calculator,
+        name="buyback_public_calculator",
+    ),
+    path(
+        "buyback/public/contract/<str:tracking_number>/",
+        buyback.buyback_public_contract,
+        name="buyback_public_contract",
+    ),
 ]

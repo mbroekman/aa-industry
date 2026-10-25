@@ -71,7 +71,7 @@ class TestBuybackPollContracts:
         user = UserFactory()
         character = EveCharacterFactory()
         program = (
-            BuybackProgramFactory(facility=facility)
+            BuybackProgramFactory(facilities=[facility])
             if facility
             else BuybackProgramFactory()
         )
@@ -99,7 +99,7 @@ class TestBuybackPollContracts:
             _esi_contract(
                 title="BB-ABCD1234",
                 price=1000.0,
-                start_location_id=program.facility_id,
+                start_location_id=program.facilities.first().facility_id,
                 acceptor_id=program.corporation.corporation_id,
             )
         ]
@@ -126,7 +126,7 @@ class TestBuybackPollContracts:
             _esi_contract(
                 title="BB-ABCD1234",
                 price=5000.0,  # wrong price
-                start_location_id=program.facility_id,
+                start_location_id=program.facilities.first().facility_id,
                 acceptor_id=program.corporation.corporation_id,
             )
         ]
@@ -171,7 +171,7 @@ class TestBuybackPollContracts:
             _esi_contract(
                 title="BB-ABCD1234",
                 price=1000.0,
-                start_location_id=program.facility_id,
+                start_location_id=program.facilities.first().facility_id,
                 acceptor_id=program.corporation.corporation_id,
             )
         ]
@@ -216,7 +216,7 @@ class TestBuybackPollFollowsInGameStatus:
         fields = {
             "title": "BB-ABCD1234",
             "price": 1000.0,
-            "start_location_id": program.facility_id,
+            "start_location_id": program.facilities.first().facility_id,
             "acceptor_id": program.corporation.corporation_id,
         }
         fields.update(overrides)

@@ -297,4 +297,12 @@ def register_ai_market_manager_menu():
 def register_urls():
     """Register app urls"""
 
-    return UrlHook(urls, "industry_reforged", r"^industry/")
+    return UrlHook(
+        urls,
+        "industry_reforged",
+        r"^industry/",
+        excluded_views=[
+            "industry_reforged.views.buyback.public.buyback_public_calculator",
+            "industry_reforged.views.buyback.public.buyback_public_contract",
+        ],
+    )

@@ -9,14 +9,46 @@ from decimal import Decimal
 from eveuniverse.models import EveCategory, EveType
 
 # Django
+from django.contrib.auth.models import Group
+from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils.translation import gettext_lazy as _
 
 # Alliance Auth
+from allianceauth.authentication.models import State
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from .facilities import IndustryFacility, KnownLocation
+
+
+class BuybackProgramQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        """Active programs this user may see and use.
+
+        Anonymous visitors only see public programs. A logged-in user sees a
+        program when they pass both its group and its state restriction (an
+        empty restriction lets everyone through). Directors always see their
+        own corporation's programs.
+        """
+        programs = self.filter(is_active=True)
+        if user is None or not user.is_authenticated:
+            return programs.filter(is_public=True)
+
+        state = getattr(getattr(user, "profile", None), "state", None)
+        group_ok = Q(restricted_to_groups__isnull=True) | Q(
+            restricted_to_groups__in=user.groups.all()
+        )
+        state_ok = Q(restricted_to_states__isnull=True)
+        if state is not None:
+            state_ok |= Q(restricted_to_states=state)
+        allowed = group_ok & state_ok
+
+        main = getattr(getattr(user, "profile", None), "main_character", None)
+        if main and user.has_perm("industry_reforged.corp_access"):
+            allowed |= Q(corporation__corporation_id=main.corporation_id)
+
+        return programs.filter(allowed).distinct()
 
 
 class BuybackProgram(models.Model):
@@ -36,21 +68,68 @@ class BuybackProgram(models.Model):
     )
     name = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
-    facility = models.ForeignKey(
+    facilities = models.ManyToManyField(
         IndustryFacility,
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
-        related_name="buyback_programs",
-        help_text=_("Configured drop-off structure, if it is an IndustryFacility."),
+        related_name="buyback_dropoff_programs",
+        help_text=_("Structures where members may hand in their contract."),
     )
-    known_location = models.ForeignKey(
+    known_locations = models.ManyToManyField(
         KnownLocation,
+        blank=True,
+        related_name="buyback_dropoff_programs",
+        help_text=_("Other locations where members may hand in their contract."),
+    )
+    RECIPIENT_CHOICES = (
+        ("CORPORATION", _("The program's corporation")),
+        ("CHARACTER", _("A specific character")),
+    )
+    recipient_type = models.CharField(
+        max_length=12,
+        choices=RECIPIENT_CHOICES,
+        default="CORPORATION",
+        help_text=_("Who members must make the in-game contract out to."),
+    )
+    recipient_character = models.ForeignKey(
+        EveCharacter,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="buyback_programs",
-        help_text=_("Drop-off location outside configured IndustryFacilities."),
+        related_name="+",
+        help_text=_(
+            "Receiving character when contracts go to a character. It needs the "
+            "character contracts permission via Add Personal Token."
+        ),
+    )
+    tracking_prefix = models.CharField(
+        max_length=10,
+        default="BB",
+        validators=[
+            RegexValidator(
+                r"^[A-Z0-9]{1,10}$",
+                _("Use 1-10 capital letters or digits."),
+            )
+        ],
+        help_text=_("Start of every tracking number, e.g. BB gives BB-1A2B3C4D."),
+    )
+    restricted_to_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        related_name="+",
+        help_text=_("Only these groups may use the program. Empty means everyone."),
+    )
+    restricted_to_states = models.ManyToManyField(
+        State,
+        blank=True,
+        related_name="+",
+        help_text=_("Only these states may use the program. Empty means everyone."),
+    )
+    is_public = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Let anyone use the calculator without logging in. Requires "
+            'APPS_WITH_PUBLIC_VIEWS = ["industry_reforged"] in local.py.'
+        ),
     )
     price_modifier_percent = models.FloatField(
         default=0.0,
@@ -98,6 +177,8 @@ class BuybackProgram(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = BuybackProgramQuerySet.as_manager()
+
     class Meta:
         verbose_name = _("Buyback Program")
         verbose_name_plural = _("Buyback Programs")
@@ -105,20 +186,37 @@ class BuybackProgram(models.Model):
     def __str__(self):
         return f"{self.name} ({self.corporation.corporation_ticker})"
 
-    def save(self, *args, **kwargs):
-        if not self.facility_id and not self.known_location_id:
-            raise ValueError(
-                "A BuybackProgram must have either a facility or a known_location set."
-            )
-        super().save(*args, **kwargs)
+    @property
+    def drop_off_names(self) -> list[str]:
+        names = [f.name for f in self.facilities.all()]
+        names += [loc.name for loc in self.known_locations.all()]
+        return names
 
     @property
-    def drop_off_name(self):
-        if self.facility:
-            return self.facility.name
-        if self.known_location:
-            return self.known_location.name
-        return "-"
+    def drop_off_name(self) -> str:
+        return ", ".join(self.drop_off_names) or "-"
+
+    @property
+    def drop_off_location_ids(self) -> set[int]:
+        ids = {f.facility_id for f in self.facilities.all()}
+        ids |= {loc.location_id for loc in self.known_locations.all()}
+        return ids
+
+    @property
+    def recipient_id(self) -> int:
+        """EVE id the in-game contract must be made out to."""
+        if self.recipient_type == "CHARACTER" and self.recipient_character_id:
+            return self.recipient_character.character_id
+        return self.corporation.corporation_id
+
+    @property
+    def recipient_name(self) -> str:
+        if self.recipient_type == "CHARACTER" and self.recipient_character_id:
+            return self.recipient_character.character_name
+        return self.corporation.corporation_name
+
+    def is_visible_to(self, user) -> bool:
+        return BuybackProgram.objects.visible_to(user).filter(pk=self.pk).exists()
 
 
 class BuybackWatchlistItem(models.Model):
@@ -214,6 +312,10 @@ class BuybackContract(models.Model):
         help_text=_("Contains an item on the program's watchlist (flag mode)."),
     )
     flag_notes = models.TextField(blank=True)
+    is_public_submission = models.BooleanField(
+        default=False,
+        help_text=_("Created through a program's public calculator, without login."),
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

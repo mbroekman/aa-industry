@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: Access and visibility options from the original buyback plugin (TASK-273, phase 1):
+  - Programs can be limited to Alliance Auth groups and/or states. This is enforced everywhere: dashboard, calculator (including a direct POST), statistics and contract pages. Directors always see their own corporation's programs, and directors of another corporation can no longer open a contract's page.
+  - A program can be made public: its calculator then works without logging in, and the visitor gets a private status page through the tracking number. Requires `APPS_WITH_PUBLIC_VIEWS = ["industry_reforged"]` in `local.py`; without it a login is still required.
+  - A program can have several drop-off locations (structures and other locations); any of them passes the location check. Existing programs keep their current drop-off.
+  - Contracts can go to a specific character instead of the corporation; that character's contracts are then polled (new scope `esi-contracts.read_character_contracts.v1` via Add Personal Token).
+  - Each program sets its own tracking number prefix (default `BB`, so existing tracking numbers keep working).
+
 - **claims**: Claimed-job ETA tracking, overview and overdue alerting (TASK-262):
   - `utils/eta_service.py`: estimates when a claimed job should be done, preferring the real ESI-reported `end_date` of the linked EVE industry job once one exists, falling back to `assigned_at + estimated_duration_seconds`, and treating an unknown ETA (no claim timestamp, or a build duration that was never successfully computed) as "unknown" rather than guessing.
   - New `JobTrackingConfig` per-corp setting (`completion_buffer_hours`, frontend-editable from a new "Job Alerts" card on Director Configuration): the grace period after the estimated completion before a job is flagged overdue, and also the interval between repeat reminders while it stays overdue.

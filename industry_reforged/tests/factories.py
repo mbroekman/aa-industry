@@ -154,7 +154,15 @@ class BuybackProgramFactory(factory.django.DjangoModelFactory):
     corporation = factory.SubFactory(EveCorporationInfoFactory)
     name = factory.Sequence(lambda n: f"Buyback Program {n}")
     is_active = True
-    facility = factory.SubFactory(IndustryFacilityFactory)
+
+    @factory.post_generation
+    def facilities(self, create, extracted, **kwargs):
+        """One drop-off facility by default; pass facilities=[...] to choose."""
+        if not create:
+            return
+        self.facilities.set(
+            extracted if extracted is not None else [IndustryFacilityFactory()]
+        )
 
 
 class BuybackWatchlistItemFactory(factory.django.DjangoModelFactory):

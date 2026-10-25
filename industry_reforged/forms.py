@@ -1,4 +1,6 @@
 # Third Party
+import re
+
 import requests
 from eveuniverse.models import EveType
 
@@ -893,8 +895,14 @@ class BuybackProgramForm(forms.ModelForm):
             "corporation",
             "name",
             "is_active",
-            "facility",
-            "known_location",
+            "facilities",
+            "known_locations",
+            "recipient_type",
+            "recipient_character",
+            "tracking_prefix",
+            "restricted_to_groups",
+            "restricted_to_states",
+            "is_public",
             "price_modifier_percent",
             "accepted_categories",
             "price_density_threshold",
@@ -907,8 +915,24 @@ class BuybackProgramForm(forms.ModelForm):
             "corporation": forms.Select(attrs={"class": "form-select"}),
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "facility": forms.Select(attrs={"class": "form-select"}),
-            "known_location": forms.Select(attrs={"class": "form-select"}),
+            "facilities": forms.SelectMultiple(
+                attrs={"class": "form-select", "size": "5"}
+            ),
+            "known_locations": forms.SelectMultiple(
+                attrs={"class": "form-select", "size": "5"}
+            ),
+            "recipient_type": forms.Select(attrs={"class": "form-select"}),
+            "recipient_character": forms.Select(attrs={"class": "form-select"}),
+            "tracking_prefix": forms.TextInput(
+                attrs={"class": "form-control", "style": "text-transform: uppercase"}
+            ),
+            "restricted_to_groups": forms.SelectMultiple(
+                attrs={"class": "form-select", "size": "5"}
+            ),
+            "restricted_to_states": forms.SelectMultiple(
+                attrs={"class": "form-select", "size": "4"}
+            ),
+            "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "price_modifier_percent": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.1"}
             ),
@@ -937,24 +961,36 @@ class BuybackProgramForm(forms.ModelForm):
                 "corporation"
             ].queryset.filter(pk=corporation.pk)
             self.fields["corporation"].initial = corporation
+            self.fields["known_locations"].queryset = self.fields[
+                "known_locations"
+            ].queryset.filter(corporations=corporation)
+            self.fields["recipient_character"].queryset = self.fields[
+                "recipient_character"
+            ].queryset.filter(corporation_id=corporation.corporation_id)
         if self.instance and self.instance.pk:
             self.fields["corporation"].disabled = True
-        self.fields["facility"].required = False
-        self.fields["known_location"].required = False
+        self.fields["recipient_character"].required = False
+        # Accept "bb" as "BB": validate after upper-casing, in clean_tracking_prefix.
+        self.fields["tracking_prefix"].validators = []
+
+    def clean_tracking_prefix(self):
+        prefix = (self.cleaned_data.get("tracking_prefix") or "").strip().upper()
+        if not re.fullmatch(r"[A-Z0-9]{1,10}", prefix):
+            raise ValidationError(_("Use 1-10 capital letters or digits."))
+        return prefix
 
     def clean(self):
         cleaned_data = super().clean()
-        facility = cleaned_data.get("facility")
-        known_location = cleaned_data.get("known_location")
-        if not facility and not known_location:
-            raise ValidationError(
-                _(
-                    "You must select either a Facility or a Known Location as the drop-off point."
-                )
-            )
-        if facility and known_location:
-            raise ValidationError(
-                _("Select either a Facility or a Known Location, not both.")
+        if not cleaned_data.get("facilities") and not cleaned_data.get(
+            "known_locations"
+        ):
+            raise ValidationError(_("Select at least one drop-off location."))
+        if cleaned_data.get("recipient_type") == "CHARACTER" and not cleaned_data.get(
+            "recipient_character"
+        ):
+            self.add_error(
+                "recipient_character",
+                _("Choose the character that receives the contracts."),
             )
         return cleaned_data
 

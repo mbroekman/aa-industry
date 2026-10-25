@@ -3,6 +3,8 @@
 # Standard Library
 import logging
 from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 
 # Third Party
@@ -26,6 +28,7 @@ from .utils import esi, log_task_execution, notify_discord_user
 logger = logging.getLogger(__name__)
 
 CONTRACTS_SCOPE = "esi-contracts.read_corporation_contracts.v1"
+CHARACTER_CONTRACTS_SCOPE = "esi-contracts.read_character_contracts.v1"
 TERMINAL_STATUSES = ("PAID", "REJECTED", "CANCELLED", "EXPIRED")
 
 # ESI contract statuses. "finished*" means the receiver accepted it in-game, so
@@ -38,12 +41,6 @@ ESI_WITHDRAWN = ("deleted", "cancelled")
 
 def _build_expectation(contract) -> BuybackContractExpectation:
     program = contract.program
-    location_id = None
-    if program.facility_id:
-        location_id = program.facility_id
-    elif program.known_location_id:
-        location_id = program.known_location_id
-
     expected_items = [
         ExpectedItem(type_id=item.eve_type_id, quantity=item.quantity)
         for item in contract.items.all()
@@ -53,8 +50,75 @@ def _build_expectation(contract) -> BuybackContractExpectation:
         tracking_number=contract.tracking_number,
         expected_items=expected_items,
         expected_price=float(contract.quoted_price),
-        expected_location_id=location_id,
-        expected_receiver_id=program.corporation.corporation_id,
+        expected_location_ids=program.drop_off_location_ids,
+        expected_receiver_id=program.recipient_id,
+    )
+
+
+@dataclass
+class _ContractSource:
+    """Where a program's in-game contracts are read from: the corporation's
+    contracts, or the receiving character's own contracts."""
+
+    lock_key: str
+    fetch_contracts: Callable[[], list]
+    fetch_items: Callable[[int], list]
+
+
+def _contract_source(program) -> _ContractSource | None:
+    from ..models import CorporationSyncConfig
+
+    if program.recipient_type == "CHARACTER":
+        character = program.recipient_character
+        if not character:
+            logger.warning(f"Buyback program {program.pk} has no recipient character")
+            return None
+        token = Token.objects.filter(
+            character_id=character.character_id, scopes__name=CHARACTER_CONTRACTS_SCOPE
+        ).first()
+        if not token:
+            logger.warning(f"No character-contracts token for {character.character_name}")
+            return None
+        contracts_api = esi.client.Contracts
+        return _ContractSource(
+            lock_key=f"buyback_poll_lock_char_{character.character_id}",
+            fetch_contracts=lambda: contracts_api.GetCharactersCharacterIdContracts(
+                character_id=character.character_id, token=token
+            ).results(),
+            fetch_items=lambda contract_id: contracts_api.GetCharactersCharacterIdContractsContractIdItems(
+                character_id=character.character_id,
+                contract_id=contract_id,
+                token=token,
+            ).result(),
+        )
+
+    sync_config = (
+        CorporationSyncConfig.objects.filter(corporation=program.corporation)
+        .select_related("sync_character")
+        .first()
+    )
+    if not sync_config:
+        logger.warning(f"No sync config for corporation {program.corporation_id}")
+        return None
+    token = Token.objects.filter(
+        character_id=sync_config.sync_character.character_id,
+        scopes__name=CONTRACTS_SCOPE,
+    ).first()
+    if not token:
+        logger.warning(
+            f"No contracts-scope token for {sync_config.sync_character.character_name}"
+        )
+        return None
+    corporation_id = program.corporation.corporation_id
+    contracts_api = esi.client.Contracts
+    return _ContractSource(
+        lock_key=f"buyback_poll_lock_{program.corporation_id}",
+        fetch_contracts=lambda: contracts_api.GetCorporationsCorporationIdContracts(
+            corporation_id=corporation_id, token=token
+        ).results(),
+        fetch_items=lambda contract_id: contracts_api.GetCorporationsCorporationIdContractsContractIdItems(
+            corporation_id=corporation_id, contract_id=contract_id, token=token
+        ).result(),
     )
 
 
@@ -105,20 +169,14 @@ def _send_match_notifications(contract):
         )
 
 
-def _match(contract, esi_contract, program, token) -> bool:
+def _match(contract, esi_contract, program, source: _ContractSource) -> bool:
     """Compare the in-game contract against the appraisal and store the result.
     Returns False if the contract items couldn't be fetched (retry next poll)."""
     from ..models import BuybackContract
 
     esi_contract_id = getattr(esi_contract, "contract_id")
     try:
-        items = (
-            esi.client.Contracts.GetCorporationsCorporationIdContractsContractIdItems(
-                corporation_id=program.corporation.corporation_id,
-                contract_id=esi_contract_id,
-                token=token,
-            ).result()
-        )
+        items = source.fetch_items(esi_contract_id)
     except Exception as e:
         logger.error(f"Failed to fetch items for contract {esi_contract_id}: {e}")
         return False
@@ -237,46 +295,25 @@ def buyback_poll_contracts():
     fire on status transitions. The lock below only avoids redundant ESI calls
     and self-heals within 5 minutes if a worker dies mid-run.
     """
-    from ..models import BuybackContract, BuybackProgram, CorporationSyncConfig
+    from ..models import BuybackContract, BuybackProgram
 
     programs = BuybackProgram.objects.filter(is_active=True).select_related(
-        "corporation"
+        "corporation", "recipient_character"
     )
 
     for program in programs:
-        lock_key = f"buyback_poll_lock_{program.corporation_id}"
-        if not cache.add(lock_key, 1, timeout=300):
+        source = _contract_source(program)
+        if not source:
+            continue
+        if not cache.add(source.lock_key, 1, timeout=300):
             continue
 
         try:
-            sync_config = (
-                CorporationSyncConfig.objects.filter(corporation=program.corporation)
-                .select_related("sync_character")
-                .first()
-            )
-            if not sync_config:
-                logger.warning(
-                    f"No sync config for corporation {program.corporation_id}"
-                )
-                continue
-
-            token = Token.objects.filter(
-                character_id=sync_config.sync_character.character_id,
-                scopes__name=CONTRACTS_SCOPE,
-            ).first()
-            if not token:
-                logger.warning(
-                    f"No contracts-scope token for {sync_config.sync_character.character_name}"
-                )
-                continue
-
             try:
-                contracts = esi.client.Contracts.GetCorporationsCorporationIdContracts(
-                    corporation_id=program.corporation.corporation_id, token=token
-                ).results()
+                contracts = source.fetch_contracts()
             except Exception as e:
                 logger.error(
-                    f"Failed to fetch contracts for {program.corporation_id}: {e}"
+                    f"Failed to fetch contracts for buyback program {program.pk}: {e}"
                 )
                 continue
 
@@ -285,7 +322,8 @@ def buyback_poll_contracts():
                     continue
 
                 tracking_number = extract_tracking_number(
-                    getattr(esi_contract, "title", "") or ""
+                    getattr(esi_contract, "title", "") or "",
+                    prefixes={program.tracking_prefix},
                 )
                 if not tracking_number:
                     continue
@@ -302,7 +340,7 @@ def buyback_poll_contracts():
 
                 esi_contract_id = getattr(esi_contract, "contract_id")
                 if contract.esi_contract_id is None:
-                    if not _match(contract, esi_contract, program, token):
+                    if not _match(contract, esi_contract, program, source):
                         continue
                 elif contract.esi_contract_id != esi_contract_id:
                     # A second in-game contract with the same tracking number;
@@ -311,7 +349,7 @@ def buyback_poll_contracts():
 
                 _follow_esi_status(contract, esi_contract)
         finally:
-            cache.delete(lock_key)
+            cache.delete(source.lock_key)
 
 
 @shared_task(name="industry_reforged.tasks.buyback_purge_stale_contracts")

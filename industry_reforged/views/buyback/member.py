@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext as _
@@ -17,10 +17,12 @@ from ...tasks.buyback import watchlist_flag_notes
 from ...utils.inventory_parser import parse_inventory_paste
 from ...utils.pricing_engine import calculate_buyback_quote
 
+CALCULATOR_TEMPLATE = "industry_reforged/buyback/calculator.html"
 
-def _generate_tracking_number() -> str:
+
+def _generate_tracking_number(prefix: str = "BB") -> str:
     while True:
-        candidate = "BB-" + get_random_string(8).upper()
+        candidate = f"{prefix}-{get_random_string(8).upper()}"
         if not BuybackContract.objects.filter(tracking_number=candidate).exists():
             return candidate
 
@@ -49,64 +51,47 @@ def _compute_donation(gross_total: Decimal, mode: str, raw_value: str) -> Decima
     return min(donation, gross_total)
 
 
-@login_required
-@permission_required("industry_reforged.basic_access")
-def buyback_dashboard(request: WSGIRequest) -> HttpResponse:
-    """Lists active buyback programs and the member's own contract history."""
-    user_characters = request.user.character_ownerships.all().values_list(
-        "character_id", flat=True
+def _visible_programs(user):
+    return (
+        BuybackProgram.objects.visible_to(user)
+        .select_related("corporation", "recipient_character")
+        .prefetch_related("facilities", "known_locations")
     )
 
-    programs = BuybackProgram.objects.filter(is_active=True).select_related(
-        "corporation", "facility", "known_location"
-    )
-    my_contracts = (
-        BuybackContract.objects.filter(character_id__in=user_characters)
-        .select_related("program")
-        .order_by("-created_at")[:50]
-    )
 
-    context = {
-        "title": _("Buyback Program"),
-        "programs": programs,
-        "my_contracts": my_contracts,
-    }
-    return render(request, "industry_reforged/buyback/dashboard.html", context)
+def run_calculator(
+    request: WSGIRequest, programs, context: dict, *, character, public: bool
+) -> HttpResponse:
+    """Shared by the member calculator and a program's public calculator.
 
-
-@login_required
-@permission_required("industry_reforged.basic_access")
-def buyback_calculator(request: WSGIRequest) -> HttpResponse:
-    """GET renders the paste form; POST previews a quote, and on confirm,
-    creates the BuybackContract + items with a fresh tracking number."""
-    programs = BuybackProgram.objects.filter(is_active=True).select_related(
-        "corporation", "facility", "known_location"
-    )
-
-    context = {
-        "title": _("Buyback Calculator"),
-        "programs": programs,
-    }
+    GET renders the paste form; POST previews a quote, and on confirm creates
+    the BuybackContract + items with a fresh tracking number. `programs` is
+    the set the visitor may use, so a program id outside it is a 404 even on
+    a hand-crafted POST.
+    """
+    context["programs"] = programs
+    context["public"] = public
 
     if request.method != "POST":
-        return render(request, "industry_reforged/buyback/calculator.html", context)
+        return render(request, CALCULATOR_TEMPLATE, context)
 
-    program_id = request.POST.get("program_id")
+    program_id = request.POST.get("program_id", "")
+    if not program_id.isdigit():
+        raise Http404
+    program = get_object_or_404(programs, id=int(program_id))
     inventory_text = request.POST.get("inventory_text", "").strip()
-    program = get_object_or_404(BuybackProgram, id=program_id, is_active=True)
     context["selected_program"] = program
     context["inventory_text"] = inventory_text
 
     if not inventory_text:
         messages.error(request, _("Please paste your inventory list."))
-        return render(request, "industry_reforged/buyback/calculator.html", context)
+        return render(request, CALCULATOR_TEMPLATE, context)
 
-    character = request.user.profile.main_character
-    if not character:
+    if not public and not character:
         messages.error(
             request, _("You must have a main character set to submit a buyback.")
         )
-        return render(request, "industry_reforged/buyback/calculator.html", context)
+        return render(request, CALCULATOR_TEMPLATE, context)
 
     parsed_items, unrecognized = parse_inventory_paste(inventory_text)
     if unrecognized:
@@ -118,7 +103,7 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
 
     if not parsed_items:
         messages.error(request, _("No valid items found in the pasted list."))
-        return render(request, "industry_reforged/buyback/calculator.html", context)
+        return render(request, CALCULATOR_TEMPLATE, context)
 
     gross_total, item_details = calculate_buyback_quote(parsed_items, program)
     base_total = sum((d["base_line_total"] for d in item_details), Decimal("0.00"))
@@ -130,30 +115,34 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
     )
     net_total = gross_total - donation_amount
 
-    context["total_price"] = gross_total
-    context["item_details"] = item_details
-    context["base_total"] = base_total
-    context["modifier_impact"] = modifier_impact
-    context["donation_mode"] = donation_mode
-    context["donation_value"] = request.POST.get("donation_value", "")
-    context["donation_amount"] = donation_amount
-    context["net_total"] = net_total
+    context.update(
+        {
+            "total_price": gross_total,
+            "item_details": item_details,
+            "base_total": base_total,
+            "modifier_impact": modifier_impact,
+            "donation_mode": donation_mode,
+            "donation_value": request.POST.get("donation_value", ""),
+            "donation_amount": donation_amount,
+            "net_total": net_total,
+        }
+    )
 
     if request.POST.get("confirm") != "1":
         # Preview only - nothing is persisted and no ESI call is made here.
-        return render(request, "industry_reforged/buyback/calculator.html", context)
+        return render(request, CALCULATOR_TEMPLATE, context)
 
     submittable = [d for d in item_details if not d["blocked"]]
     if not submittable:
         messages.error(
             request, _("None of the items in this list are accepted by this program.")
         )
-        return render(request, "industry_reforged/buyback/calculator.html", context)
+        return render(request, CALCULATOR_TEMPLATE, context)
 
     watchlist_notes = watchlist_flag_notes(
         program, [d["eve_type"].id for d in submittable]
     )
-    tracking_number = _generate_tracking_number()
+    tracking_number = _generate_tracking_number(program.tracking_prefix)
     contract = BuybackContract.objects.create(
         tracking_number=tracking_number,
         program=program,
@@ -163,6 +152,7 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         status="PENDING",
         flag_watchlist=bool(watchlist_notes),
         flag_notes="\n".join(watchlist_notes),
+        is_public_submission=public and character is None,
     )
     BuybackContractItem.objects.bulk_create(
         [
@@ -182,24 +172,66 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         _("Submitted! Your tracking number is %(tracking_number)s.")
         % {"tracking_number": tracking_number},
     )
-    return redirect(
-        "industry_reforged:buyback_contract_detail", tracking_number=tracking_number
+    detail_view = (
+        "industry_reforged:buyback_public_contract"
+        if public
+        else "industry_reforged:buyback_contract_detail"
+    )
+    return redirect(detail_view, tracking_number=tracking_number)
+
+
+@login_required
+@permission_required("industry_reforged.basic_access")
+def buyback_dashboard(request: WSGIRequest) -> HttpResponse:
+    """Lists the programs this member may use and their own contract history."""
+    user_characters = request.user.character_ownerships.all().values_list(
+        "character_id", flat=True
+    )
+    my_contracts = (
+        BuybackContract.objects.filter(character_id__in=user_characters)
+        .select_related("program")
+        .order_by("-created_at")[:50]
+    )
+
+    context = {
+        "title": _("Buyback Program"),
+        "programs": _visible_programs(request.user),
+        "my_contracts": my_contracts,
+    }
+    return render(request, "industry_reforged/buyback/dashboard.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.basic_access")
+def buyback_calculator(request: WSGIRequest) -> HttpResponse:
+    return run_calculator(
+        request,
+        _visible_programs(request.user),
+        {"title": _("Buyback Calculator")},
+        character=request.user.profile.main_character,
+        public=False,
     )
 
 
 def _get_owned_contract_or_403(request, tracking_number):
+    """The contract if this user owns it, or directs its program's corporation."""
     contract = get_object_or_404(
-        BuybackContract.objects.select_related("program", "character"),
+        BuybackContract.objects.select_related("program__corporation", "character"),
         tracking_number=tracking_number,
     )
     user_characters = request.user.character_ownerships.all().values_list(
         "character_id", flat=True
     )
-    is_owner = contract.character_id in user_characters
-    is_manager = request.user.has_perm("industry_reforged.corp_access")
-    if not is_owner and not is_manager:
-        return None
-    return contract
+    if contract.character_id in user_characters:
+        return contract
+
+    main = request.user.profile.main_character
+    is_program_director = (
+        request.user.has_perm("industry_reforged.corp_access")
+        and main is not None
+        and main.corporation_id == contract.program.corporation.corporation_id
+    )
+    return contract if is_program_director else None
 
 
 @login_required
@@ -232,7 +264,7 @@ def buyback_contract_cancel(request: WSGIRequest, tracking_number: str) -> HttpR
     if request.method == "POST":
         if contract.status == "PENDING":
             contract.status = "CANCELLED"
-            contract.save(update_fields=["status"])
+            contract.save(update_fields=["status", "updated_at"])
             messages.success(request, _("Contract cancelled."))
         else:
             messages.error(request, _("Only pending contracts can be cancelled."))
