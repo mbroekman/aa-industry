@@ -438,3 +438,40 @@ class TestParserUnpacked:
         )
         assert parsed == {rifter: 1, trit: 100}
         assert unpacked == {rifter.id}
+
+
+@pytest.mark.django_db
+class TestUniqueRulesAndWatchlist:
+    """The unique constraints have no condition (MariaDB can't create those);
+    they rely on NULLs being distinct, so the empty side never collides."""
+
+    def test_many_group_rules_and_one_rule_per_item(self):
+        # Django
+        from django.db import IntegrityError, transaction
+
+        program = BuybackProgramFactory()
+        BuybackItemRule.objects.create(
+            program=program, eve_market_group=_market_group(910001, "Ore")
+        )
+        BuybackItemRule.objects.create(
+            program=program, eve_market_group=_market_group(910002, "Ice")
+        )
+        item = EveTypeFactory()
+        BuybackItemRule.objects.create(program=program, eve_type=item)
+
+        with pytest.raises(IntegrityError), transaction.atomic():
+            BuybackItemRule.objects.create(program=program, eve_type=item)
+        assert BuybackItemRule.objects.filter(program=program).count() == 3
+
+    def test_many_item_entries_and_one_entry_per_group(self):
+        # Django
+        from django.db import IntegrityError, transaction
+
+        program = BuybackProgramFactory()
+        group = EveGroupFactory()
+        BuybackWatchlistItem.objects.create(program=program, eve_type=EveTypeFactory())
+        BuybackWatchlistItem.objects.create(program=program, eve_type=EveTypeFactory())
+        BuybackWatchlistItem.objects.create(program=program, eve_group=group)
+
+        with pytest.raises(IntegrityError), transaction.atomic():
+            BuybackWatchlistItem.objects.create(program=program, eve_group=group)

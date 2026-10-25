@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **buyback**: The "one rule per item or market group" and "one watchlist entry per item group" checks are now real database constraints on MariaDB/MySQL too (migration 0089). Before, MariaDB skipped them with warning `models.W036`.
 - **buyback**: The contract page now shows a separate "Create this contract in EVE" block while a contract is pending: who to make it out to, the exact ISK to ask, the title (tracking number) and the drop-off location, each with a copy button, plus the contract type and the deadline.
 - **ui**: Inactive tabs and grey (secondary) buttons now have a visible background, border and readable text, also in the dark theme; disabled buttons are less washed out.
 

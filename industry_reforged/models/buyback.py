@@ -360,10 +360,11 @@ class BuybackWatchlistItem(models.Model):
         verbose_name = _("Buyback Watchlist Item")
         verbose_name_plural = _("Buyback Watchlist Items")
         unique_together = (("program", "eve_type"),)
+        # No condition needed: unique indexes treat NULLs as distinct, and
+        # MariaDB/MySQL can't create conditional unique constraints at all.
         constraints = [
             models.UniqueConstraint(
                 fields=["program", "eve_group"],
-                condition=Q(eve_group__isnull=False),
                 name="buyback_watchlist_unique_group",
             ),
             models.CheckConstraint(
@@ -420,15 +421,15 @@ class BuybackItemRule(models.Model):
     class Meta:
         verbose_name = _("Buyback Item Rule")
         verbose_name_plural = _("Buyback Item Rules")
+        # No condition needed: unique indexes treat NULLs as distinct, and
+        # MariaDB/MySQL can't create conditional unique constraints at all.
         constraints = [
             models.UniqueConstraint(
                 fields=["program", "eve_type"],
-                condition=Q(eve_type__isnull=False),
                 name="buyback_rule_unique_type",
             ),
             models.UniqueConstraint(
                 fields=["program", "eve_market_group"],
-                condition=Q(eve_market_group__isnull=False),
                 name="buyback_rule_unique_market_group",
             ),
             models.CheckConstraint(
