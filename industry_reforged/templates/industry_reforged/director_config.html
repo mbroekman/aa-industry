@@ -726,7 +726,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                <a href="#" id="deleteConfirmBtn" class="btn btn-danger">{% trans "Delete" %}</a>
+                <form method="post" action="#" id="deleteConfirmForm" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{% trans "Delete" %}</button>
+                </form>
             </div>
         </div>
     </div>
@@ -744,8 +747,7 @@
             deleteModal.addEventListener('show.bs.modal', function (event) {
                 var button = event.relatedTarget;
                 var deleteUrl = button.getAttribute('data-bs-delete-url');
-                var confirmBtn = deleteModal.querySelector('#deleteConfirmBtn');
-                confirmBtn.href = deleteUrl;
+                deleteModal.querySelector('#deleteConfirmForm').action = deleteUrl;
             });
         }
 

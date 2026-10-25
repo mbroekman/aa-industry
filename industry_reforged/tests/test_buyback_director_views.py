@@ -6,6 +6,7 @@ import pytest
 
 # Django
 from django.contrib.auth.models import Permission
+from django.http import Http404
 from django.test import RequestFactory
 
 # AA Industry App
@@ -41,6 +42,7 @@ def rf():
 
 
 def _director_user():
+    """A corp_access user whose main character is in a fresh corporation."""
     user = UserFactory()
     corp = EveCorporationInfoFactory()
     character = EveCharacterFactory(
@@ -51,7 +53,11 @@ def _director_user():
     perm = Permission.objects.get(codename="corp_access")
     user.user_permissions.add(perm)
     user = user.__class__.objects.get(pk=user.pk)
-    return user
+    return user, corp
+
+
+def _own_contract(corp, **kwargs):
+    return BuybackContractFactory(program=BuybackProgramFactory(corporation=corp), **kwargs)
 
 
 @pytest.mark.django_db
@@ -65,8 +71,7 @@ class TestBuybackDirectorViews:
         mock_render.assert_not_called()
 
     def test_program_create_round_trip(self, rf):
-        user = _director_user()
-        corp = EveCorporationInfoFactory()
+        user, corp = _director_user()
         facility = IndustryFacilityFactory()
 
         request = rf.post(
@@ -90,11 +95,38 @@ class TestBuybackDirectorViews:
             response = director_config_buyback_program_edit(request)
 
         assert response.status_code == 302
-        assert BuybackProgram.objects.filter(name="Main Buyback").exists()
+        assert BuybackProgram.objects.filter(
+            name="Main Buyback", corporation=corp
+        ).exists()
+
+    def test_program_cannot_be_created_for_another_corporation(self, rf):
+        user, _ = _director_user()
+        other_corp = EveCorporationInfoFactory()
+        facility = IndustryFacilityFactory()
+
+        request = rf.post(
+            "/",
+            {
+                "corporation": other_corp.id,
+                "name": "Foreign Buyback",
+                "facility": facility.facility_id,
+                "price_modifier_percent": "0",
+                "price_density_threshold": "0",
+                "price_density_tax_percent": "0",
+                "contract_expiry_days": "7",
+                "price_type": "SELL",
+                "refining_rate": "90.0",
+            },
+        )
+        request.user = user
+
+        with patch("industry_reforged.views.buyback.director.render"):
+            director_config_buyback_program_edit(request)
+
+        assert not BuybackProgram.objects.filter(name="Foreign Buyback").exists()
 
     def test_program_requires_facility_or_known_location(self, rf):
-        user = _director_user()
-        corp = EveCorporationInfoFactory()
+        user, corp = _director_user()
 
         request = rf.post(
             "/",
@@ -115,9 +147,19 @@ class TestBuybackDirectorViews:
             mock_render.assert_called()
         assert not BuybackProgram.objects.filter(name="No Dropoff").exists()
 
+    def test_program_of_another_corporation_cannot_be_edited(self, rf):
+        user, _ = _director_user()
+        foreign = BuybackProgramFactory()
+
+        request = rf.get("/")
+        request.user = user
+
+        with pytest.raises(Http404):
+            director_config_buyback_program_edit(request, foreign.id)
+
     def test_program_delete(self, rf):
-        user = _director_user()
-        program = BuybackProgramFactory()
+        user, corp = _director_user()
+        program = BuybackProgramFactory(corporation=corp)
 
         request = rf.post("/")
         request.user = user
@@ -127,9 +169,44 @@ class TestBuybackDirectorViews:
 
         assert not BuybackProgram.objects.filter(pk=program.pk).exists()
 
+    def test_program_delete_rejects_get(self, rf):
+        user, corp = _director_user()
+        program = BuybackProgramFactory(corporation=corp)
+
+        request = rf.get("/")
+        request.user = user
+        response = director_config_buyback_program_delete(request, program.id)
+
+        assert response.status_code == 405
+        assert BuybackProgram.objects.filter(pk=program.pk).exists()
+
+    def test_program_with_contracts_is_not_deleted(self, rf):
+        user, corp = _director_user()
+        contract = _own_contract(corp)
+
+        request = rf.post("/")
+        request.user = user
+
+        with patch("industry_reforged.views.buyback.director.messages") as msgs:
+            director_config_buyback_program_delete(request, contract.program_id)
+
+        assert BuybackProgram.objects.filter(pk=contract.program_id).exists()
+        msgs.error.assert_called_once()
+
+    def test_program_of_another_corporation_cannot_be_deleted(self, rf):
+        user, _ = _director_user()
+        foreign = BuybackProgramFactory()
+
+        request = rf.post("/")
+        request.user = user
+
+        with pytest.raises(Http404):
+            director_config_buyback_program_delete(request, foreign.id)
+        assert BuybackProgram.objects.filter(pk=foreign.pk).exists()
+
     def test_watchlist_add(self, rf):
-        user = _director_user()
-        program = BuybackProgramFactory()
+        user, corp = _director_user()
+        program = BuybackProgramFactory(corporation=corp)
         eve_type = EveTypeFactory(name="PLEX")
 
         request = rf.post(
@@ -150,9 +227,26 @@ class TestBuybackDirectorViews:
             program=program, eve_type=eve_type
         ).exists()
 
+    def test_watchlist_cannot_target_another_corporations_program(self, rf):
+        user, _ = _director_user()
+        foreign = BuybackProgramFactory()
+        EveTypeFactory(name="PLEX")
+
+        request = rf.post(
+            "/", {"program": foreign.id, "item_name": "PLEX", "reason": "x"}
+        )
+        request.user = user
+
+        with patch("industry_reforged.views.buyback.director.render"):
+            director_config_buyback_watchlist_edit(request)
+
+        assert not BuybackWatchlistItem.objects.filter(program=foreign).exists()
+
     def test_watchlist_delete(self, rf):
-        user = _director_user()
-        item = BuybackWatchlistItemFactory()
+        user, corp = _director_user()
+        item = BuybackWatchlistItemFactory(
+            program=BuybackProgramFactory(corporation=corp)
+        )
 
         request = rf.post("/")
         request.user = user
@@ -163,24 +257,26 @@ class TestBuybackDirectorViews:
         assert not BuybackWatchlistItem.objects.filter(pk=item.pk).exists()
 
     @patch("industry_reforged.views.buyback.director.render")
-    def test_review_queue_only_lists_flagged_and_matched(self, mock_render, rf):
-        user = _director_user()
-        BuybackContractFactory(status="FLAGGED")
-        BuybackContractFactory(status="MATCHED")
-        BuybackContractFactory(status="PAID")
-        BuybackContractFactory(status="PENDING")
+    def test_review_queue_only_lists_own_flagged_and_matched(self, mock_render, rf):
+        user, corp = _director_user()
+        _own_contract(corp, status="FLAGGED")
+        _own_contract(corp, status="MATCHED")
+        _own_contract(corp, status="PAID")
+        _own_contract(corp, status="PENDING")
+        BuybackContractFactory(status="FLAGGED")  # another corporation's
 
         request = rf.get("/")
         request.user = user
         director_buyback_review(request)
 
-        context = mock_render.call_args[0][2]
-        statuses = {c.status for c in context["contracts"]}
-        assert statuses == {"FLAGGED", "MATCHED"}
+        contracts = list(mock_render.call_args[0][2]["contracts"])
+        assert {c.status for c in contracts} == {"FLAGGED", "MATCHED"}
+        assert all(c.program.corporation_id == corp.id for c in contracts)
 
-    def test_accept_and_pay_creates_ledger_transaction_and_pays(self, rf):
-        user = _director_user()
-        contract = BuybackContractFactory(status="MATCHED", quoted_price=5000)
+    @patch("industry_reforged.views.buyback.director.notify_discord_user")
+    def test_accept_and_pay_creates_ledger_transaction_and_pays(self, mock_notify, rf):
+        user, corp = _director_user()
+        contract = _own_contract(corp, status="MATCHED", quoted_price=5000)
 
         request = rf.post("/", {"action": "accept_and_pay"})
         request.user = user
@@ -190,16 +286,16 @@ class TestBuybackDirectorViews:
 
         contract.refresh_from_db()
         assert contract.status == "PAID"
-        assert (
-            LedgerTransaction.objects.filter(
-                buyback_contract=contract, transaction_type="BUYBACK_PAYOUT"
-            ).count()
-            == 1
+        payouts = LedgerTransaction.objects.filter(
+            buyback_contract=contract, transaction_type="BUYBACK_PAYOUT"
         )
+        assert payouts.count() == 1
+        assert payouts.first().director == user
+        mock_notify.assert_called_once()
 
     def test_reject_flips_status_without_ledger_row(self, rf):
-        user = _director_user()
-        contract = BuybackContractFactory(status="FLAGGED")
+        user, corp = _director_user()
+        contract = _own_contract(corp, status="FLAGGED")
 
         request = rf.post("/", {"action": "reject", "reason": "scam"})
         request.user = user
@@ -213,8 +309,8 @@ class TestBuybackDirectorViews:
         assert LedgerTransaction.objects.filter(buyback_contract=contract).count() == 0
 
     def test_resolving_already_paid_contract_is_a_noop(self, rf):
-        user = _director_user()
-        contract = BuybackContractFactory(status="PAID")
+        user, corp = _director_user()
+        contract = _own_contract(corp, status="PAID")
 
         request = rf.post("/", {"action": "accept_and_pay"})
         request.user = user
@@ -223,3 +319,15 @@ class TestBuybackDirectorViews:
             director_buyback_contract_resolve(request, contract.tracking_number)
 
         assert LedgerTransaction.objects.filter(buyback_contract=contract).count() == 0
+
+    def test_another_corporations_contract_cannot_be_resolved(self, rf):
+        user, _ = _director_user()
+        foreign = BuybackContractFactory(status="MATCHED")
+
+        request = rf.post("/", {"action": "accept_and_pay"})
+        request.user = user
+
+        with pytest.raises(Http404):
+            director_buyback_contract_resolve(request, foreign.tracking_number)
+        foreign.refresh_from_db()
+        assert foreign.status == "MATCHED"

@@ -2,6 +2,8 @@
 
 # Standard Library
 import logging
+from collections import Counter
+from datetime import datetime
 
 # Third Party
 from celery import shared_task
@@ -26,6 +28,13 @@ logger = logging.getLogger(__name__)
 CONTRACTS_SCOPE = "esi-contracts.read_corporation_contracts.v1"
 TERMINAL_STATUSES = ("PAID", "REJECTED", "CANCELLED", "EXPIRED")
 
+# ESI contract statuses. "finished*" means the receiver accepted it in-game, so
+# the seller has been paid; "deleted"/"cancelled" means the seller withdrew it
+# and may still create a corrected one before the program's expiry.
+ESI_FINISHED = ("finished", "finished_issuer", "finished_contractor")
+ESI_REJECTED = ("rejected",)
+ESI_WITHDRAWN = ("deleted", "cancelled")
+
 
 def _build_expectation(contract) -> BuybackContractExpectation:
     program = contract.program
@@ -49,12 +58,29 @@ def _build_expectation(contract) -> BuybackContractExpectation:
     )
 
 
-def _send_contract_notifications(contract, result, is_new_flag: bool):
-    """Discord webhook for the director channel on a new flagged/matched
-    contract, plus a per-member DM on the status change."""
+def watchlist_flag_notes(program, type_ids) -> list[str]:
+    """One note per watchlist entry in flag mode (not blocking) that matches."""
+    from ..models import BuybackWatchlistItem
+
+    hits = BuybackWatchlistItem.objects.filter(
+        program=program, blocks_submission=False, eve_type_id__in=type_ids
+    ).select_related("eve_type")
+    return [
+        f"Watchlisted item: {hit.eve_type.name}" + (f" ({hit.reason})" if hit.reason else "")
+        for hit in hits
+    ]
+
+
+def _notify_member(contract, message: str):
+    if contract.character:
+        notify_discord_user(contract.character, message)
+
+
+def _send_match_notifications(contract):
+    """Fired once, on the PENDING -> MATCHED/FLAGGED transition."""
     from ..models import CorporationWebhookConfig
 
-    if result.status == "FLAGGED":
+    if contract.status == "FLAGGED":
         webhook_config = CorporationWebhookConfig.objects.filter(
             corporation=contract.program.corporation
         ).first()
@@ -63,21 +89,134 @@ def _send_contract_notifications(contract, result, is_new_flag: bool):
 
             embed = {
                 "title": f"Buyback Contract Flagged: {contract.tracking_number}",
-                "description": result.notes or "Needs director review.",
+                "description": contract.flag_notes or "Needs director review.",
                 "color": 15158332,  # Red
             }
             send_discord_webhook(webhook_config.buyback_webhook, embed)
+        _notify_member(
+            contract,
+            f"Your buyback contract {contract.tracking_number} needs review: {contract.flag_notes}",
+        )
+    elif contract.status == "MATCHED":
+        _notify_member(
+            contract,
+            f"Your buyback contract {contract.tracking_number} was matched successfully.",
+        )
 
-    if is_new_flag and contract.character:
-        if result.status == "FLAGGED":
-            notify_discord_user(
-                contract.character,
-                f"Your buyback contract {contract.tracking_number} needs review: {result.notes}",
+
+def _match(contract, esi_contract, program, token) -> bool:
+    """Compare the in-game contract against the appraisal and store the result.
+    Returns False if the contract items couldn't be fetched (retry next poll)."""
+    from ..models import BuybackContract
+
+    esi_contract_id = getattr(esi_contract, "contract_id")
+    try:
+        items = esi.client.Contracts.GetCorporationsCorporationIdContractsContractIdItems(
+            corporation_id=program.corporation.corporation_id,
+            contract_id=esi_contract_id,
+            token=token,
+        ).result()
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Failed to fetch items for contract {esi_contract_id}: {e}")
+        return False
+
+    title = getattr(esi_contract, "title", "") or ""
+    esi_contract_dict = {
+        "title": title,
+        "price": getattr(esi_contract, "price", 0.0),
+        "start_location_id": getattr(esi_contract, "start_location_id", None),
+        "acceptor_id": getattr(esi_contract, "acceptor_id", None),
+        "assignee_id": getattr(esi_contract, "assignee_id", None),
+    }
+    esi_items = [
+        {
+            "type_id": getattr(i, "type_id", None),
+            "quantity": getattr(i, "quantity", 0),
+        }
+        for i in items
+    ]
+
+    result = match_contract(_build_expectation(contract), esi_contract_dict, esi_items)
+
+    # Watchlist "flag" items send the contract to review even when the in-game
+    # contract itself is clean.
+    watchlist_notes = watchlist_flag_notes(
+        program, [item.eve_type_id for item in contract.items.all()]
+    )
+    status = "FLAGGED" if watchlist_notes else result.status
+    notes = "\n".join(watchlist_notes + ([result.notes] if result.notes else []))
+
+    BuybackContract.objects.filter(pk=contract.pk).update(
+        esi_contract_id=esi_contract_id,
+        esi_issuer_character_id=getattr(esi_contract, "issuer_id", None),
+        esi_acceptor_character_id=getattr(esi_contract, "acceptor_id", None),
+        contract_price=getattr(esi_contract, "price", None),
+        contract_title=title,
+        status=status,
+        flag_item_mismatch=result.item_mismatch,
+        flag_price_mismatch=result.price_mismatch,
+        flag_structure_mismatch=result.structure_mismatch,
+        flag_receiver_mismatch=result.receiver_mismatch,
+        flag_title_tampered=result.title_tampered,
+        flag_no_tracking=result.no_tracking,
+        flag_watchlist=bool(watchlist_notes),
+        flag_notes=notes,
+        updated_at=timezone.now(),
+    )
+
+    esi_totals = Counter()
+    for item in esi_items:
+        esi_totals[item["type_id"]] += item["quantity"]
+    for item in contract.items.all():
+        verified = esi_totals.get(item.eve_type_id, 0) == item.quantity
+        if item.is_esi_verified != verified:
+            item.is_esi_verified = verified
+            item.save(update_fields=["is_esi_verified"])
+
+    contract.refresh_from_db()
+    _send_match_notifications(contract)
+    return True
+
+
+def _follow_esi_status(contract, esi_contract):
+    """Apply what happened to the matched contract in-game."""
+    from ..models import BuybackContract
+
+    esi_status = getattr(esi_contract, "status", None)
+    if not isinstance(esi_status, str):
+        esi_status = "outstanding"
+
+    if esi_status in ESI_FINISHED:
+        if contract.mark_paid(notes="Buyback payout (contract accepted in-game)"):
+            _notify_member(
+                contract,
+                f"Your buyback contract {contract.tracking_number} was accepted and paid.",
             )
-        elif result.status == "MATCHED":
-            notify_discord_user(
-                contract.character,
-                f"Your buyback contract {contract.tracking_number} was matched successfully.",
+    elif esi_status in ESI_REJECTED:
+        contract.status = "REJECTED"
+        contract.save(update_fields=["status", "updated_at"])
+        _notify_member(
+            contract,
+            f"Your buyback contract {contract.tracking_number} was rejected in-game.",
+        )
+    elif esi_status in ESI_WITHDRAWN:
+        # The seller withdrew it - typically to fix it. Go back to PENDING so a
+        # corrected contract with the same tracking number can still match.
+        BuybackContract.objects.filter(pk=contract.pk).update(
+            status="PENDING",
+            esi_contract_id=None,
+            contract_price=None,
+            contract_title="",
+            updated_at=timezone.now(),
+        )
+    else:
+        date_expired = getattr(esi_contract, "date_expired", None)
+        if isinstance(date_expired, datetime) and date_expired < timezone.now():
+            contract.status = "EXPIRED"
+            contract.save(update_fields=["status", "updated_at"])
+            _notify_member(
+                contract,
+                f"Your buyback contract {contract.tracking_number} expired in-game without being accepted.",
             )
 
 
@@ -85,14 +224,15 @@ def _send_contract_notifications(contract, result, is_new_flag: bool):
 @log_task_execution("Buyback Poll Contracts")
 def buyback_poll_contracts():
     """
-    Poll ESI corp contracts for every active BuybackProgram, match by tracking
-    number, update BuybackContract rows, fire notifications.
+    Poll ESI corp contracts for every active BuybackProgram. A contract is
+    matched (items compared, flags set, notifications sent) once, when first
+    seen; after that only its in-game status is followed (paid, rejected,
+    withdrawn, expired).
 
-    Idempotency is structural: esi_contract_id is DB-unique and every write is
-    scoped per-row via .update(), so two overlapping runs can't duplicate or
-    corrupt state - the lock below only avoids redundant ESI calls, and self-
-    heals within 5 minutes if a worker dies mid-run (not the source project's
-    unbounded, manually-flushed lock).
+    Idempotency is structural: esi_contract_id is DB-unique, the payout goes
+    through BuybackContract.mark_paid() (records once), and notifications only
+    fire on status transitions. The lock below only avoids redundant ESI calls
+    and self-heals within 5 minutes if a worker dies mid-run.
     """
     from ..models import BuybackContract, BuybackProgram, CorporationSyncConfig
 
@@ -131,19 +271,19 @@ def buyback_poll_contracts():
                 contracts = esi.client.Contracts.GetCorporationsCorporationIdContracts(
                     corporation_id=program.corporation.corporation_id, token=token
                 ).results()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(
                     f"Failed to fetch contracts for {program.corporation_id}: {e}"
                 )
                 continue
 
             for esi_contract in contracts:
-                contract_type = getattr(esi_contract, "type", None)
-                if contract_type != "item_exchange":
+                if getattr(esi_contract, "type", None) != "item_exchange":
                     continue
 
-                title = getattr(esi_contract, "title", "") or ""
-                tracking_number = extract_tracking_number(title)
+                tracking_number = extract_tracking_number(
+                    getattr(esi_contract, "title", "") or ""
+                )
                 if not tracking_number:
                     continue
 
@@ -158,61 +298,15 @@ def buyback_poll_contracts():
                     continue
 
                 esi_contract_id = getattr(esi_contract, "contract_id")
-                was_pending = contract.status == "PENDING"
-
-                try:
-                    items = esi.client.Contracts.GetCorporationsCorporationIdContractsContractIdItems(
-                        corporation_id=program.corporation.corporation_id,
-                        contract_id=esi_contract_id,
-                        token=token,
-                    ).result()
-                except Exception as e:
-                    logger.error(
-                        f"Failed to fetch items for contract {esi_contract_id}: {e}"
-                    )
+                if contract.esi_contract_id is None:
+                    if not _match(contract, esi_contract, program, token):
+                        continue
+                elif contract.esi_contract_id != esi_contract_id:
+                    # A second in-game contract with the same tracking number;
+                    # the first one stays authoritative until it's withdrawn.
                     continue
 
-                esi_contract_dict = {
-                    "title": title,
-                    "price": getattr(esi_contract, "price", 0.0),
-                    "start_location_id": getattr(
-                        esi_contract, "start_location_id", None
-                    ),
-                    "acceptor_id": getattr(esi_contract, "acceptor_id", None),
-                    "assignee_id": getattr(esi_contract, "assignee_id", None),
-                }
-                esi_items = [
-                    {
-                        "type_id": getattr(i, "type_id", None),
-                        "quantity": getattr(i, "quantity", 0),
-                    }
-                    for i in items
-                ]
-
-                result = match_contract(
-                    _build_expectation(contract), esi_contract_dict, esi_items
-                )
-
-                BuybackContract.objects.filter(pk=contract.pk).update(
-                    esi_contract_id=esi_contract_id,
-                    esi_issuer_character_id=getattr(esi_contract, "issuer_id", None),
-                    esi_acceptor_character_id=getattr(
-                        esi_contract, "acceptor_id", None
-                    ),
-                    contract_price=getattr(esi_contract, "price", None),
-                    contract_title=title,
-                    status=result.status,
-                    flag_item_mismatch=result.item_mismatch,
-                    flag_price_mismatch=result.price_mismatch,
-                    flag_structure_mismatch=result.structure_mismatch,
-                    flag_receiver_mismatch=result.receiver_mismatch,
-                    flag_title_tampered=result.title_tampered,
-                    flag_no_tracking=result.no_tracking,
-                    flag_notes=result.notes,
-                )
-
-                contract.refresh_from_db()
-                _send_contract_notifications(contract, result, is_new_flag=was_pending)
+                _follow_esi_status(contract, esi_contract)
         finally:
             cache.delete(lock_key)
 
@@ -232,9 +326,8 @@ def buyback_purge_stale_contracts():
         )
         if timezone.now() > deadline:
             contract.status = "EXPIRED"
-            contract.save(update_fields=["status"])
-            if contract.character:
-                notify_discord_user(
-                    contract.character,
-                    f"Your buyback contract {contract.tracking_number} expired - no matching contract was seen in time.",
-                )
+            contract.save(update_fields=["status", "updated_at"])
+            _notify_member(
+                contract,
+                f"Your buyback contract {contract.tracking_number} expired - no matching contract was seen in time.",
+            )

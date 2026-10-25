@@ -86,7 +86,8 @@
                                 <tr class="{% if detail.blocked %}table-danger{% elif detail.flagged %}table-warning{% endif %}">
                                     <td>
                                         {{ detail.eve_type.name }}
-                                        {% if detail.blocked %}<span class="badge bg-danger ms-1">{% trans "Blocked" %}</span>{% elif detail.flagged %}<span class="badge bg-warning text-dark ms-1">{% trans "Flagged" %}</span>{% endif %}
+                                        {% if detail.blocked %}<span class="badge bg-danger ms-1">{% trans "Not accepted" %}</span>{% elif detail.flagged %}<span class="badge bg-warning text-dark ms-1">{% trans "Manual review" %}</span>{% endif %}
+                                        {% if detail.blocked and detail.blocked_reason %}<div class="small text-danger">{{ detail.blocked_reason }}</div>{% elif detail.flagged and detail.watchlist_reason %}<div class="small text-body-secondary">{{ detail.watchlist_reason }}</div>{% endif %}
                                     </td>
                                     <td class="text-end">{{ detail.quantity }}</td>
                                     <td class="text-end">{{ detail.unit_price|eve_isk }}</td>

@@ -13,6 +13,7 @@ from django.utils.crypto import get_random_string
 from django.utils.translation import gettext as _
 
 from ...models import BuybackContract, BuybackContractItem, BuybackProgram
+from ...tasks.buyback import watchlist_flag_notes
 from ...utils.inventory_parser import parse_inventory_paste
 from ...utils.pricing_engine import calculate_buyback_quote
 
@@ -145,10 +146,13 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
     submittable = [d for d in item_details if not d["blocked"]]
     if not submittable:
         messages.error(
-            request, _("Every item in this list was blocked by the watchlist.")
+            request, _("None of the items in this list are accepted by this program.")
         )
         return render(request, "industry_reforged/buyback/calculator.html", context)
 
+    watchlist_notes = watchlist_flag_notes(
+        program, [d["eve_type"].id for d in submittable]
+    )
     tracking_number = _generate_tracking_number()
     contract = BuybackContract.objects.create(
         tracking_number=tracking_number,
@@ -157,6 +161,8 @@ def buyback_calculator(request: WSGIRequest) -> HttpResponse:
         quoted_price=net_total,
         donation_amount=donation_amount,
         status="PENDING",
+        flag_watchlist=bool(watchlist_notes),
+        flag_notes="\n".join(watchlist_notes),
     )
     BuybackContractItem.objects.bulk_create(
         [

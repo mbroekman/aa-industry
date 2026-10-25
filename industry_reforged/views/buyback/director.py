@@ -8,15 +8,31 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
 
 from ...forms import BuybackProgramForm, BuybackWatchlistItemForm
-from ...models import (
-    BuybackContract,
-    BuybackProgram,
-    BuybackWatchlistItem,
-    LedgerTransaction,
-)
+from ...models import BuybackContract, BuybackProgram, BuybackWatchlistItem
 from ...tasks.utils import notify_discord_user
+
+
+def _director_corporation(request: WSGIRequest):
+    """Directors only ever manage their own main character's corporation."""
+    main = request.user.profile.main_character
+    if not main:
+        return None
+    return EveCorporationInfo.objects.filter(corporation_id=main.corporation_id).first()
+
+
+def _no_corporation(request: WSGIRequest) -> HttpResponse:
+    messages.error(request, _("You are not part of a corporation."))
+    return redirect("industry_reforged:index")
+
+
+def _back_to_config() -> HttpResponse:
+    return redirect(reverse("industry_reforged:director_config") + "#buyback")
 
 
 @login_required
@@ -24,19 +40,27 @@ from ...tasks.utils import notify_discord_user
 def director_config_buyback_program_edit(
     request: WSGIRequest, program_id: int = None
 ) -> HttpResponse:
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
     if program_id:
-        instance = get_object_or_404(BuybackProgram, id=program_id)
+        instance = get_object_or_404(
+            BuybackProgram, id=program_id, corporation=corporation
+        )
     else:
-        instance = BuybackProgram()
+        instance = BuybackProgram(corporation=corporation)
 
     if request.method == "POST":
-        form = BuybackProgramForm(request.POST, instance=instance)
+        form = BuybackProgramForm(
+            request.POST, instance=instance, corporation=corporation
+        )
         if form.is_valid():
             form.save()
             messages.success(request, _("Buyback program saved successfully."))
-            return redirect(reverse("industry_reforged:director_config") + "#buyback")
+            return _back_to_config()
     else:
-        form = BuybackProgramForm(instance=instance)
+        form = BuybackProgramForm(instance=instance, corporation=corporation)
 
     return render(
         request,
@@ -54,14 +78,30 @@ def director_config_buyback_program_edit(
 
 @login_required
 @permission_required("industry_reforged.corp_access")
+@require_POST
 def director_config_buyback_program_delete(
     request: WSGIRequest, program_id: int
 ) -> HttpResponse:
-    program = get_object_or_404(BuybackProgram, id=program_id)
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    program = get_object_or_404(BuybackProgram, id=program_id, corporation=corporation)
+    if program.contracts.exists():
+        messages.error(
+            request,
+            _(
+                "Buyback program '%(name)s' has contracts and can't be deleted. "
+                "Deactivate it instead."
+            )
+            % {"name": program.name},
+        )
+        return _back_to_config()
+
     name = program.name
     program.delete()
     messages.success(request, _("Buyback program '%(name)s' deleted.") % {"name": name})
-    return redirect(reverse("industry_reforged:director_config") + "#buyback")
+    return _back_to_config()
 
 
 @login_required
@@ -69,19 +109,27 @@ def director_config_buyback_program_delete(
 def director_config_buyback_watchlist_edit(
     request: WSGIRequest, item_id: int = None
 ) -> HttpResponse:
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
     if item_id:
-        instance = get_object_or_404(BuybackWatchlistItem, id=item_id)
+        instance = get_object_or_404(
+            BuybackWatchlistItem, id=item_id, program__corporation=corporation
+        )
     else:
         instance = BuybackWatchlistItem()
 
     if request.method == "POST":
-        form = BuybackWatchlistItemForm(request.POST, instance=instance)
+        form = BuybackWatchlistItemForm(
+            request.POST, instance=instance, corporation=corporation
+        )
         if form.is_valid():
             form.save()
             messages.success(request, _("Watchlist item saved successfully."))
-            return redirect(reverse("industry_reforged:director_config") + "#buyback")
+            return _back_to_config()
     else:
-        form = BuybackWatchlistItemForm(instance=instance)
+        form = BuybackWatchlistItemForm(instance=instance, corporation=corporation)
 
     return render(
         request,
@@ -97,21 +145,34 @@ def director_config_buyback_watchlist_edit(
 
 @login_required
 @permission_required("industry_reforged.corp_access")
+@require_POST
 def director_config_buyback_watchlist_delete(
     request: WSGIRequest, item_id: int
 ) -> HttpResponse:
-    item = get_object_or_404(BuybackWatchlistItem, id=item_id)
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    item = get_object_or_404(
+        BuybackWatchlistItem, id=item_id, program__corporation=corporation
+    )
     item.delete()
     messages.success(request, _("Watchlist item deleted."))
-    return redirect(reverse("industry_reforged:director_config") + "#buyback")
+    return _back_to_config()
 
 
 @login_required
 @permission_required("industry_reforged.corp_access")
 def director_buyback_review(request: WSGIRequest) -> HttpResponse:
     """Queue of FLAGGED/MATCHED contracts awaiting a payout decision."""
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
     contracts = (
-        BuybackContract.objects.filter(status__in=["FLAGGED", "MATCHED"])
+        BuybackContract.objects.filter(
+            status__in=["FLAGGED", "MATCHED"], program__corporation=corporation
+        )
         .select_related("program", "character")
         .prefetch_related("items__eve_type")
         .order_by("-created_at")
@@ -128,36 +189,39 @@ def director_buyback_review(request: WSGIRequest) -> HttpResponse:
 def director_buyback_contract_resolve(
     request: WSGIRequest, tracking_number: str
 ) -> HttpResponse:
-    """POST action: accept_and_pay creates the payout LedgerTransaction and marks
-    PAID; reject marks REJECTED and notifies the member. Never re-processes an
+    """POST action: accept_and_pay records the payout (once) and marks PAID;
+    reject marks REJECTED and notifies the member. Never re-processes an
     already-terminal contract, so a double-click can never double-pay."""
-    contract = get_object_or_404(BuybackContract, tracking_number=tracking_number)
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    contract = get_object_or_404(
+        BuybackContract,
+        tracking_number=tracking_number,
+        program__corporation=corporation,
+    )
 
     if request.method == "POST" and contract.status in ("MATCHED", "FLAGGED"):
         action = request.POST.get("action")
         if action == "accept_and_pay":
-            LedgerTransaction.objects.create(
-                transaction_type="BUYBACK_PAYOUT",
-                amount=contract.quoted_price,
-                character=contract.character,
-                director=request.user,
-                reference=contract.tracking_number,
-                notes="Buyback payout",
-                buyback_contract=contract,
-            )
-            contract.status = "PAID"
-            contract.save(update_fields=["status"])
-            messages.success(
-                request,
-                _("Contract %(tracking_number)s paid out.")
-                % {"tracking_number": contract.tracking_number},
-            )
+            if contract.mark_paid(director=request.user):
+                if contract.character:
+                    notify_discord_user(
+                        contract.character,
+                        f"Your buyback contract {contract.tracking_number} was paid out.",
+                    )
+                messages.success(
+                    request,
+                    _("Contract %(tracking_number)s paid out.")
+                    % {"tracking_number": contract.tracking_number},
+                )
         elif action == "reject":
             reason = request.POST.get("reason", "").strip()
             contract.status = "REJECTED"
             if reason:
                 contract.flag_notes = reason
-            contract.save(update_fields=["status", "flag_notes"])
+            contract.save(update_fields=["status", "flag_notes", "updated_at"])
             if contract.character:
                 notify_discord_user(
                     contract.character,

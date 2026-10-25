@@ -698,19 +698,32 @@ def calculate_bom_cost(parsed_items, corporation=None, target_facility=None):
 # format and one place to fix a pricing bug.
 
 
-def get_reprocessing_value(eve_type, quantity, efficiency=1.0) -> Decimal | None:
+def _market_unit_prices(type_ids, order_type="sell") -> dict:
+    """Jita unit prices for `order_type` "buy", "sell" or "split" (average of both)."""
+    if order_type == "split":
+        buy = get_market_prices(type_ids, order_type="buy")
+        sell = get_market_prices(type_ids, order_type="sell")
+        return {
+            tid: (buy.get(tid, 0.0) + sell.get(tid, 0.0)) / 2.0 for tid in type_ids
+        }
+    return get_market_prices(type_ids, order_type=order_type)
+
+
+def get_reprocessing_value(
+    eve_type, quantity, efficiency=1.0, order_type="sell"
+) -> Decimal | None:
     """
     Reprocessing valuation via eveuniverse's EveType.materials (SDE reprocessing
-    yield), valued at the refined materials' market sell price. Returns None
-    (never False/0) when the item has no reprocessing output at all, so callers
-    never hit a "0 vs. unset" ambiguity.
+    yield), with the materials valued at the same price basis (buy/sell/split)
+    as the item itself. Returns None (never False/0) when the item has no
+    reprocessing output at all, so callers never hit a "0 vs. unset" ambiguity.
     """
     materials = list(eve_type.materials.all())
     if not materials:
         return None
 
     material_ids = [m.material_eve_type_id for m in materials]
-    prices = get_market_prices(material_ids)
+    prices = _market_unit_prices(material_ids, order_type=order_type)
 
     total = Decimal("0.00")
     for mat in materials:
@@ -738,23 +751,14 @@ def get_item_value_variants(
     """
     variants = {}
 
-    if order_type == "split":
-        buy_price = get_market_prices([eve_type.id], order_type="buy").get(
-            eve_type.id, 0.0
-        )
-        sell_price = get_market_prices([eve_type.id], order_type="sell").get(
-            eve_type.id, 0.0
-        )
-        market_price = (buy_price + sell_price) / 2.0
-    else:
-        market_price = get_market_prices([eve_type.id], order_type=order_type).get(
-            eve_type.id, 0.0
-        )
+    market_price = _market_unit_prices([eve_type.id], order_type=order_type).get(
+        eve_type.id, 0.0
+    )
     if market_price and market_price > 0.0:
         variants["market"] = Decimal(str(market_price)) * quantity
 
     reprocessed = get_reprocessing_value(
-        eve_type, quantity, efficiency=refining_efficiency
+        eve_type, quantity, efficiency=refining_efficiency, order_type=order_type
     )
     if reprocessed is not None and reprocessed > 0:
         variants["reprocessed"] = reprocessed
@@ -813,27 +817,55 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
         )
     }
 
+    accepted_category_ids = (
+        set(program.accepted_categories.values_list("id", flat=True))
+        if program.pk
+        else set()
+    )
+
     total_price = Decimal("0.00")
     item_details = []
     order_type = (program.price_type or "SELL").lower()
     refining_efficiency = float(program.refining_rate or 0.0) / 100.0
 
+    def blocked_line(eve_type, quantity, reason, watchlist_reason=""):
+        return {
+            "eve_type": eve_type,
+            "quantity": quantity,
+            "unit_price": Decimal("0.00"),
+            "line_total": Decimal("0.00"),
+            "base_unit_price": Decimal("0.00"),
+            "base_line_total": Decimal("0.00"),
+            "value_source": None,
+            "blocked": True,
+            "blocked_reason": reason,
+            "flagged": False,
+            "watchlist_reason": watchlist_reason,
+        }
+
     for eve_type, quantity in parsed_items.items():
         watchlist_entry = watchlist.get(eve_type.id)
         if watchlist_entry and watchlist_entry.blocks_submission:
             item_details.append(
-                {
-                    "eve_type": eve_type,
-                    "quantity": quantity,
-                    "unit_price": Decimal("0.00"),
-                    "line_total": Decimal("0.00"),
-                    "base_unit_price": Decimal("0.00"),
-                    "base_line_total": Decimal("0.00"),
-                    "value_source": None,
-                    "blocked": True,
-                    "flagged": False,
-                    "watchlist_reason": watchlist_entry.reason,
-                }
+                blocked_line(
+                    eve_type,
+                    quantity,
+                    watchlist_entry.reason or "Not accepted by this program.",
+                    watchlist_entry.reason,
+                )
+            )
+            continue
+
+        category_id = (
+            eve_type.eve_group.eve_category_id if eve_type.eve_group_id else None
+        )
+        if accepted_category_ids and category_id not in accepted_category_ids:
+            item_details.append(
+                blocked_line(
+                    eve_type,
+                    quantity,
+                    "This item's category isn't accepted by this program.",
+                )
             )
             continue
 
@@ -882,6 +914,7 @@ def calculate_buyback_quote(parsed_items, program) -> tuple[Decimal, list[dict]]
                 "base_line_total": base_unit_price * quantity,
                 "value_source": value_source,
                 "blocked": False,
+                "blocked_reason": "",
                 "flagged": bool(watchlist_entry),
                 "watchlist_reason": watchlist_entry.reason if watchlist_entry else "",
             }

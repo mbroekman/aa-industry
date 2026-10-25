@@ -85,6 +85,36 @@ class TestGetReprocessingValue:
 
 
 @pytest.mark.django_db
+class TestReprocessingPriceBasis:
+    """Reprocessed materials follow the program's price type (TASK-272)."""
+
+    def _setup(self):
+        eve_type = EveTypeFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        EveTypeMaterial.objects.create(
+            eve_type=eve_type, material_eve_type=tritanium, quantity=10
+        )
+        return eve_type, tritanium
+
+    def _prices(self, tritanium):
+        table = {"buy": 4.0, "sell": 6.0}
+        return lambda ids, order_type="sell": {tritanium.id: table[order_type]}
+
+    @pytest.mark.parametrize(
+        ("order_type", "expected"),
+        [("buy", Decimal("40")), ("sell", Decimal("60")), ("split", Decimal("50"))],
+    )
+    def test_materials_use_the_requested_price_basis(self, order_type, expected):
+        eve_type, tritanium = self._setup()
+        with patch(
+            "industry_reforged.utils.pricing_engine.get_market_prices",
+            side_effect=self._prices(tritanium),
+        ):
+            value = get_reprocessing_value(eve_type, 1, order_type=order_type)
+        assert value == expected
+
+
+@pytest.mark.django_db
 class TestGetItemValueVariants:
     def test_market_only_when_not_reprocessable(self, mock_esi_orders):
         eve_type = EveTypeFactory()
@@ -310,6 +340,32 @@ class TestCalculateBuybackQuote:
         assert total == Decimal("100.00")
         assert details[0]["blocked"] is False
         assert details[0]["flagged"] is True
+
+    def test_accepted_categories_block_items_from_other_categories(
+        self, mock_esi_orders
+    ):
+        program = BuybackProgramFactory()
+        accepted = EveTypeFactory()
+        other = EveTypeFactory()
+        program.accepted_categories.add(accepted.eve_group.eve_category)
+        mock_esi_orders.return_value = _market_response(100.0)
+
+        total, details = calculate_buyback_quote({accepted: 1, other: 1}, program)
+
+        by_type = {d["eve_type"]: d for d in details}
+        assert by_type[accepted]["blocked"] is False
+        assert by_type[other]["blocked"] is True
+        assert "category" in by_type[other]["blocked_reason"]
+        assert total == Decimal("100.00")
+
+    def test_empty_accepted_categories_accepts_everything(self, mock_esi_orders):
+        program = BuybackProgramFactory()
+        eve_type = EveTypeFactory()
+        mock_esi_orders.return_value = _market_response(100.0)
+
+        _, details = calculate_buyback_quote({eve_type: 1}, program)
+
+        assert details[0]["blocked"] is False
 
     def test_empty_input_returns_zero(self, mock_esi_orders):
         program = BuybackProgramFactory()

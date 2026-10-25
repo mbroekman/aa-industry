@@ -160,7 +160,6 @@ class BuybackContract(models.Model):
         ("PENDING", _("Pending - awaiting ESI contract")),
         ("MATCHED", _("Matched - no issues found")),
         ("FLAGGED", _("Flagged - needs director review")),
-        ("ACCEPTED", _("Accepted in-game")),
         ("REJECTED", _("Rejected")),
         ("PAID", _("Paid")),
         ("EXPIRED", _("Expired - no contract seen in time")),
@@ -210,6 +209,10 @@ class BuybackContract(models.Model):
     flag_receiver_mismatch = models.BooleanField(default=False)
     flag_title_tampered = models.BooleanField(default=False)
     flag_no_tracking = models.BooleanField(default=False)
+    flag_watchlist = models.BooleanField(
+        default=False,
+        help_text=_("Contains an item on the program's watchlist (flag mode)."),
+    )
     flag_notes = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -254,12 +257,42 @@ class BuybackContract(models.Model):
                 self.flag_receiver_mismatch,
                 self.flag_title_tampered,
                 self.flag_no_tracking,
+                self.flag_watchlist,
             ]
         )
 
     @property
     def payout_transaction(self):
         return self.ledger_transactions.first()
+
+    def mark_paid(self, director=None, notes="Buyback payout") -> bool:
+        """Record the payout once. Shared by the director's Pay button and the
+        poller seeing the contract finished in-game, so whichever comes first
+        wins and the other is a no-op. Returns True if this call paid it."""
+        from django.db import transaction
+
+        from .wallet import LedgerTransaction
+
+        with transaction.atomic():
+            locked = BuybackContract.objects.select_for_update().get(pk=self.pk)
+            if locked.status == "PAID":
+                return False
+            if not locked.ledger_transactions.filter(
+                transaction_type="BUYBACK_PAYOUT"
+            ).exists():
+                LedgerTransaction.objects.create(
+                    transaction_type="BUYBACK_PAYOUT",
+                    amount=locked.quoted_price,
+                    character=locked.character,
+                    director=director,
+                    reference=locked.tracking_number,
+                    notes=notes,
+                    buyback_contract=locked,
+                )
+            locked.status = "PAID"
+            locked.save(update_fields=["status", "updated_at"])
+        self.status = "PAID"
+        return True
 
 
 class BuybackContractItem(models.Model):

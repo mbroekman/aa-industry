@@ -930,8 +930,13 @@ class BuybackProgramForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, corporation=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if corporation is not None:
+            self.fields["corporation"].queryset = self.fields[
+                "corporation"
+            ].queryset.filter(pk=corporation.pk)
+            self.fields["corporation"].initial = corporation
         if self.instance and self.instance.pk:
             self.fields["corporation"].disabled = True
         self.fields["facility"].required = False
@@ -972,8 +977,12 @@ class BuybackWatchlistItemForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, corporation=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if corporation is not None:
+            self.fields["program"].queryset = BuybackProgram.objects.filter(
+                corporation=corporation
+            )
         self.fields["program"].label_from_instance = lambda obj: obj.name
         if self.instance and self.instance.pk:
             self.fields["program"].disabled = True
