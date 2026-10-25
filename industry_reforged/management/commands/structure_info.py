@@ -15,7 +15,10 @@ Usage:
 # Standard Library
 import logging
 
+# Third Party
 import requests
+
+# Django
 from django.core.management.base import BaseCommand
 
 from ...tasks.utils import _get_security_space
@@ -73,7 +76,6 @@ class Command(BaseCommand):
     # -- Upwell structures (authenticated) --------------------------------
 
     def _show_upwell_structure(self, structure_id):
-        # AA Industry App
         from ...models import IndustryFacility
 
         self.stdout.write(
@@ -111,7 +113,7 @@ class Command(BaseCommand):
             tried.append(token.character_name)
             try:
                 access_token = token.valid_access_token()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("Token refresh failed for %s", token.character_name)
                 continue
 
@@ -184,7 +186,7 @@ class Command(BaseCommand):
                         token=token,
                     ).results(use_etag=False)
                 )
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 self.stdout.write(
                     self.style.WARNING(
                         f"  Could not list structures via {token.character_name}: {e}"
@@ -289,7 +291,6 @@ class Command(BaseCommand):
     # -- Locally cached data ----------------------------------------------
 
     def _show_cached_facility(self, facility_id):
-        # AA Industry App
         from ...models import IndustryFacility
 
         facility = IndustryFacility.objects.filter(facility_id=facility_id).first()
@@ -342,7 +343,7 @@ class Command(BaseCommand):
 
             eve_type, _ = EveType.objects.get_or_create_esi(id=type_id)
             return f"{eve_type.name} ({type_id})"
-        except Exception:  # noqa: BLE001
+        except Exception:
             return f"Unknown ({type_id})"
 
     def _resolve_system(self, system_id):
@@ -355,7 +356,7 @@ class Command(BaseCommand):
 
             system = EveSolarSystem.objects.get(eve_id=system_id)
             return f"{system.name} ({system_id}, {security_space})"
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug(
                 "No local EveSolarSystem for %s, falling back to ESI", system_id
             )
@@ -380,6 +381,6 @@ class Command(BaseCommand):
             )
             if resp.status_code == 200 and resp.json():
                 return resp.json()[0].get("name") or "Unknown"
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("Failed to resolve name for %s via ESI", entity_id)
         return "Unknown"

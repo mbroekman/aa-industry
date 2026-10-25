@@ -71,6 +71,7 @@ class TestQuotesViews:
         user.profile.main_character = order.character
         request.user = user
 
+        # Standard Library
         from decimal import Decimal
 
         with (
@@ -118,6 +119,7 @@ class TestQuotesViews:
         mat_type = EveTypeFactory(id=99002, name="Tritanium", eve_group=grp_mat)
 
         # Corp owns the blueprint
+        # AA Industry App
         from industry_reforged.models import CorpBlueprint
 
         CorpBlueprint.objects.create(
@@ -164,8 +166,10 @@ class TestQuotesViews:
             assert "structure_job_costs" in context
 
     def test_view_quote_includes_unowned_blueprints_in_total_bom_price(self, rf):
+        # Django
         from django.contrib.auth.models import Permission
 
+        # AA Industry App
         from industry_reforged.tests.factories import (
             EveCategoryFactory,
             EveCorporationInfoFactory,

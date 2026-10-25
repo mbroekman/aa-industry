@@ -86,9 +86,7 @@ class TestBuiltBlueprintRuns:
 
         assert _built_blueprint_runs([order.id], _bp_map(product)) == {BP_ID: 0}
 
-    def test_completed_task_with_linked_job_is_not_double_counted(
-        self, order, product
-    ):
+    def test_completed_task_with_linked_job_is_not_double_counted(self, order, product):
         task = ProductionTaskFactory(
             item_type=product,
             quantity=10,
@@ -134,6 +132,8 @@ class TestBuiltBlueprintRuns:
             status="IN_PRODUCTION",
             created_from_order=MemberOrderFactory(status="ACCEPTED"),
         )
-        _link(other_task, CorporationIndustryJobFactory(status="delivered", runs=50), 50)
+        _link(
+            other_task, CorporationIndustryJobFactory(status="delivered", runs=50), 50
+        )
 
         assert _built_blueprint_runs([order.id], _bp_map(product)) == {BP_ID: 0}

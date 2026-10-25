@@ -64,6 +64,7 @@ def get_character_skill_levels(character_id: int) -> dict[int, int]:
         # Direct ESI skills fetch with the OAuth bearer token to bypass django-esi's
         # bravado 304 cache issues (same technique as slot_service.py).
         try:
+            # Third Party
             import requests
 
             access_token = token.valid_access_token()
@@ -76,7 +77,7 @@ def get_character_skill_levels(character_id: int) -> dict[int, int]:
             if resp.status_code == 200:
                 for s in resp.json().get("skills", []):
                     skills[s.get("skill_id", 0)] = s.get("active_skill_level", 0)
-        except Exception:  # noqa: BLE001
+        except Exception:
             skills = {}
 
         if not skills:
@@ -92,7 +93,7 @@ def get_character_skill_levels(character_id: int) -> dict[int, int]:
 
     except HTTPNotModified:
         return {}
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning(
             f"Failed to fetch live skills from ESI for character {character_id}: {e}"
         )
@@ -187,7 +188,7 @@ def get_required_skills(item_type_id: int, activity_id: int) -> list[dict[str, A
                         "level": skill.level,
                     }
                 )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(
             "Error fetching required skills for type %s (act %s): %s",
             item_type_id,
@@ -279,7 +280,8 @@ def check_claim_tree_eligibility(
 def claim_tree_failure_text(failures: list[tuple[Any, list[dict[str, Any]]]]) -> str:
     """'Item A (Requires: X V); Item B (Requires: Y III)' for claim error messages."""
     return "; ".join(
-        f"{t.item_type.name} ({missing_skills_text(missing)})" for t, missing in failures
+        f"{t.item_type.name} ({missing_skills_text(missing)})"
+        for t, missing in failures
     )
 
 

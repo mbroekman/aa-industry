@@ -1,6 +1,9 @@
+# Django
 from django.core.management.base import BaseCommand
-from industry_reforged.tasks.inventory import task_sync_corp_inventory
+
+# AA Industry App
 from industry_reforged.models import CorpInventory
+from industry_reforged.tasks.inventory import task_sync_corp_inventory
 
 
 class Command(BaseCommand):
@@ -11,6 +14,7 @@ class Command(BaseCommand):
             print("Done")
         except Exception as e:
             print("Error:", e)
+            # Standard Library
             import traceback
 
             traceback.print_exc()

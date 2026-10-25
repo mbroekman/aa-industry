@@ -256,7 +256,7 @@ def dt_director_tasks(request):
                 if task.assigned_to:
                     try:
                         corp = task.assigned_to.corporation
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         corp = None
                 corp_id = corp.corporation_id if corp else None
                 if corp_id not in buffer_hours_by_corp:
@@ -740,6 +740,7 @@ def dt_blueprint_library(request):
             )
         )
         try:
+            # Third Party
             from corptools.models import CorpAsset, EveLocation
 
             eve_loc_ids = list(

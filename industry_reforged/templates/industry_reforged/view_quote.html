@@ -410,9 +410,9 @@
                                                 <td class="text-center align-middle text-nowrap">
                                                     {% with info=item.build_status_info %}
                                                         {% if info %}
-                                                            <span class="badge {{ info.badge_class }}" 
-                                                                  data-bs-toggle="tooltip"
-                                                                  title="{% if info.status == 'COMPLETED' %}{% trans 'Completed' %}{% if info.task.completed_at %} ({{ info.task.completed_at|date:'Y-m-d H:i' }}){% endif %}{% if info.task.assigned_to %} {% trans 'by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'IN_PRODUCTION' %}{% trans 'In Production' %}{% if info.task.assigned_to %} - {% trans 'Claimed by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'UNCLAIMED' %}{% trans 'Unclaimed - Waiting for builder' %}{% else %}{% trans 'To Build' %}{% endif %}">
+                                                            <span class="badge {{ info.badge_class }}"
+                                                                data-bs-toggle="tooltip"
+                                                                title="{% if info.status == 'COMPLETED' %}{% trans 'Completed' %}{% if info.task.completed_at %} ({{ info.task.completed_at|date:'Y-m-d H:i' }}){% endif %}{% if info.task.assigned_to %} {% trans 'by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'IN_PRODUCTION' %}{% trans 'In Production' %}{% if info.task.assigned_to %} - {% trans 'Claimed by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'UNCLAIMED' %}{% trans 'Unclaimed - Waiting for builder' %}{% else %}{% trans 'To Build' %}{% endif %}">
                                                                 <i class="fas {{ info.icon }} me-1"></i>{{ info.label }}
                                                             </span>
                                                         {% else %}
@@ -486,7 +486,7 @@
                                             </tr>
                                             {% endfor %}
                                             {% endif %}
-                                            
+
                                             {% if not build_items and not buy_items %}
                                                 <tr><td colspan="{% if order.status == 'REQUESTED' and perms.industry_reforged.corp_access %}7{% else %}6{% endif %}" class="text-center">No items found.</td></tr>
                                             {% endif %}
@@ -663,9 +663,9 @@
                                                         {% else %}
                                                             {% with info=item.build_status_info %}
                                                                 {% if info %}
-                                                                    <span class="badge {{ info.badge_class }}" 
-                                                                          data-bs-toggle="tooltip"
-                                                                          title="{% if info.status == 'COMPLETED' %}{% trans 'Completed' %}{% if info.task.completed_at %} ({{ info.task.completed_at|date:'Y-m-d H:i' }}){% endif %}{% if info.task.assigned_to %} {% trans 'by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'IN_PRODUCTION' %}{% trans 'In Production' %}{% if info.task.assigned_to %} - {% trans 'Claimed by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'UNCLAIMED' %}{% trans 'Unclaimed - Waiting for builder' %}{% else %}{% trans 'To Build' %}{% endif %}">
+                                                                    <span class="badge {{ info.badge_class }}"
+                                                                        data-bs-toggle="tooltip"
+                                                                        title="{% if info.status == 'COMPLETED' %}{% trans 'Completed' %}{% if info.task.completed_at %} ({{ info.task.completed_at|date:'Y-m-d H:i' }}){% endif %}{% if info.task.assigned_to %} {% trans 'by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'IN_PRODUCTION' %}{% trans 'In Production' %}{% if info.task.assigned_to %} - {% trans 'Claimed by' %} {{ info.task.assigned_to.character_name }}{% endif %}{% elif info.status == 'UNCLAIMED' %}{% trans 'Unclaimed - Waiting for builder' %}{% else %}{% trans 'To Build' %}{% endif %}">
                                                                         <i class="fas {{ info.icon }} me-1"></i>{{ info.label }}
                                                                     </span>
                                                                 {% else %}
@@ -801,7 +801,7 @@
                         </div>
                     </div>
                 </div> <!-- End Tab ME -->
-                
+
                 <!-- TAB: MISSING BLUEPRINTS -->
                 <div class="tab-pane fade" id="missing-bp-pane" role="tabpanel" aria-labelledby="missing-bp-tab" tabindex="0">
                     <div class="row m-0">
@@ -1158,13 +1158,13 @@
         $('#quoteTotal').on('input', function() {
             let newPrice = parseFloat($(this).val()) || 0;
             let margin = newPrice - buildCost;
-            
+
             let formatOpts = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
             $('#pnlSuggestedPrice').text(newPrice.toLocaleString('en-US', formatOpts) + ' ISK');
-            
+
             let marginEl = $('#pnlProfitMargin');
             marginEl.text(margin.toLocaleString('en-US', formatOpts) + ' ISK');
-            
+
             if (margin < 0) {
                 marginEl.removeClass('text-success').addClass('text-danger');
             } else {
@@ -1177,7 +1177,7 @@
         $('#quoteUpfrontPlex').on('input', function() {
             let plexQty = parseInt($(this).val()) || 0;
             let totalIsk = plexQty * plexPrice;
-            
+
             let helper = $('#quoteUpfrontPlex-helper');
             if(totalIsk > 0) {
                 helper.text('(= ' + formatISK(totalIsk) + ' ISK)');

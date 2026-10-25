@@ -6,11 +6,11 @@ Unit tests for Hybrid Builder Reward Model 2 (TASK-249).
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-# Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo
-
 # Django
 from django.test import TestCase
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
 
 # AA Industry App
 from industry_reforged.forms import CorpPricingConfigForm

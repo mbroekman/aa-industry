@@ -355,9 +355,9 @@ def update_character_pi(character_id=None):
                                     vol = float(item_type.volume or 0.0) * float(amount)
                                     contents_volume += vol
                                     if item_type.name in contents_json:
-                                        contents_json[item_type.name]["amount"] += (
-                                            amount
-                                        )
+                                        contents_json[item_type.name][
+                                            "amount"
+                                        ] += amount
                                         contents_json[item_type.name]["volume"] += vol
                                     else:
                                         contents_json[item_type.name] = {
@@ -423,7 +423,9 @@ def update_character_pi(character_id=None):
                                     character.character_ownership.user,
                                     "industry_pi_config",
                                 ):
-                                    threshold = character.character_ownership.user.industry_pi_config.storage_warning_threshold
+                                    threshold = (
+                                        character.character_ownership.user.industry_pi_config.storage_warning_threshold
+                                    )
                             except Exception:
                                 pass
 

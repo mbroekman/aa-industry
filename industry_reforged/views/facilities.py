@@ -14,9 +14,11 @@ def get_corporate_structures_for_dropdown(corporation):
     # Third Party
     import requests
 
+    # Django
+    from django.db.models import Q
+
     # Alliance Auth
     from esi.models import Token
-    from django.db.models import Q
 
     from ..models import CorporationSyncConfig, IndustryFacility
     from ..models.facilities import KnownLocation

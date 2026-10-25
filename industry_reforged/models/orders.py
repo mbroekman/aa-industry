@@ -5,15 +5,15 @@ App Models
 # Standard Library
 from decimal import Decimal
 
-# Alliance Auth
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+# Third Party
+from eveuniverse.models import EveType
 
 # Django
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-# Third Party
-from eveuniverse.models import EveType
+# Alliance Auth
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 
 class CorpPricingConfig(models.Model):
@@ -634,7 +634,7 @@ class ProductionTask(models.Model):
                 self.item_type_id, self.activity_id
             )
             return max(1, portion)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return 1
 
     @property

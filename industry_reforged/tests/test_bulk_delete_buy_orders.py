@@ -3,14 +3,14 @@ Unit tests for bulk-deleting Procurement Buy Orders from the Director Dashboard'
 Buy Orders tab (checkbox selection + "Delete Selected").
 """
 
-# Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo
-
 # Django
 from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
 
 # AA Industry App
 from industry_reforged.models import CorpBuyOrder

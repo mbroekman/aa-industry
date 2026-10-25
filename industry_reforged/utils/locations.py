@@ -1,12 +1,12 @@
 """Location resolution helper utilities for Industry Reforged."""
 
 # Standard Library
-from typing import Dict, Iterable, Optional, Tuple
+from collections.abc import Iterable
 
 
 def format_location_flag(
     flag: str,
-    division_names: Optional[Dict[str, str]] = None,
+    division_names: dict[str, str] | None = None,
 ) -> str:
     """Format an EVE location_flag into human-readable text, using division name if available."""
     if not flag:
@@ -23,14 +23,15 @@ def format_location_flag(
     return flag
 
 
-def get_corp_division_names() -> Dict[Optional[int], Dict[str, str]]:
+def get_corp_division_names() -> dict[int | None, dict[str, str]]:
     """
     Get mapping of corporation_id -> { 'CorpSAG1': 'Input-Output', ... }.
     Extracted from corptools EveLocation entries with negative IDs (managed hangars).
     Key `None` contains fallback division names across all corporations.
     """
-    divisions_by_corp: Dict[Optional[int], Dict[str, str]] = {None: {}}
+    divisions_by_corp: dict[int | None, dict[str, str]] = {None: {}}
     try:
+        # Third Party
         from corptools.models import EveLocation
 
         for loc_id, loc_name, corp_id in EveLocation.objects.filter(
@@ -56,17 +57,18 @@ def get_corp_division_names() -> Dict[Optional[int], Dict[str, str]]:
 
 def get_office_hangar_locations(
     structure_ids: Iterable[int],
-) -> Dict[Tuple[int, str], str]:
+) -> dict[tuple[int, str], str]:
     """
     Map (structure_id, flag) -> 'Structure > Hangar Division Name'.
     Uses corptools CorpAsset (OfficeFolder) and EveLocation.
     """
-    hangar_map: Dict[Tuple[int, str], str] = {}
+    hangar_map: dict[tuple[int, str], str] = {}
     ids = list(structure_ids)
     if not ids:
         return hangar_map
 
     try:
+        # Third Party
         from corptools.models import CorpAsset, EveLocation
 
         offices = list(
@@ -77,7 +79,7 @@ def get_office_hangar_locations(
         if not offices:
             return hangar_map
 
-        hangar_id_to_key: Dict[int, Tuple[int, str]] = {}
+        hangar_id_to_key: dict[int, tuple[int, str]] = {}
         for struct_id, office_item_id in offices:
             for d in range(1, 8):
                 h_id = -int(f"{office_item_id}{d}")
@@ -94,14 +96,14 @@ def get_office_hangar_locations(
     return hangar_map
 
 
-def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
+def resolve_location_names(location_ids: Iterable[int]) -> dict[int, str]:
     """
     Resolve a collection of location IDs into human-readable names.
     Combines IndustryFacility, KnownLocation, corptools (EveLocation, CorpAsset),
     EveStation, and EveSolarSystem.
     """
     ids = set(location_ids)
-    names: Dict[int, str] = {}
+    names: dict[int, str] = {}
     if not ids:
         return names
 
@@ -125,6 +127,7 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
 
     # 3. CorpAsset (for container/office item_ids)
     try:
+        # Third Party
         from corptools.models import CorpAsset
 
         for itm_id, loc_name in (
@@ -139,6 +142,7 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
 
     # 4. EveStation
     try:
+        # Third Party
         from eveuniverse.models import EveStation
 
         for st_id, name in EveStation.objects.filter(id__in=ids).values_list(
@@ -151,6 +155,7 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
 
     # 5. EveSolarSystem
     try:
+        # Third Party
         from eveuniverse.models import EveSolarSystem
 
         for sys_id, name in EveSolarSystem.objects.filter(id__in=ids).values_list(
@@ -164,6 +169,7 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
     # 6. EveLocation (corptools) - HIGHEST PRECEDENCE
     # Provides the exact full hierarchy: "Structure > Hangar > Container"
     try:
+        # Third Party
         from corptools.models import EveLocation
 
         for loc_id, name in EveLocation.objects.filter(location_id__in=ids).values_list(
@@ -177,17 +183,18 @@ def resolve_location_names(location_ids: Iterable[int]) -> Dict[int, str]:
     return names
 
 
-def get_blueprint_asset_locations(item_ids: Iterable[int]) -> Dict[int, str]:
+def get_blueprint_asset_locations(item_ids: Iterable[int]) -> dict[int, str]:
     """
     Map blueprint item_id -> full location path from corptools CorpAsset.
     Provides exact container hierarchy (e.g. Structure > Division > Container).
     """
-    asset_locs: Dict[int, str] = {}
+    asset_locs: dict[int, str] = {}
     ids = list(item_ids)
     if not ids:
         return asset_locs
 
     try:
+        # Third Party
         from corptools.models import CorpAsset
 
         for itm_id, loc_name in (
@@ -205,10 +212,10 @@ def get_blueprint_asset_locations(item_ids: Iterable[int]) -> Dict[int, str]:
 
 def get_blueprint_full_location(
     bp,
-    location_names: Dict[int, str],
-    office_hangars: Optional[Dict[Tuple[int, str], str]] = None,
-    corp_divisions: Optional[Dict[Optional[int], Dict[str, str]]] = None,
-    asset_locations: Optional[Dict[int, str]] = None,
+    location_names: dict[int, str],
+    office_hangars: dict[tuple[int, str], str] | None = None,
+    corp_divisions: dict[int | None, dict[str, str]] | None = None,
+    asset_locations: dict[int, str] | None = None,
 ) -> str:
     """Return the complete location path for a blueprint in 'Structure > Hangar > Container' format."""
     # 0. Check direct asset location (e.g. exact container from corptools CorpAsset)

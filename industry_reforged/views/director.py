@@ -562,6 +562,7 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
     corporation = main_char.corporation if main_char else None
 
     if not corporation:
+        # Django
         from django.contrib import messages
 
         messages.error(request, _("You are not part of a corporation."))
@@ -573,7 +574,7 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
         .annotate(total_qty=Sum("quantity"))
     )
 
-    from ..models import KnownLocation, IndustryFacility
+    from ..models import IndustryFacility, KnownLocation
 
     loc_names = dict(
         KnownLocation.objects.filter(corporations=corporation).values_list(
@@ -683,9 +684,10 @@ def director_inventory(request: WSGIRequest) -> HttpResponse:
                 }
             )
 
-    from ..models import IndustryFacility
-
+    # Django
     from django.db.models import Q
+
+    from ..models import IndustryFacility
 
     valid_facility_ids = list(
         corporation.known_locations.values_list("location_id", flat=True)
@@ -945,6 +947,7 @@ def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
 
         mat_ids = list(bom.keys())
 
+        # Third Party
         from eveuniverse.models import EveType
 
         blueprint_ids = set(
@@ -1015,9 +1018,10 @@ def director_config(request: WSGIRequest) -> HttpResponse:
     task_logs = TaskExecutionLog.objects.all().order_by("task_name")
     has_failed_tasks = task_logs.filter(status="FAILED").exists()
 
-    from ..models import IndustryFacility
-
+    # Django
     from django.db.models import Q
+
+    from ..models import IndustryFacility
 
     valid_facility_ids = list(
         corporation.known_locations.values_list("location_id", flat=True)
@@ -1094,7 +1098,9 @@ def director_config_delete_output_location(
     request: WSGIRequest, location_id: int
 ) -> HttpResponse:
     """Delete an OutputLocation."""
+    # Django
     from django.shortcuts import get_object_or_404
+
     from ..models.orders import OutputLocation
 
     main_char = request.user.profile.main_character

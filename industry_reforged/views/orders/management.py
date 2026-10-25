@@ -161,17 +161,21 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
 def toggle_order_item_bought(request: WSGIRequest, item_id: int) -> HttpResponse:
     """Toggle the bought status of an OrderItem."""
     if not request.user.is_authenticated:
+        # Django
         from django.http import HttpResponseForbidden
 
         return HttpResponseForbidden()
 
     if request.method != "POST":
+        # Django
         from django.http import HttpResponseNotAllowed
 
         return HttpResponseNotAllowed(["POST"])
 
+    # Django
     from django.http import JsonResponse
     from django.utils import timezone
+
     from ...models import OrderItem
 
     item = (

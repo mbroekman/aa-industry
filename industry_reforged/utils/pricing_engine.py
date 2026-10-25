@@ -256,6 +256,7 @@ def get_prices_with_overrides(type_ids, corporation=None):
     overrides defined in CorpItemConfig for the given corporation.
     Blueprints (category_id 9) are ignored from ESI and default to 0 unless overridden.
     """
+    # Third Party
     from eveuniverse.models import EveType
 
     blueprints = set(
@@ -289,6 +290,7 @@ def get_detailed_prices(type_ids, corporation=None):
     Fetch Jita prices and return detailed breakdown with both original and final prices.
     Blueprints (category_id 9) are ignored from ESI and default to 0 unless overridden.
     """
+    # Third Party
     from eveuniverse.models import EveType
 
     blueprints = set(
@@ -427,7 +429,7 @@ def fetch_system_cost_indices(solar_system_id=None):
     Fetch system cost indices from ESI with Django cache caching.
     Returns:
         dict: If solar_system_id is provided, returns {activity_name: float_cost_index}.
-              If None, returns {solar_system_id: {activity_name: float_cost_index}}.
+            If None, returns {solar_system_id: {activity_name: float_cost_index}}.
     """
     # Django
     from django.core.cache import cache
@@ -894,6 +896,7 @@ def get_item_production_details(type_id: int, activity_id: int = 1) -> tuple[int
     Uses django-eveuniverse EveIndustryActivityProduct and EveIndustryActivityDuration.
     Cached for fast repeated lookups.
     """
+    # Django
     from django.core.cache import cache
 
     cache_key = f"aa_industry_prod_details_{type_id}_{activity_id}"

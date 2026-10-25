@@ -66,7 +66,9 @@ class TestFacilityTasks:
         mock_station_info.type_id = 1531
         mock_station_info.system_id = 30000142
 
-        mock_esi.client.Universe.GetUniverseStationsStationId.return_value.result.return_value = mock_station_info
+        mock_esi.client.Universe.GetUniverseStationsStationId.return_value.result.return_value = (
+            mock_station_info
+        )
 
         update_industry_facilities()
 
@@ -105,7 +107,9 @@ class TestFacilityTasks:
             mock_asset1,
             mock_asset2,
         ]
-        mock_esi.client.Corporation.GetCorporationsCorporationIdStructures.return_value.results.return_value = []
+        mock_esi.client.Corporation.GetCorporationsCorporationIdStructures.return_value.results.return_value = (
+            []
+        )
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200

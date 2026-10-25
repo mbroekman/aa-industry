@@ -47,9 +47,9 @@ class TestDutchTranslations:
 
         for msgid, expected_msgstr in expected.items():
             translated = catalog.gettext(msgid)
-            assert translated == expected_msgstr, (
-                f"Expected '{msgid}' -> '{expected_msgstr}', got '{translated}'"
-            )
+            assert (
+                translated == expected_msgstr
+            ), f"Expected '{msgid}' -> '{expected_msgstr}', got '{translated}'"
 
     def test_translation_activation_in_django(self):
         """Verify that Django's translation activator correctly uses the Dutch translations."""

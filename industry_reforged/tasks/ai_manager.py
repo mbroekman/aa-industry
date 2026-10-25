@@ -576,8 +576,7 @@ def scan_market_opportunities(
             result_msg += f" Found {missing_bpo_count} missing BPO opportunities."
 
         if scanner:
-            # Django
-            from ..models.ai_manager import OpportunityScannerLog, OpportunityScanner
+            from ..models.ai_manager import OpportunityScanner, OpportunityScannerLog
 
             # Verify scanner still exists in case it was deleted while the scan was running
             if OpportunityScanner.objects.filter(pk=scanner.id).exists():

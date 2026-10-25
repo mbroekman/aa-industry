@@ -1,9 +1,8 @@
 """Tests for OrderItem bought tracking and MemberOrder progress integration."""
 
 # Standard Library
-from decimal import Decimal
-from unittest.mock import patch
 import json
+from unittest.mock import patch
 
 # Third Party
 import pytest
@@ -16,15 +15,11 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.authentication.models import CharacterOwnership
 
-# Eve Models
-from eveuniverse.models import EveIndustryActivityProduct
-
 # AA Industry App
 from industry_reforged.models import CorpItemConfig, OrderItem
 from industry_reforged.tests.factories import (
     EveCharacterFactory,
     EveCorporationInfoFactory,
-    EveTypeFactory,
     MemberOrderFactory,
     OrderItemFactory,
     ProductionTaskFactory,
@@ -115,8 +110,8 @@ class TestOrderItemBought:
         assert order.progress_percent == 100
 
         # Now add a ProductionTask (1 completed, 1 pending)
-        t1 = ProductionTaskFactory(created_from_order=order, status="COMPLETED")
-        t2 = ProductionTaskFactory(created_from_order=order, status="PENDING")
+        ProductionTaskFactory(created_from_order=order, status="COMPLETED")
+        ProductionTaskFactory(created_from_order=order, status="PENDING")
 
         # Total work items = 2 buy items + 2 tasks = 4
         # Completed work items = 2 bought + 1 completed = 3

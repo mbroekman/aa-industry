@@ -13,21 +13,23 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Alliance Auth
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+# Third Party
+from eveuniverse.models import (
+    EveIndustryActivity,
+    EveIndustryActivityProduct,
+    EveIndustryActivitySkill,
+)
 
 # Django
 from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+
+# Alliance Auth
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Scope, Token
-from eveuniverse.models import (
-    EveIndustryActivity,
-    EveIndustryActivityProduct,
-    EveIndustryActivitySkill,
-)
 
 # AA Industry App
 from industry_reforged.tests.factories import (
@@ -916,7 +918,9 @@ class TestSkillGatedBomRelease(TestCase):
         parent.builder_reward = Decimal("1000000.00")
         parent.save()
 
-        req = self.rf.get("/industry/industrialist/claim-preview/", {"task_id": parent.id})
+        req = self.rf.get(
+            "/industry/industrialist/claim-preview/", {"task_id": parent.id}
+        )
         req.user = self.user
         data = json.loads(claim_task_preview(req).content)
 

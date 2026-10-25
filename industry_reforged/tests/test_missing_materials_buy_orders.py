@@ -8,15 +8,15 @@ order's Required Raw Materials table.
 # Standard Library
 from unittest.mock import MagicMock, patch
 
-# Alliance Auth
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
 # Django
 from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+
+# Alliance Auth
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 # AA Industry App
 from industry_reforged.models import CorpBuyOrder

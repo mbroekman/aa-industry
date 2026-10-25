@@ -80,9 +80,10 @@ def eve_isk_short(value):
 def format_duration(seconds):
     """
     Formats a duration in seconds into human-readable EVE industry format.
-    Example: 9000000 -> "104d 4h"
-             12000 -> "3h 20m"
-             600 -> "10m"
+    Examples:
+        9000000 -> "104d 4h"
+        12000 -> "3h 20m"
+        600 -> "10m"
     """
     try:
         sec = int(seconds)

@@ -157,6 +157,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     if bom_materials:
         mat_ids = list(bom_materials.keys())
 
+        # Third Party
         from eveuniverse.models import EveType
 
         blueprint_ids = set(
@@ -211,6 +212,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
             build_items.append(item)
 
     # Bulk fetch tasks for all items on this order and child orders
+    # Standard Library
     from collections import defaultdict
 
     all_order_ids = [order.id] + list(order.child_orders.values_list("id", flat=True))
@@ -299,8 +301,12 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
     actual_missing_count = 0
 
     if corp_info and bom_blueprints_list:
+        # Standard Library
         from collections import defaultdict
+
+        # Django
         from django.db.models import Q
+
         from ...models import CorpBlueprint
 
         root = (
@@ -394,12 +400,10 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 product_eve_type_id=eve_type.id, activity_id__in=[1, 11]
             ).first()
 
-            is_invented = False
             missing_bp = not has_corp_bp
             is_used = False
             if bp_prod:
                 if bp_prod.eve_type_id in invented_blueprint_types:
-                    is_invented = True
                     missing_bp = False
                 else:
                     status_info = bp_status_map.get(bp_prod.eve_type_id)
@@ -493,6 +497,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         )
         corp_id = main_char.corporation_id if main_char else None
         if corp_id:
+            # Alliance Auth
             from allianceauth.eveonline.models import EveCorporationInfo
 
             corp = EveCorporationInfo.objects.filter(corporation_id=corp_id).first()
@@ -659,6 +664,7 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         from ...models.orders import OutputLocation
 
                         corp_info = request.user.profile.main_character.corporation_id
+                        # Alliance Auth
                         from allianceauth.eveonline.models import EveCorporationInfo
 
                         corp = EveCorporationInfo.objects.filter(
@@ -840,6 +846,7 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
     if bom_materials:
         mat_ids = list(bom_materials.keys())
 
+        # Third Party
         from eveuniverse.models import EveType
 
         blueprint_ids = set(

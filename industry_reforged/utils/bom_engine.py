@@ -170,6 +170,7 @@ def get_blueprint_me(product_type, corp_info=None, order=None):
     has_corp_bp = True
     if bp_prod:
         if corp_info:
+            # AA Industry App
             from industry_reforged.models import CorpBlueprint
 
             has_corp_bp = CorpBlueprint.objects.filter(
@@ -238,7 +239,6 @@ def calculate_order_bom(order):
         }
     }
     """
-    bom = {}
     # Alliance Auth
     from allianceauth.eveonline.models import EveCorporationInfo
 
@@ -263,7 +263,7 @@ def calculate_order_bom(order):
         from django.db.models import Sum
 
         # AA Industry App
-        from industry_reforged.models import CorpInventory, CorpBlueprint
+        from industry_reforged.models import CorpBlueprint, CorpInventory
 
         inventory = (
             CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
@@ -296,7 +296,7 @@ def calculate_tasks_bom(tasks, corp_info=None):
         from django.db.models import Sum
 
         # AA Industry App
-        from industry_reforged.models import CorpInventory, CorpBlueprint
+        from industry_reforged.models import CorpBlueprint, CorpInventory
 
         inventory = (
             CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
@@ -455,10 +455,12 @@ def get_recursive_bom_tree(
         product_type = EveType.objects.get(id=type_id)
 
         if activity_id == 11:
+            # AA Industry App
             from industry_reforged.models import IndustryFacility
 
             reaction_fac = None
             if corp_info:
+                # Django
                 from django.db.models import Q
 
                 valid_facility_ids = list(
@@ -477,9 +479,11 @@ def get_recursive_bom_tree(
             if reaction_fac:
                 target_facility = reaction_fac
         elif target_facility is None:
+            # AA Industry App
             from industry_reforged.models import IndustryFacility
 
             if corp_info:
+                # Django
                 from django.db.models import Q
 
                 valid_facility_ids = list(
@@ -640,9 +644,9 @@ def get_recursive_bom_tree(
                             "base_quantity": 1,
                             "activity_id": 11,  # Reaction Formula
                             "sub_materials": [],
-                            "facility_name": target_facility.name
-                            if target_facility
-                            else "None",
+                            "facility_name": (
+                                target_facility.name if target_facility else "None"
+                            ),
                             "is_reaction": True,
                         }
                     )
@@ -659,9 +663,9 @@ def get_recursive_bom_tree(
                             "base_quantity": runs,
                             "activity_id": 5,  # Copying
                             "sub_materials": [],
-                            "facility_name": target_facility.name
-                            if target_facility
-                            else "None",
+                            "facility_name": (
+                                target_facility.name if target_facility else "None"
+                            ),
                             "is_reaction": False,
                         }
                     )
@@ -730,6 +734,7 @@ def flatten_bom_tree(recursive_tree, corp_stock=None):
     # Fetch group names for all unique types
     type_ids = list(bom.keys())
     if type_ids:
+        # Third Party
         from eveuniverse.models import EveType
 
         types = EveType.objects.filter(id__in=type_ids).select_related("eve_group")

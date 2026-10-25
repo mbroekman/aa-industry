@@ -128,7 +128,9 @@ class CharacterPlanet(models.Model):
         threshold = 75
         try:
             if hasattr(self.character.character_ownership.user, "industry_pi_config"):
-                threshold = self.character.character_ownership.user.industry_pi_config.storage_warning_threshold
+                threshold = (
+                    self.character.character_ownership.user.industry_pi_config.storage_warning_threshold
+                )
         except Exception:
             pass
         return any(pin.utilization_pct >= threshold for pin in self.storage_pins)
@@ -367,7 +369,9 @@ class CharacterPlanet(models.Model):
         threshold_pct = 100
         try:
             if hasattr(self.character.character_ownership.user, "industry_pi_config"):
-                threshold_pct = self.character.character_ownership.user.industry_pi_config.extraction_deficit_threshold_percent
+                threshold_pct = (
+                    self.character.character_ownership.user.industry_pi_config.extraction_deficit_threshold_percent
+                )
         except Exception:
             pass
 
@@ -626,7 +630,9 @@ class PlanetPin(models.Model):
             if hasattr(
                 self.planet.character.character_ownership.user, "industry_pi_config"
             ):
-                threshold_pct = self.planet.character.character_ownership.user.industry_pi_config.extraction_deficit_threshold_percent
+                threshold_pct = (
+                    self.planet.character.character_ownership.user.industry_pi_config.extraction_deficit_threshold_percent
+                )
         except Exception:
             pass
 

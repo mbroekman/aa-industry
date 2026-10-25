@@ -4,7 +4,7 @@ Unit tests for ProductionTask Priority Controls and Multiplier Visualization (TA
 
 # Standard Library
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Third Party
 import pytest
@@ -21,7 +21,6 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from industry_reforged.models import CorpPricingConfig, MemberOrder, ProductionTask
 from industry_reforged.tests.factories import (
     EveTypeFactory,
-    ProductionTaskFactory,
     UserFactory,
 )
 from industry_reforged.views.director import (
@@ -193,7 +192,7 @@ class TestProductionTaskPriorityViews(TestCase):
 
     def test_unclaimed_tasks_priority_sorting(self):
         # Create tasks with different priorities
-        task_urgent = ProductionTask.objects.create(
+        ProductionTask.objects.create(
             item_type=self.item_type,
             quantity=1,
             activity_id=1,
@@ -202,7 +201,7 @@ class TestProductionTaskPriorityViews(TestCase):
             priority="URGENT",
             builder_reward=Decimal("1000000.00"),
         )
-        task_high = ProductionTask.objects.create(
+        ProductionTask.objects.create(
             item_type=self.item_type,
             quantity=1,
             activity_id=1,
@@ -211,7 +210,7 @@ class TestProductionTaskPriorityViews(TestCase):
             priority="HIGH",
             builder_reward=Decimal("1000000.00"),
         )
-        task_low = ProductionTask.objects.create(
+        ProductionTask.objects.create(
             item_type=self.item_type,
             quantity=1,
             activity_id=1,
@@ -221,6 +220,7 @@ class TestProductionTaskPriorityViews(TestCase):
             builder_reward=Decimal("1000000.00"),
         )
 
+        # Django
         from django.db.models import Case, IntegerField, Value, When
 
         priority_order = Case(

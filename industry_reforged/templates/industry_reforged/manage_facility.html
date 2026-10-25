@@ -103,7 +103,7 @@
         const typeIdInput = document.getElementById("id_type_id");
         if (!typeIdInput) return;
         const typeId = parseInt(typeIdInput.value);
-        
+
         let allowedSize = "";
         if ([35832, 35825, 35835].includes(typeId)) {
             allowedSize = " M-";
@@ -112,9 +112,9 @@
         } else if ([35834, 35827].includes(typeId)) {
             allowedSize = " XL-";
         }
-        
+
         const rigSelects = document.querySelectorAll("select[id^='id_rigs-'][id$='-rig']");
-        
+
         rigSelects.forEach(select => {
             Array.from(select.options).forEach(opt => {
                 if (opt.value === "") return;
@@ -132,7 +132,7 @@
                     }
                 }
             });
-            
+
             if (select.selectedIndex > 0 && select.options[select.selectedIndex].disabled) {
                 select.value = "";
             }
@@ -165,7 +165,7 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         filterRigs();
-        
+
         const typeIdInput = document.getElementById("id_type_id");
         if (typeIdInput) {
             typeIdInput.addEventListener("change", filterRigs);

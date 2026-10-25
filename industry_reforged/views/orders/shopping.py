@@ -98,7 +98,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
             # Django
             from django.db.models import Sum
 
-            from ...models import CorpInventory, CorpBlueprint
+            from ...models import CorpBlueprint, CorpInventory
 
             inventory = (
                 CorpInventory.objects.filter(corporation=corp_info, quantity__gt=0)
@@ -149,9 +149,10 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     if bom:
         mat_ids = list(bom.keys())
 
-        from ...utils.pricing_engine import get_prices_with_overrides
-
+        # Third Party
         from eveuniverse.models import EveType
+
+        from ...utils.pricing_engine import get_prices_with_overrides
 
         blueprint_ids = set(
             EveType.objects.filter(

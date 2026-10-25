@@ -26,7 +26,7 @@ def get_task_eta(task: Any) -> datetime.datetime | None:
 
     Preference order:
     1. The latest end_date among this task's still-active/ready linked EVE industry jobs
-       (the real ESI timer - strictly more accurate than an estimate).
+    (the real ESI timer - strictly more accurate than an estimate).
     2. assigned_at + estimated_duration_seconds, if both are set and duration is non-zero.
     3. None ("unknown") - never guessed as "now"/"overdue" from incomplete data.
     """
@@ -73,7 +73,6 @@ def get_corp_buffer_hours(corporation) -> int:
     if cached is not None:
         return cached
 
-    # Third Party
     from ..models import JobTrackingConfig
 
     config = JobTrackingConfig.objects.filter(corporation=corporation).first()

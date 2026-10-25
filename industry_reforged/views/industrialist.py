@@ -74,7 +74,6 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         output_field=IntegerField(),
     )
 
-    # AA Industry App
     from ..utils import skill_service
 
     unauthed_characters = skill_service.get_unauthed_characters(request.user)
@@ -623,7 +622,6 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
     runs_per_slot = max(1, math.ceil(runs_total / allocated_slots))
     wall_clock_sec = int(base_dur_sec * runs_per_slot * 0.75) if base_dur_sec > 0 else 0
 
-    # AA Industry App
     from ..utils import skill_service
     from ..utils.slot_service import get_user_available_slots
 
@@ -697,9 +695,9 @@ def claim_task_preview(request: WSGIRequest) -> HttpResponse:
             "reward_claimed_formatted": f"{reward_claimed:,.2f} ISK",
             "rem_quantity": rem_qty,
             "rem_reward": float(reward_rem) if rem_qty > 0 else 0.0,
-            "rem_reward_formatted": f"{reward_rem:,.2f} ISK"
-            if rem_qty > 0
-            else "0.00 ISK",
+            "rem_reward_formatted": (
+                f"{reward_rem:,.2f} ISK" if rem_qty > 0 else "0.00 ISK"
+            ),
             "eligible": eligible,
             "missing_skills_text": skill_service.claim_tree_failure_text(failures),
             "eligible_available_slots": eligible_slots["available_slots"],
@@ -800,7 +798,6 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                 import math
                 from decimal import Decimal
 
-                # AA Industry App
                 from ..models import CorpPricingConfig
                 from ..utils.pricing_engine import (
                     calculate_task_builder_reward,
@@ -883,9 +880,11 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     allocated_slots=allocated_slots,
                     bom_parent=task.bom_parent,
                     gamification_value=claimed_val,
-                    builder_reward=Decimal("0.00")
-                    if has_owned_ancestor(task, character)
-                    else reward_claimed,
+                    builder_reward=(
+                        Decimal("0.00")
+                        if has_owned_ancestor(task, character)
+                        else reward_claimed
+                    ),
                     estimated_duration_seconds=dur_claimed,
                     is_claimable=task.is_claimable,
                 )
@@ -917,6 +916,7 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                         t.assigned_at = timezone.now()
                         t.allocated_slots = allocated_slots
                         if allocated_slots > 1:
+                            # Standard Library
                             import math
 
                             from ..utils.pricing_engine import (

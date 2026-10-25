@@ -302,6 +302,7 @@ class TestPricingEngine:
         assert price == 5000.0
 
     def test_fetch_system_cost_indices_fallback(self):
+        # Django
         from django.core.cache import cache
 
         cache.clear()
@@ -312,6 +313,7 @@ class TestPricingEngine:
             assert indices["reaction"] == 0.01
 
     def test_fetch_system_cost_indices_caching(self):
+        # Django
         from django.core.cache import cache
 
         cache.clear()
@@ -339,8 +341,10 @@ class TestPricingEngine:
                 assert cached_indices["manufacturing"] == 0.0266
 
     def test_calculate_structure_job_costs(self):
+        # Third Party
         from eveuniverse.models import EveMarketPrice
 
+        # AA Industry App
         from industry_reforged.models import IndustryFacility, TaxConfig
 
         corp = EveCorporationInfoFactory(corporation_id=123)
@@ -388,6 +392,7 @@ class TestPricingEngine:
             assert fees == Decimal("220000.00")
 
     def test_calculate_bom_cost_blueprint_ownership_rules(self):
+        # AA Industry App
         from industry_reforged.models import CorpBlueprint
 
         corp = EveCorporationInfoFactory(corporation_id=456)

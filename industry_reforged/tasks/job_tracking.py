@@ -36,7 +36,7 @@ def check_overdue_production_tasks():
     for task in tasks:
         try:
             corp = task.assigned_to.corporation
-        except Exception:  # noqa: BLE001
+        except Exception:
             corp = None
         corp_id = corp.corporation_id if corp else None
 

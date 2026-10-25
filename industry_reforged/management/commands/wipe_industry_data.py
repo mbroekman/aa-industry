@@ -4,9 +4,9 @@ from django.core.management.base import BaseCommand
 # AA Industry App
 from industry_reforged.models import (
     BuilderPayoutBatch,
+    CorpBuyOrder,
     MemberOrder,
     ProductionTask,
-    CorpBuyOrder,
 )
 
 

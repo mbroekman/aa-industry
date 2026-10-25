@@ -7,15 +7,15 @@ import json
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-# Alliance Auth
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
 # Django
 from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+
+# Alliance Auth
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Scope, Token
 
 # AA Industry App
@@ -121,7 +121,9 @@ class TestPartialClaimingAndSlots(TestCase):
             mock_skill_amr,
         ]
 
-        mock_esi.client.Skills.GetCharactersCharacterIdSkills.return_value.results.return_value = mock_res
+        mock_esi.client.Skills.GetCharactersCharacterIdSkills.return_value.results.return_value = (
+            mock_res
+        )
 
         # First call: hits ESI
         slots = get_character_industry_slots(self.character.character_id)

@@ -4,15 +4,15 @@ esi-skills.read_skills.v1 scope - without it, skill_service/slot_service silentl
 that character as 0 skills / base 1-slot, giving members and directors a wrong picture.
 """
 
-# Alliance Auth
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
 # Django
 from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+
+# Alliance Auth
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Scope, Token
 
 # AA Industry App

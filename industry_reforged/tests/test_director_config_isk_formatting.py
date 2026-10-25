@@ -1,16 +1,17 @@
 # Python
+# Standard Library
 from decimal import Decimal
 from unittest.mock import patch
-
-# Alliance Auth
-from allianceauth.framework.staticfiles.storage import AaManifestStaticFilesStorage
-from allianceauth.tests.auth_utils import AuthUtils
 
 # Django
 from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+
+# Alliance Auth
+from allianceauth.framework.staticfiles.storage import AaManifestStaticFilesStorage
+from allianceauth.tests.auth_utils import AuthUtils
 
 # AA Industry App
 from industry_reforged.forms import (

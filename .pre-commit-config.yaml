@@ -30,6 +30,8 @@ exclude: |
     backlog/|
     LICENSE|
     README\.md|
+    CHANGELOG\.md|  # written by commitizen on version bumps
+    (AGENTS|CLAUDE|GEMINI)\.md|  # agent instructions; mdformat breaks their file:// links
     .min(.css|.css.map|.js|.js.map)|
     locale/|
     static/(.*)/libs/

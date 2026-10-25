@@ -7,18 +7,19 @@ import datetime
 from decimal import Decimal
 from unittest.mock import patch
 
-# Alliance Auth
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
 # Django
 from django.contrib.auth.models import Permission
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
 from django.utils import timezone
+
+# Alliance Auth
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Scope, Token
 
+# AA Industry App
 from industry_reforged.models import CorporationWebhookConfig, JobTrackingConfig
 from industry_reforged.tasks.job_tracking import check_overdue_production_tasks
 from industry_reforged.tests.factories import (

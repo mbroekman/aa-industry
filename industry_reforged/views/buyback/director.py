@@ -42,9 +42,9 @@ def director_config_buyback_program_edit(
         request,
         "industry_reforged/director_config_form.html",
         {
-            "title": _("Edit Buyback Program")
-            if program_id
-            else _("Add Buyback Program"),
+            "title": (
+                _("Edit Buyback Program") if program_id else _("Add Buyback Program")
+            ),
             "form": form,
             "back_url": "industry_reforged:director_config",
             "back_hash": "#buyback",
