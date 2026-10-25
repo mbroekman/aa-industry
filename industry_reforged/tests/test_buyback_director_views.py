@@ -57,7 +57,9 @@ def _director_user():
 
 
 def _own_contract(corp, **kwargs):
-    return BuybackContractFactory(program=BuybackProgramFactory(corporation=corp), **kwargs)
+    return BuybackContractFactory(
+        program=BuybackProgramFactory(corporation=corp), **kwargs
+    )
 
 
 @pytest.mark.django_db

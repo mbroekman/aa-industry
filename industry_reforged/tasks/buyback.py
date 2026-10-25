@@ -66,7 +66,8 @@ def watchlist_flag_notes(program, type_ids) -> list[str]:
         program=program, blocks_submission=False, eve_type_id__in=type_ids
     ).select_related("eve_type")
     return [
-        f"Watchlisted item: {hit.eve_type.name}" + (f" ({hit.reason})" if hit.reason else "")
+        f"Watchlisted item: {hit.eve_type.name}"
+        + (f" ({hit.reason})" if hit.reason else "")
         for hit in hits
     ]
 
@@ -111,12 +112,14 @@ def _match(contract, esi_contract, program, token) -> bool:
 
     esi_contract_id = getattr(esi_contract, "contract_id")
     try:
-        items = esi.client.Contracts.GetCorporationsCorporationIdContractsContractIdItems(
-            corporation_id=program.corporation.corporation_id,
-            contract_id=esi_contract_id,
-            token=token,
-        ).result()
-    except Exception as e:  # noqa: BLE001
+        items = (
+            esi.client.Contracts.GetCorporationsCorporationIdContractsContractIdItems(
+                corporation_id=program.corporation.corporation_id,
+                contract_id=esi_contract_id,
+                token=token,
+            ).result()
+        )
+    except Exception as e:
         logger.error(f"Failed to fetch items for contract {esi_contract_id}: {e}")
         return False
 
@@ -271,7 +274,7 @@ def buyback_poll_contracts():
                 contracts = esi.client.Contracts.GetCorporationsCorporationIdContracts(
                     corporation_id=program.corporation.corporation_id, token=token
                 ).results()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.error(
                     f"Failed to fetch contracts for {program.corporation_id}: {e}"
                 )

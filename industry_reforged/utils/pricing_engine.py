@@ -703,9 +703,7 @@ def _market_unit_prices(type_ids, order_type="sell") -> dict:
     if order_type == "split":
         buy = get_market_prices(type_ids, order_type="buy")
         sell = get_market_prices(type_ids, order_type="sell")
-        return {
-            tid: (buy.get(tid, 0.0) + sell.get(tid, 0.0)) / 2.0 for tid in type_ids
-        }
+        return {tid: (buy.get(tid, 0.0) + sell.get(tid, 0.0)) / 2.0 for tid in type_ids}
     return get_market_prices(type_ids, order_type=order_type)
 
 

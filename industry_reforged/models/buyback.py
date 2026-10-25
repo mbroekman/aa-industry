@@ -269,6 +269,7 @@ class BuybackContract(models.Model):
         """Record the payout once. Shared by the director's Pay button and the
         poller seeing the contract finished in-game, so whichever comes first
         wins and the other is a no-op. Returns True if this call paid it."""
+        # Django
         from django.db import transaction
 
         from .wallet import LedgerTransaction
