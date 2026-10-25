@@ -723,3 +723,24 @@ class BuybackUserSettings(models.Model):
 
     def __str__(self):
         return f"{self.user} buyback settings"
+
+
+class BuybackFaq(models.Model):
+    """A question and answer on a corporation's Buyback FAQ page."""
+
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="buyback_faqs"
+    )
+    question = models.CharField(max_length=255)
+    answer = models.TextField()
+    order = models.PositiveIntegerField(
+        default=0, help_text=_("Lower numbers are shown first.")
+    )
+
+    class Meta:
+        verbose_name = _("Buyback FAQ")
+        verbose_name_plural = _("Buyback FAQs")
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.question

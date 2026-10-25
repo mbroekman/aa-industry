@@ -1,0 +1,196 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+{% load industry_tags %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ program.name }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{{ program.name }} <small class="text-muted fs-6">{% trans "rules and prices" %}</small></h2>
+                <a href="{% url 'industry_reforged:buyback_calculator' %}" class="btn btn-success"><i class="fas fa-calculator"></i> {% trans "New Appraisal" %}</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 mb-4">
+                <div class="card-header"><h5 class="card-title mb-0">{% trans "How items are valued" %}</h5></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">{% trans "Price basis" %}</dt>
+                        <dd class="col-sm-7">{{ program.get_price_type_display }}</dd>
+
+                        <dt class="col-sm-5">{% trans "Price modifier" %}</dt>
+                        <dd class="col-sm-7">{% if program.price_modifier_percent > 0 %}+{% endif %}{{ program.price_modifier_percent }}%</dd>
+
+                        <dt class="col-sm-5">{% trans "Ore, ice and moon ore" %}</dt>
+                        <dd class="col-sm-7">
+                            {% trans "highest of" %}
+                            {% if program.use_raw_ore_value %}<span class="badge bg-secondary">{% trans "ore price" %}</span>{% endif %}
+                            {% if program.use_compressed_value %}<span class="badge bg-secondary">{% trans "compressed price" %}</span>{% endif %}
+                            {% if program.use_refined_value %}<span class="badge bg-secondary">{% trans "refined minerals" %} ({{ program.refining_rate|floatformat:"-1" }}%)</span>{% endif %}
+                            {% if not program.use_raw_ore_value and not program.use_compressed_value and not program.use_refined_value %}<span class="text-danger">{% trans "not valued" %}</span>{% endif %}
+                        </dd>
+
+                        {% if program.use_reprocessed_value_for_t1 %}
+                        <dt class="col-sm-5">{% trans "T1 gear" %}</dt>
+                        <dd class="col-sm-7">{% blocktrans with rate=program.t1_refining_rate|floatformat:"-1" %}higher of market price and scrap minerals at {{ rate }}% yield{% endblocktrans %}</dd>
+                        {% endif %}
+
+                        {% if program.npc_price_blue_loot or program.npc_price_red_loot or program.npc_price_ope or program.npc_price_bonds %}
+                        <dt class="col-sm-5">{% trans "NPC price for" %}</dt>
+                        <dd class="col-sm-7">
+                            {% if program.npc_price_blue_loot %}<span class="badge bg-info text-dark">{% trans "Sleeper Components" %}</span>{% endif %}
+                            {% if program.npc_price_red_loot %}<span class="badge bg-info text-dark">{% trans "Triglavian Survey Databases" %}</span>{% endif %}
+                            {% if program.npc_price_ope %}<span class="badge bg-info text-dark">{% trans "Overseer's Personal Effects" %}</span>{% endif %}
+                            {% if program.npc_price_bonds %}<span class="badge bg-info text-dark">{% trans "SCC Encrypted Bonds" %}</span>{% endif %}
+                        </dd>
+                        {% endif %}
+
+                        {% if program.price_density_threshold and program.price_density_tax_percent %}
+                        <dt class="col-sm-5">{% trans "Bulky item tax" %}</dt>
+                        <dd class="col-sm-7">{% blocktrans with tax=program.price_density_tax_percent threshold=program.price_density_threshold|eve_isk %}-{{ tax }}% for items worth less than {{ threshold }} per m³{% endblocktrans %}</dd>
+                        {% endif %}
+
+                        {% if program.hauling_fuel_cost %}
+                        <dt class="col-sm-5">{% trans "Hauling" %}</dt>
+                        <dd class="col-sm-7">{{ program.hauling_fuel_cost|floatformat:"-2" }} ISK/m³{% if program.compression_density_modifier %} ({% trans "ore at compressed volume" %}){% endif %}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 mb-4">
+                <div class="card-header"><h5 class="card-title mb-0">{% trans "What is accepted" %}</h5></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">{% trans "Items" %}</dt>
+                        <dd class="col-sm-7">
+                            {% if program.allow_all_items %}{% trans "everything, except the items and groups marked as not accepted below" %}{% else %}{% trans "only the items and groups listed below" %}{% endif %}
+                        </dd>
+
+                        {% if accepted_categories %}
+                        <dt class="col-sm-5">{% trans "Categories" %}</dt>
+                        <dd class="col-sm-7">{% for category in accepted_categories %}<span class="badge bg-secondary me-1">{{ category.name }}</span>{% endfor %}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-5">{% trans "Never accepted" %}</dt>
+                        <dd class="col-sm-7">{% trans "blueprints" %}{% if not program.allow_unpacked_items %}, {% trans "assembled items" %}{% endif %}</dd>
+
+                        {% if program.reject_appraisal_on_disallowed %}
+                        <dt class="col-sm-5">{% trans "Mixed lists" %}</dt>
+                        <dd class="col-sm-7">{% trans "an appraisal is refused if any item isn't accepted" %}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-5">{% trans "Hand in at" %}</dt>
+                        <dd class="col-sm-7">{{ program.drop_off_name }}</dd>
+
+                        <dt class="col-sm-5">{% trans "Contract to" %}</dt>
+                        <dd class="col-sm-7">{{ program.recipient_name }}</dd>
+
+                        <dt class="col-sm-5">{% trans "Time to create the contract" %}</dt>
+                        <dd class="col-sm-7">{% blocktrans count days=program.contract_expiry_days %}{{ days }} day{% plural %}{{ days }} days{% endblocktrans %}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{% trans "Item rules" %}</h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Item or market group" %}</th>
+                            <th class="text-end">{% trans "Price" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule in item_rules %}
+                        <tr>
+                            <td>{{ rule.target_name }}</td>
+                            <td class="text-end">
+                                {% if rule.disallow %}<span class="badge bg-danger">{% trans "Not accepted" %}</span>
+                                {% elif rule.price_modifier_percent %}<span class="{% if rule.price_modifier_percent < 0 %}text-danger{% else %}text-success{% endif %}">{% if rule.price_modifier_percent > 0 %}+{% endif %}{{ rule.price_modifier_percent }}%</span>
+                                {% else %}{% trans "accepted at the program price" %}{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">{% trans "No item rules." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{% trans "Fixed prices" %}</h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Item" %}</th>
+                            <th class="text-end">{% trans "Price per unit" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sp in static_prices %}
+                        <tr>
+                            <td>{{ sp.eve_type.name }}</td>
+                            <td class="text-end">{{ sp.price|eve_isk }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">{% trans "No fixed prices." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if watchlist is not None %}
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{% trans "Watchlist" %} <span class="badge bg-secondary">{% trans "directors only" %}</span></h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Item or group" %}</th>
+                            <th>{% trans "Reason" %}</th>
+                            <th>{% trans "Effect" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in watchlist %}
+                        <tr>
+                            <td>{{ entry.target_name }}</td>
+                            <td>{{ entry.reason }}</td>
+                            <td>{% if entry.blocks_submission %}<span class="badge bg-danger">{% trans "Blocked" %}</span>{% else %}<span class="badge bg-warning text-dark">{% trans "Manual review" %}</span>{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">{% trans "The watchlist is empty." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ from .blueprints import BlueprintRequest, CorpBlueprint
 from .buyback import (
     BuybackContract,
     BuybackContractItem,
+    BuybackFaq,
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
@@ -104,4 +105,5 @@ __all__ = [
     "BuybackUserSettings",
     "BuybackContract",
     "BuybackContractItem",
+    "BuybackFaq",
 ]

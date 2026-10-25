@@ -13,7 +13,13 @@
                     <li class="breadcrumb-item active" aria-current="page">{% trans "Buyback Review Queue" %}</li>
                 </ol>
             </nav>
-            <h2 class="mb-0">{% trans "Buyback Review Queue" %}</h2>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{% trans "Buyback Review Queue" %}</h2>
+                <form method="post" action="{% url 'industry_reforged:director_buyback_refresh_contracts' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-primary"><i class="fas fa-sync"></i> {% trans "Check contracts now" %}</button>
+                </form>
+            </div>
         </div>
     </div>
 

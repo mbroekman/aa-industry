@@ -355,3 +355,62 @@ def buyback_contract_cancel(request: WSGIRequest, tracking_number: str) -> HttpR
     return redirect(
         "industry_reforged:buyback_contract_detail", tracking_number=tracking_number
     )
+
+
+def _is_program_director(user, program) -> bool:
+    main = getattr(getattr(user, "profile", None), "main_character", None)
+    return (
+        user.has_perm("industry_reforged.corp_access")
+        and main is not None
+        and main.corporation_id == program.corporation.corporation_id
+    )
+
+
+@login_required
+@permission_required("industry_reforged.basic_access")
+def buyback_program_rules(request: WSGIRequest, program_id: int) -> HttpResponse:
+    """Read-only overview of how a program values items, for the members who
+    may use it. The watchlist is only shown to the program's own directors."""
+    program = get_object_or_404(_visible_programs(request.user), id=program_id)
+    is_director = _is_program_director(request.user, program)
+
+    context = {
+        "title": _("%(name)s - rules and prices") % {"name": program.name},
+        "program": program,
+        "item_rules": program.item_rules.select_related(
+            "eve_type", "eve_market_group"
+        ).order_by("disallow", "eve_market_group__name", "eve_type__name"),
+        "static_prices": program.static_prices.select_related("eve_type").order_by(
+            "eve_type__name"
+        ),
+        "accepted_categories": program.accepted_categories.order_by("name"),
+        "watchlist": (
+            program.watchlist_items.select_related("eve_type", "eve_group")
+            if is_director
+            else None
+        ),
+    }
+    return render(request, "industry_reforged/buyback/program_rules.html", context)
+
+
+@login_required
+@permission_required("industry_reforged.basic_access")
+def buyback_faq(request: WSGIRequest) -> HttpResponse:
+    """FAQ of every corporation whose buyback program this member may use."""
+    from ...models import BuybackFaq
+
+    corporation_ids = _visible_programs(request.user).values_list(
+        "corporation_id", flat=True
+    )
+    faqs = BuybackFaq.objects.filter(corporation_id__in=corporation_ids).select_related(
+        "corporation"
+    )
+    by_corporation = {}
+    for faq in faqs:
+        by_corporation.setdefault(faq.corporation, []).append(faq)
+
+    context = {
+        "title": _("Buyback FAQ"),
+        "faqs_by_corporation": by_corporation,
+    }
+    return render(request, "industry_reforged/buyback/faq.html", context)

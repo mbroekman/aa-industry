@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: Pages for members (TASK-276, phase 4):
+  - **Rules and prices** page per program (click the program name on the Buyback dashboard): how items are valued, what is accepted, item rules, fixed prices, drop-off, recipient and deadline. The program's own directors also see its watchlist there.
+  - **FAQ** with a built-in "How it works" and questions each corporation's directors manage on the Buyback tab (no Django admin needed). Members see the FAQ of every corporation whose program they may use.
+  - **Check contracts now** button in the review queue, instead of waiting up to 15 minutes for the next poll.
+
 - **buyback**: Contract handling and notifications from the original buyback plugin (TASK-275, phase 3):
   - Sellers can add a note for the buyer; it shows on the contract page, in the review queue and in the Discord post.
   - A contract asking more than the quote is flagged; asking less is only noted, since the seller only shortchanges themselves.

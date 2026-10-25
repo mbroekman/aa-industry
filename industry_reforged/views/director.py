@@ -1064,6 +1064,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         program__corporation=corporation
     ).select_related("program", "eve_type")
     market_groups_loaded = EveMarketGroup.objects.exists()
+    buyback_faqs = corporation.buyback_faqs.all()
 
     from ..models import JobTrackingConfig
 
@@ -1087,6 +1088,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "buyback_item_rules": buyback_item_rules,
         "buyback_static_prices": buyback_static_prices,
         "market_groups_loaded": market_groups_loaded,
+        "buyback_faqs": buyback_faqs,
         "job_tracking_configs": job_tracking_configs,
     }
     return render(request, "industry_reforged/director_config.html", context)

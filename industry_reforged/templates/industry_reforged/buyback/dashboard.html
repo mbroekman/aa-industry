@@ -26,6 +26,7 @@
                             {% endif %}
                         </button>
                     </form>
+                    <a href="{% url 'industry_reforged:buyback_faq' %}" class="btn btn-outline-secondary"><i class="fas fa-question-circle"></i> {% trans "FAQ" %}</a>
                     <a href="{% url 'industry_reforged:buyback_stats' %}" class="btn btn-outline-secondary"><i class="fas fa-chart-line"></i> {% trans "Statistics" %}</a>
                     <a href="{% url 'industry_reforged:buyback_calculator' %}" class="btn btn-success"><i class="fas fa-calculator"></i> {% trans "New Appraisal" %}</a>
                 </div>
@@ -49,7 +50,7 @@
                     <tbody>
                         {% for program in programs %}
                         <tr>
-                            <td class="fw-bold">{{ program.name }}</td>
+                            <td class="fw-bold"><a href="{% url 'industry_reforged:buyback_program_rules' program.id %}" title="{% trans 'Rules and prices' %}">{{ program.name }}</a></td>
                             <td>{{ program.corporation.corporation_ticker }}</td>
                             <td>{{ program.drop_off_name }}</td>
                             <td>

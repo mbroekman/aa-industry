@@ -394,6 +394,12 @@ urlpatterns = [
     path("buyback/", buyback.buyback_dashboard, name="buyback_dashboard"),
     path("buyback/calculator/", buyback.buyback_calculator, name="buyback_calculator"),
     path("buyback/stats/", buyback.buyback_stats, name="buyback_stats"),
+    path("buyback/faq/", buyback.buyback_faq, name="buyback_faq"),
+    path(
+        "buyback/program/<int:program_id>/rules/",
+        buyback.buyback_program_rules,
+        name="buyback_program_rules",
+    ),
     path(
         "buyback/notifications/",
         buyback.buyback_notification_settings,
@@ -478,6 +484,26 @@ urlpatterns = [
         "director/buyback/review/",
         buyback.director_buyback_review,
         name="director_buyback_review",
+    ),
+    path(
+        "director/buyback/refresh-contracts/",
+        buyback.director_buyback_refresh_contracts,
+        name="director_buyback_refresh_contracts",
+    ),
+    path(
+        "director/buyback/faq/add/",
+        buyback.director_config_buyback_faq_edit,
+        name="director_config_buyback_faq_add",
+    ),
+    path(
+        "director/buyback/faq/<int:faq_id>/edit/",
+        buyback.director_config_buyback_faq_edit,
+        name="director_config_buyback_faq_edit",
+    ),
+    path(
+        "director/buyback/faq/<int:faq_id>/delete/",
+        buyback.director_config_buyback_faq_delete,
+        name="director_config_buyback_faq_delete",
     ),
     path(
         "director/buyback/untracked/<int:untracked_id>/dismiss/",

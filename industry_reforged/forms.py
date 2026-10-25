@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     Basket,
     BasketItem,
+    BuybackFaq,
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
@@ -1231,3 +1232,14 @@ class BuybackStaticPriceForm(_BuybackProgramChildForm):
                 self.add_error("item_name", _("This item already has a fixed price."))
             self.instance.eve_type = eve_type
         return cleaned_data
+
+
+class BuybackFaqForm(forms.ModelForm):
+    class Meta:
+        model = BuybackFaq
+        fields = ["question", "answer", "order"]
+        widgets = {
+            "question": forms.TextInput(attrs={"class": "form-control"}),
+            "answer": forms.Textarea(attrs={"class": "form-control", "rows": 6}),
+            "order": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+        }

@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from allianceauth.eveonline.models import EveCorporationInfo
 
 from ...forms import (
+    BuybackFaqForm,
     BuybackItemRuleForm,
     BuybackProgramForm,
     BuybackStaticPriceForm,
@@ -21,6 +22,7 @@ from ...forms import (
 )
 from ...models import (
     BuybackContract,
+    BuybackFaq,
     BuybackItemRule,
     BuybackProgram,
     BuybackStaticPrice,
@@ -356,4 +358,70 @@ def director_buyback_contract_resolve(
     elif request.method == "POST":
         messages.error(request, _("This contract has already been resolved."))
 
+    return redirect("industry_reforged:director_buyback_review")
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_buyback_faq_edit(
+    request: WSGIRequest, faq_id: int = None
+) -> HttpResponse:
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    if faq_id:
+        instance = get_object_or_404(BuybackFaq, id=faq_id, corporation=corporation)
+    else:
+        instance = BuybackFaq(corporation=corporation)
+
+    if request.method == "POST":
+        form = BuybackFaqForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("FAQ entry saved."))
+            return _back_to_config()
+    else:
+        form = BuybackFaqForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Edit FAQ Entry") if faq_id else _("Add FAQ Entry"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#buyback",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_config_buyback_faq_delete(request: WSGIRequest, faq_id: int) -> HttpResponse:
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    get_object_or_404(BuybackFaq, id=faq_id, corporation=corporation).delete()
+    messages.success(request, _("FAQ entry deleted."))
+    return _back_to_config()
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_buyback_refresh_contracts(request: WSGIRequest) -> HttpResponse:
+    """Queue a contract poll now instead of waiting for the 15-minute schedule."""
+    from ...tasks.buyback import buyback_poll_contracts
+
+    buyback_poll_contracts.delay()
+    messages.success(
+        request,
+        _(
+            "Checking in-game contracts now. Reload this page in a minute to see "
+            "the result."
+        ),
+    )
     return redirect("industry_reforged:director_buyback_review")

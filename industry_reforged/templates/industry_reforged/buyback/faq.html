@@ -1,0 +1,46 @@
+{% extends "industry_reforged/base.html" %}
+{% load i18n %}
+
+{% block details %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:index' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'industry_reforged:buyback_dashboard' %}">{% trans "Buyback Program" %}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% trans "FAQ" %}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">{% trans "Buyback FAQ" %}</h2>
+        </div>
+    </div>
+
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{% trans "How it works" %}</h5></div>
+        <div class="card-body">
+            <ol class="mb-0">
+                <li>{% trans "In EVE, open the container or hangar with your items, select them, right-click and choose Copy." %}</li>
+                <li>{% trans "Paste the list into the calculator, pick a program and click Get Appraisal." %}</li>
+                <li>{% trans "Happy with the price? Confirm to get a tracking number." %}</li>
+                <li>{% trans "Create an item exchange contract in EVE: the tracking number as the title, exactly the quoted price, at one of the program's drop-off locations, to the recipient shown on your contract page." %}</li>
+                <li>{% trans "The contract is checked automatically. You're paid when it's accepted in EVE; you get a message when that happens." %}</li>
+            </ol>
+        </div>
+    </div>
+
+    {% for corporation, faqs in faqs_by_corporation.items %}
+    <div class="card border-0 mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">{{ corporation.corporation_name }}</h5></div>
+        <div class="card-body">
+            {% for faq in faqs %}
+            <div class="{% if not forloop.last %}mb-3{% endif %}">
+                <h6 class="fw-bold mb-1">{{ faq.question }}</h6>
+                <p class="mb-0" style="white-space: pre-line;">{{ faq.answer }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
