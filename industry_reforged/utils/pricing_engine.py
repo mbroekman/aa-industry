@@ -909,6 +909,7 @@ class _BuybackRules:
 
 def _load_buyback_data(parsed_items, program, rules) -> dict:
     """Fetch the EVE data the program's options need, for just these items."""
+    # Third Party
     from eveuniverse.models import EveType
 
     from . import buyback_data
@@ -929,7 +930,9 @@ def _load_buyback_data(parsed_items, program, rules) -> dict:
         candidates = [
             t for t in eve_types.values() if buyback_data.is_t1_scrap_candidate(t)
         ]
-        eve_types.update(buyback_data.ensure_sections(candidates, EveType.Section.DOGMAS))
+        eve_types.update(
+            buyback_data.ensure_sections(candidates, EveType.Section.DOGMAS)
+        )
         eve_types.update(
             buyback_data.ensure_sections(
                 [t for t in candidates if buyback_data.is_t1(eve_types[t.id])],

@@ -242,7 +242,9 @@ class TestHauling:
             hauling_fuel_cost=100.0, compression_density_modifier=True
         )
         ore = _type_in_category(25, "Asteroid", name="Veldspar", packaged_volume=0.1)
-        _type_in_category(25, "Asteroid", name="Compressed Veldspar", packaged_volume=0.001)
+        _type_in_category(
+            25, "Asteroid", name="Compressed Veldspar", packaged_volume=0.001
+        )
         with patch(PRICE, side_effect=_prices({ore.id: 20.0})):
             _, details = calculate_buyback_quote({ore: 1000}, program)
         # 1000 x 0.001 m3 x 100 = 100 ISK instead of 10,000 at raw volume
@@ -358,7 +360,11 @@ class TestForms:
         program = BuybackProgramFactory()
         item = EveTypeFactory(name="Zydrine")
         form = BuybackItemRuleForm(
-            {"program": program.id, "item_name": "zydrine", "price_modifier_percent": "5"},
+            {
+                "program": program.id,
+                "item_name": "zydrine",
+                "price_modifier_percent": "5",
+            },
             corporation=program.corporation,
         )
         assert form.is_valid(), form.errors
@@ -369,8 +375,12 @@ class TestForms:
         program = BuybackProgramFactory()
         group = _market_group(900010, "Minerals")
         form = BuybackItemRuleForm(
-            {"program": program.id, "eve_market_group": group.id, "disallow": "on",
-             "price_modifier_percent": "0"},
+            {
+                "program": program.id,
+                "eve_market_group": group.id,
+                "disallow": "on",
+                "price_modifier_percent": "0",
+            },
             corporation=program.corporation,
         )
         assert form.is_valid(), form.errors

@@ -383,6 +383,7 @@ def buyback_load_market_groups():
 
     Started from the Buyback tab, not scheduled: market groups barely change.
     """
+    # Third Party
     from eveuniverse.models import EveMarketGroup
 
     EveMarketGroup.objects.update_or_create_all_esi()

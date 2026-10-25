@@ -1039,6 +1039,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "name"
     )
 
+    # Third Party
     from eveuniverse.models import EveMarketGroup
 
     from ..models import (

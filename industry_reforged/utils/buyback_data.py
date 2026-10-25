@@ -68,7 +68,7 @@ def ensure_sections(eve_types, section: str) -> dict:
                 id=eve_type.id, enabled_sections=[section]
             )
             fetched.append(eve_type.id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning(f"Could not load {section} for type {eve_type.id}: {e}")
             cache.set(cache_key, 1, timeout=_FAILED_FETCH_TTL)
     if fetched:

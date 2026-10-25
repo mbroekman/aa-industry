@@ -239,9 +239,7 @@ class TestGetBuybackValueVariants:
         module_category, _ = EveCategory.objects.get_or_create(
             id=7, defaults={"name": "Module", "published": True}
         )
-        module = EveTypeFactory(
-            eve_group=EveGroupFactory(eve_category=module_category)
-        )
+        module = EveTypeFactory(eve_group=EveGroupFactory(eve_category=module_category))
         tritanium = EveTypeFactory(name="Tritanium")
         EveTypeMaterial.objects.create(
             eve_type=module, material_eve_type=tritanium, quantity=1000
