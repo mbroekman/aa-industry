@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## Unreleased
 
+### Docs
+
+- **buyback**: The user manual now has a Buyback chapter for members (1.3) and for directors (3.8), plus the buyback webhook and background check; the README feature list covers all buyback options.
+
 ### Fix
 
 - **ui**: Inactive tabs and grey (secondary) buttons now have a visible background, border and readable text, also in the dark theme; disabled buttons are less washed out.

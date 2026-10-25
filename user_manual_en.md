@@ -24,6 +24,41 @@ Members can use the plugin to order ships, modules, and structures from the corp
 - **Acceptance & Payment**: You can review the quote, compare it to estimated Jita prices to see your corporate discount (savings), and click "Accept Quote" to finalize it. The order is then forwarded to the corporate builders. Your order will be assigned a unique **Payment Reference** (e.g., `ORD-ABCD-1234`). You must transfer the ISK to the corporation wallet using this exact reference as the reason. The system will automatically detect your payment and mark the order as "Paid".
 - **Delivery**: Once all builders complete their tasks, your order is ready. A director will contract the goods to you in-game and mark the order as "Delivered" in Auth, which will send you an in-app notification.
 
+### 1.3 Buyback Program
+
+The Buyback Program lets you sell items to the corporation: paste your inventory, get a price, and hand the items in with an in-game contract. Open it via **Buyback Program** in the menu.
+
+**Selling items**
+
+1. On the Buyback dashboard, click a program's name to see its **Rules & prices**: how items are valued, what is accepted, special prices per item or market group, where to drop off and who to make the contract out to.
+1. Open the **Calculator**, choose a program and paste your items straight from the EVE inventory window (select the items, Ctrl+C, paste).
+1. The calculator shows a price for every item, with a short note on how it was valued (for example market price, refined value or a fixed price) and why an item was refused, if it was. Below the list you see the base value, the program's modifier, any hauling cost and the net amount.
+1. Optionally add a **donation** to the corporation (an ISK amount or a percentage) and a **note for the buyer**. Then submit to get your **tracking number** (for example `BB-1A2B3C4D`).
+1. In EVE, create an **Item Exchange** contract:
+   - make it out to the corporation or character shown on the contract page,
+   - start it at one of the listed drop-off locations,
+   - put the tracking number in the contract **title** (description),
+   - ask exactly the **net amount** shown, and include exactly the appraised items.
+1. Create the contract before the deadline shown on the contract page (7 days by default). If you don't, the tracking number expires.
+
+**What happens next**
+
+Every 15 minutes the plugin reads the in-game contracts and matches yours by its tracking number. It checks the items, price, location, recipient and title. A contract without issues is **Matched**; one with a difference is **Flagged** for a director to look at. Asking *less* than the quote is only noted; asking more gets the contract flagged.
+
+As soon as the corporation accepts the contract in-game, it is marked **Paid** automatically. If it is rejected in-game or by a director you see **Rejected**, and if no contract shows up in time, **Expired**. If you delete your in-game contract the tracking number goes back to *Pending*, so you can create a new contract. While a contract is still *Pending* you can cancel it yourself from its page.
+
+The contract page shows the status, the instructions and the appraised items. You get a Discord DM and an Auth notification when your contract is paid, rejected or expired. Use the **bell icon** on the Buyback dashboard to turn these messages off (or on again).
+
+**More pages**
+
+- **FAQ**: how the program works, plus questions and answers from your corporation's directors.
+- **Statistics**: per program the total paid out, top sellers, top items, donations and a daily activity chart.
+- **Monthly leaderboard**: sellers ranked by ISK paid out per month, with donations. You only see programs you are allowed to use.
+
+**Public calculator**: a program can be opened to people without an Auth account (for example on a public link). They get a tracking number and a simple status page; they don't get messages.
+
+Some items are never accepted: blueprints are always refused, and a program can refuse specific items or groups, assembled (unpacked) items, or everything without a rule. Depending on the program, one refused item either leaves just that item out or refuses the whole appraisal.
+
 ______________________________________________________________________
 
 ## 2. For Builders (Industrialists)
@@ -113,6 +148,7 @@ All business and pricing rules are managed strictly via the **Director Control P
   - **Orders Webhook**: A general webhook for announcements when a member places a **New Order** or when a **Quote is provided**.
   - **Directors Webhook**: A specific webhook for Director-only action alerts, such as when a new quote needs to be calculated, when an order is **Ready for Delivery**, or a batched summary whenever claimed jobs become overdue (see **Job Alerts** in Director Config).
   - **AI Jobs Webhook**: Notifies the channel when the AI Market Manager automatically generates new Production Tasks based on your configured Baskets.
+  - **Buyback Webhook**: New and flagged buyback contracts and suspicious contracts (see 3.8). Which contracts are posted, and whether the item list is included, is set per program on the Buyback tab.
 
 ### 3.7 AI Market Manager
 
@@ -123,6 +159,51 @@ The AI Market Manager automates the generation of Production Tasks by evaluating
 - **Demand Forecasting**: The AI service ingests 90 days of ESI Market transaction data, along with external signals from Alliance Auth's **OpTimer module (Fleet Pings and Doctrines)**. It combines historical sales volume, price trends, and upcoming fleet deployments to predict the exact quantities needed over the next 7 days.
 - **Automation**: The AI evaluation runs in the background (via Celery `industry_evaluate_ai_baskets`). Newly generated tasks automatically include the AI's predicted `qty_to_build` and appear on the Industrialist Job Market.
 
+### 3.8 Buyback Program (Directors)
+
+Everything is set up on the **Buyback** tab of **Director Configurations**. You only see and manage the programs of your own corporation. Contracts are read with the corporate token (`esi-contracts.read_corporation_contracts.v1`), or with the recipient character's personal token when a program sends contracts to a character.
+
+**Program settings** (Add Program / edit icon)
+
+- **Basics**: name, active, drop-off locations (one or more production facilities and/or known locations) and the deadline in days for members to create their contract.
+- **Recipient**: the corporation, or a specific character (that character needs a personal token with `esi-contracts.read_character_contracts.v1`).
+- **Tracking prefix**: the start of every tracking number (default `BB`, 1-10 capital letters or digits), so several programs can be told apart in-game.
+- **Access**: limit the program to Auth groups and/or states (empty means everyone with basic access). Directors of the corporation always see their own programs. **Public** opens the calculator to people without an account; see the README for the required setting.
+- **Price**: Jita **Buy**, **Sell** or **Split** price, plus a **price modifier** (for example `-10` pays 90%).
+- **What is accepted**: *accept all items* (default) or only items and market groups that have a rule; optionally restricted to categories; assembled (unpacked) items on/off; and whether one refused item refuses the whole appraisal. Blueprints are always refused.
+- **Ore, ice and moon ore**: value at the raw price, the compressed price and/or the refined minerals (at the refining rate); the highest enabled value is paid.
+- **T1 scrap value**: ships, modules, charges, drones and subsystems up to meta level 4 can also be valued as reprocessed minerals (with their own scrap rate); the higher of market and scrap is paid.
+- **NPC prices**: value Sleeper Components, Triglavian Survey Databases, Overseer's Personal Effects and/or SCC Encrypted Bonds at CCP's average price instead of the market.
+- **Bulky items**: a *price density tax* (a percentage off items worth less than a set ISK/m³) or a *hauling cost* (ISK per m³ deducted from the total). Use one of the two, not both. Optionally use the compressed volume of ore for these.
+- **Notifications**: post every new contract to the buyback Discord webhook (flagged contracts are always posted), optionally with the item list, and send a DM plus Auth notification to a manager character for each new contract.
+- **Wallet division**: the corporation wallet that funds the program; its balance is shown on the program's performance page.
+
+**Item rules, fixed prices and watchlist**
+
+- **Item Rules**: raise, lower or block the price of one item or a whole market group (-100% to +100%, or *disallow*). A group rule also covers every group below it, and the most specific rule wins; the rule's percentage comes on top of the program modifier. Click **Load market groups** once before choosing a market group.
+- **Fixed Prices**: pay a fixed ISK amount per unit for an item, regardless of the market (no modifier or density tax).
+- **Watchlist**: items or item groups that need attention. Either flag the contract for review, or block the item in the calculator altogether.
+
+Members see the item rules and fixed prices on the program's **Rules & prices** page; the watchlist is only shown to the program's directors.
+
+**Review queue** (Review Flagged Contracts button)
+
+- Lists contracts that are *Matched* or *Flagged*, with the reason for each flag (item, price, location, recipient, title, watchlist) and the seller's note. The contract page shows the appraised items next to the items in the actual in-game contract, with differences highlighted.
+- Accepting the contract in-game is enough: at the next check the plugin marks it **Paid**, books the payout in the ledger and messages the seller. The **Pay** and **Reject** buttons (with a reason) are there for manual handling.
+- **Suspicious contracts**: in-game contracts to the program's recipient that use its tracking prefix but a tracking number that was never issued. They are posted to Discord once and listed until you dismiss them.
+- **Check contracts now** queues an immediate check instead of waiting for the next 15-minute run.
+
+**FAQ**: add your own questions and answers in the Buyback FAQ section; members see them on the FAQ page next to the built-in explanation.
+
+**Statistics**
+
+- **Statistics** (all members): per program the totals, flag/rejection/expiry rates, average turnaround, top sellers, items and donors, and a daily chart for 7, 30 or 90 days.
+- **Monthly leaderboard** (all members): sellers ranked by ISK paid out per month.
+- **Performance** (the program's directors; chart icon on the Buyback tab or on the Statistics page): 12 months of contracts per status, ISK paid out and donations with a chart, the top item groups and items of the last 3 months, and the funding wallet's balance.
+- **CSV export** (on the Performance page): every paid contract line with tracking number, dates, seller, item, group, quantity and price.
+
+The buyback Discord webhook URL itself is set in the Django Admin (see 3.6).
+
 ______________________________________________________________________
 
 ## 4. System & Automation
@@ -130,6 +211,7 @@ ______________________________________________________________________
 The plugin runs largely autonomously in the background via Celery tasks:
 
 - **Synchronization**: Every 15 to 30 minutes, the plugin synchronizes Wallets, Corporate Inventory, Personal Jobs, and Planetary Interaction via the EVE Swagger Interface (ESI).
+- **Buyback Contracts**: Every 15 minutes the plugin reads the in-game contracts of each buyback program, matches them to tracking numbers and follows their status (paid, rejected, expired). Once a day, tracking numbers without a contract past their deadline are expired.
 - **Overdue Job Checks**: Every 30 minutes, a background task scans all claimed jobs for anything past its estimated completion time (plus the configured grace buffer) and sends reminders to the builder and a summary to the directors' Discord webhook.
 - **Multilingual Support (i18n)**: The interface supports multiple languages. If users change their preferred language in Alliance Auth (e.g., to Dutch), the plugin will automatically display the translated interface.
 
