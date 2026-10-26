@@ -506,6 +506,21 @@ urlpatterns = [
         name="director_buyback_refresh_contracts",
     ),
     path(
+        "director/buyback/build-material/add/",
+        buyback.director_config_build_material_edit,
+        name="director_config_build_material_add",
+    ),
+    path(
+        "director/buyback/build-material/<int:material_id>/edit/",
+        buyback.director_config_build_material_edit,
+        name="director_config_build_material_edit",
+    ),
+    path(
+        "director/buyback/build-material/<int:material_id>/delete/",
+        buyback.director_config_build_material_delete,
+        name="director_config_build_material_delete",
+    ),
+    path(
         "director/buyback/reprocessing/",
         buyback.director_config_buyback_reprocessing,
         name="director_config_buyback_reprocessing",

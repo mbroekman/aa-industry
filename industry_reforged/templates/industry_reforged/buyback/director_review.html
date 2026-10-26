@@ -58,7 +58,11 @@
                             <td>
                                 {% if contract.advice %}
                                 <a href="{% url 'industry_reforged:buyback_contract_detail' contract.tracking_number %}#sell-or-reprocess" class="text-decoration-none">
-                                    {% if contract.advice.gain > 0 %}<span class="badge bg-success">{% trans "Reprocess some" %}</span> <span class="small text-success">+{{ contract.advice.gain|eve_isk }}</span>{% else %}<span class="badge bg-primary">{% trans "Sell" %}</span>{% endif %}
+                                    {% if contract.advice.sell.count %}<span class="badge bg-primary" title="{% trans 'Sell' %}"><i class="fas fa-coins"></i> {{ contract.advice.sell.count }}</span>{% endif %}
+                                    {% if contract.advice.reprocess.count %}<span class="badge bg-success" title="{% trans 'Reprocess' %}"><i class="fas fa-recycle"></i> {{ contract.advice.reprocess.count }}</span>{% endif %}
+                                    {% if contract.advice.build.count %}<span class="badge bg-info text-dark" title="{% trans 'Build material' %}"><i class="fas fa-hammer"></i> {{ contract.advice.build.count }}</span>{% endif %}
+                                    {% if contract.advice.sort.count %}<span class="badge bg-warning text-dark" title="{% trans 'To be sorted' %}"><i class="fas fa-question-circle"></i> {{ contract.advice.sort.count }}</span>{% endif %}
+                                    {% if contract.advice.gain > 0 %}<div class="small text-success">{% trans "Reprocessing" %} +{{ contract.advice.gain|eve_isk_short }}</div>{% endif %}
                                 </a>
                                 {% else %}-{% endif %}
                             </td>

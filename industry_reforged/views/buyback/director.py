@@ -22,6 +22,7 @@ from ...forms import (
     BuybackProgramForm,
     BuybackStaticPriceForm,
     BuybackWatchlistItemForm,
+    CorpBuildMaterialForm,
     CorpReprocessingConfigForm,
 )
 from ...models import (
@@ -267,14 +268,15 @@ def _attach_advice(contracts, corporation) -> None:
     """Set contract.advice (sell/reprocess summary) for the review queue.
     A failing price lookup leaves the column empty instead of breaking the page."""
     from ...models import CorpReprocessingConfig
-    from ...utils.reprocess_advice import advise_contract
+    from ...utils.reprocess_advice import BuildMaterials, advise_contract
     from ...utils.stock_needs import stock_deficits
 
     try:
         config = CorpReprocessingConfig.for_corporation(corporation)
         deficits = stock_deficits(corporation) if config.use_stock_needs else {}
+        build = BuildMaterials(corporation)
         for contract in contracts:
-            contract.advice = advise_contract(contract, deficits=deficits)
+            contract.advice = advise_contract(contract, deficits=deficits, build=build)
     except Exception:
         logger.exception("Sell/reprocess advice failed for the review queue")
         for contract in contracts:
@@ -486,3 +488,62 @@ def director_config_buyback_reprocessing(request: WSGIRequest) -> HttpResponse:
             "back_hash": "#buyback",
         },
     )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+def director_config_build_material_edit(
+    request: WSGIRequest, material_id: int = None
+) -> HttpResponse:
+    """Add or edit an item or market group kept as building material."""
+    from ...models import CorpBuildMaterial
+
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    if material_id:
+        instance = get_object_or_404(
+            CorpBuildMaterial, id=material_id, corporation=corporation
+        )
+    else:
+        instance = CorpBuildMaterial(corporation=corporation)
+
+    if request.method == "POST":
+        form = CorpBuildMaterialForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Build material saved."))
+            return _back_to_config()
+    else:
+        form = CorpBuildMaterialForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Edit Build Material") if material_id else _("Add Build Material"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#buyback",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
+@require_POST
+def director_config_build_material_delete(
+    request: WSGIRequest, material_id: int
+) -> HttpResponse:
+    from ...models import CorpBuildMaterial
+
+    corporation = _director_corporation(request)
+    if not corporation:
+        return _no_corporation(request)
+
+    get_object_or_404(
+        CorpBuildMaterial, id=material_id, corporation=corporation
+    ).delete()
+    messages.success(request, _("Build material removed."))
+    return _back_to_config()

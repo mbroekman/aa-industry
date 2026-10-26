@@ -832,3 +832,56 @@ class CorpReprocessingConfig(models.Model):
         return cls.objects.filter(corporation=corporation).first() or cls(
             corporation=corporation
         )
+
+
+class CorpBuildMaterial(models.Model):
+    """An item or market group the corporation keeps as building material:
+    the sell-or-reprocess advice never sells it, and reprocessed materials
+    on this list are valued at what buying them would cost."""
+
+    corporation = models.ForeignKey(
+        EveCorporationInfo, on_delete=models.CASCADE, related_name="build_materials"
+    )
+    eve_type = models.ForeignKey(
+        EveType, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    eve_market_group = models.ForeignKey(
+        EveMarketGroup,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text=_("Covers every market group below it too."),
+    )
+    note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = _("Build Material")
+        verbose_name_plural = _("Build Materials")
+        # No condition needed: unique indexes treat NULLs as distinct, and
+        # MariaDB/MySQL can't create conditional unique constraints at all.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["corporation", "eve_type"], name="build_material_unique_type"
+            ),
+            models.UniqueConstraint(
+                fields=["corporation", "eve_market_group"],
+                name="build_material_unique_market_group",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(eve_type__isnull=False, eve_market_group__isnull=True)
+                    | Q(eve_type__isnull=True, eve_market_group__isnull=False)
+                ),
+                name="build_material_type_xor_market_group",
+            ),
+        ]
+
+    def __str__(self):
+        return self.target_name
+
+    @property
+    def target_name(self) -> str:
+        if self.eve_type_id:
+            return self.eve_type.name
+        return self.eve_market_group.name if self.eve_market_group_id else "-"

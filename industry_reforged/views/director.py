@@ -1052,6 +1052,9 @@ def director_config(request: WSGIRequest) -> HttpResponse:
         "market_groups_loaded": market_groups_loaded,
         "buyback_faqs": buyback_faqs,
         "reprocessing_config": reprocessing_config,
+        "build_materials": corporation.build_materials.select_related(
+            "eve_type", "eve_market_group__parent_market_group"
+        ).order_by("eve_market_group__name", "eve_type__name"),
         "broker_fee_rate": (
             reprocessing_tax_config.broker_fee_rate if reprocessing_tax_config else 0.0
         ),

@@ -193,16 +193,22 @@ Members see the item rules and fixed prices on the program's **Rules & prices** 
 - **Suspicious contracts**: in-game contracts to the program's recipient that use its tracking prefix but a tracking number that was never issued. They are posted to Discord once and listed until you dismiss them.
 - **Check contracts now** queues an immediate check instead of waiting for the next 15-minute run.
 
-**Sell or reprocess?**
+**What to do with the items (sell, reprocess, build material, to be sorted)**
 
-Each contract page shows the program's directors whether the items it brings in are best sold as they are or reprocessed first. The review queue has a short summary per contract in the *Advice* column.
+Each contract page shows the program's directors what to do with every item it brings in, in four clearly coloured groups. The review queue shows how many items fall in each group per contract (*Advice* column).
 
-- For every item you see four values: sold straight to Jita buy orders, sold through a Jita sell order (after broker fee and sales tax), and the same two for the materials it reprocesses into (after the reprocessing tax). Only whole reprocessing batches count; the remainder is counted as sold.
-- The advice is **Sell**, **Reprocess** or **Either way** (when the difference is below the margin you set), with how much ISK the better option brings. Items that can't be reprocessed (no materials, blueprints) are always *Sell*.
-- If **Count stock shortages** is on, materials the corporation is short of (below their low-stock target in Inventory) are valued at what buying them at Jita would cost. That can tip an item to *Reprocess*; the advice then names the shortage it fills. A shortage is counted only once per contract.
-- At the top: the total for selling everything, reprocessing everything and following the advice, and what following it gains. Below: the materials you get from the items to reprocess, with a copy button for a multibuy list. A *Slow to sell* badge means the quantity is more than 5 days of Jita trade volume.
+- **Sell** (blue): worth more as-is.
+- **Reprocess** (green): worth more as the materials it reprocesses into.
+- **Build material** (teal): on the corporation's build-material list; it is kept, never sold.
+- **To be sorted** (yellow): a director decides. Shown when no Jita price is known, when selling and reprocessing are within the margin you set, or when the advice would be to sell but the quantity is more than 5 days of Jita trade volume.
 
-Set the assumptions in **Selling or reprocessing** on the Buyback tab: the route the advice is based on (straight to buy orders or through a sell order), the reprocessing yield for ore/ice/moon ore and for everything else, the reprocessing tax, broker fee, sales tax, the "either way" margin and whether stock shortages count.
+For every item you see the value sold straight to Jita buy orders and through a Jita sell order (after broker fee and sales tax), and the same two for the materials it reprocesses into (after the reprocessing tax). Only whole reprocessing batches count; the remainder is counted as sold. Below the table are two material lists with copy buttons: **Keep as build material** and **Sell after reprocessing**.
+
+Reprocessed materials that are build materials, or that fill a low-stock shortage (when *Count stock shortages* is on), count as used in-house: they are valued at what buying them at Jita would cost, which can tip an item to *Reprocess*. A shortage is counted only once per contract.
+
+**Build Materials** (Buyback tab): add single items (e.g. Tritanium) or market groups (e.g. Minerals; a group covers every group below it). Load the market groups once (Item Rules section) before choosing a group.
+
+**Selling or reprocessing** (Buyback tab): the route the advice is based on (straight to buy orders or through a sell order), the reprocessing yield for ore/ice/moon ore and for everything else, the reprocessing tax, broker fee, sales tax, the margin for *To be sorted* and whether stock shortages count.
 
 **FAQ**: add your own questions and answers in the Buyback FAQ section; members see them on the FAQ page next to the built-in explanation.
 

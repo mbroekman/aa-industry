@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Feat
 
+- **buyback**: Build materials and four clear groups (TASK-280). Directors keep a list of items and market groups as **build material** (Buyback tab); the contract advice now sorts every item into **Sell**, **Reprocess**, **Build material** or **To be sorted** (no Jita price, sell and reprocess about equal, or slow to sell), each with its own colour, totals and icon. Reprocessed build materials are kept and valued at what buying them would cost; the material list is split into *Keep as build material* and *Sell after reprocessing*. The review queue shows the count per group (migration 0091).
 - **buyback**: "Sell or reprocess?" advice per contract for the program's directors (TASK-279). Per item: the value sold straight to Jita buy orders or through a sell order (after broker fee and sales tax), and the same for its reprocessed materials (after reprocessing tax, whole batches only); advice Sell, Reprocess or Either way with the ISK difference. Materials the corporation is short of (low-stock targets) count as used in-house. Totals, gain over selling everything, a copyable material list, and an *Advice* column in the review queue. Settings per corporation in "Selling or reprocessing" on the Buyback tab (migration 0090).
 
 - **buyback**: Statistics from the original buyback plugin (TASK-277, phase 5):

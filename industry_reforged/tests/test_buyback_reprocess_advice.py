@@ -9,9 +9,23 @@ import pytest
 from eveuniverse.models import EveCategory, EveTypeMaterial
 
 # AA Industry App
-from industry_reforged.models import CorpItemConfig, CorpReprocessingConfig, TaxConfig
+from industry_reforged.models import (
+    CorpBuildMaterial,
+    CorpItemConfig,
+    CorpReprocessingConfig,
+    TaxConfig,
+)
 from industry_reforged.utils import reprocess_advice
-from industry_reforged.utils.reprocess_advice import EITHER, REPROCESS, SELL, advise
+from industry_reforged.utils.reprocess_advice import (
+    BUILD,
+    REPROCESS,
+    SELL,
+    SORT,
+    SORT_CLOSE,
+    SORT_NO_PRICE,
+    SORT_SLOW,
+    advise,
+)
 from industry_reforged.utils.stock_needs import stock_deficits
 
 from .factories import EveCorporationInfoFactory, EveGroupFactory, EveTypeFactory
@@ -125,9 +139,11 @@ class TestAdvice:
         assert item.advice == REPROCESS
         assert item.difference == Decimal("1500")
         assert result.sell_all == Decimal("1000")
-        assert result.best_mix == Decimal("2500")
+        assert result.reprocess.count == 1
+        assert result.reprocess.value == Decimal("2500")
         assert result.gain == Decimal("1500")
-        assert result.materials[0].quantity == 500
+        assert result.sell_materials[0].quantity == 500
+        assert result.build_materials == []
 
     def test_sell_when_the_item_is_worth_more(self):
         corp = EveCorporationInfoFactory()
@@ -135,16 +151,17 @@ class TestAdvice:
         with patch(PRICES, side_effect=prices):
             result = advise([(module, 1)], corp, config=_config(corp))
         assert result.items[0].advice == SELL
-        assert result.materials == []
+        assert result.sell.value == Decimal("1000")
+        assert result.sell_materials == []
 
-    def test_small_difference_is_either_way(self):
+    def test_small_difference_is_to_be_sorted(self):
         corp = EveCorporationInfoFactory()
         module, _, prices = self._scrap_item(sell_price_each=250, mineral_price=5.1)
         with patch(PRICES, side_effect=prices):
             item = advise(
                 [(module, 1)], corp, config=_config(corp, margin_percent=5)
             ).items[0]
-        assert item.advice == EITHER  # 250 vs 255
+        assert (item.advice, item.sort_reason) == (SORT, SORT_CLOSE)  # 250 vs 255
 
     def test_reprocessing_tax_lowers_the_material_value(self):
         corp = EveCorporationInfoFactory()
@@ -171,7 +188,7 @@ class TestAdvice:
         assert item.sell_listed == Decimal("104.50")
         assert result.route == CorpReprocessingConfig.ROUTE_LISTED
 
-    def test_items_without_materials_and_blueprints_are_sold(self):
+    def test_unpriced_items_are_to_be_sorted(self):
         corp = EveCorporationInfoFactory()
         fuel = EveTypeFactory(name="Oxygen Fuel Block")
         blueprint_category, _ = EveCategory.objects.get_or_create(
@@ -185,11 +202,10 @@ class TestAdvice:
         )
         with patch(PRICES, side_effect=_prices({fuel.id: 10}, {})):
             result = advise([(fuel, 5), (blueprint, 1)], corp, config=_config(corp))
-        assert [(i.reprocessable, i.advice) for i in result.items] == [
-            (False, SELL),
-            (False, SELL),
+        assert [(i.reprocessable, i.advice, i.sort_reason) for i in result.items] == [
+            (False, SELL, ""),
+            (False, SORT, SORT_NO_PRICE),  # blueprint: no market price
         ]
-        assert result.reprocess_all == result.sell_all
 
 
 @pytest.mark.django_db
@@ -221,7 +237,9 @@ class TestStockNeeds:
         assert a.advice == REPROCESS and a.fills_shortage == ["Tritanium"]
         assert a.in_house_bonus == Decimal("50")  # 50 x (2.0 - 1.0)
         assert b.advice == SELL and b.fills_shortage == []
-        assert result.materials[0].in_house == 50
+        assert [(m.eve_type.name, m.quantity) for m in result.build_materials] == [
+            ("Tritanium", 50)
+        ]
 
     def test_stock_deficits_from_low_stock_targets(self):
         corp = EveCorporationInfoFactory()
@@ -235,6 +253,76 @@ class TestStockNeeds:
         corp = EveCorporationInfoFactory()
         config = CorpReprocessingConfig.for_corporation(corp)
         assert config.pk is None and config.ore_yield_percent == 90.6
+
+
+@pytest.mark.django_db
+class TestBuildMaterials:
+    def test_item_on_the_list_is_kept_for_building(self):
+        corp = EveCorporationInfoFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        CorpBuildMaterial.objects.create(corporation=corp, eve_type=tritanium)
+
+        with patch(PRICES, side_effect=_prices({tritanium.id: 4.0}, {tritanium.id: 5.0})):
+            result = advise([(tritanium, 1000)], corp, config=_config(corp))
+
+        item = result.items[0]
+        assert item.advice == BUILD
+        assert item.value == Decimal("5000")  # what buying it in would cost
+        assert result.build.count == 1
+        assert [(m.eve_type.name, m.quantity) for m in result.build_materials] == [
+            ("Tritanium", 1000)
+        ]
+
+    def test_market_group_covers_the_groups_below_it(self):
+        # Third Party
+        from eveuniverse.models import EveMarketGroup
+
+        corp = EveCorporationInfoFactory()
+        materials = EveMarketGroup.objects.create(
+            id=920001, name="Manufacture & Research", description=""
+        )
+        minerals = EveMarketGroup.objects.create(
+            id=920002, name="Minerals", description="", parent_market_group=materials
+        )
+        pyerite = EveTypeFactory(name="Pyerite", eve_market_group=minerals)
+        CorpBuildMaterial.objects.create(corporation=corp, eve_market_group=materials)
+
+        with patch(PRICES, side_effect=_prices({pyerite.id: 10}, {pyerite.id: 11})):
+            item = advise([(pyerite, 10)], corp, config=_config(corp)).items[0]
+
+        assert item.advice == BUILD
+
+    def test_reprocessed_build_materials_are_kept_and_valued_at_replacement(self):
+        corp = EveCorporationInfoFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        module = EveTypeFactory(name="Module", portion_size=1)
+        EveTypeMaterial.objects.create(
+            eve_type=module, material_eve_type=tritanium, quantity=100
+        )
+        CorpBuildMaterial.objects.create(corporation=corp, eve_type=tritanium)
+        # Sold: 60. Reprocessed and sold: 50 x 1.0 = 50. Kept: 50 x 2.0 = 100.
+        prices = _prices({module.id: 60, tritanium.id: 1.0}, {tritanium.id: 2.0})
+
+        with patch(PRICES, side_effect=prices):
+            result = advise([(module, 1)], corp, config=_config(corp))
+
+        item = result.items[0]
+        assert item.advice == REPROCESS
+        assert item.in_house_bonus == Decimal("50")
+        assert result.sell_materials == []
+        assert [(m.eve_type.name, m.quantity) for m in result.build_materials] == [
+            ("Tritanium", 50)
+        ]
+
+    def test_slow_selling_item_is_to_be_sorted(self):
+        corp = EveCorporationInfoFactory()
+        fuel = EveTypeFactory(name="Fuel")
+        with patch(PRICES, side_effect=_prices({fuel.id: 10}, {})), patch.object(
+            reprocess_advice, "_velocity", return_value=100.0
+        ):
+            item = advise([(fuel, 1000)], corp, config=_config(corp)).items[0]
+        assert (item.advice, item.sort_reason) == (SORT, SORT_SLOW)
+        assert item.slow_sale
 
 
 # --- Views ------------------------------------------------------------------
@@ -331,7 +419,7 @@ class TestAdviceOnPages:
                 _request(director), contract.tracking_number
             ).content.decode()
 
-        assert "Sell or reprocess?" in html and "Scrap Module" in html
+        assert "What to do with these items" in html and "Scrap Module" in html
 
     def test_seller_does_not_see_the_advice_card(self):
         # AA Industry App
@@ -345,7 +433,7 @@ class TestAdviceOnPages:
             _request(seller), contract.tracking_number
         ).content.decode()
 
-        assert "Sell or reprocess?" not in html
+        assert "What to do with these items" not in html
 
     def test_review_queue_shows_the_advice_column(self):
         # AA Industry App
@@ -361,7 +449,7 @@ class TestAdviceOnPages:
         with patch(PRICES, side_effect=prices):
             html = director_buyback_review(_request(director)).content.decode()
 
-        assert "Reprocess some" in html and "#sell-or-reprocess" in html
+        assert "fa-recycle" in html and "#sell-or-reprocess" in html
 
     def test_settings_are_saved_for_the_directors_corporation(self):
         # AA Industry App
@@ -392,3 +480,61 @@ class TestAdviceOnPages:
         config = CorpReprocessingConfig.objects.get(corporation=corp)
         assert config.sell_route == "LISTED" and config.ore_yield_percent == 87.5
         assert TaxConfig.objects.get(corporation=corp).broker_fee_rate == 1.5
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("mock_static")
+class TestBuildMaterialManagement:
+    def test_add_item_for_own_corporation(self):
+        from industry_reforged.views.buyback.director import (
+            director_config_build_material_edit,
+        )
+
+        corp = EveCorporationInfoFactory()
+        EveTypeFactory(name="Tritanium")
+        director, _ = _user(corp, perms=("basic_access", "corp_access"))
+
+        response = director_config_build_material_edit(
+            _request(director, "post", {"item_name": "Tritanium", "note": "hulls"})
+        )
+
+        assert response.status_code == 302
+        entry = CorpBuildMaterial.objects.get()
+        assert entry.corporation == corp and entry.eve_type.name == "Tritanium"
+
+    def test_duplicate_item_is_refused(self):
+        from industry_reforged.views.buyback.director import (
+            director_config_build_material_edit,
+        )
+
+        corp = EveCorporationInfoFactory()
+        tritanium = EveTypeFactory(name="Tritanium")
+        CorpBuildMaterial.objects.create(corporation=corp, eve_type=tritanium)
+        director, _ = _user(corp, perms=("basic_access", "corp_access"))
+
+        response = director_config_build_material_edit(
+            _request(director, "post", {"item_name": "Tritanium"})
+        )
+
+        assert response.status_code == 200  # form shown again with the error
+        assert CorpBuildMaterial.objects.count() == 1
+
+    def test_other_corporations_entry_cannot_be_deleted(self):
+        # Django
+        from django.http import Http404
+
+        from industry_reforged.views.buyback.director import (
+            director_config_build_material_delete,
+        )
+
+        foreign = CorpBuildMaterial.objects.create(
+            corporation=EveCorporationInfoFactory(), eve_type=EveTypeFactory()
+        )
+        director, _ = _user(
+            EveCorporationInfoFactory(), perms=("basic_access", "corp_access")
+        )
+        with pytest.raises(Http404):
+            director_config_build_material_delete(
+                _request(director, "post"), foreign.id
+            )
+        assert CorpBuildMaterial.objects.filter(pk=foreign.pk).exists()

@@ -10,6 +10,7 @@ from .buyback import (
     BuybackUntrackedContract,
     BuybackUserSettings,
     BuybackWatchlistItem,
+    CorpBuildMaterial,
     CorpReprocessingConfig,
 )
 from .config import (
@@ -107,5 +108,6 @@ __all__ = [
     "BuybackContract",
     "BuybackContractItem",
     "BuybackFaq",
+    "CorpBuildMaterial",
     "CorpReprocessingConfig",
 ]

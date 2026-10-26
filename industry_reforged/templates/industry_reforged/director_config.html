@@ -845,6 +845,50 @@
 
             <div class="card border-0 mb-4 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-hammer text-info"></i> {% trans "Build Materials" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_build_material_add' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> {% trans "Add Build Material" %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <p class="text-muted small px-3 pt-3 mb-2">{% trans "Items and market groups the corporation keeps for building. The sell-or-reprocess advice never sells them, and reprocessed materials on this list are valued at what buying them would cost. A market group covers every group below it." %}</p>
+                    {% if not market_groups_loaded %}<p class="small text-warning px-3">{% trans "Load the market groups (Item Rules section) before choosing a market group." %}</p>{% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover m-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{% trans "Item or market group" %}</th>
+                                    <th>{% trans "Note" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in build_materials %}
+                                <tr>
+                                    <td>
+                                        {% if material.eve_type_id %}
+                                        <img src="https://images.evetech.net/types/{{ material.eve_type_id }}/icon?size=32" alt="" class="rounded me-1" style="width:20px;height:20px;" loading="lazy">{{ material.eve_type.name }}
+                                        {% else %}
+                                        <i class="fas fa-folder-open text-muted me-1"></i>{% if material.eve_market_group.parent_market_group %}{{ material.eve_market_group.parent_market_group.name }} &gt; {% endif %}<strong>{{ material.eve_market_group.name }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ material.note|default:"-" }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'industry_reforged:director_config_build_material_edit' material.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-bs-delete-url="{% url 'industry_reforged:director_config_build_material_delete' material.id %}"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">{% trans "No build materials yet: everything is either sold or reprocessed." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
                     <h5 class="card-title mb-0"><i class="fas fa-recycle text-primary"></i> {% trans "Selling or reprocessing" %}</h5>
                     <a href="{% url 'industry_reforged:director_config_buyback_reprocessing' %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> {% trans "Edit" %}</a>
                 </div>

@@ -5,6 +5,8 @@ from .director import (
     director_buyback_refresh_contracts,
     director_buyback_review,
     director_buyback_untracked_dismiss,
+    director_config_build_material_delete,
+    director_config_build_material_edit,
     director_config_buyback_faq_delete,
     director_config_buyback_faq_edit,
     director_config_buyback_program_delete,

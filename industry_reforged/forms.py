@@ -21,6 +21,7 @@ from .models import (
     BuybackWatchlistItem,
     CorpItemConfig,
     CorporationPricingConfig,
+    CorpBuildMaterial,
     CorpPricingConfig,
     CorpReprocessingConfig,
     CorpTypeDiscount,
@@ -1299,3 +1300,64 @@ class CorpReprocessingConfigForm(forms.ModelForm):
                 defaults={"broker_fee_rate": self.cleaned_data["broker_fee_percent"]},
             )
         return instance
+
+
+class CorpBuildMaterialForm(forms.ModelForm):
+    """An item or market group the corporation keeps as building material."""
+
+    item_name = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Exact name of one item (e.g. Tritanium)."),
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    eve_market_group = _MarketGroupChoiceField(
+        queryset=EveMarketGroup.objects.select_related("parent_market_group").order_by(
+            "name"
+        ),
+        required=False,
+        label=_("Market group"),
+        help_text=_(
+            "Or a market group (e.g. Minerals); it covers every group below it too."
+        ),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    class Meta:
+        model = CorpBuildMaterial
+        fields = ["item_name", "eve_market_group", "note"]
+        widgets = {"note": forms.TextInput(attrs={"class": "form-control"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.eve_type_id:
+            self.fields["item_name"].initial = self.instance.eve_type.name
+
+    def _taken(self, **lookup) -> bool:
+        qs = CorpBuildMaterial.objects.filter(
+            corporation=self.instance.corporation, **lookup
+        )
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        return qs.exists()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item_name = (cleaned_data.get("item_name") or "").strip()
+        market_group = cleaned_data.get("eve_market_group")
+        if bool(item_name) == bool(market_group):
+            raise ValidationError(_("Choose either an item or a market group."))
+
+        if item_name:
+            eve_type = resolve_eve_type(item_name)
+            if self._taken(eve_type=eve_type):
+                self.add_error("item_name", _("This item is already on the list."))
+            self.instance.eve_type = eve_type
+            cleaned_data["eve_market_group"] = None
+        else:
+            if self._taken(eve_market_group=market_group):
+                self.add_error(
+                    "eve_market_group", _("This group is already on the list.")
+                )
+            self.instance.eve_type = None
+        return cleaned_data
