@@ -1,12 +1,12 @@
 # Standard Library
-from datetime import date
+import datetime
 
 # Third Party
 from pydantic import BaseModel
 
 
 class TransactionIngest(BaseModel):
-    date: date
+    date: datetime.date
     type_id: int
     volume_sold: float
     avg_price: float
@@ -18,12 +18,12 @@ class PriceIngest(BaseModel):
 
 
 class PingIngest(BaseModel):
-    date: date
+    date: datetime.date
     is_ping: int = 1
 
 
 class DoctrineIngest(BaseModel):
-    date: date
+    date: datetime.date
     type_id: int
     is_doctrine: int = 1
 
