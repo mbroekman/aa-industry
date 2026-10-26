@@ -262,7 +262,9 @@ class TestBuildMaterials:
         tritanium = EveTypeFactory(name="Tritanium")
         CorpBuildMaterial.objects.create(corporation=corp, eve_type=tritanium)
 
-        with patch(PRICES, side_effect=_prices({tritanium.id: 4.0}, {tritanium.id: 5.0})):
+        with patch(
+            PRICES, side_effect=_prices({tritanium.id: 4.0}, {tritanium.id: 5.0})
+        ):
             result = advise([(tritanium, 1000)], corp, config=_config(corp))
 
         item = result.items[0]
@@ -317,8 +319,9 @@ class TestBuildMaterials:
     def test_slow_selling_item_is_to_be_sorted(self):
         corp = EveCorporationInfoFactory()
         fuel = EveTypeFactory(name="Fuel")
-        with patch(PRICES, side_effect=_prices({fuel.id: 10}, {})), patch.object(
-            reprocess_advice, "_velocity", return_value=100.0
+        with (
+            patch(PRICES, side_effect=_prices({fuel.id: 10}, {})),
+            patch.object(reprocess_advice, "_velocity", return_value=100.0),
         ):
             item = advise([(fuel, 1000)], corp, config=_config(corp)).items[0]
         assert (item.advice, item.sort_reason) == (SORT, SORT_SLOW)
@@ -486,6 +489,7 @@ class TestAdviceOnPages:
 @pytest.mark.usefixtures("mock_static")
 class TestBuildMaterialManagement:
     def test_add_item_for_own_corporation(self):
+        # AA Industry App
         from industry_reforged.views.buyback.director import (
             director_config_build_material_edit,
         )
@@ -503,6 +507,7 @@ class TestBuildMaterialManagement:
         assert entry.corporation == corp and entry.eve_type.name == "Tritanium"
 
     def test_duplicate_item_is_refused(self):
+        # AA Industry App
         from industry_reforged.views.buyback.director import (
             director_config_build_material_edit,
         )
@@ -523,6 +528,7 @@ class TestBuildMaterialManagement:
         # Django
         from django.http import Http404
 
+        # AA Industry App
         from industry_reforged.views.buyback.director import (
             director_config_build_material_delete,
         )

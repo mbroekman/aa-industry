@@ -6,8 +6,8 @@ Every item lands in one of four groups:
 - REPROCESS: worth more as the materials it reprocesses into.
 - BUILD: on the corporation's build-material list; kept, never sold.
 - SORT ("to be sorted"): a director decides. No price is known, selling and
-  reprocessing are within the configured margin, or the advice would be to
-  sell but the quantity is more than a few days of Jita trade volume.
+    reprocessing are within the configured margin, or the advice would be to
+    sell but the quantity is more than a few days of Jita trade volume.
 
 Values: sold straight to Jita buy orders ("instant") or through a Jita sell
 order minus broker fee and sales tax ("listed"), as the item itself or as its
@@ -107,9 +107,7 @@ class ContractAdvice:
     @property
     def gain(self) -> Decimal:
         """What reprocessing the REPROCESS items adds over selling them."""
-        return sum(
-            (i.difference for i in self.items if i.advice == REPROCESS), ZERO
-        )
+        return sum((i.difference for i in self.items if i.advice == REPROCESS), ZERO)
 
     def by_category(self, category) -> list:
         return [i for i in self.items if i.advice == category]
@@ -343,7 +341,10 @@ def advise(
                         )
                     if mat.in_house:
                         item.in_house_bonus += (
-                            (_d(sell.get(mat.eve_type.id)) - sale_price(mat.eve_type.id))
+                            (
+                                _d(sell.get(mat.eve_type.id))
+                                - sale_price(mat.eve_type.id)
+                            )
                             * mat.in_house
                             * reprocess_tax
                         )
@@ -388,7 +389,9 @@ def advise(
                     mat.in_house = 0
                 if materials:
                     item.difference = (
-                        item.reprocess_listed if listed_route else item.reprocess_instant
+                        item.reprocess_listed
+                        if listed_route
+                        else item.reprocess_instant
                     ) - sell_value
                 item.in_house_bonus = ZERO
                 item.value = sell_value

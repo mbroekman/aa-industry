@@ -522,7 +522,9 @@ def director_config_build_material_edit(
         request,
         "industry_reforged/director_config_form.html",
         {
-            "title": _("Edit Build Material") if material_id else _("Add Build Material"),
+            "title": (
+                _("Edit Build Material") if material_id else _("Add Build Material")
+            ),
             "form": form,
             "back_url": "industry_reforged:director_config",
             "back_hash": "#buyback",
