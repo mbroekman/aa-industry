@@ -22,7 +22,8 @@ from ...utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
 )
-from ...utils.discord import send_discord_webhook
+from ...discord_i18n import discord_language
+from ...utils.discord import send_discord_webhook, webhook_language
 from ...utils.pricing_engine import (
     calculate_bom_cost,
     calculate_quote,
@@ -775,18 +776,33 @@ def provide_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                         corporation=corporation
                     ).first()
                     if webhook_config and webhook_config.orders_webhook:
-                        embed = {
-                            "title": f"Quote Provided: Order #{parent.id}",
-                            "description": f"A quote of **{grand_total:,.2f} ISK** has been provided for your order. Please review and accept.",
-                            "color": 3447003,  # Blue
-                        }
-                        send_discord_webhook(webhook_config.orders_webhook, embed)
+                        language = webhook_language(webhook_config)
+                        with discord_language(language):
+                            embed = {
+                                "title": _("Quote Provided: Order #%(id)s")
+                                % {"id": parent.id},
+                                "description": _(
+                                    "A quote of **%(total)s ISK** has been provided for "
+                                    "your order. Please review and accept."
+                                )
+                                % {"total": f"{grand_total:,.2f}"},
+                                "color": 3447003,  # Blue
+                            }
+                        send_discord_webhook(
+                            webhook_config.orders_webhook, embed, language
+                        )
 
                 # Send a direct message to the user who placed the order
                 # AA Industry App
                 from industry_reforged.tasks.utils import notify_discord_user
 
-                dm_msg = f"**Industry Quote Received**\nYour order `#{parent.id}` has been quoted for **{grand_total:,.2f} ISK**. Please check the dashboard to accept or reject it."
+                def dm_msg(order_id=parent.id, total=grand_total):
+                    return _(
+                        "**Industry Quote Received**\nYour order `#%(id)s` has been "
+                        "quoted for **%(total)s ISK**. Please check the dashboard to "
+                        "accept or reject it."
+                    ) % {"id": order_id, "total": f"{total:,.2f}"}
+
                 notify_discord_user(parent.character, dm_msg)
 
             messages.success(
@@ -1085,12 +1101,17 @@ def accept_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 corporation=corporation
             ).first()
             if webhook_config and webhook_config.orders_webhook:
-                embed = {
-                    "title": f"Quote Accepted: Order #{order.id}",
-                    "description": f"**{order.character.character_name}** has accepted the quote. Tasks generated.",
-                    "color": 3066993,  # Green
-                }
-                send_discord_webhook(webhook_config.orders_webhook, embed)
+                language = webhook_language(webhook_config)
+                with discord_language(language):
+                    embed = {
+                        "title": _("Quote Accepted: Order #%(id)s") % {"id": order.id},
+                        "description": _(
+                            "**%(name)s** has accepted the quote. Tasks generated."
+                        )
+                        % {"name": order.character.character_name},
+                        "color": 3066993,  # Green
+                    }
+                send_discord_webhook(webhook_config.orders_webhook, embed, language)
 
         messages.success(
             request,
@@ -1125,12 +1146,15 @@ def reject_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
                 corporation=corporation
             ).first()
             if webhook_config and webhook_config.orders_webhook:
-                embed = {
-                    "title": f"Quote Rejected: Order #{order.id}",
-                    "description": f"**{order.character.character_name}** has rejected the quote.",
-                    "color": 15158332,  # Red
-                }
-                send_discord_webhook(webhook_config.orders_webhook, embed)
+                language = webhook_language(webhook_config)
+                with discord_language(language):
+                    embed = {
+                        "title": _("Quote Rejected: Order #%(id)s") % {"id": order.id},
+                        "description": _("**%(name)s** has rejected the quote.")
+                        % {"name": order.character.character_name},
+                        "color": 15158332,  # Red
+                    }
+                send_discord_webhook(webhook_config.orders_webhook, embed, language)
 
         messages.info(request, _("Quote rejected and order cancelled."))
     return redirect("industry_reforged:orders_dashboard")

@@ -11,6 +11,9 @@ from eveuniverse.models import EveType
 from esi.exceptions import HTTPNotModified
 from esi.models import Token
 
+# Django
+from django.utils.translation import gettext
+
 from ..models import (
     CharacterPlanet,
     PlanetPin,
@@ -403,9 +406,14 @@ def update_character_pi(character_id=None):
                         if pin_obj.is_extractor and pin_obj.expiry_time:
                             if now >= pin_obj.expiry_time:
                                 if not pin_obj.notification_sent:
-                                    message = f"Your extractor on **{planet_label}** has just stopped. Time to restart it!"
                                     send_pi_notification(
-                                        character, "PI Extractor Expired", message
+                                        character,
+                                        lambda: gettext("PI Extractor Expired"),
+                                        lambda label=planet_label: gettext(
+                                            "Your extractor on **%(planet)s** has "
+                                            "just stopped. Time to restart it!"
+                                        )
+                                        % {"planet": label},
                                     )
                                     pin_obj.notification_sent = True
                                     pin_obj.save()
@@ -431,9 +439,15 @@ def update_character_pi(character_id=None):
 
                             if pin_obj.utilization_pct >= threshold:
                                 if not pin_obj.notification_sent:
-                                    message = f"The storage (or launchpad) on **{planet_label}** is (almost) full! Time to pick up your goods."
                                     send_pi_notification(
-                                        character, "PI Storage Full", message
+                                        character,
+                                        lambda: gettext("PI Storage Full"),
+                                        lambda label=planet_label: gettext(
+                                            "The storage (or launchpad) on "
+                                            "**%(planet)s** is (almost) full! Time "
+                                            "to pick up your goods."
+                                        )
+                                        % {"planet": label},
                                     )
                                     pin_obj.notification_sent = True
                                     pin_obj.save()

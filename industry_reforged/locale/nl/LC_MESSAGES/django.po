@@ -474,8 +474,8 @@ msgstr ""
 
 #: industry_reforged/models/config.py:130
 msgid ""
-"The minimum profit margin percentage allowed for an order (e.g., 0.00 for "
-"0%, -5.00 for -5% max loss)."
+"The minimum profit margin percentage allowed for an order (e.g., 0.00 for 0%,"
+" -5.00 for -5% max loss)."
 msgstr ""
 "Het minimaal toegestane winstmargepercentage voor een bestelling (bijv. 0.00 "
 "voor 0%, -5.00 voor maximaal -5% verlies)."
@@ -657,7 +657,9 @@ msgstr "Aanbetaling Vereist:"
 
 #: industry_reforged/models/orders.py:106
 msgid "If True, corp-level discounts are not applied to this order's items."
-msgstr "Indien waar, worden bedrijfskortingen niet toegepast op de items van deze bestelling."
+msgstr ""
+"Indien waar, worden bedrijfskortingen niet toegepast op de items van deze "
+"bestelling."
 
 #: industry_reforged/models/orders.py:120
 msgid "If this order was split, this is the parent order."
@@ -1449,8 +1451,8 @@ msgid ""
 "Opportunity Scanners allow you to define persistent scan profiles to quickly "
 "find profitable items."
 msgstr ""
-"Met Opportuniteitsscanners kun je permanente scanprofielen definiëren om "
-"snel winstgevende items te vinden."
+"Met Opportuniteitsscanners kun je permanente scanprofielen definiëren om snel"
+" winstgevende items te vinden."
 
 #: industry_reforged/templates/industry_reforged/ai_manager/scanner_form.html:112
 msgid ""
@@ -1888,8 +1890,8 @@ msgstr "Korting %%"
 #: industry_reforged/templates/industry_reforged/director_config.html:291
 msgid "No specific discounts configured. Everyone pays full price (or markup)."
 msgstr ""
-"Geen specifieke kortingen geconfigureerd. Iedereen betaalt de volledige "
-"prijs (of opslag)."
+"Geen specifieke kortingen geconfigureerd. Iedereen betaalt de volledige prijs"
+" (of opslag)."
 
 #: industry_reforged/templates/industry_reforged/director_config.html:306
 msgid "Background Task Logs"
@@ -2461,8 +2463,8 @@ msgid ""
 "sure you want to proceed?"
 msgstr ""
 "Je staat op het punt taken te voltooien. Als een van deze onvoltooide sub-"
-"taken heeft, zal dit recursief ook alle sub-taken als voltooid markeren. "
-"Weet je zeker dat je wilt doorgaan?"
+"taken heeft, zal dit recursief ook alle sub-taken als voltooid markeren. Weet"
+" je zeker dat je wilt doorgaan?"
 
 #: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:934
 msgid "Proceed"
@@ -2567,9 +2569,10 @@ msgstr "Kies een bestaande structuur of vul hieronder handmatig in"
 
 #: industry_reforged/templates/industry_reforged/manage_facility.html:30
 msgid "Only structures capable of manufacturing or reactions are shown."
-msgstr "Alleen structuren die in staat zijn tot productie of reacties worden getoond."
-"Alleen structuren die geschikt zijn voor fabricage of reacties worden "
-"getoond."
+msgstr ""
+"Alleen structuren die in staat zijn tot productie of reacties worden "
+"getoond.Alleen structuren die geschikt zijn voor fabricage of reacties worden"
+" getoond."
 
 #: industry_reforged/templates/industry_reforged/manage_facility.html:46
 msgid "Unknown (Determined automatically)"
@@ -2971,12 +2974,12 @@ msgstr "Bestellingsfamilie Overzicht"
 
 #: industry_reforged/templates/industry_reforged/view_quote.html:103
 msgid ""
-"This order is part of a larger production group. The final unified quote "
-"sent to the customer will be the sum of all orders in this group:"
+"This order is part of a larger production group. The final unified quote sent"
+" to the customer will be the sum of all orders in this group:"
 msgstr ""
-"Deze bestelling maakt deel uit van een grotere productiegroep. De "
-"definitieve verenigde offerte die naar de klant wordt gestuurd, is de som "
-"van alle bestellingen in deze groep:"
+"Deze bestelling maakt deel uit van een grotere productiegroep. De definitieve"
+" verenigde offerte die naar de klant wordt gestuurd, is de som van alle "
+"bestellingen in deze groep:"
 
 #: industry_reforged/templates/industry_reforged/view_quote.html:125
 msgid "Child Order"
@@ -3220,7 +3223,9 @@ msgstr "Offertedetails opslaan en bestelstatus bijwerken."
 msgid ""
 "AI Forecasting model is not available. Please check if the ai-forecasting "
 "service is running."
-msgstr "AI Voorspellingsmodel is niet beschikbaar. Controleer of de ai-forecasting service draait."
+msgstr ""
+"AI Voorspellingsmodel is niet beschikbaar. Controleer of de ai-forecasting "
+"service draait."
 
 #: industry_reforged/views/ai_manager.py:108
 msgid "Opportunity Scanner created successfully."
@@ -3295,8 +3300,8 @@ msgstr ""
 
 #: industry_reforged/views/api.py:95
 msgid ""
-"Corporate Inventory sync has been queued in the background. Please refresh "
-"in a few minutes."
+"Corporate Inventory sync has been queued in the background. Please refresh in"
+" a few minutes."
 msgstr ""
 "Bedrijfsvoorraad synchronisatie is in de wachtrij geplaatst. Ververs de "
 "pagina over een paar minuten."
@@ -3311,11 +3316,11 @@ msgstr ""
 
 #: industry_reforged/views/api.py:125
 msgid ""
-"Corporate Blueprint sync has been queued in the background. Please refresh "
-"in a few minutes."
+"Corporate Blueprint sync has been queued in the background. Please refresh in"
+" a few minutes."
 msgstr ""
-"Synchronisatie van bedrijfsblauwdrukken is in de wachtrij geplaatst. "
-"Vernieuw de pagina over een paar minuten."
+"Synchronisatie van bedrijfsblauwdrukken is in de wachtrij geplaatst. Vernieuw"
+" de pagina over een paar minuten."
 
 #: industry_reforged/views/blueprints.py:63
 msgid "Quantity and Runs must be at least 1."
@@ -3692,6 +3697,627 @@ msgstr ""
 "Sub-component %(name)s succesvol opgesplitst in Onderliggende Bestelling "
 "#%(child_id)s."
 
+msgid "Upfront (PLEX)"
+msgstr "Vooraf (PLEX)"
+
+msgid "Upfront Payment Required (PLEX):"
+msgstr "Vooruitbetaling vereist (PLEX):"
+
+msgid "Missing"
+msgstr "Ontbreekt"
+
+msgid "All required blueprints are available in the corporation."
+msgstr "Alle benodigde blauwdrukken zijn beschikbaar binnen de corporatie."
+
+msgid "Remaining Balance on Delivery:"
+msgstr "Restant bij levering:"
+
+msgid "Current rate"
+msgstr "Huidige koers"
+
+msgid "Default (installation setting)"
+msgstr "Standaard (installatie-instelling)"
+
+msgid "Exact name of one item (e.g. PLEX)."
+msgstr "Exacte naam van één item (bijv. PLEX)."
+
+msgid ""
+"Or the exact name of an item group, to watch every item in it (e.g. Salvaged "
+"Materials)."
+msgstr ""
+"Of de exacte naam van een itemgroep, om alle items daarin te volgen (bijv. "
+"Salvaged Materials)."
+
+msgid "Exact name of one item."
+msgstr "Exacte naam van één item."
+
+msgid "Market group"
+msgstr "Marktgroep"
+
+msgid ""
+"Or a market group; the rule then covers every group below it too. The most "
+"specific rule wins."
+msgstr ""
+"Of een marktgroep; de regel geldt dan ook voor alle groepen eronder. De meest"
+" specifieke regel wint."
+
+msgid "Exact name of the item."
+msgstr "Exacte naam van het item."
+
+msgid "Broker fee (%)"
+msgstr "Broker fee (%)"
+
+msgid "Broker fee when selling through a sell order."
+msgstr "Broker fee bij verkoop via een sell order."
+
+msgid "Exact name of one item (e.g. Tritanium)."
+msgstr "Exacte naam van één item (bijv. Tritanium)."
+
+msgid "Or a market group (e.g. Minerals); it covers every group below it too."
+msgstr ""
+"Of een marktgroep (bijv. Minerals); die geldt ook voor alle groepen eronder."
+
+msgid "Language of Discord messages"
+msgstr "Taal van Discord-berichten"
+
+msgid "Use 1-10 capital letters or digits."
+msgstr "Gebruik 1-10 hoofdletters of cijfers."
+
+msgid "Select at least one drop-off location."
+msgstr "Kies minstens één afleverlocatie."
+
+msgid "Choose the character that receives the contracts."
+msgstr "Kies het karakter dat de contracten ontvangt."
+
+msgid "Enter either an item name or a group name."
+msgstr "Vul een itemnaam of een groepsnaam in."
+
+msgid "Choose either an item or a market group."
+msgstr "Kies een item of een marktgroep."
+
+msgid ""
+"All posts to this corporation's webhooks use this language, whatever language"
+" the person who triggered them uses. Direct messages follow each member's own"
+" language."
+msgstr ""
+"Alle berichten naar de webhooks van deze corporatie gebruiken deze taal, "
+"ongeacht de taal van degene die ze veroorzaakt. Privéberichten volgen de "
+"eigen taal van elk lid."
+
+msgid "Minimum reward floor cannot exceed maximum reward cap."
+msgstr "De minimale beloning mag niet hoger zijn dan de maximale beloning."
+
+msgid "A watchlist entry for this item already exists."
+msgstr "Er bestaat al een watchlist-regel voor dit item."
+
+msgid "A watchlist entry for this group already exists."
+msgstr "Er bestaat al een watchlist-regel voor deze groep."
+
+msgid "This item already has a rule."
+msgstr "Dit item heeft al een regel."
+
+msgid "This group already has a rule."
+msgstr "Deze groep heeft al een regel."
+
+msgid "This item already has a fixed price."
+msgstr "Dit item heeft al een vaste prijs."
+
+msgid "This item is already on the list."
+msgstr "Dit item staat al op de lijst."
+
+msgid "This group is already on the list."
+msgstr "Deze groep staat al op de lijst."
+
+#, python-format
+msgid "No single item group is called '%(name)s'."
+msgstr "Er is geen unieke itemgroep met de naam '%(name)s'."
+
+msgid "(see the link)"
+msgstr "(zie de link)"
+
+#, python-format
+msgid ""
+"Untracked buyback contract in %(program)s: '%(title)s' from %(issuer)s for "
+"%(price)s ISK. Its tracking number was never issued - check it before "
+"accepting."
+msgstr ""
+"Onbekend buyback-contract in %(program)s: '%(title)s' van %(issuer)s voor "
+"%(price)s ISK. Het trackingnummer is nooit uitgegeven - controleer het "
+"voordat je accepteert."
+
+#, python-format
+msgid ""
+"New buyback contract %(tracking)s in %(program)s (needs review): %(url)s"
+msgstr ""
+"Nieuw buyback-contract %(tracking)s in %(program)s (moet beoordeeld worden): "
+"%(url)s"
+
+#, python-format
+msgid "New buyback contract %(tracking)s in %(program)s: %(url)s"
+msgstr "Nieuw buyback-contract %(tracking)s in %(program)s: %(url)s"
+
+msgid "Suspicious buyback contract"
+msgstr "Verdacht buyback-contract"
+
+msgid "Seller"
+msgstr "Verkoper"
+
+msgid "Price"
+msgstr "Prijs"
+
+#, python-format
+msgid "Buyback contract flagged: %(tracking)s"
+msgstr "Buyback-contract gemarkeerd: %(tracking)s"
+
+#, python-format
+msgid "New buyback contract: %(tracking)s"
+msgstr "Nieuw buyback-contract: %(tracking)s"
+
+msgid "Review notes"
+msgstr "Beoordelingsnotities"
+
+msgid "Note from seller"
+msgstr "Notitie van de verkoper"
+
+msgid "open"
+msgstr "openen"
+
+#, python-format
+msgid "Buyback contract %(tracking)s"
+msgstr "Buyback-contract %(tracking)s"
+
+#, python-format
+msgid "New Quote Requested: Order #%(id)s"
+msgstr "Nieuwe offerte aangevraagd: Order #%(id)s"
+
+#, python-format
+msgid "**%(name)s** has requested a quote."
+msgstr "**%(name)s** heeft een offerte aangevraagd."
+
+msgid "Total Estimated Price"
+msgstr "Totale geschatte prijs"
+
+msgid "Could not determine the order's corporation."
+msgstr "Kon de corporatie van de order niet bepalen."
+
+msgid "No materials were selected."
+msgstr "Er zijn geen materialen geselecteerd."
+
+msgid "None of the selected materials are part of this order's BOM."
+msgstr ""
+"Geen van de geselecteerde materialen hoort bij de stuklijst van deze order."
+
+#, python-format
+msgid ""
+"Buy orders: %(created)s created, %(updated)s updated with the additional "
+"shortfall."
+msgstr ""
+"Inkooporders: %(created)s aangemaakt, %(updated)s bijgewerkt met het extra "
+"tekort."
+
+#, python-format
+msgid ""
+"%(skipped)s selected material(s) were skipped - corp stock already covers the"
+" required quantity."
+msgstr ""
+"%(skipped)s geselecteerde materia(a)l(en) overgeslagen - de corp-voorraad "
+"dekt de benodigde hoeveelheid al."
+
+#, python-format
+msgid ""
+"**Industry Quote Received**\n"
+"Your order `#%(id)s` has been quoted for **%(total)s ISK**. Please check the dashboard to accept or reject it."
+msgstr ""
+"**Industrie-offerte ontvangen**\n"
+"Je order `#%(id)s` heeft een offerte van **%(total)s ISK**. Bekijk het dashboard om hem te accepteren of te weigeren."
+
+#, python-format
+msgid "Quote Accepted: Order #%(id)s"
+msgstr "Offerte geaccepteerd: Order #%(id)s"
+
+#, python-format
+msgid "**%(name)s** has accepted the quote. Tasks generated."
+msgstr "**%(name)s** heeft de offerte geaccepteerd. Taken aangemaakt."
+
+#, python-format
+msgid "Quote Rejected: Order #%(id)s"
+msgstr "Offerte geweigerd: Order #%(id)s"
+
+#, python-format
+msgid "**%(name)s** has rejected the quote."
+msgstr "**%(name)s** heeft de offerte geweigerd."
+
+#, python-format
+msgid "Quote Provided: Order #%(id)s"
+msgstr "Offerte uitgebracht: Order #%(id)s"
+
+#, python-format
+msgid ""
+"A quote of **%(total)s ISK** has been provided for your order. Please review "
+"and accept."
+msgstr ""
+"Er is een offerte van **%(total)s ISK** uitgebracht voor je order. Bekijk en "
+"accepteer hem."
+
+msgid "bought"
+msgstr "gekocht"
+
+msgid "not bought"
+msgstr "niet gekocht"
+
+msgid "Item not found."
+msgstr "Item niet gevonden."
+
+msgid "Permission denied."
+msgstr "Geen toegang."
+
+#, python-format
+msgid "Order Deleted: #%(id)s"
+msgstr "Order verwijderd: #%(id)s"
+
+#, python-format
+msgid "**%(name)s**'s order was deleted by **%(deleted_by)s**."
+msgstr "De order van **%(name)s** is verwijderd door **%(deleted_by)s**."
+
+#, python-format
+msgid "Order #%(id)s Ready"
+msgstr "Order #%(id)s klaar"
+
+#, python-format
+msgid ""
+"**%(name)s**'s order is fully built and ready to be delivered!\n"
+"Payment Reference: `%(reference)s`\n"
+"Total: `%(total)s ISK`"
+msgstr ""
+"De order van **%(name)s** is volledig gebouwd en klaar om geleverd te worden!\n"
+"Betalingsreferentie: `%(reference)s`\n"
+"Totaal: `%(total)s ISK`"
+
+#, python-format
+msgid ""
+"Order #%(id)s from %(name)s is ready for delivery! Total price: %(total)s "
+"ISK. Payment Reference: %(reference)s"
+msgstr ""
+"Order #%(id)s van %(name)s is klaar voor levering! Totaalprijs: %(total)s "
+"ISK. Betalingsreferentie: %(reference)s"
+
+msgid "New Blueprint Request"
+msgstr "Nieuwe blueprint-aanvraag"
+
+#, python-format
+msgid ""
+"Your Blueprint Request for **%(item)s** has been marked as **%(status)s** by "
+"%(by)s."
+msgstr ""
+"Je blueprint-aanvraag voor **%(item)s** is door %(by)s op **%(status)s** "
+"gezet."
+
+#, python-format
+msgid "**%(user)s** has requested copies of **%(item)s**."
+msgstr "**%(user)s** heeft kopieën aangevraagd van **%(item)s**."
+
+msgid "None"
+msgstr "Geen"
+
+#, python-format
+msgid "Default: %(language)s"
+msgstr "Standaard: %(language)s"
+
+msgid "Discord Messages"
+msgstr "Discord-berichten"
+
+msgid "No Buy Orders were selected."
+msgstr "Er zijn geen inkooporders geselecteerd."
+
+msgid "Invalid priority specified."
+msgstr "Ongeldige prioriteit opgegeven."
+
+msgid "No tasks selected."
+msgstr "Geen taken geselecteerd."
+
+msgid "Builder pricing configuration saved."
+msgstr "Prijsinstellingen voor bouwers opgeslagen."
+
+msgid "Edit Builder Pricing"
+msgstr "Bouwersprijzen bewerken"
+
+msgid "Add Builder Pricing"
+msgstr "Bouwersprijzen toevoegen"
+
+msgid "Discord message language saved."
+msgstr "Taal van Discord-berichten opgeslagen."
+
+msgid "Job alert settings saved."
+msgstr "Instellingen voor job-meldingen opgeslagen."
+
+msgid "Edit Job Alert Settings"
+msgstr "Instellingen job-meldingen bewerken"
+
+msgid "Add Job Alert Settings"
+msgstr "Instellingen job-meldingen toevoegen"
+
+#, python-format
+msgid ""
+"Updated priority for %(qty)sx %(item)s to %(prio)s (Reward: %(reward)s ISK)."
+msgstr ""
+"Prioriteit voor %(qty)sx %(item)s gewijzigd naar %(prio)s (beloning: "
+"%(reward)s ISK)."
+
+#, python-format
+msgid "Successfully updated priority to %(prio)s for %(count)s job(s)."
+msgstr "Prioriteit gewijzigd naar %(prio)s voor %(count)s job(s)."
+
+msgid "Watchlist item saved successfully."
+msgstr "Watchlist-item opgeslagen."
+
+msgid "Watchlist item deleted."
+msgstr "Watchlist-item verwijderd."
+
+msgid "Item rule saved."
+msgstr "Itemregel opgeslagen."
+
+msgid "Item rule deleted."
+msgstr "Itemregel verwijderd."
+
+msgid "Fixed price saved."
+msgstr "Vaste prijs opgeslagen."
+
+msgid "Fixed price deleted."
+msgstr "Vaste prijs verwijderd."
+
+msgid ""
+"Loading market groups in the background. This takes a few minutes; reload "
+"this page afterwards."
+msgstr ""
+"Marktgroepen worden op de achtergrond geladen. Dit duurt een paar minuten; "
+"laad deze pagina daarna opnieuw."
+
+msgid "Buyback Review Queue"
+msgstr "Buyback-beoordelingswachtrij"
+
+msgid "Suspicious contract dismissed."
+msgstr "Verdacht contract afgehandeld."
+
+msgid "FAQ entry deleted."
+msgstr "FAQ-vraag verwijderd."
+
+msgid ""
+"Checking in-game contracts now. Reload this page in a minute to see the "
+"result."
+msgstr ""
+"De in-game contracten worden nu gecontroleerd. Laad deze pagina over een "
+"minuut opnieuw voor het resultaat."
+
+msgid "Build material removed."
+msgstr "Bouwmateriaal verwijderd."
+
+#, python-format
+msgid "Buyback program '%(name)s' deleted."
+msgstr "Buyback-programma '%(name)s' verwijderd."
+
+msgid "Add Watchlist Item"
+msgstr "Watchlist-item toevoegen"
+
+msgid "Edit Watchlist Item"
+msgstr "Watchlist-item bewerken"
+
+msgid "Edit Item Rule"
+msgstr "Itemregel bewerken"
+
+msgid "Add Fixed Price"
+msgstr "Vaste prijs toevoegen"
+
+msgid "Edit Fixed Price"
+msgstr "Vaste prijs bewerken"
+
+msgid "Selling or reprocessing"
+msgstr "Verkopen of reprocessen"
+
+msgid "Buyback program saved successfully."
+msgstr "Buyback-programma opgeslagen."
+
+msgid "Edit Buyback Program"
+msgstr "Buyback-programma bewerken"
+
+msgid "Add Buyback Program"
+msgstr "Buyback-programma toevoegen"
+
+#, python-format
+msgid ""
+"Buyback program '%(name)s' has contracts and can't be deleted. Deactivate it "
+"instead."
+msgstr ""
+"Buyback-programma '%(name)s' heeft contracten en kan niet verwijderd worden. "
+"Zet het in plaats daarvan op inactief."
+
+msgid "This contract has already been resolved."
+msgstr "Dit contract is al afgehandeld."
+
+msgid "FAQ entry saved."
+msgstr "FAQ-vraag opgeslagen."
+
+msgid "Edit FAQ Entry"
+msgstr "FAQ-vraag bewerken"
+
+msgid "Add FAQ Entry"
+msgstr "FAQ-vraag toevoegen"
+
+msgid "Reprocessing settings saved."
+msgstr "Reprocessing-instellingen opgeslagen."
+
+msgid "Build material saved."
+msgstr "Bouwmateriaal opgeslagen."
+
+msgid "Edit Build Material"
+msgstr "Bouwmateriaal bewerken"
+
+msgid "Add Build Material"
+msgstr "Bouwmateriaal toevoegen"
+
+#, python-format
+msgid "Contract %(tracking_number)s paid out."
+msgstr "Contract %(tracking_number)s uitbetaald."
+
+#, python-format
+msgid "Contract %(tracking_number)s rejected."
+msgstr "Contract %(tracking_number)s geweigerd."
+
+#, python-format
+msgid "Your buyback contract %(tracking)s was paid out."
+msgstr "Je buyback-contract %(tracking)s is uitbetaald."
+
+#, python-format
+msgid "Your buyback contract %(tracking)s was rejected."
+msgstr "Je buyback-contract %(tracking)s is geweigerd."
+
+msgid ""
+"The AI Market Manager has generated the following new tasks based on current "
+"market conditions:"
+msgstr ""
+"De AI Marktbeheerder heeft op basis van de huidige markt de volgende nieuwe "
+"taken aangemaakt:"
+
+msgid "New AI-Generated Production Tasks"
+msgstr "Nieuwe door AI gegenereerde productietaken"
+
+#, python-format
+msgid ""
+"Quantity: %(qty)s\n"
+"Expected Margin: %(margin)s%%"
+msgstr ""
+"Aantal: %(qty)s\n"
+"Verwachte marge: %(margin)s%%"
+
+#, python-format
+msgid "Low Stock Warning: %(item)s"
+msgstr "Waarschuwing lage voorraad: %(item)s"
+
+#, python-format
+msgid ""
+"Total stock is **%(qty)s**, which is below the threshold of "
+"**%(threshold)s**."
+msgstr ""
+"De totale voorraad is **%(qty)s**, onder de drempel van **%(threshold)s**."
+
+#, python-format
+msgid "Low Wallet Balance: %(name)s"
+msgstr "Laag walletsaldo: %(name)s"
+
+#, python-format
+msgid ""
+"Balance is **%(balance)s ISK**, which is below the threshold of "
+"**%(threshold)s ISK**."
+msgstr ""
+"Het saldo is **%(balance)s ISK**, onder de drempel van **%(threshold)s ISK**."
+
+msgid "Unknown"
+msgstr "Onbekend"
+
+#, python-format
+msgid "Your industry job %(id)s has finished."
+msgstr "Je industry-job %(id)s is klaar."
+
+#, python-format
+msgid "Corporate Job Ready: %(item)s"
+msgstr "Corporatie-job klaar: %(item)s"
+
+#, python-format
+msgid "Job **%(id)s** is now ready to be delivered by **%(installer)s**."
+msgstr "Job **%(id)s** kan nu geleverd worden door **%(installer)s**."
+
+#, python-format
+msgid ""
+"Your claimed job %(qty)sx %(item)s is ~%(hours)sh past its estimated "
+"completion time."
+msgstr ""
+"Je geclaimde job %(qty)sx %(item)s is ~%(hours)su over de geschatte eindtijd."
+
+msgid "Overdue Claimed Jobs"
+msgstr "Geclaimde jobs over tijd"
+
+msgid "Claimed Job Overdue"
+msgstr "Geclaimde job over tijd"
+
+#, python-format
+msgid "%(count)s claimed job(s) are past their estimated completion time:"
+msgstr "%(count)s geclaimde job(s) zijn over hun geschatte eindtijd:"
+
+msgid "PI Extractor Expired"
+msgstr "PI-extractor gestopt"
+
+#, python-format
+msgid "Your extractor on **%(planet)s** has just stopped. Time to restart it!"
+msgstr ""
+"Je extractor op **%(planet)s** is net gestopt. Tijd om hem opnieuw te "
+"starten!"
+
+msgid "PI Storage Full"
+msgstr "PI-opslag vol"
+
+#, python-format
+msgid ""
+"The storage (or launchpad) on **%(planet)s** is (almost) full! Time to pick "
+"up your goods."
+msgstr ""
+"De opslag (of launchpad) op **%(planet)s** is (bijna) vol! Tijd om je "
+"goederen op te halen."
+
+#, python-format
+msgid "Your buyback contract %(tracking)s needs review: %(notes)s"
+msgstr "Je buyback-contract %(tracking)s moet beoordeeld worden: %(notes)s"
+
+#, python-format
+msgid "Your buyback contract %(tracking)s was matched successfully."
+msgstr "Je buyback-contract %(tracking)s is gekoppeld."
+
+#, python-format
+msgid "Your buyback contract %(tracking)s was accepted and paid."
+msgstr "Je buyback-contract %(tracking)s is geaccepteerd en betaald."
+
+#, python-format
+msgid "Your buyback contract %(tracking)s was rejected in-game."
+msgstr "Je buyback-contract %(tracking)s is in-game geweigerd."
+
+#, python-format
+msgid ""
+"Your buyback contract %(tracking)s expired - no matching contract was seen in"
+" time."
+msgstr ""
+"Je buyback-contract %(tracking)s is verlopen - er is op tijd geen passend "
+"contract gezien."
+
+#, python-format
+msgid ""
+"Your buyback contract %(tracking)s expired in-game without being accepted."
+msgstr ""
+"Je buyback-contract %(tracking)s is in-game verlopen zonder geaccepteerd te "
+"worden."
+
+msgid "Job Tracking Configuration"
+msgstr "Job-tracking instelling"
+
+msgid "Job Tracking Configurations"
+msgstr "Job-tracking instellingen"
+
+msgid "Webhook URL for new/flagged Buyback contracts."
+msgstr "Webhook-URL voor nieuwe/gemarkeerde buyback-contracten."
+
+msgid ""
+"Language of the messages sent to these webhooks. Empty uses the installation "
+"default (DISCORD_MESSAGE_LANGUAGE or LANGUAGE_CODE)."
+msgstr ""
+"Taal van de berichten naar deze webhooks. Leeg gebruikt de standaard van de "
+"installatie (DISCORD_MESSAGE_LANGUAGE of LANGUAGE_CODE)."
+
+msgid ""
+"Grace period added on top of a claimed job's estimated completion time before"
+" it's flagged as overdue. Also used as the interval between repeat reminders "
+"while a job stays overdue."
+msgstr ""
+"Extra tijd bovenop de geschatte eindtijd van een geclaimde job voordat die "
+"als te laat wordt gemarkeerd. Ook de tijd tussen herinneringen zolang een job"
+" te laat blijft."
+
 #~ msgid "No pricing configurations found."
 #~ msgstr "Geen prijsconfiguraties gevonden."
 
@@ -3744,21 +4370,3 @@ msgstr ""
 
 #~ msgid "Auto-refresh: 1m"
 #~ msgstr "Automatisch vernieuwen: 1m"
-
-msgid "Upfront (PLEX)"
-msgstr "Vooraf (PLEX)"
-
-msgid "Upfront Payment Required (PLEX):"
-msgstr "Vooruitbetaling vereist (PLEX):"
-
-msgid "Missing"
-msgstr "Ontbreekt"
-
-msgid "All required blueprints are available in the corporation."
-msgstr "Alle benodigde blauwdrukken zijn beschikbaar binnen de corporatie."
-
-msgid "Remaining Balance on Delivery:"
-msgstr "Restant bij levering:"
-
-msgid "Current rate"
-msgstr "Huidige koers"

@@ -252,21 +252,40 @@ def evaluate_baskets(basket_id=None):
                     corporation__corporation_id=corp_id
                 ).first()
                 if webhook_config and webhook_config.ai_jobs_webhook:
-                    embed = {
-                        "title": "🏭 New AI-Generated Production Tasks",
-                        "description": "The AI Market Manager has generated the following new tasks based on current market conditions:",
-                        "color": 3447003,
-                        "fields": [],
-                    }
-                    for job in jobs:
-                        embed["fields"].append(
-                            {
-                                "name": job["name"],
-                                "value": f"Quantity: {job['qty']}\nExpected Margin: {job['margin']:.1f}%",
-                                "inline": False,
-                            }
-                        )
-                    send_discord_webhook(webhook_config.ai_jobs_webhook, embed)
+                    # Django
+                    from django.utils.translation import gettext
+
+                    from ..discord_i18n import discord_language
+                    from ..utils.discord import webhook_language
+
+                    language = webhook_language(webhook_config)
+                    with discord_language(language):
+                        embed = {
+                            "title": "🏭 " + gettext("New AI-Generated Production Tasks"),
+                            "description": gettext(
+                                "The AI Market Manager has generated the following "
+                                "new tasks based on current market conditions:"
+                            ),
+                            "color": 3447003,
+                            "fields": [],
+                        }
+                        for job in jobs:
+                            embed["fields"].append(
+                                {
+                                    "name": job["name"],
+                                    "value": gettext(
+                                        "Quantity: %(qty)s\nExpected Margin: %(margin)s%%"
+                                    )
+                                    % {
+                                        "qty": job["qty"],
+                                        "margin": f"{job['margin']:.1f}",
+                                    },
+                                    "inline": False,
+                                }
+                            )
+                    send_discord_webhook(
+                        webhook_config.ai_jobs_webhook, embed, language
+                    )
             except Exception as e:
                 logger.error(f"Error sending AI jobs webhook for corp {corp_id}: {e}")
 

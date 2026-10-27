@@ -116,15 +116,32 @@ def task_sync_corp_wallets():
                             now - div.last_warning
                         ) > datetime.timedelta(days=1):
                             if webhook_config and webhook_config.wallets_webhook:
-                                from ..utils.discord import send_discord_webhook
+                                # Django
+                                from django.utils.translation import gettext
 
-                                embed = {
-                                    "title": f"Low Wallet Balance: {div.name}",
-                                    "description": f"Balance is **{balance:,.2f} ISK**, which is below the threshold of **{threshold:,.2f} ISK**.",
-                                    "color": 15158332,  # Red
-                                }
+                                from ..discord_i18n import discord_language
+                                from ..utils.discord import (
+                                    send_discord_webhook,
+                                    webhook_language,
+                                )
+
+                                language = webhook_language(webhook_config)
+                                with discord_language(language):
+                                    embed = {
+                                        "title": gettext("Low Wallet Balance: %(name)s")
+                                        % {"name": div.name},
+                                        "description": gettext(
+                                            "Balance is **%(balance)s ISK**, which is "
+                                            "below the threshold of **%(threshold)s ISK**."
+                                        )
+                                        % {
+                                            "balance": f"{balance:,.2f}",
+                                            "threshold": f"{threshold:,.2f}",
+                                        },
+                                        "color": 15158332,  # Red
+                                    }
                                 send_discord_webhook(
-                                    webhook_config.wallets_webhook, embed
+                                    webhook_config.wallets_webhook, embed, language
                                 )
                             div.last_warning = now
                             div.save()

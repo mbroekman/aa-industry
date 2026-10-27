@@ -275,7 +275,11 @@ class TestBuybackPollFollowsInGameStatus:
         )
         assert payouts.count() == 1
         assert payouts.first().director is None
-        assert any("accepted and paid" in c.args[1] for c in mock_notify.call_args_list)
+        messages = [
+            c.args[1]() if callable(c.args[1]) else c.args[1]
+            for c in mock_notify.call_args_list
+        ]
+        assert any("accepted and paid" in m for m in messages)
 
     @patch("industry_reforged.tasks.utils.notify_discord_user")
     @patch("industry_reforged.tasks.buyback.esi")

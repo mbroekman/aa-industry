@@ -4,6 +4,9 @@ Sellers get a Discord DM and an Alliance Auth notification, unless they turned
 buyback notifications off. A program can post every new contract (flagged ones
 always) to the corporation's buyback webhook, optionally with the item list,
 and DM a manager character.
+
+Messages to a person are built in that person's Alliance Auth language; posts
+to the webhook in the language of the corporation's webhook configuration.
 """
 
 # Standard Library
@@ -12,6 +15,9 @@ import logging
 # Django
 from django.conf import settings
 from django.urls import reverse
+from django.utils.translation import gettext
+
+from ..discord_i18n import discord_language, user_language
 
 logger = logging.getLogger(__name__)
 
@@ -36,24 +42,30 @@ def _notifications_disabled(user) -> bool:
     ).exists()
 
 
-def _auth_notify(user, title: str, message: str, level: str = "info"):
+def _text(value) -> str:
+    return str(value() if callable(value) else value)
+
+
+def _auth_notify(user, title, message, level: str = "info"):
     try:
         # Alliance Auth
         from allianceauth.notifications import notify
 
-        notify(user, title, message, level)
+        with discord_language(user_language(user)):
+            notify(user, _text(title), _text(message), level)
     except Exception as e:
         logger.warning(f"Could not create Auth notification for {user}: {e}")
 
 
-def _dm(character, message: str):
+def _dm(character, message):
     from ..tasks.utils import notify_discord_user
 
     notify_discord_user(character, message)
 
 
-def notify_seller(contract, title: str, message: str, level: str = "info"):
-    """DM + Auth notification to the seller, unless they opted out."""
+def notify_seller(contract, title, message, level: str = "info"):
+    """DM + Auth notification to the seller, unless they opted out. `title`
+    and `message` may be callables; they are built in the seller's language."""
     if not contract.character:
         return
     user = _user_of(contract.character)
@@ -81,81 +93,100 @@ def _item_list(contract) -> str:
     text = "\n".join(lines)
     if len(text) > EMBED_FIELD_LIMIT:
         text = (
-            text[: EMBED_FIELD_LIMIT - 30].rsplit("\n", 1)[0] + "\n... (see the link)"
+            text[: EMBED_FIELD_LIMIT - 30].rsplit("\n", 1)[0]
+            + "\n... "
+            + gettext("(see the link)")
         )
     return text
 
 
-def _webhook_url(program):
+def _webhook_config(program):
     from ..models import CorporationWebhookConfig
 
     config = CorporationWebhookConfig.objects.filter(
         corporation=program.corporation
     ).first()
-    return config.buyback_webhook if config and config.buyback_webhook else None
+    return config if config and config.buyback_webhook else None
 
 
 def notify_new_contract(contract):
     """Fired once, when an in-game contract is first matched to the appraisal."""
+    from .discord import send_discord_webhook, webhook_language
+
     program = contract.program
     flagged = contract.status == "FLAGGED"
 
-    webhook = _webhook_url(program)
-    if webhook and (flagged or program.notify_new_contracts):
-        from .discord import send_discord_webhook
-
-        seller = contract.character.character_name if contract.character else "-"
-        fields = [
-            {"name": "Seller", "value": seller, "inline": True},
-            {"name": "Status", "value": contract.get_status_display(), "inline": True},
-            {
-                "name": "Price",
-                "value": f"{contract.quoted_price:,.2f} ISK",
-                "inline": True,
-            },
-        ]
-        if contract.flag_notes:
-            fields.append(
+    config = _webhook_config(program)
+    if config and (flagged or program.notify_new_contracts):
+        language = webhook_language(config)
+        with discord_language(language):
+            seller = contract.character.character_name if contract.character else "-"
+            fields = [
+                {"name": gettext("Seller"), "value": seller, "inline": True},
                 {
-                    "name": "Review notes",
-                    "value": contract.flag_notes[:EMBED_FIELD_LIMIT],
-                }
-            )
-        if contract.seller_note:
-            fields.append(
+                    "name": gettext("Status"),
+                    "value": str(contract.get_status_display()),
+                    "inline": True,
+                },
                 {
-                    "name": "Note from seller",
-                    "value": contract.seller_note[:EMBED_FIELD_LIMIT],
-                }
-            )
-        if program.notify_show_item_list:
-            fields.append({"name": "Items", "value": _item_list(contract) or "-"})
-        send_discord_webhook(
-            webhook,
-            {
-                "title": (
-                    f"Buyback contract flagged: {contract.tracking_number}"
-                    if flagged
-                    else f"New buyback contract: {contract.tracking_number}"
-                ),
-                "description": f"{program.name} - [open]({contract_url(contract)})",
+                    "name": gettext("Price"),
+                    "value": f"{contract.quoted_price:,.2f} ISK",
+                    "inline": True,
+                },
+            ]
+            if contract.flag_notes:
+                fields.append(
+                    {
+                        "name": gettext("Review notes"),
+                        "value": contract.flag_notes[:EMBED_FIELD_LIMIT],
+                    }
+                )
+            if contract.seller_note:
+                fields.append(
+                    {
+                        "name": gettext("Note from seller"),
+                        "value": contract.seller_note[:EMBED_FIELD_LIMIT],
+                    }
+                )
+            if program.notify_show_item_list:
+                fields.append(
+                    {"name": gettext("Items"), "value": _item_list(contract) or "-"}
+                )
+            title = (
+                gettext("Buyback contract flagged: %(tracking)s")
+                if flagged
+                else gettext("New buyback contract: %(tracking)s")
+            ) % {"tracking": contract.tracking_number}
+            embed = {
+                "title": title,
+                "description": f"{program.name} - [{gettext('open')}]({contract_url(contract)})",
                 "color": COLOR_RED if flagged else COLOR_GREEN,
                 "fields": fields,
-            },
-        )
+            }
+        send_discord_webhook(config.buyback_webhook, embed, language)
 
     manager = program.notify_manager_character
     if manager:
-        message = (
-            f"New buyback contract {contract.tracking_number} in {program.name}"
-            f"{' (needs review)' if flagged else ''}: {contract_url(contract)}"
-        )
+
+        def message():
+            text = (
+                gettext("New buyback contract %(tracking)s in %(program)s (needs review): %(url)s")
+                if flagged
+                else gettext("New buyback contract %(tracking)s in %(program)s: %(url)s")
+            )
+            return text % {
+                "tracking": contract.tracking_number,
+                "program": program.name,
+                "url": contract_url(contract),
+            }
+
         _dm(manager, message)
         user = _user_of(manager)
         if user is not None:
             _auth_notify(
                 user,
-                f"Buyback contract {contract.tracking_number}",
+                lambda: gettext("Buyback contract %(tracking)s")
+                % {"tracking": contract.tracking_number},
                 message,
                 "warning" if flagged else "info",
             )
@@ -163,23 +194,31 @@ def notify_new_contract(contract):
 
 def notify_untracked_contract(untracked):
     """An in-game contract uses the program's prefix but no issued tracking number."""
-    program = untracked.program
-    message = (
-        f"Untracked buyback contract in {program.name}: '{untracked.title}' "
-        f"from {untracked.issuer_name} for {untracked.price:,.2f} ISK. Its tracking "
-        "number was never issued - check it before accepting."
-    )
-    webhook = _webhook_url(program)
-    if webhook:
-        from .discord import send_discord_webhook
+    from .discord import send_discord_webhook, webhook_language
 
-        send_discord_webhook(
-            webhook,
-            {
-                "title": "Suspicious buyback contract",
-                "description": message,
+    program = untracked.program
+
+    def message():
+        return gettext(
+            "Untracked buyback contract in %(program)s: '%(title)s' from %(issuer)s "
+            "for %(price)s ISK. Its tracking number was never issued - check it "
+            "before accepting."
+        ) % {
+            "program": program.name,
+            "title": untracked.title,
+            "issuer": untracked.issuer_name,
+            "price": f"{untracked.price:,.2f}",
+        }
+
+    config = _webhook_config(program)
+    if config:
+        language = webhook_language(config)
+        with discord_language(language):
+            embed = {
+                "title": gettext("Suspicious buyback contract"),
+                "description": message(),
                 "color": COLOR_ORANGE,
-            },
-        )
+            }
+        send_discord_webhook(config.buyback_webhook, embed, language)
     if program.notify_manager_character:
         _dm(program.notify_manager_character, message)

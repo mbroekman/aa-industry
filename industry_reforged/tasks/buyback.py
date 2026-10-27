@@ -14,6 +14,7 @@ from celery import shared_task
 from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.translation import gettext, gettext_noop
 
 # Alliance Auth
 from esi.models import Token
@@ -148,9 +149,15 @@ def watchlist_flag_notes(program, type_ids) -> list[str]:
     ]
 
 
-def _notify_seller(contract, message: str, level: str = "info"):
+def _notify_seller(contract, message_id: str, level: str = "info", **params):
+    """`message_id` is an untranslated text (gettext_noop) with %(tracking)s;
+    it is translated in the seller's language."""
+    values = {"tracking": contract.tracking_number, **params}
     buyback_notify.notify_seller(
-        contract, f"Buyback contract {contract.tracking_number}", message, level
+        contract,
+        lambda: gettext("Buyback contract %(tracking)s") % values,
+        lambda: gettext(message_id) % values,
+        level,
     )
 
 
@@ -160,13 +167,14 @@ def _send_match_notifications(contract):
     if contract.status == "FLAGGED":
         _notify_seller(
             contract,
-            f"Your buyback contract {contract.tracking_number} needs review: {contract.flag_notes}",
+            gettext_noop("Your buyback contract %(tracking)s needs review: %(notes)s"),
             "warning",
+            notes=contract.flag_notes,
         )
     elif contract.status == "MATCHED":
         _notify_seller(
             contract,
-            f"Your buyback contract {contract.tracking_number} was matched successfully.",
+            gettext_noop("Your buyback contract %(tracking)s was matched successfully."),
             "success",
         )
 
@@ -282,14 +290,14 @@ def _follow_esi_status(contract, esi_contract):
         if contract.mark_paid(notes="Buyback payout (contract accepted in-game)"):
             _notify_seller(
                 contract,
-                f"Your buyback contract {contract.tracking_number} was accepted and paid.",
+                gettext_noop("Your buyback contract %(tracking)s was accepted and paid."),
             )
     elif esi_status in ESI_REJECTED:
         contract.status = "REJECTED"
         contract.save(update_fields=["status", "updated_at"])
         _notify_seller(
             contract,
-            f"Your buyback contract {contract.tracking_number} was rejected in-game.",
+            gettext_noop("Your buyback contract %(tracking)s was rejected in-game."),
         )
     elif esi_status in ESI_WITHDRAWN:
         # The seller withdrew it - typically to fix it. Go back to PENDING so a
@@ -308,7 +316,10 @@ def _follow_esi_status(contract, esi_contract):
             contract.save(update_fields=["status", "updated_at"])
             _notify_seller(
                 contract,
-                f"Your buyback contract {contract.tracking_number} expired in-game without being accepted.",
+                gettext_noop(
+                    "Your buyback contract %(tracking)s expired in-game without being "
+                    "accepted."
+                ),
             )
 
 
@@ -402,7 +413,10 @@ def buyback_purge_stale_contracts():
             contract.save(update_fields=["status", "updated_at"])
             _notify_seller(
                 contract,
-                f"Your buyback contract {contract.tracking_number} expired - no matching contract was seen in time.",
+                gettext_noop(
+                    "Your buyback contract %(tracking)s expired - no matching contract "
+                    "was seen in time."
+                ),
             )
 
 

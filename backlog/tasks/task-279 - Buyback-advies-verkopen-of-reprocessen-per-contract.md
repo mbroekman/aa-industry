@@ -1,10 +1,10 @@
 ---
 id: TASK-279
-title: 'Buyback: advies verkopen of reprocessen per contract'
+title: 'Buyback: sell or reprocess advice per contract'
 status: Done
 assignee: []
 created_date: '2026-10-25 18:27'
-updated_date: '2026-10-25 18:36'
+updated_date: '2026-10-27 10:26'
 labels: []
 dependencies: []
 ordinal: 453000

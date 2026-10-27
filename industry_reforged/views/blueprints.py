@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 
 # App
 from ..models import (
@@ -19,7 +19,8 @@ from ..models import (
     ProductionTask,
 )
 from ..tasks.utils import notify_discord_user
-from ..utils.discord import send_discord_webhook
+from ..discord_i18n import discord_language
+from ..utils.discord import send_discord_webhook, webhook_language
 
 logger = logging.getLogger(__name__)
 
@@ -75,29 +76,39 @@ def request_blueprint(request: WSGIRequest, item_id: int) -> HttpResponse:
             webhook_configs = CorporationWebhookConfig.objects.all()
             for config in webhook_configs:
                 if config.blueprint_requests_webhook:
-                    embed = {
-                        "title": "New Blueprint Request",
-                        "description": f"**{request.user.username}** has requested copies of **{blueprint.eve_type.name}**.",
-                        "color": 3447003,  # Blue
-                        "fields": [
-                            {
-                                "name": "Quantity",
-                                "value": str(requested_quantity),
-                                "inline": True,
+                    language = webhook_language(config)
+                    with discord_language(language):
+                        embed = {
+                            "title": gettext("New Blueprint Request"),
+                            "description": gettext(
+                                "**%(user)s** has requested copies of **%(item)s**."
+                            )
+                            % {
+                                "user": request.user.username,
+                                "item": blueprint.eve_type.name,
                             },
-                            {
-                                "name": "Runs",
-                                "value": str(requested_runs),
-                                "inline": True,
-                            },
-                            {
-                                "name": "Notes",
-                                "value": notes if notes else "None",
-                                "inline": False,
-                            },
-                        ],
-                    }
-                    send_discord_webhook(config.blueprint_requests_webhook, embed)
+                            "color": 3447003,  # Blue
+                            "fields": [
+                                {
+                                    "name": gettext("Quantity"),
+                                    "value": str(requested_quantity),
+                                    "inline": True,
+                                },
+                                {
+                                    "name": gettext("Runs"),
+                                    "value": str(requested_runs),
+                                    "inline": True,
+                                },
+                                {
+                                    "name": gettext("Notes"),
+                                    "value": notes if notes else gettext("None"),
+                                    "inline": False,
+                                },
+                            ],
+                        }
+                    send_discord_webhook(
+                        config.blueprint_requests_webhook, embed, language
+                    )
 
             messages.success(
                 request,
@@ -168,7 +179,12 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
                     and bp_req.requester.profile.main_character
                 ):
                     main_char = bp_req.requester.profile.main_character
-                    msg = f"Your Blueprint Request for **{bp_req.blueprint.eve_type.name}** has been marked as **{new_status}** by {request.user.username}."
+                    def msg(item=bp_req.blueprint.eve_type.name, by=request.user.username):
+                        return gettext(
+                            "Your Blueprint Request for **%(item)s** has been marked "
+                            "as **%(status)s** by %(by)s."
+                        ) % {"item": item, "status": new_status, "by": by}
+
                     notify_discord_user(main_char, msg)
             except Exception as e:
                 logger.error(

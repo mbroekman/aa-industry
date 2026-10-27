@@ -11,6 +11,9 @@ from celery import shared_task
 from esi.exceptions import HTTPNotModified
 from esi.models import Token
 
+# Django
+from django.utils.translation import gettext
+
 from ..models import (
     CharacterIndustryJob,
     CorporationIndustryJob,
@@ -120,7 +123,10 @@ def update_character_jobs():
                     if was_active and obj.status in ["completed", "delivered"]:
                         notify_discord_user(
                             obj.character,
-                            f"Your industry job {obj.job_id} has finished.",
+                            lambda job_id=obj.job_id: gettext(
+                                "Your industry job %(id)s has finished."
+                            )
+                            % {"id": job_id},
                         )
 
             # Cleanup jobs that fell off ESI
@@ -287,20 +293,37 @@ def update_corporation_jobs():
                         corporation=config.corporation
                     ).first()
                     if webhook_config and webhook_config.jobs_webhook:
-                        from ..utils.discord import send_discord_webhook
+                        from ..discord_i18n import discord_language
+                        from ..utils.discord import (
+                            send_discord_webhook,
+                            webhook_language,
+                        )
 
-                        p_name = (
-                            obj.product_type.name if obj.product_type else "Unknown"
+                        language = webhook_language(webhook_config)
+                        with discord_language(language):
+                            p_name = (
+                                obj.product_type.name
+                                if obj.product_type
+                                else gettext("Unknown")
+                            )
+                            i_name = (
+                                obj.installer.character_name
+                                if obj.installer
+                                else gettext("Unknown")
+                            )
+                            embed = {
+                                "title": gettext("Corporate Job Ready: %(item)s")
+                                % {"item": p_name},
+                                "description": gettext(
+                                    "Job **%(id)s** is now ready to be delivered by "
+                                    "**%(installer)s**."
+                                )
+                                % {"id": obj.job_id, "installer": i_name},
+                                "color": 15844367,  # Gold
+                            }
+                        send_discord_webhook(
+                            webhook_config.jobs_webhook, embed, language
                         )
-                        i_name = (
-                            obj.installer.character_name if obj.installer else "Unknown"
-                        )
-                        embed = {
-                            "title": f"Corporate Job Ready: {p_name}",
-                            "description": f"Job **{obj.job_id}** is now ready to be delivered by **{i_name}**.",
-                            "color": 15844367,  # Gold
-                        }
-                        send_discord_webhook(webhook_config.jobs_webhook, embed)
 
         # Cleanup jobs that fell off ESI
         if successful_fetches == 2:

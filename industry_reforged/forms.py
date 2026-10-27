@@ -22,6 +22,7 @@ from .models import (
     CorpBuildMaterial,
     CorpItemConfig,
     CorporationPricingConfig,
+    CorporationWebhookConfig,
     CorpPricingConfig,
     CorpReprocessingConfig,
     CorpTypeDiscount,
@@ -1361,3 +1362,28 @@ class CorpBuildMaterialForm(forms.ModelForm):
                 )
             self.instance.eve_type = None
         return cleaned_data
+
+
+class DiscordLanguageForm(forms.ModelForm):
+    """Language of the corporation's Discord webhook messages."""
+
+    class Meta:
+        model = CorporationWebhookConfig
+        fields = ["discord_language"]
+        labels = {"discord_language": _("Language of Discord messages")}
+
+    def __init__(self, *args, **kwargs):
+        from .discord_i18n import language_choices
+
+        super().__init__(*args, **kwargs)
+        self.fields["discord_language"] = forms.ChoiceField(
+            choices=language_choices(),
+            required=False,
+            label=_("Language of Discord messages"),
+            help_text=_(
+                "All posts to this corporation's webhooks use this language, "
+                "whatever language the person who triggered them uses. Direct "
+                "messages follow each member's own language."
+            ),
+            widget=forms.Select(attrs={"class": "form-select"}),
+        )

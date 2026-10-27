@@ -521,6 +521,11 @@ urlpatterns = [
         name="director_config_build_material_delete",
     ),
     path(
+        "director/config/discord-language/",
+        director.director_config_discord_language,
+        name="director_config_discord_language",
+    ),
+    path(
         "director/buyback/reprocessing/",
         buyback.director_config_buyback_reprocessing,
         name="director_config_buyback_reprocessing",

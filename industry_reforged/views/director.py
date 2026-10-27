@@ -1059,6 +1059,7 @@ def director_config(request: WSGIRequest) -> HttpResponse:
             reprocessing_tax_config.broker_fee_rate if reprocessing_tax_config else 0.0
         ),
         "job_tracking_configs": job_tracking_configs,
+        "discord_language_label": _discord_language_label(corporation),
     }
     return render(request, "industry_reforged/director_config.html", context)
 
@@ -1315,6 +1316,42 @@ def director_config_pricing_method_edit(
 
 @login_required
 @permission_required("industry_reforged.corp_access")
+def director_config_discord_language(request: WSGIRequest) -> HttpResponse:
+    """Language of the director's corporation's Discord webhook messages."""
+    from ..forms import DiscordLanguageForm
+    from ..models import CorporationWebhookConfig
+
+    main = request.user.profile.main_character
+    corporation = main.corporation if main else None
+    if not corporation:
+        messages.error(request, _("You are not part of a corporation."))
+        return redirect("industry_reforged:director_config")
+
+    instance = CorporationWebhookConfig.objects.filter(corporation=corporation).first()
+    instance = instance or CorporationWebhookConfig(corporation=corporation)
+    if request.method == "POST":
+        form = DiscordLanguageForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Discord message language saved."))
+            return redirect(reverse("industry_reforged:director_config") + "#pricing")
+    else:
+        form = DiscordLanguageForm(instance=instance)
+
+    return render(
+        request,
+        "industry_reforged/director_config_form.html",
+        {
+            "title": _("Discord Messages"),
+            "form": form,
+            "back_url": "industry_reforged:director_config",
+            "back_hash": "#pricing",
+        },
+    )
+
+
+@login_required
+@permission_required("industry_reforged.corp_access")
 def director_config_job_tracking_edit(
     request: WSGIRequest, config_id: int = None
 ) -> HttpResponse:
@@ -1440,3 +1477,20 @@ def director_config_sync_rigs(request: WSGIRequest) -> HttpResponse:
         )
 
     return redirect("industry_reforged:director_config")
+
+
+def _discord_language_label(corporation) -> str:
+    """Readable name of the corporation's Discord message language."""
+    from django.conf import settings
+
+    from ..discord_i18n import default_language
+    from ..models import CorporationWebhookConfig
+
+    config = CorporationWebhookConfig.objects.filter(corporation=corporation).first()
+    names = dict(settings.LANGUAGES)
+    if config and config.discord_language:
+        return str(names.get(config.discord_language, config.discord_language))
+    default = default_language()
+    return _("Default: %(language)s") % {
+        "language": names.get(default, names.get(default.split("-")[0], default))
+    }

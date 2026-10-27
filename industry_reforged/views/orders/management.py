@@ -12,7 +12,8 @@ from ...models import (
     MemberOrder,
     ProductionTask,
 )
-from ...utils.discord import send_discord_webhook
+from ...discord_i18n import discord_language
+from ...utils.discord import send_discord_webhook, webhook_language
 
 
 def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
@@ -62,12 +63,20 @@ def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
                 deleted_by_name = (
                     main_char.character_name if main_char else request.user.username
                 )
-                embed = {
-                    "title": f"Order Deleted: #{order.id}",
-                    "description": f"**{order.character.character_name}**'s order was deleted by **{deleted_by_name}**.",
-                    "color": 15158332,  # Red
-                }
-                send_discord_webhook(webhook_config.orders_webhook, embed)
+                language = webhook_language(webhook_config)
+                with discord_language(language):
+                    embed = {
+                        "title": _("Order Deleted: #%(id)s") % {"id": order.id},
+                        "description": _(
+                            "**%(name)s**'s order was deleted by **%(deleted_by)s**."
+                        )
+                        % {
+                            "name": order.character.character_name,
+                            "deleted_by": deleted_by_name,
+                        },
+                        "color": 15158332,  # Red
+                    }
+                send_discord_webhook(webhook_config.orders_webhook, embed, language)
 
         # If this is a child order created via Split Items, we should move the items back to the parent!
         # How to distinguish? Component splits have a specific note: "Sub-component ... split from Order"

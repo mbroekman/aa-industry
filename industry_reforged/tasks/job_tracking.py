@@ -8,10 +8,12 @@ from celery import shared_task
 
 # Django
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from ..models import CorporationWebhookConfig, ProductionTask
 from ..utils import eta_service
-from ..utils.discord import send_discord_webhook
+from ..discord_i18n import discord_language
+from ..utils.discord import send_discord_webhook, webhook_language
 from .utils import log_task_execution, send_pi_notification
 
 logger = logging.getLogger(__name__)
@@ -60,12 +62,16 @@ def check_overdue_production_tasks():
         hours_overdue = (
             int(overdue_since.total_seconds() // 3600) if overdue_since else 0
         )
-        message = (
-            f"Your claimed job {task.quantity}x {task.item_type.name} is "
-            f"~{hours_overdue}h past its estimated completion time."
-        )
+        def message(qty=task.quantity, item=task.item_type.name, hours=hours_overdue):
+            return gettext(
+                "Your claimed job %(qty)sx %(item)s is ~%(hours)sh past its "
+                "estimated completion time."
+            ) % {"qty": qty, "item": item, "hours": hours}
+
         send_pi_notification(
-            task.assigned_to, title="Claimed Job Overdue", message=message
+            task.assigned_to,
+            title=lambda: gettext("Claimed Job Overdue"),
+            message=message,
         )
 
         task.last_overdue_notified_at = now
@@ -85,12 +91,17 @@ def check_overdue_production_tasks():
             f"- **{t.assigned_to.character_name}**: {t.quantity}x {t.item_type.name}"
             for t in flagged_tasks
         )
-        embed = {
-            "title": "Overdue Claimed Jobs",
-            "description": (
-                f"{len(flagged_tasks)} claimed job(s) are past their estimated "
-                f"completion time:\n{lines}"
-            ),
-            "color": 15158332,  # Red
-        }
-        send_discord_webhook(webhook_config.directors_webhook, embed)
+        language = webhook_language(webhook_config)
+        with discord_language(language):
+            embed = {
+                "title": gettext("Overdue Claimed Jobs"),
+                "description": gettext(
+                    "%(count)s claimed job(s) are past their estimated completion "
+                    "time:"
+                )
+                % {"count": len(flagged_tasks)}
+                + "\n"
+                + lines,
+                "color": 15158332,  # Red
+            }
+        send_discord_webhook(webhook_config.directors_webhook, embed, language)

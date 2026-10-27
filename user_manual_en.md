@@ -144,6 +144,7 @@ All business and pricing rules are managed strictly via the **Director Control P
 ### 3.6 Corporate Discord Webhooks
 
 - In addition to Direct Messages for members, directors can configure corporate webhooks.
+- **Language**: all posts to a corporation's webhooks use one fixed language, set in **Director Configurations -> Global Pricing -> Discord Messages** (empty means the installation default). It no longer depends on the language of the person who triggered the message. Direct messages to members use each member's own Alliance Auth language.
 - Add your webhook URLs via the Django Admin Panel (`Discord Webhook Configurations`).
   - **Orders Webhook**: A general webhook for announcements when a member places a **New Order** or when a **Quote is provided**.
   - **Directors Webhook**: A specific webhook for Director-only action alerts, such as when a new quote needs to be calculated, when an order is **Ready for Delivery**, or a batched summary whenever claimed jobs become overdue (see **Job Alerts** in Director Config).

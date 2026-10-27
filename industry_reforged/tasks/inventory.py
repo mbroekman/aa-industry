@@ -182,15 +182,32 @@ def task_sync_corp_inventory():
                         now - config.last_low_stock_warning
                     ) > datetime.timedelta(days=1):
                         if webhook_config and webhook_config.inventory_webhook:
-                            from ..utils.discord import send_discord_webhook
+                            # Django
+                            from django.utils.translation import gettext
 
-                            embed = {
-                                "title": f"Low Stock Warning: {config.item_type.name}",
-                                "description": f"Total stock is **{total_qty}**, which is below the threshold of **{config.target_threshold}**.",
-                                "color": 15158332,  # Red
-                            }
+                            from ..discord_i18n import discord_language
+                            from ..utils.discord import (
+                                send_discord_webhook,
+                                webhook_language,
+                            )
+
+                            language = webhook_language(webhook_config)
+                            with discord_language(language):
+                                embed = {
+                                    "title": gettext("Low Stock Warning: %(item)s")
+                                    % {"item": config.item_type.name},
+                                    "description": gettext(
+                                        "Total stock is **%(qty)s**, which is below "
+                                        "the threshold of **%(threshold)s**."
+                                    )
+                                    % {
+                                        "qty": total_qty,
+                                        "threshold": config.target_threshold,
+                                    },
+                                    "color": 15158332,  # Red
+                                }
                             send_discord_webhook(
-                                webhook_config.inventory_webhook, embed
+                                webhook_config.inventory_webhook, embed, language
                             )
 
                         if config.auto_produce:

@@ -159,6 +159,14 @@ Some Buyback pricing options need EVE data that a default eveuniverse install do
 
 Market groups are the exception: to choose one for an item rule they must all exist first. Click **Load market groups** in the Item Rules section of the Buyback tab once; this runs `industry_reforged.tasks.buyback_load_market_groups` in the background (not a scheduled task). The "NPC price" options use CCP's average prices, which the daily `task_pull_market_data` run refreshes.
 
+#### Language of Discord messages
+
+Discord messages don't follow the language of whoever triggered them. Posts to webhooks use the language chosen per corporation under **Director Configurations -> Global Pricing -> Discord Messages**; when none is chosen, the installation default applies. Direct messages to members use each member's own Alliance Auth language. Set the default in `myauth/settings/local.py` (it falls back to `LANGUAGE_CODE`):
+
+```python
+DISCORD_MESSAGE_LANGUAGE = "en"  # or e.g. "nl-nl"
+```
+
 #### Automating Scopes for all Users
 To prevent members from having to manually authorize additional PI or Industry tokens, you can configure Alliance Auth to **automatically request these scopes** during the standard "Add Character" login flow. Add the following to your `myauth/settings/local.py`:
 

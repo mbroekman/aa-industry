@@ -356,10 +356,12 @@ def director_buyback_contract_resolve(
         action = request.POST.get("action")
         if action == "accept_and_pay":
             if contract.mark_paid(director=request.user):
+                tracking = contract.tracking_number
                 buyback_notify.notify_seller(
                     contract,
-                    f"Buyback contract {contract.tracking_number}",
-                    f"Your buyback contract {contract.tracking_number} was paid out.",
+                    lambda: _("Buyback contract %(tracking)s") % {"tracking": tracking},
+                    lambda: _("Your buyback contract %(tracking)s was paid out.")
+                    % {"tracking": tracking},
                     "success",
                 )
                 messages.success(
@@ -373,10 +375,15 @@ def director_buyback_contract_resolve(
             if reason:
                 contract.flag_notes = reason
             contract.save(update_fields=["status", "flag_notes", "updated_at"])
+            tracking = contract.tracking_number
             buyback_notify.notify_seller(
                 contract,
-                f"Buyback contract {contract.tracking_number}",
-                f"Your buyback contract {contract.tracking_number} was rejected. {reason}".strip(),
+                lambda: _("Buyback contract %(tracking)s") % {"tracking": tracking},
+                lambda: (
+                    _("Your buyback contract %(tracking)s was rejected.")
+                    % {"tracking": tracking}
+                    + (f" {reason}" if reason else "")
+                ),
                 "danger",
             )
             messages.success(

@@ -288,6 +288,17 @@
 
             <div class="card border-0 mb-4 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="card-title mb-0"><i class="fab fa-discord text-primary"></i> {% trans "Discord Messages" %}</h5>
+                    <a href="{% url 'industry_reforged:director_config_discord_language' %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> {% trans "Edit" %}</a>
+                </div>
+                <div class="card-body">
+                    <div><span class="text-muted">{% trans "Language of webhook messages:" %}</span> <strong>{{ discord_language_label }}</strong></div>
+                    <div class="small text-muted mt-1">{% trans "Posts to your corporation's Discord webhooks always use this language. Direct messages follow each member's own language." %}</div>
+                </div>
+            </div>
+
+            <div class="card border-0 mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
                     <h5 class="card-title mb-0"><i class="fas fa-bell text-warning"></i> {% trans "Job Alerts" %}</h5>
                     <a href="{% url 'industry_reforged:director_config_job_tracking_add' %}" class="btn btn-sm btn-success"><i class="fas fa-plus"></i> {% trans "Configure Alerts" %}</a>
                 </div>

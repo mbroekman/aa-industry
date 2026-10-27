@@ -91,9 +91,23 @@ class IndustryESIProvider(ESIClientProvider):
 esi = IndustryESIProvider()
 
 
+def _in_language(text, language: str) -> str:
+    """`text` as a string in `language`: a callable is called (so it builds
+    its translations there), a lazy translation is resolved there."""
+    from ..discord_i18n import discord_language
+
+    with discord_language(language):
+        return str(text() if callable(text) else text)
+
+
 def notify_discord_user(character, message):
+    """DM the character's owner. `message` may be a callable that builds the
+    text; it then runs in the recipient's Alliance Auth language."""
+    from ..discord_i18n import user_language
+
     try:
         user = character.character_ownership.user
+        message = _in_language(message, user_language(user))
         try:
             # Third Party
             from aadiscordbot.tasks import send_direct_message_by_user_id
@@ -118,8 +132,15 @@ def notify_discord_user(character, message):
 
 
 def send_pi_notification(character, title, message):
+    """Auth notification plus Discord DM. `title` and `message` may be
+    callables or lazy strings; they are built in the recipient's language."""
+    from ..discord_i18n import user_language
+
     try:
         user = character.character_ownership.user
+        language = user_language(user)
+        title = _in_language(title, language)
+        message = _in_language(message, language)
 
         # 1. Send Alliance Auth Notification
         # Alliance Auth

@@ -14,7 +14,8 @@ from ...models import (
     OrderFit,
     OrderItem,
 )
-from ...utils.discord import send_discord_webhook
+from ...discord_i18n import discord_language
+from ...utils.discord import send_discord_webhook, webhook_language
 from ...utils.fit_parser import parse_fit_text
 from ...utils.pricing_engine import (
     calculate_quote,
@@ -128,22 +129,25 @@ def create_order(request: WSGIRequest) -> HttpResponse:
         # Send to all configured webhooks in the system, since orders are global
         webhook_configs = CorporationWebhookConfig.objects.all()
         for config in webhook_configs:
-            embed = {
-                "title": f"New Quote Requested: Order #{order.id}",
-                "description": f"**{character.character_name}** has requested a quote.",
-                "color": 3447003,  # Blue
-                "fields": [
-                    {
-                        "name": "Total Estimated Price",
-                        "value": f"{total_price:,.2f} ISK",
-                        "inline": False,
-                    }
-                ],
-            }
+            language = webhook_language(config)
+            with discord_language(language):
+                embed = {
+                    "title": _("New Quote Requested: Order #%(id)s") % {"id": order.id},
+                    "description": _("**%(name)s** has requested a quote.")
+                    % {"name": character.character_name},
+                    "color": 3447003,  # Blue
+                    "fields": [
+                        {
+                            "name": _("Total Estimated Price"),
+                            "value": f"{total_price:,.2f} ISK",
+                            "inline": False,
+                        }
+                    ],
+                }
             if config.orders_webhook:
-                send_discord_webhook(config.orders_webhook, embed)
+                send_discord_webhook(config.orders_webhook, embed, language)
             elif config.directors_webhook:
-                send_discord_webhook(config.directors_webhook, embed)
+                send_discord_webhook(config.directors_webhook, embed, language)
 
         messages.success(request, _("Order parsed and quoted successfully!"))
         return redirect("industry_reforged:view_quote", order_id=order.id)

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **discord**: Discord messages no longer mix languages depending on who triggered them (TASK-281). Webhook posts use the language chosen per corporation (Director Configurations -> Global Pricing -> Discord Messages, migration 0092), falling back to the new `DISCORD_MESSAGE_LANGUAGE` setting and then `LANGUAGE_CODE`. Direct messages and Auth notifications use the recipient's own Alliance Auth language. All Discord texts (orders, quotes, blueprints, jobs, PI, wallets, inventory, AI tasks, buyback) are now translatable, with Dutch translations.
 - **buyback**: Item icons on the contract page: in the item list, the sell-or-reprocess table and the material list.
 - **buyback**: The calculator shows the calculation (base value, modifier, hauling, donation, what you receive) and the confirm button above the item list instead of below it, so long appraisals no longer need scrolling.
 - **buyback**: The "one rule per item or market group" and "one watchlist entry per item group" checks are now real database constraints on MariaDB/MySQL too (migration 0089). Before, MariaDB skipped them with warning `models.W036`.

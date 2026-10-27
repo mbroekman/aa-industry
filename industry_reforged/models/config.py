@@ -80,6 +80,15 @@ class CorporationWebhookConfig(models.Model):
         null=True,
         help_text=_("Webhook URL for new/flagged Buyback contracts."),
     )
+    discord_language = models.CharField(
+        max_length=10,
+        blank=True,
+        default="",
+        help_text=_(
+            "Language of the messages sent to these webhooks. Empty uses the "
+            "installation default (DISCORD_MESSAGE_LANGUAGE or LANGUAGE_CODE)."
+        ),
+    )
 
     class Meta:
         verbose_name = _("Discord Webhook Configuration")

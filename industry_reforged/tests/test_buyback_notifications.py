@@ -154,7 +154,7 @@ class TestNewContractNotifications:
         buyback_notify.notify_new_contract(contract)
 
         assert dm.call_args[0][0] == manager
-        assert contract.tracking_number in dm.call_args[0][1]
+        assert contract.tracking_number in dm.call_args[0][1]()
 
 
 def _esi_contract(**fields):
