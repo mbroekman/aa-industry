@@ -169,6 +169,7 @@ def test_director_sets_the_language_for_their_corporation():
     from django.contrib.messages.storage.fallback import FallbackStorage
     from django.test import RequestFactory
 
+    # AA Industry App
     from industry_reforged.views.director import director_config_discord_language
 
     corp = EveCorporationInfoFactory()

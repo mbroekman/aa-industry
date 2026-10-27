@@ -7,12 +7,12 @@ import logging
 from celery import shared_task
 from eveuniverse.models import EveType
 
+# Django
+from django.utils.translation import gettext
+
 # Alliance Auth
 from esi.exceptions import HTTPNotModified
 from esi.models import Token
-
-# Django
-from django.utils.translation import gettext
 
 from ..models import (
     CharacterPlanet,

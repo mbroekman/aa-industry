@@ -10,9 +10,9 @@ from celery import shared_task
 from django.utils import timezone
 from django.utils.translation import gettext
 
+from ..discord_i18n import discord_language
 from ..models import CorporationWebhookConfig, ProductionTask
 from ..utils import eta_service
-from ..discord_i18n import discord_language
 from ..utils.discord import send_discord_webhook, webhook_language
 from .utils import log_task_execution, send_pi_notification
 
@@ -62,6 +62,7 @@ def check_overdue_production_tasks():
         hours_overdue = (
             int(overdue_since.total_seconds() // 3600) if overdue_since else 0
         )
+
         def message(qty=task.quantity, item=task.item_type.name, hours=hours_overdue):
             return gettext(
                 "Your claimed job %(qty)sx %(item)s is ~%(hours)sh past its "

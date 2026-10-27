@@ -7,12 +7,12 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy as _
 
+from ...discord_i18n import discord_language
 from ...models import (
     CorporationWebhookConfig,
     MemberOrder,
     ProductionTask,
 )
-from ...discord_i18n import discord_language
 from ...utils.discord import send_discord_webhook, webhook_language
 
 

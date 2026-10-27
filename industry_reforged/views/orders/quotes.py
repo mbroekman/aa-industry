@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from ...discord_i18n import discord_language
 from ...models import (
     CorpBuyOrder,
     CorpInventory,
@@ -22,7 +23,6 @@ from ...utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
 )
-from ...discord_i18n import discord_language
 from ...utils.discord import send_discord_webhook, webhook_language
 from ...utils.pricing_engine import (
     calculate_bom_cost,

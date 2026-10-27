@@ -9,7 +9,10 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
+
+from ..discord_i18n import discord_language
 
 # App
 from ..models import (
@@ -19,7 +22,6 @@ from ..models import (
     ProductionTask,
 )
 from ..tasks.utils import notify_discord_user
-from ..discord_i18n import discord_language
 from ..utils.discord import send_discord_webhook, webhook_language
 
 logger = logging.getLogger(__name__)
@@ -179,7 +181,10 @@ def update_request_status(request: WSGIRequest, request_id: int) -> HttpResponse
                     and bp_req.requester.profile.main_character
                 ):
                     main_char = bp_req.requester.profile.main_character
-                    def msg(item=bp_req.blueprint.eve_type.name, by=request.user.username):
+
+                    def msg(
+                        item=bp_req.blueprint.eve_type.name, by=request.user.username
+                    ):
                         return gettext(
                             "Your Blueprint Request for **%(item)s** has been marked "
                             "as **%(status)s** by %(by)s."

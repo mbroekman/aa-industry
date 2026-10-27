@@ -170,9 +170,13 @@ def notify_new_contract(contract):
 
         def message():
             text = (
-                gettext("New buyback contract %(tracking)s in %(program)s (needs review): %(url)s")
+                gettext(
+                    "New buyback contract %(tracking)s in %(program)s (needs review): %(url)s"
+                )
                 if flagged
-                else gettext("New buyback contract %(tracking)s in %(program)s: %(url)s")
+                else gettext(
+                    "New buyback contract %(tracking)s in %(program)s: %(url)s"
+                )
             )
             return text % {
                 "tracking": contract.tracking_number,

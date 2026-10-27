@@ -261,7 +261,8 @@ def evaluate_baskets(basket_id=None):
                     language = webhook_language(webhook_config)
                     with discord_language(language):
                         embed = {
-                            "title": "🏭 " + gettext("New AI-Generated Production Tasks"),
+                            "title": "🏭 "
+                            + gettext("New AI-Generated Production Tasks"),
                             "description": gettext(
                                 "The AI Market Manager has generated the following "
                                 "new tasks based on current market conditions:"

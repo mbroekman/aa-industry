@@ -174,7 +174,9 @@ def _send_match_notifications(contract):
     elif contract.status == "MATCHED":
         _notify_seller(
             contract,
-            gettext_noop("Your buyback contract %(tracking)s was matched successfully."),
+            gettext_noop(
+                "Your buyback contract %(tracking)s was matched successfully."
+            ),
             "success",
         )
 
@@ -290,7 +292,9 @@ def _follow_esi_status(contract, esi_contract):
         if contract.mark_paid(notes="Buyback payout (contract accepted in-game)"):
             _notify_seller(
                 contract,
-                gettext_noop("Your buyback contract %(tracking)s was accepted and paid."),
+                gettext_noop(
+                    "Your buyback contract %(tracking)s was accepted and paid."
+                ),
             )
     elif esi_status in ESI_REJECTED:
         contract.status = "REJECTED"

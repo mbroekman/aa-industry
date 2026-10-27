@@ -1481,6 +1481,7 @@ def director_config_sync_rigs(request: WSGIRequest) -> HttpResponse:
 
 def _discord_language_label(corporation) -> str:
     """Readable name of the corporation's Discord message language."""
+    # Django
     from django.conf import settings
 
     from ..discord_i18n import default_language

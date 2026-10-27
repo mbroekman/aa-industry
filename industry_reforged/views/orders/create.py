@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.translation import gettext_lazy as _
 
+from ...discord_i18n import discord_language
 from ...models import (
     CorpItemConfig,
     CorporationWebhookConfig,
@@ -14,7 +15,6 @@ from ...models import (
     OrderFit,
     OrderItem,
 )
-from ...discord_i18n import discord_language
 from ...utils.discord import send_discord_webhook, webhook_language
 from ...utils.fit_parser import parse_fit_text
 from ...utils.pricing_engine import (
