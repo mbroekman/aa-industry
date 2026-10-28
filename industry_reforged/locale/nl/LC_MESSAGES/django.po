@@ -4374,3 +4374,16 @@ msgstr "Vrijgegeven: je kunt het bovenliggende item zelf niet bouwen"
 
 #~ msgid "Auto-refresh: 1m"
 #~ msgstr "Automatisch vernieuwen: 1m"
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html
+msgid ""
+"Items at the order facility that no open order has claimed yet. You may "
+"build fewer."
+msgstr ""
+"Items op de orderlocatie die nog door geen enkele open order zijn geclaimd. "
+"Je kunt minder bouwen."
+
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html
+#, python-format
+msgid "%(qty)s spare in stock"
+msgstr "%(qty)s extra op voorraad"

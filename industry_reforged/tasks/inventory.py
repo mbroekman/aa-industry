@@ -10,6 +10,7 @@ from celery import shared_task
 from esi.exceptions import HTTPNotModified
 from esi.models import Token
 
+from ..utils.locations import resolve_root_location
 from .utils import ensure_eve_type, esi, log_task_execution
 
 logger = logging.getLogger(__name__)
@@ -73,13 +74,7 @@ def task_sync_corp_inventory():
                     item_locations[item_id] = getattr(asset, "location_id")
 
             def get_root_location(loc_id):
-                visited = set()
-                while loc_id in item_locations:
-                    if loc_id in visited:
-                        break  # Prevent infinite loop in case of circular references
-                    visited.add(loc_id)
-                    loc_id = item_locations[loc_id]
-                return loc_id
+                return resolve_root_location(loc_id, item_locations)
 
             # Discover all unique root locations from corporate assets
             all_root_locations = set()

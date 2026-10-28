@@ -252,3 +252,25 @@ def get_blueprint_full_location(
     if flag_display:
         return f"Structure ({bp.location_id}) > {flag_display}"
     return f"Structure ({bp.location_id})"
+
+
+# EVE solar system IDs (k-space, wormholes and abyssal pockets).
+SOLAR_SYSTEM_ID_RANGE = range(30_000_000, 33_000_000)
+
+
+def resolve_root_location(loc_id: int | None, item_locations: dict) -> int | None:
+    """Walk an asset's container chain up to the station or structure it sits in.
+
+    ``item_locations`` maps each corp asset's item_id to its location_id. A
+    corp-owned structure is itself one of those assets, located in a solar
+    system, so the walk stops there: stock must be filed under the structure,
+    never under the solar system.
+    """
+    visited = set()
+    while loc_id in item_locations and loc_id not in visited:
+        parent = item_locations[loc_id]
+        if parent in SOLAR_SYSTEM_ID_RANGE:
+            break
+        visited.add(loc_id)
+        loc_id = parent
+    return loc_id

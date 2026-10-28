@@ -530,6 +530,11 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         task.eve_active_qty = eve_active
         task.eve_remaining_qty = max(0, task.quantity - eve_delivered)
 
+    # Spare stock at the order facility, so builders can build fewer
+    from ..utils.spare_stock import annotate_spare_stock
+
+    annotate_spare_stock(my_tasks)
+
     # Live available slots detection
     from ..utils.slot_service import get_user_available_slots
 

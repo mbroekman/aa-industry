@@ -6,6 +6,7 @@ import logging
 # Third Party
 from celery import shared_task
 
+from ..utils.locations import resolve_root_location
 from .utils import _get_security_space, esi, log_task_execution
 
 logger = logging.getLogger(__name__)
@@ -99,13 +100,7 @@ def update_industry_facilities():
                         item_locations[item_id] = getattr(asset, "location_id", None)
 
                 def get_root_location(loc_id):
-                    visited = set()
-                    while loc_id in item_locations:
-                        if loc_id in visited:
-                            break
-                        visited.add(loc_id)
-                        loc_id = item_locations[loc_id]
-                    return loc_id
+                    return resolve_root_location(loc_id, item_locations)
 
                 corp_roots = set()
                 for asset in assets:

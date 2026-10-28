@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **inventory**: Stock in a corporation-owned structure is filed under that structure again, not under its solar system (TASK-283). Since the change, orders never deducted stock at their facility and stock checks saw 0 there. The facility sync had the same problem. Stock moves back to the structure on the next inventory sync.
+- **claimed jobs**: A claimed order job now shows "N spare in stock" when its facility holds more of the item than open orders have already made, so the builder can build fewer (TASK-283).
 - **discord**: Discord messages no longer mix languages depending on who triggered them (TASK-281). Webhook posts use the language chosen per corporation (Director Configurations -> Global Pricing -> Discord Messages, migration 0092), falling back to the new `DISCORD_MESSAGE_LANGUAGE` setting and then `LANGUAGE_CODE`. Direct messages and Auth notifications use the recipient's own Alliance Auth language. All Discord texts (orders, quotes, blueprints, jobs, PI, wallets, inventory, AI tasks, buyback) are now translatable, with Dutch translations.
 - **buyback**: Item icons on the contract page: in the item list, the sell-or-reprocess table and the material list.
 - **buyback**: The calculator shows the calculation (base value, modifier, hauling, donation, what you receive) and the confirm button above the item list instead of below it, so long appraisals no longer need scrolling.

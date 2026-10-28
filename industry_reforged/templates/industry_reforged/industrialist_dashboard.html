@@ -474,6 +474,15 @@
                                                                         </span>
                                                                     </div>
                                                                     {% endif %}
+
+                                                                    <!-- Spare stock at the order facility -->
+                                                                    {% if task.spare_stock_qty > 0 %}
+                                                                    <div class="mt-1 small">
+                                                                        <span class="badge bg-success-subtle text-success-emphasis border border-success" title="{% trans 'Items at the order facility that no open order has claimed yet. You may build fewer.' %}">
+                                                                            <i class="fas fa-box-open"></i> {% blocktrans with qty=task.spare_stock_qty %}{{ qty }} spare in stock{% endblocktrans %}
+                                                                        </span>
+                                                                    </div>
+                                                                    {% endif %}
                                                                 </div>
                                                             </div>
                                                         </td>
