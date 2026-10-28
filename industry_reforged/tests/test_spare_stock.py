@@ -8,8 +8,8 @@ import pytest
 
 # AA Industry App
 from industry_reforged.models import (
-    CorporationIndustryJob,
     CorpInventory,
+    CorporationIndustryJob,
     IndustryFacility,
     MemberOrder,
     TaskJobLink,
@@ -41,7 +41,9 @@ class TestResolveRootLocation:
         assert resolve_root_location(FOUNDRY, {CONTAINER: FOUNDRY}) == FOUNDRY
 
     def test_circular_reference_terminates(self):
-        assert resolve_root_location(CONTAINER, {CONTAINER: NESTED, NESTED: CONTAINER}) in (
+        assert resolve_root_location(
+            CONTAINER, {CONTAINER: NESTED, NESTED: CONTAINER}
+        ) in (
             CONTAINER,
             NESTED,
         )
@@ -81,7 +83,10 @@ class TestAnnotateSpareStock:
     def test_own_delivered_output_is_not_spare(self, _details):
         corp, order, bay = self._setup(stock=334)
         task = ProductionTaskFactory(
-            item_type=bay, quantity=432, status="IN_PRODUCTION", created_from_order=order
+            item_type=bay,
+            quantity=432,
+            status="IN_PRODUCTION",
+            created_from_order=order,
         )
         self._deliver(task, corp, runs=261, job_id=1)
 
