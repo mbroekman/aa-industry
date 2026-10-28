@@ -4318,6 +4318,10 @@ msgstr ""
 "als te laat wordt gemarkeerd. Ook de tijd tussen herinneringen zolang een job"
 " te laat blijft."
 
+#: industry_reforged/templates/industry_reforged/industrialist_dashboard.html:228
+msgid "Released: you can't build the parent item yourself"
+msgstr "Vrijgegeven: je kunt het bovenliggende item zelf niet bouwen"
+
 #~ msgid "No pricing configurations found."
 #~ msgstr "Geen prijsconfiguraties gevonden."
 

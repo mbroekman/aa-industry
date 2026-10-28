@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## Unreleased
 
+### Changed
+
+- **job market**: The note on a released sub-job now reads "Released: you can't build the parent item yourself". The old text ("a skill most members lack") was wrong: the check uses the viewer's own skills.
+
 ### Docs
 
 - **buyback**: The user manual now has a Buyback chapter for members (1.3) and for directors (3.8), plus the buyback webhook and background check; the README feature list covers all buyback options.
