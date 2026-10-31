@@ -233,9 +233,9 @@ class TestOrdersTabFilterAndBadges(TestCase):
         assert "Active Member Orders" not in source
         # Badges sit in the filter bar, not in the tab button.
         tab = source.split('id="orders-tab"')[1].split("</button>")[0]
-        assert "order-filter-badge" not in tab
-        assert 'badges=order_badges' in source
-        assert 'badges=task_badges' in source
+        assert "filter-badge" not in tab
+        assert "badges=order_badges" in source
+        assert "badges=task_badges" in source
 
 
 class TestProductionTasksFilter(TestCase):
