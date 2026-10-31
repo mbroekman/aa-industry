@@ -592,6 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Filter the orders table in place: update the URL, then reload the AJAX source.
         var applyOrderFilter = function (status, sort) {
+            $('#order-filter-form').removeClass('is-submitting');
             var params = new URLSearchParams(window.location.search);
             params.set('status', status);
             if (sort) { params.set('sort', sort); }
@@ -603,7 +604,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         $('#order-filter-form').on('submit', function (e) {
             e.preventDefault();
-            applyOrderFilter($('#order-status-filter').val(), $(this).find('select[name="sort"]').val());
+            var form = this;
+            applyOrderFilter($('#order-status-filter').val(), $(form).find('select[name="sort"]').val());
+            // Alliance Auth marks every submitted form 'is-submitting' (not-allowed cursor,
+            // further submits blocked) and expects a page load to clear it. This form never
+            // reloads, so clear it once AA's own submit listener has run.
+            setTimeout(function () { form.classList.remove('is-submitting'); }, 0);
         });
 
         $('.order-filter-badge').on('click', function () {
