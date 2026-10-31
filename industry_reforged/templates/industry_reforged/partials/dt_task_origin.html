@@ -3,7 +3,7 @@
 {% if task.origin == "BASKET" %}
 <span class="badge bg-info text-dark" title="{% trans 'AI Market Manager' %}"><i class="fas fa-robot"></i> AI Basket</span>
 {% elif task.origin == "MEMBER_ORDER" %}
-<span class="badge bg-primary" title="{% trans 'Member Order' %}"><i class="fas fa-shopping-cart"></i> Order</span>
+{% with order=task.created_from_order.root_order %}<span class="badge bg-primary" title="{% if order %}{% blocktrans with id=order.id %}Member Order #{{ id }}{% endblocktrans %}{% else %}{% trans 'Member Order' %}{% endif %}"><i class="fas fa-shopping-cart"></i> Order</span>{% endwith %}
 {% elif task.origin == "BOM" %}
 <span class="badge bg-secondary" title="{% trans 'BOM Component' %}"><i class="fas fa-cogs"></i> Component</span>
 {% elif task.origin == "BLUEPRINT" %}

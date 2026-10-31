@@ -259,3 +259,19 @@ class TestProductionTasksFilter(TestCase):
     def test_all_and_specific_status(self):
         assert self._count("&task_status=ALL") == 3
         assert self._count("&task_status=COMPLETED") == 1
+
+    @patch("industry_reforged.views.datatables.eta_service")
+    def test_order_badge_tooltip_shows_root_order_number(self, mock_eta):
+        mock_eta.get_task_eta.return_value = None
+        mock_eta.get_corp_buffer_hours.return_value = 0
+        mock_eta.is_overdue.return_value = False
+        root = MemberOrderFactory()
+        sub = MemberOrderFactory(parent_order=root)
+        ProductionTaskFactory(
+            status="IN_PRODUCTION", origin="MEMBER_ORDER", created_from_order=sub
+        )
+        req = self.rf.get("/?type=all&task_status=IN_PRODUCTION")
+        req.user = self.user
+        rows = json.loads(dt_director_tasks(req).content)["data"]
+        origins = " ".join(row[3] for row in rows)
+        assert f"Member Order #{root.id}" in origins

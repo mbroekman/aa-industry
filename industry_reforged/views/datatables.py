@@ -244,7 +244,9 @@ def dt_director_tasks(request):
     if length > 0:
         qs = qs[start : start + length]
     if task_type == "all":
-        qs = qs.select_related("item_type", "assigned_to").prefetch_related(
+        qs = qs.select_related(
+            "item_type", "assigned_to", "created_from_order__parent_order"
+        ).prefetch_related(
             "linked_jobs__character_job", "linked_jobs__corporation_job"
         )
 

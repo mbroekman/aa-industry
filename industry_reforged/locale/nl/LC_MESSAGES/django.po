@@ -4474,3 +4474,10 @@ msgstr "Je geclaimde jobs worden in meer dan één structure gebouwd (of hebben 
 #: industry_reforged/views/orders/shopping.py
 msgid "The selected items are not all built in one structure, so there is no single pick-up list. The stock column still shows where each material lies."
 msgstr "De gekozen items worden niet allemaal in één structure gebouwd, dus er is geen ophaallijst. De voorraadkolom laat wel zien waar elk materiaal ligt."
+
+msgid "Member Order"
+msgstr "Ledenorder"
+
+#, python-format
+msgid "Member Order #%(id)s"
+msgstr "Ledenorder #%(id)s"
