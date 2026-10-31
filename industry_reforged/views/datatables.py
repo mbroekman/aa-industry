@@ -12,7 +12,6 @@ from ..models import CorpBuyOrder, LedgerTransaction, MemberOrder, ProductionTas
 from ..templatetags.industry_tags import eve_isk
 from ..utils import eta_service
 
-
 DEFAULT_ORDER_FILTER = "IN_PRODUCTION"
 ORDER_STATUS_FILTERS = (
     "REQUESTED",

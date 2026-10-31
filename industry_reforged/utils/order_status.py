@@ -14,9 +14,7 @@ def order_work_started(root) -> bool:
     from industry_reforged.models import OrderItem, ProductionTask
 
     family = Q(created_from_order=root) | Q(created_from_order__parent_order=root)
-    if ProductionTask.objects.filter(
-        family, status__in=STARTED_TASK_STATUSES
-    ).exists():
+    if ProductionTask.objects.filter(family, status__in=STARTED_TASK_STATUSES).exists():
         return True
     return OrderItem.objects.filter(
         Q(order=root) | Q(order__parent_order=root), is_bought=True
