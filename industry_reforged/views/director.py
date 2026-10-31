@@ -86,12 +86,48 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
     order_attention = root_orders.aggregate(
         new=Count("id", filter=Q(status="REQUESTED")),
         quoted=Count("id", filter=Q(status="QUOTED")),
+        in_production=Count("id", filter=Q(status="IN_PRODUCTION")),
         unpaid=Count("id", filter=Q(is_paid=False, status__in=OWING_STATUSES)),
     )
+    order_badges = [
+        {
+            "filter": "REQUESTED",
+            "count": order_attention["new"],
+            "label": _("New"),
+            "tip": _("New orders (requested)"),
+            "icon": "fa-inbox",
+            "css": "bg-info text-dark",
+        },
+        {
+            "filter": "QUOTED",
+            "count": order_attention["quoted"],
+            "label": _("Quoted"),
+            "tip": _("Quoted, not yet accepted"),
+            "icon": "fa-file-signature",
+            "css": "bg-primary",
+        },
+        {
+            "filter": "IN_PRODUCTION",
+            "count": order_attention["in_production"],
+            "label": _("In Production"),
+            "tip": _("Accepted orders being built"),
+            "icon": "fa-cogs",
+            "css": "bg-warning text-dark",
+        },
+        {
+            "filter": "UNPAID",
+            "count": order_attention["unpaid"],
+            "label": _("Unpaid"),
+            "tip": _("Ready or delivered, not yet paid"),
+            "icon": "fa-coins",
+            "css": "bg-danger",
+        },
+    ]
 
     context = {
         "title": "Director Control Panel",
         "order_attention": order_attention,
+        "order_badges": order_badges,
         "order_status_filter": request.GET.get("status", DEFAULT_ORDER_FILTER),
         "payout_summary": payout_summary,
         "payout_batches": payout_batches,

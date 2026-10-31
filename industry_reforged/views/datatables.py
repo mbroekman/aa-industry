@@ -22,8 +22,8 @@ ORDER_STATUS_FILTERS = (
     "READY",
     "DELIVERED",
 )
-# Orders past acceptance still owe money when unpaid; open quotes and rejects do not.
-OWING_STATUSES = ("ACCEPTED", "IN_PRODUCTION", "READY", "DELIVERED")
+# Payment is due once the goods are ready; orders still being built are not "unpaid".
+OWING_STATUSES = ("READY", "DELIVERED")
 
 
 def filter_director_orders(qs, status_filter):

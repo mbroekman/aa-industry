@@ -3,6 +3,10 @@
 {% load industry_tags %}
 
 {% block details %}
+<style>
+    .order-filter-badge { cursor: pointer; font-size: 0.8rem; }
+    .order-filter-badge.order-filter-active { box-shadow: 0 0 0 2px var(--bs-body-color); opacity: 1 !important; }
+</style>
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-12">
@@ -34,9 +38,6 @@
                     <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-pane"
                         type="button" role="tab" aria-controls="orders-pane" aria-selected="true">
                         <i class="fas fa-shopping-cart"></i> {% translate "Orders" %}
-                        {% if order_attention.new %}<span class="badge bg-info text-dark ms-1 order-filter-badge" role="button" data-order-filter="REQUESTED" data-bs-toggle="tooltip" title="{% translate 'New orders (requested)' %}"><i class="fas fa-inbox"></i> {{ order_attention.new }}</span>{% endif %}
-                        {% if order_attention.quoted %}<span class="badge bg-primary ms-1 order-filter-badge" role="button" data-order-filter="QUOTED" data-bs-toggle="tooltip" title="{% translate 'Quoted, not yet accepted' %}"><i class="fas fa-file-signature"></i> {{ order_attention.quoted }}</span>{% endif %}
-                        {% if order_attention.unpaid %}<span class="badge bg-danger ms-1 order-filter-badge" role="button" data-order-filter="UNPAID" data-bs-toggle="tooltip" title="{% translate 'Accepted orders not yet paid' %}"><i class="fas fa-coins"></i> {{ order_attention.unpaid }}</span>{% endif %}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -106,6 +107,14 @@
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
                         </form>
+                        <div class="d-flex align-items-center gap-2 flex-wrap ms-3 me-auto" id="order-filter-badges">
+                            {% for b in order_badges %}
+                            <button type="button" class="badge border-0 {{ b.css }} order-filter-badge{% if not b.count %} opacity-50{% endif %}{% if order_status_filter == b.filter %} order-filter-active{% endif %}"
+                                data-order-filter="{{ b.filter }}" data-bs-toggle="tooltip" title="{{ b.tip }}">
+                                <i class="fas {{ b.icon }}"></i> {{ b.label }} <span class="ms-1">{{ b.count }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
                         <div class="dt-search-placeholder" data-table-target="#order-management-table"></div>
                     </div>
                     <div class="table-responsive">
@@ -599,6 +608,9 @@ document.addEventListener('DOMContentLoaded', function() {
             var query = '?' + params.toString();
             history.replaceState(null, '', window.location.pathname + query + '#orders-pane');
             $('#order-status-filter').val(status);
+            $('.order-filter-badge').each(function () {
+                $(this).toggleClass('order-filter-active', $(this).data('order-filter') === status);
+            });
             ordersTable.ajax.url(ordersBaseUrl + query).load();
         };
 
@@ -613,7 +625,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         $('.order-filter-badge').on('click', function () {
-            // The badge sits inside the tab button, so the tab opens as well.
             applyOrderFilter($(this).data('order-filter'));
         });
     }

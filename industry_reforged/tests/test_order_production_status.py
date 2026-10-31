@@ -180,6 +180,7 @@ class TestOrdersTabFilterAndBadges(TestCase):
         self.quoted = MemberOrderFactory(status="QUOTED")
         self.in_prod = MemberOrderFactory(status="IN_PRODUCTION", is_paid=False)
         self.ready_paid = MemberOrderFactory(status="READY", is_paid=True)
+        self.delivered_unpaid = MemberOrderFactory(status="DELIVERED", is_paid=False)
         MemberOrderFactory(status="REJECTED")
 
     def _ids(self, query=""):
@@ -192,10 +193,11 @@ class TestOrdersTabFilterAndBadges(TestCase):
         assert self._ids() == {self.in_prod.id}
 
     def test_all_shows_everything(self):
-        assert len(self._ids("?status=ALL")) == 5
+        assert len(self._ids("?status=ALL")) == 6
 
-    def test_unpaid_only_counts_orders_past_acceptance(self):
-        assert self._ids("?status=UNPAID") == {self.in_prod.id}
+    def test_unpaid_only_counts_ready_or_delivered(self):
+        # An unpaid order still in production owes nothing yet.
+        assert self._ids("?status=UNPAID") == {self.delivered_unpaid.id}
 
     @patch("industry_reforged.views.director.render")
     def test_dashboard_badge_counts_and_default_filter(self, mock_render):
@@ -203,7 +205,18 @@ class TestOrdersTabFilterAndBadges(TestCase):
         req.user = self.user
         director_dashboard(req)
         context = mock_render.call_args[0][2]
-        assert context["order_attention"] == {"new": 1, "quoted": 1, "unpaid": 1}
+        assert context["order_attention"] == {
+            "new": 1,
+            "quoted": 1,
+            "in_production": 1,
+            "unpaid": 1,
+        }
+        assert [b["filter"] for b in context["order_badges"]] == [
+            "REQUESTED",
+            "QUOTED",
+            "IN_PRODUCTION",
+            "UNPAID",
+        ]
         assert context["order_status_filter"] == "IN_PRODUCTION"
 
     def test_template_tab_name_and_badges(self):
@@ -212,5 +225,7 @@ class TestOrdersTabFilterAndBadges(TestCase):
             / "templates/industry_reforged/director_dashboard.html"
         ).read_text(encoding="utf-8")
         assert "Active Member Orders" not in source
-        for value in ("REQUESTED", "QUOTED", "UNPAID"):
-            assert f'data-order-filter="{value}"' in source
+        # Badges sit in the filter bar, not in the tab button.
+        tab = source.split('id="orders-tab"')[1].split("</button>")[0]
+        assert "order-filter-badge" not in tab
+        assert 'id="order-filter-badges"' in source

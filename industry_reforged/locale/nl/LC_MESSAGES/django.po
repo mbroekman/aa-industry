@@ -4400,6 +4400,14 @@ msgstr "Nieuwe orders (aangevraagd)"
 msgid "Quoted, not yet accepted"
 msgstr "Offerte verstuurd, nog niet geaccepteerd"
 
-#: industry_reforged/templates/industry_reforged/director_dashboard.html
-msgid "Accepted orders not yet paid"
-msgstr "Geaccepteerde orders, nog niet betaald"
+#: industry_reforged/views/director.py
+msgid "New"
+msgstr "Nieuw"
+
+#: industry_reforged/views/director.py
+msgid "Accepted orders being built"
+msgstr "Geaccepteerde orders in productie"
+
+#: industry_reforged/views/director.py
+msgid "Ready or delivered, not yet paid"
+msgstr "Klaar of geleverd, nog niet betaald"

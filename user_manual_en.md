@@ -98,7 +98,7 @@ The command center for the industrial backbone of the corporation.
 
 - **Orders**: An overview of all member orders.
   - The tab opens on orders `In Production`. Use the filter to show another status (`Requested`, `Quoted`, `Accepted`, `Ready`, `Delivered`, etc.), all orders, or paid/unpaid ones.
-  - Badges on the tab count new orders, quotes not yet accepted and unpaid orders. Click a badge to show just those orders.
+  - Badges next to the filter count new orders, quotes not yet accepted, orders in production and unpaid orders (Ready or Delivered, not yet paid). Click a badge to show just those orders.
   - An order moves from `Accepted` to `In Production` once a builder claims one of its jobs or a buy item is marked bought. It moves back if all claims are released. Once all its tasks are built, it shifts to `READY`. You can then contract the items in-game and click **"Deliver"** to notify the buyer.
 - **Corporate Jobs Overview**: A master overview of all corporate EVE jobs across the alliance that are linked to a production task. Features a convenient status dropdown filter to quickly narrow down jobs by their EVE state (e.g., Active, Paused, Ready).
 - **Quoting Flow (Profit & Loss)**: Click on any `REQUESTED` order to view its Profit & Loss analysis. This default view shows you the estimated raw material costs, current Jita market value, estimated build costs, and your final profit margin in one clear breakdown while setting the price.
