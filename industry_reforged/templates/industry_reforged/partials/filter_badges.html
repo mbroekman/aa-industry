@@ -1,0 +1,12 @@
+{% comment %}
+Quick-filter badges for a director dashboard table.
+Params: badges (list of dicts: filter, count, label, tip, icon, css), active (current filter), form_id (the filter form they drive).
+{% endcomment %}
+<div class="d-flex align-items-center gap-2 flex-wrap ms-3 me-auto filter-badges" data-filter-form="{{ form_id }}">
+    {% for b in badges %}
+    <button type="button" class="badge border-0 {{ b.css }} filter-badge{% if not b.count %} opacity-50{% endif %}{% if active == b.filter %} filter-badge-active{% endif %}"
+        data-filter="{{ b.filter }}" data-bs-toggle="tooltip" title="{{ b.tip }}">
+        <i class="fas {{ b.icon }}"></i> {{ b.label }} <span class="ms-1">{{ b.count }}</span>
+    </button>
+    {% endfor %}
+</div>

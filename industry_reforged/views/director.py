@@ -80,7 +80,7 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
         .order_by("-total_qty")
     )
 
-    from .datatables import DEFAULT_ORDER_FILTER, OWING_STATUSES
+    from .datatables import DEFAULT_ORDER_FILTER, DEFAULT_TASK_FILTER, OWING_STATUSES
 
     root_orders = MemberOrder.objects.filter(parent_order__isnull=True)
     order_attention = root_orders.aggregate(
@@ -124,10 +124,44 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
         },
     ]
 
+    task_counts = ProductionTask.objects.aggregate(
+        unclaimed=Count("id", filter=Q(status="UNCLAIMED")),
+        in_production=Count("id", filter=Q(status="IN_PRODUCTION")),
+        completed=Count("id", filter=Q(status="COMPLETED")),
+    )
+    task_badges = [
+        {
+            "filter": "UNCLAIMED",
+            "count": task_counts["unclaimed"],
+            "label": _("Unclaimed"),
+            "tip": _("Waiting on the job market"),
+            "icon": "fa-clock",
+            "css": "bg-info text-dark",
+        },
+        {
+            "filter": "IN_PRODUCTION",
+            "count": task_counts["in_production"],
+            "label": _("In Production"),
+            "tip": _("Claimed by a builder"),
+            "icon": "fa-cogs",
+            "css": "bg-warning text-dark",
+        },
+        {
+            "filter": "COMPLETED",
+            "count": task_counts["completed"],
+            "label": _("Completed"),
+            "tip": _("Built and marked done"),
+            "icon": "fa-check",
+            "css": "bg-success",
+        },
+    ]
+
     context = {
         "title": "Director Control Panel",
         "order_attention": order_attention,
         "order_badges": order_badges,
+        "task_badges": task_badges,
+        "task_status_filter": request.GET.get("task_status", DEFAULT_TASK_FILTER),
         "order_status_filter": request.GET.get("status", DEFAULT_ORDER_FILTER),
         "payout_summary": payout_summary,
         "payout_batches": payout_batches,

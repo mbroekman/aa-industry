@@ -4,8 +4,8 @@
 
 {% block details %}
 <style>
-    .order-filter-badge { cursor: pointer; font-size: 0.8rem; }
-    .order-filter-badge.order-filter-active { box-shadow: 0 0 0 2px var(--bs-body-color); opacity: 1 !important; }
+    .filter-badge { cursor: pointer; font-size: 0.8rem; }
+    .filter-badge.filter-badge-active { box-shadow: 0 0 0 2px var(--bs-body-color); opacity: 1 !important; }
 </style>
 <div class="container-fluid">
     <div class="row mb-4">
@@ -84,7 +84,7 @@
                 <div class="tab-pane fade show active" id="orders-pane" role="tabpanel" aria-labelledby="orders-tab" tabindex="0">
                     <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
                         <form method="get" action="#orders-pane" id="order-filter-form" class="d-flex align-items-center mb-0 gap-2 custom-filters">
-                        <select name="status" id="order-status-filter" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                        <select name="status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
                             <option value="ALL" {% if order_status_filter == 'ALL' %}selected{% endif %}>{% trans "All Statuses" %}</option>
                             <option value="REQUESTED" {% if order_status_filter == 'REQUESTED' %}selected{% endif %}>{% trans "Requested" %}</option>
                             <option value="QUOTED" {% if order_status_filter == 'QUOTED' %}selected{% endif %}>{% trans "Quoted" %}</option>
@@ -107,14 +107,7 @@
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
                         </form>
-                        <div class="d-flex align-items-center gap-2 flex-wrap ms-3 me-auto" id="order-filter-badges">
-                            {% for b in order_badges %}
-                            <button type="button" class="badge border-0 {{ b.css }} order-filter-badge{% if not b.count %} opacity-50{% endif %}{% if order_status_filter == b.filter %} order-filter-active{% endif %}"
-                                data-order-filter="{{ b.filter }}" data-bs-toggle="tooltip" title="{{ b.tip }}">
-                                <i class="fas {{ b.icon }}"></i> {{ b.label }} <span class="ms-1">{{ b.count }}</span>
-                            </button>
-                            {% endfor %}
-                        </div>
+                        {% include "industry_reforged/partials/filter_badges.html" with badges=order_badges active=order_status_filter form_id="order-filter-form" %}
                         <div class="dt-search-placeholder" data-table-target="#order-management-table"></div>
                     </div>
                     <div class="table-responsive">
@@ -188,12 +181,12 @@
 
                 <div class="tab-pane fade" id="tasks-pane" role="tabpanel" aria-labelledby="tasks-tab" tabindex="0">
                     <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
-                        <form method="get" action="#tasks-pane" class="d-flex align-items-center mb-0 gap-2 custom-filters">
+                        <form method="get" action="#tasks-pane" id="task-filter-form" class="d-flex align-items-center mb-0 gap-2 custom-filters">
                         <select name="task_status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
-                            <option value="">{% trans "All Statuses" %}</option>
-                            <option value="UNCLAIMED" {% if request.GET.task_status == 'UNCLAIMED' %}selected{% endif %}>{% trans "Unclaimed" %}</option>
-                            <option value="IN_PRODUCTION" {% if request.GET.task_status == 'IN_PRODUCTION' %}selected{% endif %}>{% trans "In Production" %}</option>
-                            <option value="COMPLETED" {% if request.GET.task_status == 'COMPLETED' %}selected{% endif %}>{% trans "Completed" %}</option>
+                            <option value="ALL" {% if task_status_filter == 'ALL' %}selected{% endif %}>{% trans "All Statuses" %}</option>
+                            <option value="UNCLAIMED" {% if task_status_filter == 'UNCLAIMED' %}selected{% endif %}>{% trans "Unclaimed" %}</option>
+                            <option value="IN_PRODUCTION" {% if task_status_filter == 'IN_PRODUCTION' %}selected{% endif %}>{% trans "In Production" %}</option>
+                            <option value="COMPLETED" {% if task_status_filter == 'COMPLETED' %}selected{% endif %}>{% trans "Completed" %}</option>
                         </select>
                         <select name="task_assignee" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
                             <option value="">{% trans "All Assignees" %}</option>
@@ -211,6 +204,7 @@
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> {% trans "Apply Filter" %}</button>
                         </form>
+                        {% include "industry_reforged/partials/filter_badges.html" with badges=task_badges active=task_status_filter form_id="task-filter-form" %}
                         <div class="dt-search-placeholder" data-table-target="#production-tasks-table"></div>
                     </div>
                     <div class="table-responsive">
@@ -586,6 +580,37 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', updateHelper);
     });
 
+    // Filter a server-side table in place: copy the form's fields into the URL, then
+    // reload the table's AJAX source. Quick-filter badges set the status select first.
+    function bindInPlaceFilter(formSelector, table, ajaxUrlFor, hash) {
+        var $form = $(formSelector);
+        var statusSelect = $form.find('select').first();
+        var $badges = $('.filter-badges[data-filter-form="' + $form.attr('id') + '"] .filter-badge');
+        var apply = function () {
+            $form.removeClass('is-submitting');
+            var params = new URLSearchParams(window.location.search);
+            $form.serializeArray().forEach(function (f) { params.set(f.name, f.value); });
+            var query = params.toString();
+            history.replaceState(null, '', window.location.pathname + '?' + query + hash);
+            $badges.each(function () {
+                $(this).toggleClass('filter-badge-active', $(this).data('filter') === statusSelect.val());
+            });
+            table.ajax.url(ajaxUrlFor(query)).load();
+        };
+        $form.on('submit', function (e) {
+            e.preventDefault();
+            apply();
+            // Alliance Auth marks every submitted form 'is-submitting' (not-allowed cursor,
+            // further submits blocked) and expects a page load to clear it. These forms
+            // never reload, so clear it once AA's own submit listener has run.
+            setTimeout(function () { $form.removeClass('is-submitting'); }, 0);
+        });
+        $badges.on('click', function () {
+            statusSelect.val($(this).data('filter'));
+            apply();
+        });
+    }
+
     // Initialize DataTables
     if ($('#order-management-table').length) {
         var ordersBaseUrl = "{% url 'industry_reforged:dt_director_orders' %}";
@@ -598,35 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 { "orderable": false, "targets": [1, 5, 9] }
             ]
         });
-
-        // Filter the orders table in place: update the URL, then reload the AJAX source.
-        var applyOrderFilter = function (status, sort) {
-            $('#order-filter-form').removeClass('is-submitting');
-            var params = new URLSearchParams(window.location.search);
-            params.set('status', status);
-            if (sort) { params.set('sort', sort); }
-            var query = '?' + params.toString();
-            history.replaceState(null, '', window.location.pathname + query + '#orders-pane');
-            $('#order-status-filter').val(status);
-            $('.order-filter-badge').each(function () {
-                $(this).toggleClass('order-filter-active', $(this).data('order-filter') === status);
-            });
-            ordersTable.ajax.url(ordersBaseUrl + query).load();
-        };
-
-        $('#order-filter-form').on('submit', function (e) {
-            e.preventDefault();
-            var form = this;
-            applyOrderFilter($('#order-status-filter').val(), $(form).find('select[name="sort"]').val());
-            // Alliance Auth marks every submitted form 'is-submitting' (not-allowed cursor,
-            // further submits blocked) and expects a page load to clear it. This form never
-            // reloads, so clear it once AA's own submit listener has run.
-            setTimeout(function () { form.classList.remove('is-submitting'); }, 0);
-        });
-
-        $('.order-filter-badge').on('click', function () {
-            applyOrderFilter($(this).data('order-filter'));
-        });
+        bindInPlaceFilter('#order-filter-form', ordersTable, function (q) { return ordersBaseUrl + '?' + q; }, '#orders-pane');
     }
     if ($('#production-summary-table').length) {
         $('#production-summary-table').DataTable({
@@ -638,15 +635,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     if ($('#production-tasks-table').length) {
-        $('#production-tasks-table').DataTable({
+        var tasksBaseUrl = "{% url 'industry_reforged:dt_director_tasks' %}?type=all";
+        var tasksTable = $('#production-tasks-table').DataTable({
             "serverSide": true,
-            "ajax": "{% url 'industry_reforged:dt_director_tasks' %}?type=all" + (window.location.search ? "&" + window.location.search.substring(1) : ""),
+            "ajax": tasksBaseUrl + (window.location.search ? "&" + window.location.search.substring(1) : ""),
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
                 { "orderable": false, "targets": [7, 9] }
             ]
         });
+        bindInPlaceFilter('#task-filter-form', tasksTable, function (q) { return tasksBaseUrl + '&' + q; }, '#tasks-pane');
     }
     if ($('#payouts-table').length) {
         $('#payouts-table').DataTable({

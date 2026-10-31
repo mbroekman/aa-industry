@@ -4411,3 +4411,15 @@ msgstr "Geaccepteerde orders in productie"
 #: industry_reforged/views/director.py
 msgid "Ready or delivered, not yet paid"
 msgstr "Klaar of geleverd, nog niet betaald"
+
+#: industry_reforged/views/director.py
+msgid "Waiting on the job market"
+msgstr "Wacht op de job market"
+
+#: industry_reforged/views/director.py
+msgid "Claimed by a builder"
+msgstr "Geclaimd door een bouwer"
+
+#: industry_reforged/views/director.py
+msgid "Built and marked done"
+msgstr "Gebouwd en afgerond"

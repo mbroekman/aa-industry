@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Changed
 
 - **director dashboard**: The "Active Member Orders" tab is now "Orders" and opens on orders In Production; "All Statuses" is still in the filter. Next to the filter, clickable badges count new orders, quotes not yet accepted, orders in production and unpaid orders. A click filters the table without reloading the page, and so does Apply Filter (TASK-284).
+- **director dashboard**: The Production Tasks tab gets the same quick-filter badges (Unclaimed, In Production, Completed) and opens on In Production; "All Statuses" is still in the filter. Its filter also works without a page reload (TASK-284).
 - **orders**: The "Payment: Unpaid" filter only lists Ready and Delivered orders. Payment is not due yet while an order is still being built (TASK-284).
 - **job market**: The note on a released sub-job now reads "Released: you can't build the parent item yourself". The old text ("a skill most members lack") was wrong: the check uses the viewer's own skills.
 

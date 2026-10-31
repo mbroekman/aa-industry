@@ -26,6 +26,10 @@ ORDER_STATUS_FILTERS = (
 OWING_STATUSES = ("READY", "DELIVERED")
 
 
+DEFAULT_TASK_FILTER = "IN_PRODUCTION"
+TASK_STATUS_FILTERS = ("UNCLAIMED", "IN_PRODUCTION", "COMPLETED")
+
+
 def filter_director_orders(qs, status_filter):
     """Apply the Orders tab filter. 'ALL' (or anything unknown) shows every order."""
     if status_filter in ORDER_STATUS_FILTERS:
@@ -183,8 +187,8 @@ def dt_director_tasks(request):
 
     # Custom filters for all_tasks
     if task_type == "all":
-        status_filter = request.GET.get("task_status", "")
-        if status_filter in ["UNCLAIMED", "IN_PRODUCTION", "COMPLETED"]:
+        status_filter = request.GET.get("task_status", DEFAULT_TASK_FILTER)
+        if status_filter in TASK_STATUS_FILTERS:
             qs = qs.filter(status=status_filter)
 
         assignee_filter = request.GET.get("task_assignee", "")

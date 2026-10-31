@@ -27,7 +27,7 @@ from industry_reforged.tests.factories import (
     UserFactory,
 )
 from industry_reforged.utils.order_status import sync_order_production_status
-from industry_reforged.views.datatables import dt_director_orders
+from industry_reforged.views.datatables import dt_director_orders, dt_director_tasks
 from industry_reforged.views.director import director_dashboard
 from industry_reforged.views.industrialist import (
     bulk_unclaim_tasks,
@@ -218,6 +218,12 @@ class TestOrdersTabFilterAndBadges(TestCase):
             "UNPAID",
         ]
         assert context["order_status_filter"] == "IN_PRODUCTION"
+        assert context["task_status_filter"] == "IN_PRODUCTION"
+        assert [b["filter"] for b in context["task_badges"]] == [
+            "UNCLAIMED",
+            "IN_PRODUCTION",
+            "COMPLETED",
+        ]
 
     def test_template_tab_name_and_badges(self):
         source = (
@@ -228,4 +234,28 @@ class TestOrdersTabFilterAndBadges(TestCase):
         # Badges sit in the filter bar, not in the tab button.
         tab = source.split('id="orders-tab"')[1].split("</button>")[0]
         assert "order-filter-badge" not in tab
-        assert 'id="order-filter-badges"' in source
+        assert 'badges=order_badges' in source
+        assert 'badges=task_badges' in source
+
+
+class TestProductionTasksFilter(TestCase):
+    def setUp(self):
+        self.rf = RequestFactory()
+        user = UserFactory()
+        user.user_permissions.add(Permission.objects.get(codename="corp_access"))
+        self.user = user.__class__.objects.get(pk=user.pk)
+        self.unclaimed = ProductionTaskFactory(status="UNCLAIMED")
+        self.in_prod = ProductionTaskFactory(status="IN_PRODUCTION")
+        self.done = ProductionTaskFactory(status="COMPLETED")
+
+    def _count(self, query=""):
+        req = self.rf.get("/?type=all" + query)
+        req.user = self.user
+        return json.loads(dt_director_tasks(req).content)["recordsTotal"]
+
+    def test_default_is_in_production(self):
+        assert self._count() == 1
+
+    def test_all_and_specific_status(self):
+        assert self._count("&task_status=ALL") == 3
+        assert self._count("&task_status=COMPLETED") == 1
