@@ -19,7 +19,6 @@ from ...models import (
     MemberOrder,
     ProductionTask,
 )
-from ...utils.stock_locations import annotate_stock_locations, build_haul_list
 from ...utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
@@ -32,6 +31,7 @@ from ...utils.pricing_engine import (
     get_detailed_prices,
     get_prices_with_overrides,
 )
+from ...utils.stock_locations import annotate_stock_locations, build_haul_list
 
 
 def _filter_missing_materials(bom_materials_list):

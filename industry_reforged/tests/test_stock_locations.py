@@ -23,7 +23,9 @@ STAGING = 1_000_000_000_002
 class StockLocationsTest(TestCase):
     def setUp(self):
         self.corp = EveCorporationInfo.objects.create(
-            corporation_id=98000123, corporation_name="Stock Corp", corporation_ticker="SC"
+            corporation_id=98000123,
+            corporation_name="Stock Corp",
+            corporation_ticker="SC",
         )
         IndustryFacility.objects.create(facility_id=FOUNDRY, name="Foundry")
         KnownLocation.objects.create(location_id=JITA, name="Jita IV - Moon 4")
