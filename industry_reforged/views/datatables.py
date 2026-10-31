@@ -246,9 +246,7 @@ def dt_director_tasks(request):
     if task_type == "all":
         qs = qs.select_related(
             "item_type", "assigned_to", "created_from_order__parent_order"
-        ).prefetch_related(
-            "linked_jobs__character_job", "linked_jobs__corporation_job"
-        )
+        ).prefetch_related("linked_jobs__character_job", "linked_jobs__corporation_job")
 
     buffer_hours_by_corp: dict[int, int] = {}
 
