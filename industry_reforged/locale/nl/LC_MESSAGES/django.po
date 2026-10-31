@@ -4423,3 +4423,54 @@ msgstr "Geclaimd door een bouwer"
 #: industry_reforged/views/director.py
 msgid "Built and marked done"
 msgstr "Gebouwd en afgerond"
+
+#: industry_reforged/templates/industry_reforged/partials/stock_locations.html
+msgid "None at build facility"
+msgstr "Niets op de bouwlocatie"
+
+#: industry_reforged/templates/industry_reforged/partials/stock_locations.html
+#, python-format
+msgid "+%(n)s more location"
+msgid_plural "+%(n)s more locations"
+msgstr[0] "+%(n)s extra locatie"
+msgstr[1] "+%(n)s extra locaties"
+
+#: industry_reforged/templates/industry_reforged/partials/haul_list.html
+#, python-format
+msgid "Pick-up list for %(facility)s"
+msgstr "Ophaallijst voor %(facility)s"
+
+#: industry_reforged/templates/industry_reforged/partials/haul_list.html
+msgid "Pick-up list"
+msgstr "Ophaallijst"
+
+#: industry_reforged/templates/industry_reforged/partials/haul_list.html
+#, python-format
+msgid "%(n)s stop"
+msgid_plural "%(n)s stops"
+msgstr[0] "%(n)s stop"
+msgstr[1] "%(n)s stops"
+
+#: industry_reforged/templates/industry_reforged/partials/haul_list.html
+msgid "No single build facility, so there is no pick-up list. The stock columns still show where each material lies."
+msgstr "Geen vaste bouwlocatie, dus geen ophaallijst. De voorraadkolom laat wel zien waar elk materiaal ligt."
+
+#: industry_reforged/templates/industry_reforged/partials/haul_list.html
+msgid "All stock that is needed already lies in the build facility."
+msgstr "Alle benodigde voorraad ligt al op de bouwlocatie."
+
+#: industry_reforged/templates/industry_reforged/partials/haul_list.html
+msgid "Corp stock lying in other structures that the jobs need here. Largest piles first, so you make as few stops as possible. Materials the corp does not own at all are under Missing Materials."
+msgstr "Corpvoorraad in andere structures die de jobs hier nodig hebben. Grootste stapels eerst, zodat je zo min mogelijk stops maakt. Materialen die de corp helemaal niet heeft, staan onder Missing Materials."
+
+#: industry_reforged/templates/industry_reforged/partials/quote_bom_panes.html
+msgid "Total over all structures. Below it: per structure, the build facility in green."
+msgstr "Totaal over alle structures. Daaronder per structure; de bouwlocatie in het groen."
+
+#: industry_reforged/views/industrialist.py
+msgid "Your claimed jobs are built in more than one structure (or have no order facility), so there is no single pick-up list. The stock column still shows where each material lies."
+msgstr "Je geclaimde jobs worden in meer dan één structure gebouwd (of hebben geen orderlocatie), dus er is geen ophaallijst. De voorraadkolom laat wel zien waar elk materiaal ligt."
+
+#: industry_reforged/views/orders/shopping.py
+msgid "The selected items are not all built in one structure, so there is no single pick-up list. The stock column still shows where each material lies."
+msgstr "De gekozen items worden niet allemaal in één structure gebouwd, dus er is geen ophaallijst. De voorraadkolom laat wel zien waar elk materiaal ligt."

@@ -40,6 +40,8 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
     orders = []
     tasks = []
     recursive_bom_tree = []
+    main_char = request.user.profile.main_character
+    corp_info = main_char.corporation if main_char else None
 
     def merge_bom(target, source):
         for mat_id, data in source.items():
@@ -146,6 +148,7 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
 
     total_bom_price = 0
     sorted_bom = []
+    sorted_bps = []
     if bom:
         mat_ids = list(bom.keys())
 
@@ -179,6 +182,22 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         sorted_bom = sorted(bom_materials_list, key=lambda x: x["name"])
         sorted_bps = sorted(bom_blueprints_list, key=lambda x: x["name"])
 
+    # Where the stock lies, and what to bring to the build structure when all
+    # selected orders/tasks are built in the same one.
+    from ...utils.stock_locations import (
+        annotate_stock_locations,
+        build_haul_list,
+        single_facility,
+    )
+
+    haul_facility = single_facility(
+        list(orders) + [t.created_from_order for t in tasks if t.created_from_order]
+    )
+    annotate_stock_locations(
+        sorted_bom, corp_info, haul_facility.facility_id if haul_facility else None
+    )
+    haul_list = build_haul_list(sorted_bom) if haul_facility else []
+
     context = {
         "title": _("Shopping List"),
         "orders": orders,
@@ -189,5 +208,11 @@ def shopping_list(request: WSGIRequest) -> HttpResponse:
         "bom_blueprints": sorted_bps,
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": recursive_bom_tree,
+        "haul_list": haul_list,
+        "haul_facility": haul_facility,
+        "haul_note": _(
+            "The selected items are not all built in one structure, so there is no "
+            "single pick-up list. The stock column still shows where each material lies."
+        ),
     }
     return render(request, "industry_reforged/shopping_list.html", context)

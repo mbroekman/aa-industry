@@ -19,6 +19,7 @@ from ...models import (
     MemberOrder,
     ProductionTask,
 )
+from ...utils.stock_locations import annotate_stock_locations, build_haul_list
 from ...utils.bom_engine import (
     calculate_order_bom,
     calculate_recursive_order_bom,
@@ -46,6 +47,19 @@ def _filter_missing_materials(bom_materials_list):
         if shortfall > 0:
             missing.append({**mat, "shortfall": shortfall})
     return missing
+
+
+def _order_stock_context(order, bom_materials_list) -> dict:
+    """Per-structure stock on the order's materials and the pick-up list for its facility."""
+    corp_info = order.character.corporation if order.character else None
+    facility = order.target_facility
+    annotate_stock_locations(
+        bom_materials_list, corp_info, facility.facility_id if facility else None
+    )
+    return {
+        "haul_facility": facility,
+        "haul_list": build_haul_list(bom_materials_list) if facility else [],
+    }
 
 
 # ESI job statuses in which EVE has already consumed the blueprint runs. A cancelled or
@@ -461,6 +475,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
 
     plex_price = get_market_prices([44992]).get(44992, 0.0)
 
+    stock_context = _order_stock_context(order, bom_materials_list)
     context = {
         "title": f"Order #{order.id}",
         "order": order,
@@ -472,6 +487,7 @@ def view_quote(request: WSGIRequest, order_id: int) -> HttpResponse:
         "bom_materials": bom_materials_list,
         "bom_blueprints": bom_blueprints_list,
         "missing_order_materials": _filter_missing_materials(bom_materials_list),
+        **stock_context,
         "total_bom_price": total_bom_price,
         "structure_job_costs": structure_job_costs,
         "estimated_build_cost": estimated_build_cost,
@@ -898,11 +914,13 @@ def htmx_update_quote_facility(request: WSGIRequest, order_id: int) -> HttpRespo
                 bom_materials_list.append(data)
                 total_bom_price += data["total_price"]
 
+    stock_context = _order_stock_context(order, bom_materials_list)
     context = {
         "order": order,
         "bom_materials": bom_materials_list,
         "bom_blueprints": bom_blueprints_list,
         "missing_order_materials": _filter_missing_materials(bom_materials_list),
+        **stock_context,
         "total_bom_price": total_bom_price,
         "recursive_bom_tree": recursive_bom_tree,
     }

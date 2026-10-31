@@ -631,6 +631,7 @@
 
                 <!-- TAB 2b: MISSING MATERIALS -->
                 <div class="tab-pane fade" id="missingmaterials-pane" role="tabpanel" aria-labelledby="missingmaterials-tab" tabindex="0">
+                    {% if my_tasks %}{% include "industry_reforged/partials/haul_list.html" %}{% endif %}
                     <div class="card border-0 mb-4 h-100">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h4 class="card-title mb-0"><i class="fas fa-boxes"></i> {% trans "Missing Materials for My Claimed Jobs" %}</h4>
@@ -661,7 +662,7 @@
                                                     <span class="badge bg-secondary ms-2">{{ mat.group_name }}</span>
                                                 </div>
                                             </td>
-                                            <td class="text-end numeric text-danger" data-order="{{ mat.corp_stock|default:0 }}">{{ mat.corp_stock|default:0|intcomma }}</td>
+                                            <td class="text-end numeric text-danger" data-order="{{ mat.corp_stock|default:0 }}">{{ mat.corp_stock|default:0|intcomma }}{% include "industry_reforged/partials/stock_locations.html" %}</td>
                                             <td class="text-end numeric" data-order="{{ mat.quantity }}">{{ mat.quantity|intcomma }}</td>
                                             <td class="text-end numeric fw-bold text-danger" data-order="{{ mat.shortfall }}">{{ mat.shortfall|intcomma }}</td>
                                         </tr>

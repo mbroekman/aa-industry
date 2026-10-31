@@ -1,0 +1,22 @@
+{% load i18n humanize %}{% comment %}
+Per-structure stock under a material's stock total. Param: mat (annotated by utils.stock_locations).
+The build structure comes first, in green; the rest are piles that would need hauling.
+{% endcomment %}{% if mat.stock_locations %}
+<div class="stock-locations small text-start lh-sm mt-1">
+    {% for loc in mat.stock_locations_shown %}
+    <div class="{% if loc.is_facility %}text-success{% else %}text-body-secondary{% endif %}" title="{{ loc.name }}">
+        <i class="fas {% if loc.is_facility %}fa-industry{% else %}fa-warehouse{% endif %} fa-fw"></i>
+        <span class="stock-loc-name">{{ loc.name }}</span>: <span class="numeric">{{ loc.quantity|intcomma }}</span>
+    </div>
+    {% endfor %}
+    {% if mat.stock_locations_hidden %}
+    <div class="text-body-secondary" data-bs-toggle="tooltip" data-bs-html="true"
+        title="{% for loc in mat.stock_locations_hidden %}{{ loc.name }}: {{ loc.quantity|intcomma }}{% if not forloop.last %}<br>{% endif %}{% endfor %}">
+        {% blocktrans count n=mat.stock_locations_hidden|length %}+{{ n }} more location{% plural %}+{{ n }} more locations{% endblocktrans %}
+    </div>
+    {% endif %}
+    {% if mat.stock_at_facility is not None and mat.stock_at_facility == 0 %}
+    <div class="text-warning"><i class="fas fa-industry fa-fw"></i> {% trans "None at build facility" %}</div>
+    {% endif %}
+</div>
+{% endif %}

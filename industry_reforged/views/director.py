@@ -1014,6 +1014,14 @@ def inventory_shopping_list(request: WSGIRequest) -> HttpResponse:
         sorted_bom = sorted(bom_materials_list, key=lambda x: x["name"])
         sorted_bps = sorted(bom_blueprints_list, key=lambda x: x["name"])
 
+    # Show where the stock lies; there is no build structure, so no pick-up list.
+    from ..utils.stock_locations import annotate_stock_locations
+
+    main_char = request.user.profile.main_character
+    annotate_stock_locations(
+        sorted_bom, main_char.corporation if main_char else None, None
+    )
+
     context = {
         "title": _("Master Deficit Shopping List"),
         "bom_materials": sorted_bom,

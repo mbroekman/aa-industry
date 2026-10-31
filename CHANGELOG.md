@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## Unreleased
 
+### Added
+
+- **stock locations**: Material tables now show under Corp Stock how much lies in each structure, with the build facility first in green. A pick-up list per structure shows what to bring to the build facility before the jobs can run: only what the facility lacks, largest piles first. It appears on the order page (BOM tab), the industrialist Missing Materials tab and the shopping list, when all jobs are built in one structure. The director's deficit list shows the locations only (TASK-285).
+
 ### Changed
 
 - **director dashboard**: The "Active Member Orders" tab is now "Orders" and opens on orders In Production; "All Statuses" is still in the filter. Next to the filter, clickable badges count new orders, quotes not yet accepted, orders in production and unpaid orders. A click filters the table without reloading the page, and so does Apply Filter (TASK-284).

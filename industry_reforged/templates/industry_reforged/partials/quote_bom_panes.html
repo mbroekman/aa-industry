@@ -4,6 +4,7 @@
     <!-- TAB 2: BOM -->
     {% if perms.industry_reforged.industrialist_access or perms.industry_reforged.corp_access %}
     <div class="tab-pane fade" id="bom-pane" role="tabpanel" aria-labelledby="bom-tab" tabindex="0">
+        {% include "industry_reforged/partials/haul_list.html" %}
         {% if perms.industry_reforged.corp_access and missing_order_materials %}
         <div class="row">
             <div class="col-12 mb-4">
@@ -24,7 +25,7 @@
                                     <tr>
                                         <th><input type="checkbox" id="selectAllOrderMissingMaterials" title="{% trans 'Select all' %}"></th>
                                         <th>{% trans "Material" %}</th>
-                                        <th class="text-end">{% trans "Corp Stock" %}</th>
+                                        <th class="text-end">{% trans "Corp Stock" %} <i class="fas fa-info-circle ms-1 text-muted" data-bs-toggle="tooltip" title="{% trans 'Total over all structures. Below it: per structure, the build facility in green.' %}"></i></th>
                                         <th class="text-end">{% trans "Required" %}</th>
                                         <th class="text-end">{% trans "Shortfall" %}</th>
                                     </tr>
@@ -40,7 +41,7 @@
                                                 <span class="badge bg-secondary ms-2">{{ mat.group_name }}</span>
                                             </div>
                                         </td>
-                                        <td class="text-end numeric text-danger" data-order="{{ mat.corp_stock|default:0 }}">{{ mat.corp_stock|default:0|intcomma }}</td>
+                                        <td class="text-end numeric text-danger" data-order="{{ mat.corp_stock|default:0 }}">{{ mat.corp_stock|default:0|intcomma }}{% include "industry_reforged/partials/stock_locations.html" %}</td>
                                         <td class="text-end numeric" data-order="{{ mat.quantity }}">{{ mat.quantity|intcomma }}</td>
                                         <td class="text-end numeric fw-bold text-danger" data-order="{{ mat.shortfall }}">{{ mat.shortfall|intcomma }}</td>
                                     </tr>
@@ -85,7 +86,7 @@
                                     <tr>
                                         <th>{% trans "Type" %}</th>
                                         <th>{% trans "Material" %}</th>
-                                        <th class="text-end">{% trans "Corp Stock" %}</th>
+                                        <th class="text-end">{% trans "Corp Stock" %} <i class="fas fa-info-circle ms-1 text-muted" data-bs-toggle="tooltip" title="{% trans 'Total over all structures. Below it: per structure, the build facility in green.' %}"></i></th>
                                         <th class="text-end">{% trans "Base (ME0)" %}</th>
                                         <th class="text-end">{% trans "Required" %}</th>
                                         <th class="text-end">
@@ -111,6 +112,7 @@
                                             {% else %}
                                                 <span class="text-danger" data-bs-toggle="tooltip" title="{% trans 'Insufficient stock' %}">{{ mat.corp_stock|default:0|intcomma }}</span>
                                             {% endif %}
+                                            {% include "industry_reforged/partials/stock_locations.html" %}
                                         </td>
                                         <td class="text-end numeric text-muted" data-order="{% if mat.base_quantity %}{{ mat.base_quantity }}{% else %}{{ mat.quantity }}{% endif %}">
                                             {% if mat.base_quantity and mat.base_quantity > mat.quantity %}

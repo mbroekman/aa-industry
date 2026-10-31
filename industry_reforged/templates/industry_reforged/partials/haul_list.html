@@ -1,0 +1,46 @@
+{% load i18n humanize %}{% comment %}
+Pick-up list: what to bring to the build structure, grouped by the structure it lies in.
+Params: haul_list (utils.stock_locations.build_haul_list), haul_facility (IndustryFacility or None),
+haul_note (optional text shown when there is no single build facility).
+{% endcomment %}
+<div class="card border-secondary mb-3 haul-list">
+    <div class="card-header bg-dark text-white d-flex align-items-center gap-2 flex-wrap">
+        <i class="fas fa-truck-loading text-info"></i>
+        <h3 class="card-title mb-0 fs-6">
+            {% if haul_facility %}
+                {% blocktrans with facility=haul_facility.name %}Pick-up list for {{ facility }}{% endblocktrans %}
+            {% else %}
+                {% trans "Pick-up list" %}
+            {% endif %}
+        </h3>
+        {% if haul_list %}<span class="badge bg-info text-dark">{% blocktrans count n=haul_list|length %}{{ n }} stop{% plural %}{{ n }} stops{% endblocktrans %}</span>{% endif %}
+    </div>
+    <div class="card-body py-2">
+        {% if not haul_facility %}
+            <p class="text-body-secondary small mb-0">{{ haul_note|default:_("No single build facility, so there is no pick-up list. The stock columns still show where each material lies.") }}</p>
+        {% elif not haul_list %}
+            <p class="text-success small mb-0"><i class="fas fa-check"></i> {% trans "All stock that is needed already lies in the build facility." %}</p>
+        {% else %}
+            <p class="text-body-secondary small mb-2">{% trans "Corp stock lying in other structures that the jobs need here. Largest piles first, so you make as few stops as possible. Materials the corp does not own at all are under Missing Materials." %}</p>
+            <div class="row g-2">
+                {% for stop in haul_list %}
+                <div class="col-12 col-md-6 col-xl-4">
+                    <div class="border border-secondary rounded p-2 h-100">
+                        <div class="fw-bold mb-1"><i class="fas fa-warehouse fa-fw text-info"></i> {{ stop.name }}</div>
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                {% for item in stop.items %}
+                                <tr>
+                                    <td>{{ item.name }}</td>
+                                    <td class="text-end numeric">{{ item.quantity|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>

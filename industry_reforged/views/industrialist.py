@@ -7,6 +7,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext_lazy
 from django.utils.translation import gettext_lazy as _
 
 from ..models import (
@@ -547,8 +548,26 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
     # filtered down to only the materials actually short (this tab is about
     # what's missing, not a full BOM breakdown - that's what Shopping List is for).
     my_missing_materials = []
+    haul_list = []
+    haul_facility = None
     if my_tasks:
-        all_materials = calculate_tasks_bom(my_tasks, corp_info=corporation).values()
+        from ..utils.stock_locations import (
+            annotate_stock_locations,
+            build_haul_list,
+            single_facility,
+        )
+
+        all_materials = list(
+            calculate_tasks_bom(my_tasks, corp_info=corporation).values()
+        )
+        # Pick-up list only when all claimed jobs are built in one structure.
+        haul_facility = single_facility(t.created_from_order for t in my_tasks)
+        annotate_stock_locations(
+            all_materials,
+            corporation,
+            haul_facility.facility_id if haul_facility else None,
+        )
+        haul_list = build_haul_list(all_materials) if haul_facility else []
         for mat in all_materials:
             mat["shortfall"] = max(0, mat.get("quantity", 0) - mat.get("corp_stock", 0))
         my_missing_materials = sorted(
@@ -571,6 +590,13 @@ def industrialist_dashboard(request: WSGIRequest) -> HttpResponse:
         "user_slots": user_slots,
         "my_missing_materials": my_missing_materials,
         "my_missing_materials_shortage_count": my_missing_materials_shortage_count,
+        "haul_list": haul_list,
+        "haul_facility": haul_facility,
+        "haul_note": gettext_lazy(
+            "Your claimed jobs are built in more than one structure (or have no "
+            "order facility), so there is no single pick-up list. The stock "
+            "column still shows where each material lies."
+        ),
         "unauthed_characters": unauthed_characters,
     }
     return render(request, "industry_reforged/industrialist_dashboard.html", context)
