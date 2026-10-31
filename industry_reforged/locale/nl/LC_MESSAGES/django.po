@@ -4387,3 +4387,19 @@ msgstr ""
 #, python-format
 msgid "%(qty)s spare in stock"
 msgstr "%(qty)s extra op voorraad"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html
+msgid "Orders"
+msgstr "Orders"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html
+msgid "New orders (requested)"
+msgstr "Nieuwe orders (aangevraagd)"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html
+msgid "Quoted, not yet accepted"
+msgstr "Offerte verstuurd, nog niet geaccepteerd"
+
+#: industry_reforged/templates/industry_reforged/director_dashboard.html
+msgid "Accepted orders not yet paid"
+msgstr "Geaccepteerde orders, nog niet betaald"

@@ -14,6 +14,7 @@ from ...models import (
     ProductionTask,
 )
 from ...utils.discord import send_discord_webhook, webhook_language
+from ...utils.order_status import sync_order_production_status
 
 
 def delete_order(request: WSGIRequest, order_id: int) -> HttpResponse:
@@ -235,6 +236,7 @@ def toggle_order_item_bought(request: WSGIRequest, item_id: int) -> HttpResponse
         item.bought_by = None
 
     item.save(update_fields=["is_bought", "bought_at", "bought_by"])
+    sync_order_production_status(order)
 
     if (
         request.headers.get("x-requested-with") == "XMLHttpRequest"

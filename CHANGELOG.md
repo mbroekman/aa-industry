@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Changed
 
+- **director dashboard**: The "Active Member Orders" tab is now "Orders" and opens on orders In Production; "All Statuses" is still in the filter. The tab shows clickable badges for new orders, quotes not yet accepted and unpaid orders. A click filters the table without reloading the page, and so does Apply Filter (TASK-284).
+- **orders**: The "Payment: Unpaid" filter only lists orders from Accepted onwards. Open quotes and rejected orders owe nothing (TASK-284).
 - **job market**: The note on a released sub-job now reads "Released: you can't build the parent item yourself". The old text ("a skill most members lack") was wrong: the check uses the viewer's own skills.
 
 ### Docs
@@ -16,6 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fix
 
+- **orders**: Orders now reach In Production. No code ever set this status, so the filter was always empty. An Accepted order moves to In Production as soon as one of its jobs is claimed or completed or a buy item is marked bought, and back to Accepted when all claims are released. A migration moves existing orders with work in progress (TASK-284).
 - **inventory**: Stock in a corporation-owned structure is filed under that structure again, not under its solar system (TASK-283). Since the change, orders never deducted stock at their facility and stock checks saw 0 there. The facility sync had the same problem. Stock moves back to the structure on the next inventory sync.
 - **claimed jobs**: A claimed order job now shows "N spare in stock" when its facility holds more of the item than open orders have already made, so the builder can build fewer (TASK-283).
 - **discord**: Discord messages no longer mix languages depending on who triggered them (TASK-281). Webhook posts use the language chosen per corporation (Director Configurations -> Global Pricing -> Discord Messages, migration 0092), falling back to the new `DISCORD_MESSAGE_LANGUAGE` setting and then `LANGUAGE_CODE`. Direct messages and Auth notifications use the recipient's own Alliance Auth language. All Discord texts (orders, quotes, blueprints, jobs, PI, wallets, inventory, AI tasks, buyback) are now translatable, with Dutch translations.

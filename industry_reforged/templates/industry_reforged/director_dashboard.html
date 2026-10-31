@@ -33,7 +33,10 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-pane"
                         type="button" role="tab" aria-controls="orders-pane" aria-selected="true">
-                        <i class="fas fa-shopping-cart"></i> Active Member Orders
+                        <i class="fas fa-shopping-cart"></i> {% translate "Orders" %}
+                        {% if order_attention.new %}<span class="badge bg-info text-dark ms-1 order-filter-badge" role="button" data-order-filter="REQUESTED" data-bs-toggle="tooltip" title="{% translate 'New orders (requested)' %}"><i class="fas fa-inbox"></i> {{ order_attention.new }}</span>{% endif %}
+                        {% if order_attention.quoted %}<span class="badge bg-primary ms-1 order-filter-badge" role="button" data-order-filter="QUOTED" data-bs-toggle="tooltip" title="{% translate 'Quoted, not yet accepted' %}"><i class="fas fa-file-signature"></i> {{ order_attention.quoted }}</span>{% endif %}
+                        {% if order_attention.unpaid %}<span class="badge bg-danger ms-1 order-filter-badge" role="button" data-order-filter="UNPAID" data-bs-toggle="tooltip" title="{% translate 'Accepted orders not yet paid' %}"><i class="fas fa-coins"></i> {{ order_attention.unpaid }}</span>{% endif %}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -79,19 +82,19 @@
                 <!-- Orders Tab -->
                 <div class="tab-pane fade show active" id="orders-pane" role="tabpanel" aria-labelledby="orders-tab" tabindex="0">
                     <div class="d-flex justify-content-between align-items-center bg-dark p-2 rounded mb-3 border border-secondary dt-filter-bar">
-                        <form method="get" action="#orders-pane" class="d-flex align-items-center mb-0 gap-2 custom-filters">
-                        <select name="status" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
-                            <option value="">{% trans "All Statuses" %}</option>
-                            <option value="REQUESTED" {% if request.GET.status == 'REQUESTED' %}selected{% endif %}>{% trans "Requested" %}</option>
-                            <option value="QUOTED" {% if request.GET.status == 'QUOTED' %}selected{% endif %}>{% trans "Quoted" %}</option>
-                            <option value="ACCEPTED" {% if request.GET.status == 'ACCEPTED' %}selected{% endif %}>{% trans "Accepted" %}</option>
-                            <option value="IN_PRODUCTION" {% if request.GET.status == 'IN_PRODUCTION' %}selected{% endif %}>{% trans "In Production" %}</option>
-                            <option value="READY" {% if request.GET.status == 'READY' %}selected{% endif %}>{% trans "Ready" %}</option>
-                            <option value="DELIVERED" {% if request.GET.status == 'DELIVERED' %}selected{% endif %}>{% trans "Delivered" %}</option>
-                            <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>{% trans "Rejected" %}</option>
+                        <form method="get" action="#orders-pane" id="order-filter-form" class="d-flex align-items-center mb-0 gap-2 custom-filters">
+                        <select name="status" id="order-status-filter" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
+                            <option value="ALL" {% if order_status_filter == 'ALL' %}selected{% endif %}>{% trans "All Statuses" %}</option>
+                            <option value="REQUESTED" {% if order_status_filter == 'REQUESTED' %}selected{% endif %}>{% trans "Requested" %}</option>
+                            <option value="QUOTED" {% if order_status_filter == 'QUOTED' %}selected{% endif %}>{% trans "Quoted" %}</option>
+                            <option value="ACCEPTED" {% if order_status_filter == 'ACCEPTED' %}selected{% endif %}>{% trans "Accepted" %}</option>
+                            <option value="IN_PRODUCTION" {% if order_status_filter == 'IN_PRODUCTION' %}selected{% endif %}>{% trans "In Production" %}</option>
+                            <option value="READY" {% if order_status_filter == 'READY' %}selected{% endif %}>{% trans "Ready" %}</option>
+                            <option value="DELIVERED" {% if order_status_filter == 'DELIVERED' %}selected{% endif %}>{% trans "Delivered" %}</option>
+                            <option value="REJECTED" {% if order_status_filter == 'REJECTED' %}selected{% endif %}>{% trans "Rejected" %}</option>
                             <option disabled>───────</option>
-                            <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>{% trans "Payment: Paid" %}</option>
-                            <option value="UNPAID" {% if request.GET.status == 'UNPAID' %}selected{% endif %}>{% trans "Payment: Unpaid" %}</option>
+                            <option value="PAID" {% if order_status_filter == 'PAID' %}selected{% endif %}>{% trans "Payment: Paid" %}</option>
+                            <option value="UNPAID" {% if order_status_filter == 'UNPAID' %}selected{% endif %}>{% trans "Payment: Unpaid" %}</option>
                         </select>
                         <select name="sort" class="form-select bg-dark text-white border-secondary me-2 form-select-sm" style="width: auto;">
                             <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>{% trans "Newest First" %}</option>
@@ -576,14 +579,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize DataTables
     if ($('#order-management-table').length) {
-        $('#order-management-table').DataTable({
+        var ordersBaseUrl = "{% url 'industry_reforged:dt_director_orders' %}";
+        var ordersTable = $('#order-management-table').DataTable({
             "serverSide": true,
-            "ajax": "{% url 'industry_reforged:dt_director_orders' %}" + window.location.search,
+            "ajax": ordersBaseUrl + window.location.search,
             "autoWidth": false,
             "order": [[ 0, "desc" ]],
             "columnDefs": [
                 { "orderable": false, "targets": [1, 5, 9] }
             ]
+        });
+
+        // Filter the orders table in place: update the URL, then reload the AJAX source.
+        var applyOrderFilter = function (status, sort) {
+            var params = new URLSearchParams(window.location.search);
+            params.set('status', status);
+            if (sort) { params.set('sort', sort); }
+            var query = '?' + params.toString();
+            history.replaceState(null, '', window.location.pathname + query + '#orders-pane');
+            $('#order-status-filter').val(status);
+            ordersTable.ajax.url(ordersBaseUrl + query).load();
+        };
+
+        $('#order-filter-form').on('submit', function (e) {
+            e.preventDefault();
+            applyOrderFilter($('#order-status-filter').val(), $(this).find('select[name="sort"]').val());
+        });
+
+        $('.order-filter-badge').on('click', function () {
+            // The badge sits inside the tab button, so the tab opens as well.
+            applyOrderFilter($(this).data('order-filter'));
         });
     }
     if ($('#production-summary-table').length) {

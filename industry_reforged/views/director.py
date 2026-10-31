@@ -80,8 +80,19 @@ def director_dashboard(request: WSGIRequest) -> HttpResponse:
         .order_by("-total_qty")
     )
 
+    from .datatables import DEFAULT_ORDER_FILTER, OWING_STATUSES
+
+    root_orders = MemberOrder.objects.filter(parent_order__isnull=True)
+    order_attention = root_orders.aggregate(
+        new=Count("id", filter=Q(status="REQUESTED")),
+        quoted=Count("id", filter=Q(status="QUOTED")),
+        unpaid=Count("id", filter=Q(is_paid=False, status__in=OWING_STATUSES)),
+    )
+
     context = {
         "title": "Director Control Panel",
+        "order_attention": order_attention,
+        "order_status_filter": request.GET.get("status", DEFAULT_ORDER_FILTER),
         "payout_summary": payout_summary,
         "payout_batches": payout_batches,
         "task_assignees": task_assignees,

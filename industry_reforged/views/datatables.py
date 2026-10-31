@@ -13,6 +13,31 @@ from ..templatetags.industry_tags import eve_isk
 from ..utils import eta_service
 
 
+DEFAULT_ORDER_FILTER = "IN_PRODUCTION"
+ORDER_STATUS_FILTERS = (
+    "REQUESTED",
+    "QUOTED",
+    "ACCEPTED",
+    "REJECTED",
+    "IN_PRODUCTION",
+    "READY",
+    "DELIVERED",
+)
+# Orders past acceptance still owe money when unpaid; open quotes and rejects do not.
+OWING_STATUSES = ("ACCEPTED", "IN_PRODUCTION", "READY", "DELIVERED")
+
+
+def filter_director_orders(qs, status_filter):
+    """Apply the Orders tab filter. 'ALL' (or anything unknown) shows every order."""
+    if status_filter in ORDER_STATUS_FILTERS:
+        return qs.filter(status=status_filter)
+    if status_filter == "PAID":
+        return qs.filter(is_paid=True)
+    if status_filter == "UNPAID":
+        return qs.filter(is_paid=False, status__in=OWING_STATUSES)
+    return qs
+
+
 def get_datatables_params(request):
     """Parse DataTables parameters from GET request"""
     draw = int(request.GET.get("draw", 1))
@@ -31,24 +56,10 @@ def dt_director_orders(request):
     """AJAX endpoint for Member Orders on Director Dashboard"""
     draw, start, length, search, order_col, order_dir = get_datatables_params(request)
 
-    qs = MemberOrder.objects.filter(parent_order__isnull=True)
-
-    # Custom filters
-    status_filter = request.GET.get("status", "")
-    if status_filter in [
-        "REQUESTED",
-        "QUOTED",
-        "ACCEPTED",
-        "REJECTED",
-        "IN_PRODUCTION",
-        "READY",
-        "DELIVERED",
-    ]:
-        qs = qs.filter(status=status_filter)
-    elif status_filter == "PAID":
-        qs = qs.filter(is_paid=True)
-    elif status_filter == "UNPAID":
-        qs = qs.filter(is_paid=False)
+    qs = filter_director_orders(
+        MemberOrder.objects.filter(parent_order__isnull=True),
+        request.GET.get("status", DEFAULT_ORDER_FILTER),
+    )
 
     total_records = qs.count()
 

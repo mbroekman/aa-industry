@@ -16,6 +16,7 @@ from ..models import (
     ProductionTask,
 )
 from ..utils.bom_engine import calculate_tasks_bom
+from ..utils.order_status import sync_order_production_status, sync_orders_for_tasks
 from .orders.notifications import notify_order_ready
 
 
@@ -948,6 +949,7 @@ def claim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     request,
                     f"Successfully claimed {task.quantity}x {task.item_type.name}.",
                 )
+            sync_order_production_status(task.created_from_order)
         else:
             messages.error(request, _("Task is no longer available or does not exist."))
 
@@ -1015,6 +1017,7 @@ def unclaim_task(request: WSGIRequest, task_id: int) -> HttpResponse:
 
         if task.assigned_to:
             unclaim_recursive(task, task.assigned_to, pricing_config)
+        sync_order_production_status(task.created_from_order)
 
         messages.success(
             request, f"Successfully unclaimed {task.quantity}x {task.item_type.name}."
@@ -1082,6 +1085,7 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
                 for child in t.bom_children.all():
                     claim_recursive(child, char)
 
+            claimed_roots = []
             for task in tasks:
                 if (
                     not task.is_claimable
@@ -1112,6 +1116,8 @@ def bulk_claim_tasks(request: WSGIRequest) -> HttpResponse:
                     )
                     continue
                 claim_recursive(task, character)
+                claimed_roots.append(task)
+            sync_orders_for_tasks(claimed_roots)
 
             if count > 0:
                 messages.success(request, f"Successfully claimed {count} tasks.")
@@ -1181,9 +1187,11 @@ def bulk_unclaim_tasks(request: WSGIRequest) -> HttpResponse:
                 for child in t.bom_children.all():
                     unclaim_recursive(child, char, config)
 
-            for task in tasks:
+            unclaimed_roots = list(tasks)
+            for task in unclaimed_roots:
                 if task.assigned_to:
                     unclaim_recursive(task, task.assigned_to, pricing_config)
+            sync_orders_for_tasks(unclaimed_roots)
 
             messages.success(request, f"Successfully unclaimed {count} tasks.")
         else:
@@ -1238,6 +1246,8 @@ def complete_task(request: WSGIRequest, task_id: int) -> HttpResponse:
                     parent.status = "READY"
                     parent.save()
                     notify_order_ready(parent)
+                elif remaining:
+                    sync_order_production_status(parent)
 
             messages.success(
                 request, f"Marked {task.quantity}x {task.item_type.name} as completed!"
@@ -1302,6 +1312,8 @@ def bulk_complete_tasks(request: WSGIRequest) -> HttpResponse:
                             parent.status = "READY"
                             parent.save()
                             notify_order_ready(parent)
+                        elif remaining:
+                            sync_order_production_status(parent)
 
             messages.success(
                 request,
